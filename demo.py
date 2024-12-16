@@ -3,15 +3,23 @@ from utils import generate_script, verify_api_key, generate_xiaohongshu_content,
 from langchain.memory import ConversationBufferMemory
 import streamlit.components.v1 as components
 from character_templates import CHARACTER_TEMPLATES
-import sys
-sys.path.append(r"C:\Users\21157\PycharmProjects\视频文案生成\components")
-from avatar_manager import AvatarManager
 from pathlib import Path
 import os
 import base64
+from components.avatar_manager import AvatarManager
 
-avatar_manager = AvatarManager
+# 配置全局路径
+ASSETS_DIR = Path("assets")
+AVATARS_DIR = ASSETS_DIR / "avatars"
 
+# 确保必要的目录存在
+ASSETS_DIR.mkdir(exist_ok=True)
+AVATARS_DIR.mkdir(exist_ok=True)
+
+# 初始化头像管理器
+avatar_manager = AvatarManager()
+
+# 模型映射配置
 model_mapping = {
     "通义千问 (Qwen)": ("qwen", "Qwen-Max"),
     "ChatGPT-4": ("chatgpt", "GPT-4"),
@@ -28,11 +36,9 @@ st.set_page_config(
 
 def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", key: str = None) -> None:
     """使用 Streamlit 原生组件创建复制按钮"""
-    # 为每个按钮初始化状态
     if key not in st.session_state:
         st.session_state[key] = False
 
-    # 创建按钮
     if st.button(button_text, key=f"btn_{key}", use_container_width=True):
         try:
             import pyperclip
@@ -42,20 +48,50 @@ def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", 
         except ImportError:
             st.error('请先安装 pyperclip: pip install pyperclip')
 
-    # 重置状态
-    else:
-        st.session_state[key] = False
 
-st.title("📝 AI生成小工具")
+def get_user_avatar(character_type: str = None) -> str:
+    """获取用户头像地址"""
+    if character_type is None:
+        return str(AVATARS_DIR / "default_user.png")
+
+    # 角色头像映射
+    avatar_mapping = {
+        "温柔知性大姐姐": "xiaorou.png",
+        "暴躁顶撞纹身男": "ahu.png",
+        "呆呆萌萌萝莉妹": "tangtang.png",
+        "高冷霸道男总裁": "tingqian.png",
+        "阳光开朗小奶狗": "nuannuan.png",
+        "英姿飒爽女王大人": "ningshuang.png",
+        "默认": "default_user.png"
+    }
+
+    # 获取对应角色的头像文件名
+    avatar_file = avatar_mapping.get(character_type, "default_user.png")
+    return str(AVATARS_DIR / avatar_file)
+
+
+def get_image_base64(image_path: str) -> str:
+    """将图片转换为base64编码"""
+    if not image_path or not os.path.exists(image_path):
+        return ""
+
+    try:
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode()
+    except Exception as e:
+        st.error(f"图片处理错误: {str(e)}")
+        return ""
+
 
 # 初始化 session state
 if 'api_keys' not in st.session_state:
     st.session_state.api_keys = {
-        'qwen': st.secrets.get("api_keys", {}).get("dashscope", ""),  # 从 secrets 获取通义千问密钥
-        'chatgpt': "",  # ChatGPT API 密钥留空，由用户输入
-        'claude': "",   # Claude API 密钥留空，由用户输入
-        'glm': st.secrets.get("api_keys", {}).get("glm", "")  # 从 secrets 获取智谱 AI 密钥
+        'qwen': st.secrets.get("api_keys", {}).get("dashscope", ""),
+        'chatgpt': "",
+        'claude': "",
+        'glm': st.secrets.get("api_keys", {}).get("glm", "")
     }
+
 if 'use_env_qwen_key' not in st.session_state:
     st.session_state.use_env_qwen_key = False
 if 'use_env_glm_key' not in st.session_state:
@@ -68,7 +104,6 @@ if 'travel_response' not in st.session_state:
     st.session_state.travel_response = None
 if 'selected_character' not in st.session_state:
     st.session_state.selected_character = "默认"
-
 # 侧边栏配置
 with st.sidebar:
     st.subheader("🤖 模型选择")
