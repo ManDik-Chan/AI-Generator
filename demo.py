@@ -33,6 +33,75 @@ st.set_page_config(
     layout="wide"
 )
 
+def check_avatar_files():
+    """检查头像文件是否完整可用"""
+    avatars_dir = Path("assets/avatars").resolve()
+    if not avatars_dir.exists():
+        st.error(f"头像目录不存在: {avatars_dir}")
+        return False
+
+    required_files = {
+        "xiaorou.png": "温柔知性大姐姐",
+        "ahu.png": "暴躁顶撞纹身男",
+        "tangtang.png": "呆呆萌萌萝莉妹",
+        "tingqian.png": "高冷霸道男总裁",
+        "nuannuan.png": "阳光开朗小奶狗",
+        "ningshuang.png": "英姿飒爽女王大人",
+        "default_user.png": "默认用户"
+    }
+
+    missing_files = []
+    for file_name, character_name in required_files.items():
+        file_path = avatars_dir / file_name
+        if not file_path.exists():
+            missing_files.append(f"{file_name} ({character_name})")
+
+    if missing_files:
+        st.warning(f"以下头像文件缺失:\n" + "\n".join(missing_files))
+        return False
+
+    return True
+
+
+def debug_avatar_paths():
+    """调试头像文件路径"""
+    avatars_dir = Path("assets/avatars").resolve()
+
+    st.write("当前工作目录:", os.getcwd())
+    st.write("头像目录:", str(avatars_dir))
+    st.write("头像目录是否存在:", avatars_dir.exists())
+
+    if avatars_dir.exists():
+        st.write("可用的头像文件:")
+        for file in avatars_dir.glob("*.png"):
+            st.write(f"- {file.name}")
+            # 尝试读取文件
+            try:
+                with open(file, "rb") as f:
+                    content = f.read(100)  # 只读取前100字节
+                    st.write(f"  - 文件可读: 是 (大小: {len(content)} bytes)")
+            except Exception as e:
+                st.write(f"  - 文件可读: 否 ({str(e)})")
+
+    # 测试具体的角色头像
+    test_file = avatars_dir / "xiaorou.png"
+    st.write("\n测试小柔头像:")
+    st.write("- 路径:", str(test_file))
+    st.write("- 存在:", test_file.exists())
+    if test_file.exists():
+        st.write("- 是文件:", test_file.is_file())
+        st.write("- 大小:", test_file.stat().st_size, "bytes")
+        st.write("- 权限:", oct(test_file.stat().st_mode)[-3:])
+
+
+# 在页面初始化时调用
+if 'debug_mode' in st.session_state and st.session_state.debug_mode:
+    debug_avatar_paths()
+
+# 在应用启动时调用这个函数
+if not check_avatar_files():
+    st.warning("部分头像文件缺失，将使用默认头像替代")
+check_avatar_files()
 
 def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", key: str = None) -> None:
     """使用 Streamlit 原生组件创建复制按钮"""
@@ -49,25 +118,50 @@ def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", 
             st.error('请先安装 pyperclip: pip install pyperclip')
 
 
-def get_user_avatar(character_type: str = None) -> str:
-    """获取用户头像地址"""
-    if character_type is None:
-        return str(AVATARS_DIR / "default_user.png")
+def get_avatar_path(character_type: str = None) -> str:
+    """获取头像图片路径"""
+    try:
+        # 确保AVATARS_DIR是绝对路径
+        avatars_dir = Path("assets/avatars").resolve()
 
-    # 角色头像映射
-    avatar_mapping = {
-        "温柔知性大姐姐": "xiaorou.png",
-        "暴躁顶撞纹身男": "ahu.png",
-        "呆呆萌萌萝莉妹": "tangtang.png",
-        "高冷霸道男总裁": "tingqian.png",
-        "阳光开朗小奶狗": "nuannuan.png",
-        "英姿飒爽女王大人": "ningshuang.png",
-        "默认": "default_user.png"
-    }
+        if character_type is None:
+            default_path = avatars_dir / "default_user.png"
+            if default_path.exists():
+                return str(default_path)
+            return avatar_manager.get_default_avatar_base64()
 
-    # 获取对应角色的头像文件名
-    avatar_file = avatar_mapping.get(character_type, "default_user.png")
-    return str(AVATARS_DIR / avatar_file)
+        # 角色头像映射
+        avatar_mapping = {
+            "温柔知性大姐姐": "xiaorou.png",
+            "暴躁顶撞纹身男": "ahu.png",
+            "呆呆萌萌萝莉妹": "tangtang.png",
+            "高冷霸道男总裁": "tingqian.png",
+            "阳光开朗小奶狗": "nuannuan.png",
+            "英姿飒爽女王大人": "ningshuang.png",
+            "默认": "default_user.png"
+        }
+
+        # 获取对应角色的头像文件名
+        avatar_file = avatar_mapping.get(character_type, "default_user.png")
+        avatar_path = avatars_dir / avatar_file
+
+        if avatar_path.exists():
+            return str(avatar_path)
+
+        # 如果文件不存在，记录更多信息
+        st.warning(f"""
+        头像读取失败:
+        - 当前角色: {character_type}
+        - 查找文件: {avatar_file}
+        - 完整路径: {avatar_path}
+        """)
+
+        # 返回默认头像
+        return avatar_manager.get_default_avatar_base64()
+
+    except Exception as e:
+        st.error(f"获取头像路径出错: {str(e)}")
+        return avatar_manager.get_default_avatar_base64()
 
 
 def get_image_base64(image_path: str) -> str:
@@ -499,7 +593,6 @@ with tabs[2]:
     with col1:
         def render_chat_interface():
             chat_container = st.container()
-            avatar_manager = AvatarManager()
 
             with chat_container:
                 if st.session_state.selected_character not in st.session_state.character_messages:
@@ -510,21 +603,17 @@ with tabs[2]:
                 for idx, message in enumerate(messages):
                     is_user = message["role"] == "user"
 
+                    # 直接使用角色名获取对应的base64头像
                     if is_user:
-                        avatar_src = avatar_manager.get_user_avatar()
+                        avatar_html = f'<img src="{avatar_manager.get_default_avatar_base64()}" style="width: 40px; height: 40px; border-radius: 20px;'
                     else:
-                        avatar_src = avatar_manager.get_avatar_path(st.session_state.selected_character)
-
-                    # 如果返回的是base64字符串
-                    if avatar_src.startswith('data:image'):
-                        avatar_html = f'<img src="{avatar_src}" style="width: 40px; height: 40px; border-radius: 20px;'
-                    else:
-                        # 如果是文件路径，需要读取文件并转换为base64
                         try:
-                            with open(avatar_src, "rb") as image_file:
-                                encoded_string = base64.b64encode(image_file.read()).decode()
-                                avatar_html = f'<img src="data:image/png;base64,{encoded_string}" style="width: 40px; height: 40px; border-radius: 20px;'
-                        except:
+                            # 尝试直接读取头像文件并转换为base64
+                            avatar_file = f"{AVATARS_DIR}/{'xiaorou.png' if st.session_state.selected_character == '温柔知性大姐姐' else 'default_user.png'}"
+                            with open(avatar_file, "rb") as f:
+                                b64_string = base64.b64encode(f.read()).decode()
+                                avatar_html = f'<img src="data:image/png;base64,{b64_string}" style="width: 40px; height: 40px; border-radius: 20px;'
+                        except Exception as e:
                             # 如果读取失败，使用默认base64头像
                             avatar_html = f'<img src="{avatar_manager.get_default_avatar_base64()}" style="width: 40px; height: 40px; border-radius: 20px;'
 
@@ -558,10 +647,10 @@ with tabs[2]:
                             "阳光开朗小奶狗": ("#fff8dc", "#ffa500"),
                             "英姿飒爽女王大人": ("#e6e6fa", "#800080")
                         }
-                        style = character_styles.get(
-                            st.session_state.selected_character,
-                            ("#f0f2f6", "#1a1a1a")  # 默认样式
-                        )
+                        style = character_styles.get(st.session_state.selected_character, ("#f0f2f6", "#1a1a1a"))
+
+                        character_name = CHARACTER_TEMPLATES[st.session_state.selected_character][
+                            "name"] if st.session_state.selected_character != "默认" else "AI助手"
 
                         st.markdown(
                             f"""
@@ -569,7 +658,7 @@ with tabs[2]:
                                 {avatar_html}
                                 <div style="max-width: 80%;">
                                     <div style="font-size: 12px; color: {style[1]}; margin-bottom: 5px;">
-                                        {CHARACTER_TEMPLATES[st.session_state.selected_character]["name"] if st.session_state.selected_character != "默认" else "AI助手"}
+                                        {character_name}
                                     </div>
                                     <div style="background-color: {style[0]}; color: {style[1]}; border-radius: 20px; padding: 15px;">
                                         {message["content"]}
@@ -579,6 +668,7 @@ with tabs[2]:
                             """,
                             unsafe_allow_html=True
                         )
+
 
 
         def handle_input():
