@@ -9,6 +9,12 @@ import base64
 from components.avatar_manager import AvatarManager
 import sys
 
+st.set_page_config(
+    page_title="内容生成器",
+    page_icon="📝",
+    layout="wide"
+)
+
 # 配置全局路径
 ASSETS_DIR = Path("assets")
 AVATARS_DIR = ASSETS_DIR / "avatars"
@@ -28,11 +34,7 @@ model_mapping = {
     "GLM-4": ("glm", "GLM-4-Plus")
 }
 
-st.set_page_config(
-    page_title="内容生成器",
-    page_icon="📝",
-    layout="wide"
-)
+
 
 def check_avatar_files():
     """检查头像文件是否完整可用"""
@@ -331,7 +333,7 @@ with st.sidebar:
                 st.success("✅ 密钥已保存！")
 
 # 主界面内容生成部分
-tabs = st.tabs(["📹 视频脚本", "📱 小红书文案", "🗨️ AI聊天", "🌍 旅游助手", "⚖️ 政法助手"])
+tabs = st.tabs(["📹 视频脚本", "📱 小红书文案", "🗨️ AI聊天", "🌍 旅游助手", "⚖️ 政法助手(目前仅支持GLM-4模型)"])
 
 # 视频脚本生成标签页
 with tabs[0]:

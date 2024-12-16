@@ -13,7 +13,22 @@ from api_clients import create_client
 import io
 from docx import Document
 import PyPDF2
+import streamlit as st
 
+
+def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", key: str = None) -> None:
+    """使用 Streamlit 原生组件创建复制按钮"""
+    if key not in st.session_state:
+        st.session_state[key] = False
+
+    if st.button(button_text, key=f"btn_{key}", use_container_width=True):
+        try:
+            import pyperclip
+            pyperclip.copy(text)
+            st.session_state[key] = True
+            st.success('✅ 已复制到剪贴板！', icon="✅")
+        except ImportError:
+            st.error('请先安装 pyperclip: pip install pyperclip')
 
 def verify_api_key(model_type: str, api_key: str, max_retries: int = 2) -> Tuple[bool, str]:
     """验证API密钥是否有效，带重试机制"""

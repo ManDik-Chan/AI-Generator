@@ -2,6 +2,7 @@ import streamlit as st
 from typing import Dict, List
 from utils import _get_glm_response
 from contract_templates import CONTRACT_TEMPLATES, get_prompt_for_contract
+from utils import create_copy_button
 
 def generate_contract(template_type: str, details: Dict, api_key: str) -> Dict:
     """生成合同内容"""
@@ -107,22 +108,33 @@ def render_contract_generator():
             )
 
             if result['status'] == 'success':
-                st.markdown("### 📄 生成的合同")
-                st.write(result['contract'])
-
                 # 保存到session state
                 st.session_state.generated_contract = result['contract']
 
-                # 复制按钮
-                if st.button("📋 复制合同文本", key="copy_contract"):
-                    try:
-                        import pyperclip
-                        pyperclip.copy(result['contract'])
-                        st.success("✅ 已复制到剪贴板！")
-                    except ImportError:
-                        st.error("请先安装 pyperclip: pip install pyperclip")
+                # 显示生成的合同
+                st.markdown("### 📄 生成的合同")
+                st.write(st.session_state.generated_contract)
+
+                # 使用create_copy_button函数进行复制
+                create_copy_button(
+                    text=st.session_state.generated_contract,
+                    button_text="📋 复制合同文本",
+                    key="copy_contract_btn"
+                )
             else:
                 st.error(result['message'])
+
+        # 如果session state中有已生成的合同,也显示出来
+    elif 'generated_contract' in st.session_state:
+        st.markdown("### 📄 生成的合同")
+        st.write(st.session_state.generated_contract)
+
+        # 使用create_copy_button函数进行复制
+        create_copy_button(
+            text=st.session_state.generated_contract,
+            button_text="📋 复制合同文本",
+            key="copy_contract_btn"
+        )
 
     # 添加提示信息
     with st.expander("💡 使用提示"):
