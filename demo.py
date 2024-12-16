@@ -1,21 +1,13 @@
-import os
-import sys
+import streamlit as st
+from utils import generate_script, verify_api_key, generate_xiaohongshu_content, get_chat_response
+from langchain.memory import ConversationBufferMemory
+import streamlit.components.v1 as components
+from character_templates import CHARACTER_TEMPLATES
 from pathlib import Path
+import os
 import base64
-current_dir = Path(__file__).parent.resolve()
-if str(current_dir) not in sys.path:
-    sys.path.append(str(current_dir))
-try:
-    from utils import generate_script, verify_api_key, generate_xiaohongshu_content, get_chat_response
-    from langchain.memory import ConversationBufferMemory
-    import streamlit.components.v1 as components
-    from character_templates import CHARACTER_TEMPLATES
-    from components.avatar_manager import AvatarManager
-except ImportError as e:
-    import streamlit as st
-    st.error(f"导入错误: {str(e)}")
-    st.error("请确保所有必要的文件都在正确的位置。")
-    st.stop()
+from components.avatar_manager import AvatarManager
+import sys
 
 # 配置全局路径
 ASSETS_DIR = Path("assets")
