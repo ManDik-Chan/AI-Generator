@@ -4,9 +4,11 @@ from langchain.memory import ConversationBufferMemory
 import streamlit.components.v1 as components
 from character_templates import CHARACTER_TEMPLATES
 import sys
-sys.path.append(r"C:\Users\21157\PycharmProjects\视频文案生成\venv\components")
+sys.path.append(r"C:\Users\21157\PycharmProjects\视频文案生成\components")
 from avatar_manager import AvatarManager
 from pathlib import Path
+import os
+import base64
 
 avatar_manager = AvatarManager
 
@@ -48,12 +50,11 @@ st.title("📝 AI生成小工具")
 
 # 初始化 session state
 if 'api_keys' not in st.session_state:
-    # 从Streamlit secrets获取预设的API密钥
     st.session_state.api_keys = {
-        'qwen': st.secrets.get("api_keys", {}).get("dashscope", ""),
-        'chatgpt': st.secrets.get("api_keys", {}).get("openai", ""),
-        'claude': st.secrets.get("api_keys", {}).get("anthropic", ""),
-        'glm': st.secrets.get("api_keys", {}).get("glm", "")
+        'qwen': st.secrets.get("api_keys", {}).get("dashscope", ""),  # 从 secrets 获取通义千问密钥
+        'chatgpt': "",  # ChatGPT API 密钥留空，由用户输入
+        'claude': "",   # Claude API 密钥留空，由用户输入
+        'glm': st.secrets.get("api_keys", {}).get("glm", "")  # 从 secrets 获取智谱 AI 密钥
     }
 if 'use_env_qwen_key' not in st.session_state:
     st.session_state.use_env_qwen_key = False
@@ -67,10 +68,6 @@ if 'travel_response' not in st.session_state:
     st.session_state.travel_response = None
 if 'selected_character' not in st.session_state:
     st.session_state.selected_character = "默认"
-
-# 从系统环境变量中加载 API 密钥
-dashscope_api_key = os.getenv('DASHSCOPE_API_KEY')
-glm_api_key = os.getenv('GLM_API_KEY')
 
 # 侧边栏配置
 with st.sidebar:
@@ -126,76 +123,82 @@ with st.sidebar:
     key_label = model_info[model_type]['api_label']
     key_url = model_info[model_type]['api_url']
 
-    # 预存密钥相关按钮
+    # 只为qwen和glm显示预存密钥选项
     if model_key in ["qwen", "glm"]:
-        col1, col2 = st.columns(2)
-        with col1:
-            stored_key = st.session_state.api_keys[model_key]
-            use_env_key = st.session_state.get(f'use_env_{model_key}_key', False)
+        # 添加选择框让用户选择是否使用预存密钥
+        use_stored_key = st.checkbox(
+            "使用预存密钥",
+            key=f"use_stored_{model_key}",
+            value=st.session_state.get(f'use_env_{model_key}_key', False)
+        )
 
-            if st.button("📂 加载预存密钥",
-                         key=f"use_env_{model_key}_key_btn",
-                         disabled=use_env_key):
-                if stored_key:
-                    st.session_state[f'use_env_{model_key}_key'] = True
-                    st.warning('请确保点击"验证密钥"和"保存密钥"按钮以完成配置。')
-                    st.experimental_rerun()
-                else:
-                    st.error("⚠️ 未找到预存密钥")
-
-        with col2:
-            if st.button("❌ 取消使用预存密钥",
-                         key=f"cancel_env_{model_key}_key_btn",
-                         disabled=not use_env_key):
-                st.session_state[f'use_env_{model_key}_key'] = False
-                st.session_state.api_keys[model_key] = ""
-                st.session_state[f"{model_key}_verified"] = False
-                st.experimental_rerun()
-
-    # 显示API密钥输入框
-    if ((model_key == 'qwen' and st.session_state.get('use_env_qwen_key')) or
-            (model_key == 'glm' and st.session_state.get('use_env_glm_key'))):
-        api_key_display = st.empty()
-        api_key_display.text_input(key_label, value="预存的API密钥已加载", disabled=True)
-        api_key = st.session_state.api_keys[model_key]
-        st.warning('请确保点击"验证密钥"和"保存密钥"按钮以完成配置。')
+        if use_stored_key:
+            # 如果选择使用预存密钥，从session state获取密钥
+            st.session_state[f'use_env_{model_key}_key'] = True
+            api_key = st.session_state.api_keys[model_key]
+            st.text_input(
+                key_label,
+                value="*" * 10,  # 显示星号而不是实际密钥
+                disabled=True,
+                type="password"
+            )
+            st.info("✅ 已加载预存密钥")
+        else:
+            # 如果不使用预存密钥，显示输入框
+            st.session_state[f'use_env_{model_key}_key'] = False
+            api_key = st.text_input(
+                key_label,
+                type="password",
+                value="",  # 不显示任何预设值
+                key=f"{model_key}_key"
+            )
+            if api_key:  # 如果用户输入了新的密钥
+                st.session_state.api_keys[model_key] = api_key
     else:
+        # 对于其他模型，正常显示输入框
         api_key = st.text_input(
             key_label,
             type="password",
             value=st.session_state.api_keys.get(model_key, ''),
             key=f"{model_key}_key"
         )
-        st.markdown(f"[获取{model_type}密钥]({key_url})")
+        if api_key:  # 如果用户输入了新的密钥
+            st.session_state.api_keys[model_key] = api_key
 
+    # 验证和保存按钮部分
     col1, col2 = st.columns(2)
 
-    if col1.button("🔍 验证密钥", key="verify_btn", disabled=not api_key):
-        if not api_key:
-            st.error("⚠️ 请输入密钥！")
-        else:
-            with st.spinner("正在验证密钥..."):
-                try:
-                    is_valid, message = verify_api_key(model_key, api_key)
-                    if is_valid:
-                        st.success(f"✅ {message}")
-                        st.session_state.api_keys[model_key] = api_key
-                        st.session_state[f"{model_key}_verified"] = True
-                    else:
-                        st.error(f"❌ {message}")
+    with col1:
+        if st.button("🔍 验证密钥",
+                     key="verify_btn",
+                     disabled=not api_key):
+            if not api_key:
+                st.error("⚠️ 请输入密钥！")
+            else:
+                with st.spinner("正在验证密钥..."):
+                    try:
+                        is_valid, message = verify_api_key(model_key, api_key)
+                        if is_valid:
+                            st.success(f"✅ {message}")
+                            st.session_state[f"{model_key}_verified"] = True
+                        else:
+                            st.error(f"❌ {message}")
+                            st.session_state[f"{model_key}_verified"] = False
+                    except Exception as e:
+                        st.error(f"❌ 验证过程出错: {str(e)}")
                         st.session_state[f"{model_key}_verified"] = False
-                except Exception as e:
-                    st.error(f"❌ 验证过程出错: {str(e)}")
-                    st.session_state[f"{model_key}_verified"] = False
 
-    if col2.button("💾 保存密钥", key="save_btn", disabled=not api_key):
-        if not api_key:
-            st.error("⚠️ 请输入密钥！")
-        elif not st.session_state.get(f"{model_key}_verified", False):
-            st.error("⚠️ 请先验证密钥！")
-        else:
-            st.session_state.api_keys[model_key] = api_key
-            st.success("✅ 密钥已保存！")
+    with col2:
+        if st.button("💾 保存密钥",
+                     key="save_btn",
+                     disabled=not api_key):
+            if not api_key:
+                st.error("⚠️ 请输入密钥！")
+            elif not st.session_state.get(f"{model_key}_verified", False):
+                st.error("⚠️ 请先验证密钥！")
+            else:
+                st.session_state.api_keys[model_key] = api_key
+                st.success("✅ 密钥已保存！")
 
 # 主界面内容生成部分
 tabs = st.tabs(["📹 视频脚本", "📱 小红书文案", "🗨️ AI聊天", "🌍 旅游助手", "⚖️ 政法助手"])
@@ -461,8 +464,9 @@ with tabs[2]:
     with col1:
         def render_chat_interface():
             chat_container = st.container()
+            avatar_manager = AvatarManager()
+
             with chat_container:
-                # 确保存在消息历史
                 if st.session_state.selected_character not in st.session_state.character_messages:
                     st.session_state.character_messages[st.session_state.selected_character] = []
 
@@ -471,7 +475,30 @@ with tabs[2]:
                 for idx, message in enumerate(messages):
                     is_user = message["role"] == "user"
 
-                    # 设置不同角色的消息样式
+                    if is_user:
+                        avatar_src = avatar_manager.get_user_avatar()
+                    else:
+                        avatar_src = avatar_manager.get_avatar_path(st.session_state.selected_character)
+
+                    # 如果返回的是base64字符串
+                    if avatar_src.startswith('data:image'):
+                        avatar_html = f'<img src="{avatar_src}" style="width: 40px; height: 40px; border-radius: 20px;'
+                    else:
+                        # 如果是文件路径，需要读取文件并转换为base64
+                        try:
+                            with open(avatar_src, "rb") as image_file:
+                                encoded_string = base64.b64encode(image_file.read()).decode()
+                                avatar_html = f'<img src="data:image/png;base64,{encoded_string}" style="width: 40px; height: 40px; border-radius: 20px;'
+                        except:
+                            # 如果读取失败，使用默认base64头像
+                            avatar_html = f'<img src="{avatar_manager.get_default_avatar_base64()}" style="width: 40px; height: 40px; border-radius: 20px;'
+
+                    if is_user:
+                        avatar_html += ' margin-left: 10px;">'
+                    else:
+                        avatar_html += ' margin-right: 10px;">'
+
+                    # 设置消息样式
                     if is_user:
                         st.markdown(
                             f"""
@@ -482,14 +509,12 @@ with tabs[2]:
                                         {message["content"]}
                                     </div>
                                 </div>
-                                <img src="data:image/png;base64,{get_image_base64(get_avatar_path(None))}" 
-                                     style="width: 40px; height: 40px; border-radius: 20px; margin-left: 10px;">
+                                {avatar_html}
                             </div>
                             """,
                             unsafe_allow_html=True
                         )
                     else:
-                        # 获取角色样式
                         character_styles = {
                             "温柔知性大姐姐": ("#f8e1e7", "#d35d90"),
                             "暴躁顶撞纹身男": ("#ffe4e1", "#ff4500"),
@@ -506,8 +531,7 @@ with tabs[2]:
                         st.markdown(
                             f"""
                             <div style="display: flex; justify-content: flex-start; align-items: flex-start; margin: 10px 0;">
-                                <img src="data:image/png;base64,{get_image_base64(get_avatar_path(st.session_state.selected_character))}" 
-                                     style="width: 40px; height: 40px; border-radius: 20px; margin-right: 10px;">
+                                {avatar_html}
                                 <div style="max-width: 80%;">
                                     <div style="font-size: 12px; color: {style[1]}; margin-bottom: 5px;">
                                         {CHARACTER_TEMPLATES[st.session_state.selected_character]["name"] if st.session_state.selected_character != "默认" else "AI助手"}
