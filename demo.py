@@ -7,6 +7,8 @@ from pathlib import Path
 import os
 import base64
 from components.avatar_manager import AvatarManager
+# 初始化头像管理器
+avatar_manager = AvatarManager()
 import sys
 
 st.set_page_config(
@@ -23,17 +25,22 @@ AVATARS_DIR = ASSETS_DIR / "avatars"
 ASSETS_DIR.mkdir(exist_ok=True)
 AVATARS_DIR.mkdir(exist_ok=True)
 
-# 初始化头像管理器
-avatar_manager = AvatarManager()
+
 
 # 模型映射配置
 model_mapping = {
+    "GLM-4": ("glm", "GLM-4-Plus"),
     "通义千问 (Qwen)": ("qwen", "Qwen-Max"),
     "ChatGPT-4": ("chatgpt", "GPT-4"),
-    "Claude 3.5": ("claude", "Claude-3-Sonnet"),
-    "GLM-4": ("glm", "GLM-4-Plus")
+    "Claude 3.5": ("claude", "Claude-3-Sonnet")
 }
-
+#模型名称映射
+model_display_names = {
+    "qwen": "通义千问",
+    "chatgpt": "ChatGPT",
+    "claude": "Claude",
+    "glm": "智谱GLM"
+}
 
 
 def check_avatar_files():
@@ -50,6 +57,7 @@ def check_avatar_files():
         "tingqian.png": "高冷霸道男总裁",
         "nuannuan.png": "阳光开朗小奶狗",
         "ningshuang.png": "英姿飒爽女王大人",
+        "anran.png": "性感冷艳御姐",
         "default_user.png": "默认用户"
     }
 
@@ -106,19 +114,53 @@ if not check_avatar_files():
     st.warning("部分头像文件缺失，将使用默认头像替代")
 check_avatar_files()
 
+
 def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", key: str = None) -> None:
-    """使用 Streamlit 原生组件创建复制按钮"""
+    """使用 JavaScript 实现的复制功能"""
     if key not in st.session_state:
         st.session_state[key] = False
 
-    if st.button(button_text, key=f"btn_{key}", use_container_width=True):
-        try:
-            import pyperclip
-            pyperclip.copy(text)
-            st.session_state[key] = True
-            st.success('✅ 已复制到剪贴板！', icon="✅")
-        except ImportError:
-            st.error('请先安装 pyperclip: pip install pyperclip')
+    # 创建唯一的键值
+    button_key = f"btn_{key}"
+
+    # JavaScript 复制函数
+    js_code = f"""
+    <script>
+    function copyToClipboard_{key}() {{
+        const text = `{text}`;
+        navigator.clipboard.writeText(text).then(
+            function() {{
+                // Success callback
+                document.getElementById("{button_key}_status").innerHTML = "✅ 已复制到剪贴板！";
+                setTimeout(function() {{
+                    document.getElementById("{button_key}_status").innerHTML = "";
+                }}, 2000);
+            }},
+            function() {{
+                // Error callback
+                document.getElementById("{button_key}_status").innerHTML = "❌ 复制失败，请手动复制";
+                setTimeout(function() {{
+                    document.getElementById("{button_key}_status").innerHTML = "";
+                }}, 2000);
+            }}
+        );
+    }}
+    </script>
+    """
+
+    # HTML 按钮
+    html_button = f"""
+    <button 
+        onclick="copyToClipboard_{key}()" 
+        style="width: 100%; padding: 0.5rem; background-color: #0078D4; color: white; border: none; border-radius: 4px; cursor: pointer;"
+    >
+        {button_text}
+    </button>
+    <div id="{button_key}_status" style="text-align: center; margin-top: 0.5rem;"></div>
+    """
+
+    # 渲染HTML
+    st.components.v1.html(js_code + html_button, height=80)
 
 
 def get_avatar_path(character_type: str = None) -> str:
@@ -141,6 +183,7 @@ def get_avatar_path(character_type: str = None) -> str:
             "高冷霸道男总裁": "tingqian.png",
             "阳光开朗小奶狗": "nuannuan.png",
             "英姿飒爽女王大人": "ningshuang.png",
+            "性感冷艳御姐": "anran.png",
             "默认": "default_user.png"
         }
 
@@ -201,19 +244,62 @@ if 'travel_response' not in st.session_state:
     st.session_state.travel_response = None
 if 'selected_character' not in st.session_state:
     st.session_state.selected_character = "默认"
+
+
+def get_welcome_message(character_type: str, model_type: str = None) -> str:
+    """
+    根据角色类型和模型类型生成欢迎消息
+    """
+    if character_type == "AI助手" and model_type:
+        model_name = model_display_names.get(model_type, "AI")
+        return f"你好，我是由{model_name}驱动的AI助手，请问有什么可以帮你的吗？"
+    elif character_type in CHARACTER_TEMPLATES:
+        # 构建人设提示词
+        character = CHARACTER_TEMPLATES[character_type]
+        prompt = f"""
+你现在是一个{character['name']}。
+
+个性特点：
+{character['personality']}
+
+请根据以上人设，生成一个独特的开场白（不超过50字），展现你的性格特点。直接输出开场白内容，不需要任何解释。
+"""
+        try:
+            # 获取当前选择的模型类型和API密钥
+            current_model_key = st.session_state.get('current_model_type')
+            api_key = st.session_state.api_keys.get(current_model_key)
+
+            # 使用AI生成开场白
+            response = get_chat_response(
+                prompt=prompt,
+                memory=None,
+                model_type=current_model_key,
+                api_key=api_key,
+                character_type=None,
+                is_chat_feature=False
+            )
+            return response.strip()
+        except Exception as e:
+            print(f"生成开场白失败: {str(e)}")
+            # 如果AI生成失败，使用默认开场白
+            return f"你好，我是{character['name']}，有什么可以帮你的吗？"
+
+    return "你好，我是AI助手，有什么可以帮你的吗？"
+
 # 侧边栏配置
 with st.sidebar:
     st.subheader("🤖 模型选择")
 
     # 更新模型信息
     model_info = {
-        "通义千问 (Qwen)": {
-            "key": "qwen",
-            "model_name": "Qwen-Max",
-            "description": "阿里云最新版通义千问大模型",
-            "api_label": "通义千问API密钥:",
-            "api_url": "https://bailian.console.aliyun.com/?apiKey=1#/api-key"
+        "GLM-4": {
+            "key": "glm",
+            "model_name": "GLM-4-Plus",
+            "description": "智谱最新版ChatGLM大模型",
+            "api_label": "智谱API密钥:",
+            "api_url": "https://open.bigmodel.cn/usercenter/apikeys"
         },
+
         "ChatGPT-4": {
             "key": "chatgpt",
             "model_name": "GPT-4",
@@ -228,12 +314,12 @@ with st.sidebar:
             "api_label": "Anthropic API密钥:",
             "api_url": "https://console.anthropic.com/settings/keys"
         },
-        "GLM-4": {
-            "key": "glm",
-            "model_name": "GLM-4-Plus",
-            "description": "智谱最新版ChatGLM大模型",
-            "api_label": "智谱API密钥:",
-            "api_url": "https://open.bigmodel.cn/usercenter/apikeys"
+        "通义千问 (Qwen)": {
+            "key": "qwen",
+            "model_name": "Qwen-Max",
+            "description": "阿里云最新版通义千问大模型",
+            "api_label": "通义千问API密钥:",
+            "api_url": "https://bailian.console.aliyun.com/?apiKey=1#/api-key"
         }
     }
 
@@ -332,6 +418,25 @@ with st.sidebar:
                 st.session_state.api_keys[model_key] = api_key
                 st.success("✅ 密钥已保存！")
 
+        # 获取之前的模型类型
+        previous_model = st.session_state.get('previous_model_type', None)
+
+        # 保存当前模型类型
+        current_model = model_mapping[model_type][0]
+        st.session_state['current_model_type'] = current_model
+
+        # 如果模型发生变化且当前是AI助手模式，更新欢迎消息
+        if (previous_model != current_model and
+                st.session_state.get('selected_character') == "AI助手" and
+                "AI助手" in st.session_state.character_messages):
+            welcome_msg = get_welcome_message("AI助手", current_model)
+            st.session_state.character_messages["AI助手"] = [
+                {"role": "assistant", "content": welcome_msg}
+            ]
+
+        # 更新之前的模型类型
+        st.session_state['previous_model_type'] = current_model
+
 # 主界面内容生成部分
 tabs = st.tabs(["📹 视频脚本", "📱 小红书文案", "🗨️ AI聊天", "🌍 旅游助手", "⚖️ 政法助手(目前仅支持GLM-4模型)"])
 
@@ -422,7 +527,11 @@ with tabs[0]:
 
         # 复制功能（不包含声明文本）
         full_script = f"标题：{st.session_state['generated_title']}\n\n{st.session_state['generated_script']}"
-        create_copy_button(full_script, "📋 复制脚本到剪贴板", "copy_script_btn")
+        create_copy_button(
+            text=full_script,
+            button_text="📋 复制脚本到剪贴板",
+            key=f"copy_script_{hash(full_script)}"  # 使用内容hash作为唯一键
+        )
 
         # 添加AI声明
         st.markdown(f"---\n*此内容为 {model_type} 所生成，仅供参考，请自行着重考量。*", help="AI生成内容可能需要人工审核和修改")
@@ -449,6 +558,10 @@ with tabs[1]:
 
     is_key_verified = st.session_state.get(f"{current_model_key}_verified", False)
 
+    # 初始化session state
+    if 'selected_title_index' not in st.session_state:
+        st.session_state.selected_title_index = 0
+
     generate_xiaohongshu_btn = st.button(
         "✨ 生成文案",
         key="generate_xiaohongshu_btn",
@@ -474,7 +587,8 @@ with tabs[1]:
                 )
 
                 st.success("✅ 小红书文案已生成！")
-                st.session_state['xiaohongshu_result'] = result
+                st.session_state.xiaohongshu_result = result
+                st.session_state.selected_title_index = 0  # 重置标题选择
 
             except Exception as e:
                 st.error(f"❌ 生成失败：{str(e)}")
@@ -486,16 +600,31 @@ with tabs[1]:
 
         result = st.session_state['xiaohongshu_result']
 
-        if 'title' in result:
-            st.subheader("📌 文案标题")
-            st.info(result['title'])
-            selected_title = result['title']
-        elif 'titles' in result:
-            st.subheader("📌 标题选项")
-            for idx, title in enumerate(result['titles'], 1):
-                st.info(f"标题 {idx}: {title}")
-            selected_title = result['titles'][0]
+        # 标题选择部分
+        st.subheader("📌 选择标题")
+        titles = result['titles']
 
+        # 创建点击选择标题的按钮
+        cols = st.columns(5)  # 创建5列用于放置标题按钮
+        for i, title in enumerate(titles):
+            with cols[i]:
+                if st.button(
+                        f"标题 {i + 1}",
+                        key=f"title_btn_{i}",
+                        help=title,
+                        use_container_width=True,
+                        type="secondary" if i != st.session_state.get('selected_title_index', 0) else "primary"
+                ):
+                    st.session_state.selected_title_index = i
+                st.caption(title)
+
+        # 获取选中的标题
+        selected_title = titles[st.session_state.get('selected_title_index', 0)]
+
+        # 显示选中的标题
+        st.info(f"已选择: {selected_title}")
+
+        # 显示主要内容
         st.subheader("📝 文案内容")
         st.write(result['content'])
 
@@ -503,13 +632,18 @@ with tabs[1]:
         tags = result['tags']
         st.write(' '.join([f"#{tag}" for tag in tags]))
 
-        # 复制功能（不包含声明文本）
+        # 复制功能（直接放在主界面）
         full_content = f"{selected_title}\n\n{result['content']}\n\n{' '.join([f'#{tag}' for tag in tags])}"
-        create_copy_button(full_content, "📋 复制文案到剪贴板", "copy_xiaohongshu_btn")
+
+        st.markdown("### 一键复制")
+        create_copy_button(
+            text=full_content,
+            button_text="📋 复制文案到剪贴板",
+            key=f"copy_xiaohongshu_{hash(full_content)}"
+        )
 
         # 添加AI声明
         st.markdown(f"---\n*此内容为 {model_type} 所生成，仅供参考，请自行着重考量。*", help="AI生成内容可能需要人工审核和修改")
-
 
 def get_avatar_path(character_type: str = None) -> str:
     """获取头像图片路径"""
@@ -545,19 +679,24 @@ with tabs[2]:
 
     with col2:
         # 人设选择部分
-        previous_character = st.session_state.get('selected_character', "默认")
+        previous_character = st.session_state.get('selected_character', "AI助手")
         st.session_state.selected_character = st.selectbox(
             "🎭 选择AI人设",
-            ["默认"] + list(CHARACTER_TEMPLATES.keys()),
+            ["AI助手"] + [char for char in CHARACTER_TEMPLATES.keys() if char not in ["AI助手", "默认"]],
             key="character_select"
         )
+
+        # 获取当前选择的模型类型
+        current_model = model_mapping[model_type][0]
 
         # 检测人设是否改变
         if previous_character != st.session_state.selected_character:
             if st.session_state.selected_character not in st.session_state.character_messages:
+                # 获取欢迎消息（使用AI生成）
+                with st.spinner("正在准备角色..."):
+                    welcome_msg = get_welcome_message(st.session_state.selected_character, current_model)
+
                 # 初始化新人设的消息和记忆
-                character = CHARACTER_TEMPLATES[st.session_state.selected_character]
-                welcome_msg = f"你好，我是{character['name']}，有什么可以帮你的吗？"
                 st.session_state.character_messages[st.session_state.selected_character] = [
                     {"role": "assistant", "content": welcome_msg}
                 ]
@@ -569,7 +708,7 @@ with tabs[2]:
                     output_key="output"
                 )
 
-        if st.session_state.selected_character != "默认":
+        if st.session_state.selected_character != "AI助手":
             character = CHARACTER_TEMPLATES[st.session_state.selected_character]
             st.markdown(f"**当前人设**: {character['name']}")
             with st.expander("👀 查看人设详情"):
@@ -596,6 +735,7 @@ with tabs[2]:
     with col1:
         def render_chat_interface():
             chat_container = st.container()
+            current_model = st.session_state.get('current_model_type')
 
             with chat_container:
                 if st.session_state.selected_character not in st.session_state.character_messages:
@@ -606,19 +746,11 @@ with tabs[2]:
                 for idx, message in enumerate(messages):
                     is_user = message["role"] == "user"
 
-                    # 直接使用角色名获取对应的base64头像
+                    # 获取头像
                     if is_user:
-                        avatar_html = f'<img src="{avatar_manager.get_default_avatar_base64()}" style="width: 40px; height: 40px; border-radius: 20px;'
+                        avatar_html = f'<img src="{avatar_manager.get_user_avatar_base64()}" style="width: 40px; height: 40px; border-radius: 20px;'
                     else:
-                        try:
-                            # 尝试直接读取头像文件并转换为base64
-                            avatar_file = f"{AVATARS_DIR}/{'xiaorou.png' if st.session_state.selected_character == '温柔知性大姐姐' else 'default_user.png'}"
-                            with open(avatar_file, "rb") as f:
-                                b64_string = base64.b64encode(f.read()).decode()
-                                avatar_html = f'<img src="data:image/png;base64,{b64_string}" style="width: 40px; height: 40px; border-radius: 20px;'
-                        except Exception as e:
-                            # 如果读取失败，使用默认base64头像
-                            avatar_html = f'<img src="{avatar_manager.get_default_avatar_base64()}" style="width: 40px; height: 40px; border-radius: 20px;'
+                        avatar_html = f'<img src="{avatar_manager.get_avatar_base64(st.session_state.selected_character, current_model)}" style="width: 40px; height: 40px; border-radius: 20px;'
 
                     if is_user:
                         avatar_html += ' margin-left: 10px;">'
@@ -642,18 +774,30 @@ with tabs[2]:
                             unsafe_allow_html=True
                         )
                     else:
-                        character_styles = {
-                            "温柔知性大姐姐": ("#f8e1e7", "#d35d90"),
-                            "暴躁顶撞纹身男": ("#ffe4e1", "#ff4500"),
-                            "呆呆萌萌萝莉妹": ("#ffebcd", "#ff69b4"),
-                            "高冷霸道男总裁": ("#e6e6fa", "#483d8b"),
-                            "阳光开朗小奶狗": ("#fff8dc", "#ffa500"),
-                            "英姿飒爽女王大人": ("#e6e6fa", "#800080")
-                        }
-                        style = character_styles.get(st.session_state.selected_character, ("#f0f2f6", "#1a1a1a"))
-
-                        character_name = CHARACTER_TEMPLATES[st.session_state.selected_character][
-                            "name"] if st.session_state.selected_character != "默认" else "AI助手"
+                        # 为AI助手使用特殊的样式
+                        if st.session_state.selected_character == "AI助手":
+                            model_styles = {
+                                "qwen": ("#e6f3ff", "#0077cc"),  # 通义千问的蓝色主题
+                                "chatgpt": ("#e9f7ef", "#28a745"),  # ChatGPT的绿色主题
+                                "claude": ("#f5e6ff", "#6f42c1"),  # Claude的紫色主题
+                                "glm": ("#fff3e6", "#fd7e14")  # GLM的橙色主题
+                            }
+                            style = model_styles.get(current_model, ("#f0f2f6", "#1a1a1a"))
+                            name_suffix = f" ({model_display_names.get(current_model, 'AI')})"
+                            character_name = "AI助手" + name_suffix
+                        else:
+                            # 其他角色使用原有的样式
+                            character_styles = {
+                                "温柔知性大姐姐": ("#f8e1e7", "#d35d90"),
+                                "暴躁顶撞纹身男": ("#ffe4e1", "#ff4500"),
+                                "呆呆萌萌萝莉妹": ("#ffebcd", "#ff69b4"),
+                                "高冷霸道男总裁": ("#e6e6fa", "#483d8b"),
+                                "阳光开朗小奶狗": ("#fff8dc", "#ffa500"),
+                                "英姿飒爽女王大人": ("#e6e6fa", "#800080"),
+                                "性感冷艳御姐": ("#FFE4E1", "#800020"),
+                            }
+                            style = character_styles.get(st.session_state.selected_character, ("#f0f2f6", "#1a1a1a"))
+                            character_name = CHARACTER_TEMPLATES[st.session_state.selected_character]["name"]
 
                         st.markdown(
                             f"""
@@ -968,18 +1112,50 @@ with tabs[3]:
                 st.error(f"生成失败：{str(e)}")
                 st.info("💡 请检查输入内容是否完整，或稍后重试")
 
-    if st.session_state.travel_response:
-        st.markdown("---")
-        st.markdown("### 🎯 规划结果")
-        st.write(st.session_state.travel_response)
 
-        # 复制按钮（不包含声明文本）
+    def handle_travel_response(response_text: str):
+        """处理旅游助手的响应，确保状态保持"""
+        if 'travel_response' not in st.session_state:
+            st.session_state.travel_response = None
+
+        st.session_state.travel_response = response_text
+
+        st.markdown("### 🎯 规划结果")
+        st.write(response_text)
+
+        # 使用新的复制按钮实现
         create_copy_button(
-            text=st.session_state.travel_response,
+            text=response_text,
             button_text="📋 复制到剪贴板",
-            key="travel_copy"
+            key=f"travel_copy_{hash(response_text)}"
         )
 
+
+    if generate_btn:
+        # ... (保留生成逻辑代码)
+        with st.spinner(f"🎯 正在为您规划{destination}之旅..."):
+            try:
+                # ... (保留现有的生成逻辑)
+                response = get_chat_response(
+                    prompt=prompt,
+                    memory=None,
+                    model_type=current_model_key,
+                    api_key=st.session_state.api_keys[current_model_key],
+                    character_type=None,
+                    is_chat_feature=False
+                )
+
+                # 保存响应到 session state
+                st.session_state.travel_response = response
+
+            except Exception as e:
+                st.error(f"生成失败：{str(e)}")
+                st.info("💡 请检查输入内容是否完整，或稍后重试")
+
+    # 修改后的显示结果部分
+    if st.session_state.travel_response:
+        st.markdown("---")
+        handle_travel_response(st.session_state.travel_response)
         # 添加AI声明
         st.markdown(f"---\n*此内容为 {model_type} 所生成，仅供参考，请自行着重考量。*", help="AI生成内容可能需要人工审核和修改")
 

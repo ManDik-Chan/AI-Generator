@@ -1,8 +1,9 @@
 import streamlit as st
-from typing import Dict, List
+from typing import Dict
 from utils import _get_glm_response
 from contract_templates import CONTRACT_TEMPLATES, get_prompt_for_contract
 from utils import create_copy_button
+
 
 def generate_contract(template_type: str, details: Dict, api_key: str) -> Dict:
     """生成合同内容"""
@@ -27,6 +28,10 @@ def generate_contract(template_type: str, details: Dict, api_key: str) -> Dict:
 def render_contract_generator():
     """渲染合同生成器界面"""
     st.subheader("📝 合同起草")
+
+    # 初始化session state
+    if 'generated_contract' not in st.session_state:
+        st.session_state.generated_contract = None
 
     # 选择合同类型
     template_options = list(CONTRACT_TEMPLATES.keys()) + ["自定义合同"]
@@ -113,27 +118,27 @@ def render_contract_generator():
 
                 # 显示生成的合同
                 st.markdown("### 📄 生成的合同")
-                st.write(st.session_state.generated_contract)
+                st.write(result['contract'])
 
-                # 使用create_copy_button函数进行复制
+                # 添加复制按钮
                 create_copy_button(
-                    text=st.session_state.generated_contract,
+                    text=result['contract'],
                     button_text="📋 复制合同文本",
-                    key="copy_contract_btn"
+                    key=f"copy_contract_{hash(result['contract'])}"
                 )
             else:
                 st.error(result['message'])
 
-        # 如果session state中有已生成的合同,也显示出来
-    elif 'generated_contract' in st.session_state:
+    # 如果已有生成的合同则显示
+    elif st.session_state.generated_contract is not None:
         st.markdown("### 📄 生成的合同")
         st.write(st.session_state.generated_contract)
 
-        # 使用create_copy_button函数进行复制
+        # 添加复制按钮
         create_copy_button(
             text=st.session_state.generated_contract,
             button_text="📋 复制合同文本",
-            key="copy_contract_btn"
+            key=f"copy_contract_{hash(st.session_state.generated_contract)}"
         )
 
     # 添加提示信息

@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from utils import (
     extract_text_from_pdf,
     extract_text_from_docx,
@@ -225,7 +226,11 @@ def render_legal_assistant():
 
                     with st.expander("查看合并后的完整文本"):
                         st.text_area("完整文本", combined_text, height=300)
-                        create_copy_button(combined_text, "📋 复制完整文本", "copy_full_text")
+                        create_copy_button(
+                            text=combined_text,
+                            button_text="📋 复制完整文本",
+                            key=f"copy_full_text_{hash(combined_text)}"
+                        )
 
                 # 清空按钮
                 if st.button("清空所有图片", use_container_width=True):
@@ -261,7 +266,11 @@ def render_legal_assistant():
             if result['status'] == 'success':
                 st.markdown("### 📋 分析结果")
                 st.write(result['analysis'])
-                create_copy_button(result['analysis'], "📋 复制分析结果", "copy_analysis")
+                create_copy_button(
+                    text=result['analysis'],
+                    button_text="📋 复制分析结果",
+                    key=f"copy_analysis_{hash(result['analysis'])}"
+                )
             else:
                 st.error(result['message'])
 
@@ -301,7 +310,11 @@ def render_legal_assistant():
             if result['status'] == 'success':
                 st.markdown("### ⚠️ 风险评估结果")
                 st.write(result['analysis'])
-                create_copy_button(result['analysis'], "📋 复制评估结果", "copy_risk")
+                create_copy_button(
+                    text=result['analysis'],
+                    button_text="📋 复制评估结果",
+                    key=f"copy_risk_{hash(result['analysis'])}"
+                )
             else:
                 st.error(result['message'])
 

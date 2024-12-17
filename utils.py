@@ -17,18 +17,54 @@ import streamlit as st
 
 
 def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", key: str = None) -> None:
-    """使用 Streamlit 原生组件创建复制按钮"""
+    """使用 JavaScript 实现的复制功能"""
     if key not in st.session_state:
         st.session_state[key] = False
 
-    if st.button(button_text, key=f"btn_{key}", use_container_width=True):
-        try:
-            import pyperclip
-            pyperclip.copy(text)
-            st.session_state[key] = True
-            st.success('✅ 已复制到剪贴板！', icon="✅")
-        except ImportError:
-            st.error('请先安装 pyperclip: pip install pyperclip')
+    # 创建唯一的键值
+    button_key = f"btn_{key}"
+
+    # 处理文本中的特殊字符，防止JavaScript注入和格式错误
+    text = text.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+
+    # JavaScript 复制函数
+    js_code = f"""
+    <script>
+    function copyToClipboard_{key}() {{
+        const text = `{text}`;
+        navigator.clipboard.writeText(text).then(
+            function() {{
+                // Success callback
+                document.getElementById("{button_key}_status").innerHTML = "✅ 已复制到剪贴板！";
+                setTimeout(function() {{
+                    document.getElementById("{button_key}_status").innerHTML = "";
+                }}, 2000);
+            }},
+            function() {{
+                // Error callback
+                document.getElementById("{button_key}_status").innerHTML = "❌ 复制失败，请手动复制";
+                setTimeout(function() {{
+                    document.getElementById("{button_key}_status").innerHTML = "";
+                }}, 2000);
+            }}
+        );
+    }}
+    </script>
+    """
+
+    # HTML 按钮
+    html_button = f"""
+    <button 
+        onclick="copyToClipboard_{key}()" 
+        style="width: 100%; padding: 0.5rem; background-color: #0078D4; color: white; border: none; border-radius: 4px; cursor: pointer;"
+    >
+        {button_text}
+    </button>
+    <div id="{button_key}_status" style="text-align: center; margin-top: 0.5rem;"></div>
+    """
+
+    # 渲染HTML
+    st.components.v1.html(js_code + html_button, height=80)
 
 def verify_api_key(model_type: str, api_key: str, max_retries: int = 2) -> Tuple[bool, str]:
     """验证API密钥是否有效，带重试机制"""
@@ -158,21 +194,19 @@ def generate_xiaohongshu_content(theme: str, model_type: str, api_key: str, temp
                     tags_text = section.split(']')[1].strip()
                     tags = [tag.strip('#') for tag in tags_text.split('#') if tag.strip()]
 
-            # 验证数据
-            if len(titles) < 5:
-                raise ValueError("生成的标题数量不足5个")
+            # 确保至少有一个标题
+            if not titles:
+                titles = ["✨ " + theme]
 
-            # 验证数据格式
-            Xiaohongshu(
-                titles=titles,
-                content=content
-            )
+            # 确保有5个标题
+            while len(titles) < 5:
+                titles.append(titles[0] + f" - 版本{len(titles)+1}")
 
             # 返回结果
             return {
-                "title": titles[0],
-                "content": content,
-                "tags": tags
+                'titles': titles[:5],  # 只取前5个标题
+                'content': content,
+                'tags': tags
             }
 
         except Exception as parse_error:
@@ -201,9 +235,21 @@ def generate_character_prompt(character_type: str, user_prompt: str) -> str:
 
 
 def get_chat_response(prompt: str, memory: ConversationBufferMemory,
-                     model_type: str, api_key: str, character_type: str = None,
-                     is_chat_feature: bool = False) -> str:
-    """Generate chat response with memory support"""
+                      model_type: str, api_key: str, character_type: str = None,
+                      is_chat_feature: bool = False) -> str:
+    """Generate chat response with memory support
+
+    Args:
+        prompt: The input prompt text
+        memory: ConversationBufferMemory object for chat history
+        model_type: Type of model to use (qwen/chatgpt/claude/glm)
+        api_key: API key for the selected model
+        character_type: Optional character personality type
+        is_chat_feature: Whether this is being used in chat mode
+
+    Returns:
+        str: Generated response text
+    """
     try:
         # 只有在聊天功能中才使用历史记忆和人设
         if is_chat_feature and memory:
@@ -247,6 +293,21 @@ def get_chat_response(prompt: str, memory: ConversationBufferMemory,
         if not response or response.startswith("API"):
             print(f"Warning: Invalid response: {response}")
             return "抱歉，我暂时无法生成有效回复，请稍后再试。"
+
+        # 特定人设的表情符号过滤
+        if character_type == "性感冷艳御姐":
+            # 定义需要移除的emoji列表
+            unwanted_emojis = [
+                "😏", "😌", "🤔", "😎",  # 傲慢/邪魅类
+            ]
+            # 允许使用的emoji列表（用于提示词）
+            allowed_emojis = [
+                "🌹", "💗", "💕", "🥰",  # 玫瑰和可爱类
+                "💋", "✨", "👗", "💄", "😜", "😝"  # 优雅类
+            ]
+            # 替换不想要的emoji
+            for emoji in unwanted_emojis:
+                response = response.replace(emoji, '')
 
         # 只在聊天功能中保存对话记忆
         if is_chat_feature and memory:
