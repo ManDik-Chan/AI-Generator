@@ -27,18 +27,54 @@ def check_glm_access():
 
 
 def create_copy_button(text: str, button_text: str = "📋 复制到剪贴板", key: str = None) -> None:
-    """创建复制按钮"""
+    """使用 JavaScript 实现的复制功能"""
     if key not in st.session_state:
         st.session_state[key] = False
 
-    if st.button(button_text, key=f"btn_{key}"):
-        try:
-            import pyperclip
-            pyperclip.copy(text)
-            st.session_state[key] = True
-            st.success('✅ 已复制到剪贴板！', icon="✅")
-        except ImportError:
-            st.error('请先安装 pyperclip: pip install pyperclip')
+    # 创建唯一的键值
+    button_key = f"btn_{key}"
+
+    # 处理文本中的特殊字符，防止JavaScript注入和格式错误
+    text = text.replace("\\", "\\\\").replace("`", "\\`").replace("${", "\\${")
+
+    # JavaScript 复制函数
+    js_code = f"""
+    <script>
+    function copyToClipboard_{key}() {{
+        const text = `{text}`;
+        navigator.clipboard.writeText(text).then(
+            function() {{
+                // Success callback
+                document.getElementById("{button_key}_status").innerHTML = "✅ 已复制到剪贴板！";
+                setTimeout(function() {{
+                    document.getElementById("{button_key}_status").innerHTML = "";
+                }}, 2000);
+            }},
+            function() {{
+                // Error callback
+                document.getElementById("{button_key}_status").innerHTML = "❌ 复制失败，请手动复制";
+                setTimeout(function() {{
+                    document.getElementById("{button_key}_status").innerHTML = "";
+                }}, 2000);
+            }}
+        );
+    }}
+    </script>
+    """
+
+    # HTML 按钮
+    html_button = f"""
+    <button 
+        onclick="copyToClipboard_{key}()" 
+        style="width: 100%; padding: 0.5rem; background-color: #0078D4; color: white; border: none; border-radius: 4px; cursor: pointer;"
+    >
+        {button_text}
+    </button>
+    <div id="{button_key}_status" style="text-align: center; margin-top: 0.5rem;"></div>
+    """
+
+    # 渲染HTML
+    st.components.v1.html(js_code + html_button, height=80)
 
 
 def handle_uploaded_image(uploaded_image):
@@ -118,12 +154,23 @@ def render_legal_assistant():
         )
 
         if upload_type == "文档文件":
-            # 文档文件处理逻辑保持不变
+            # 文档文件处理逻辑
             uploaded_file = st.file_uploader(
                 "上传合同或法律文书 (支持PDF、Word格式)",
                 type=['pdf', 'docx']
             )
-            # ... 原有的文档处理代码 ...
+
+            if uploaded_file is not None:
+                try:
+                    if uploaded_file.type == "application/pdf":
+                        text = extract_text_from_pdf(uploaded_file.getvalue())
+                    else:
+                        text = extract_text_from_docx(uploaded_file.getvalue())
+                    st.session_state.document_text = text
+                    with st.expander("查看提取的文本"):
+                        st.text_area("文档内容", text, height=300)
+                except Exception as e:
+                    st.error(f"文件处理失败: {str(e)}")
 
         else:  # 图片文件上传
             # 添加单个图片上传器
@@ -162,6 +209,7 @@ def render_legal_assistant():
                                 'name': uploaded_image.name,
                                 'size': uploaded_image.size,
                                 'content': uploaded_image,
+                                'text': text,
                                 'order': len(st.session_state.uploaded_images)
                             })
                             st.session_state.image_texts.append(text)
@@ -239,7 +287,7 @@ def render_legal_assistant():
                     st.session_state.document_text = None
                     st.rerun()
 
-        # 文档类型选择和分析部分保持不变
+        # 文档类型选择和分析部分
         doc_type = st.radio(
             "文档类型",
             ["contract", "legal_document"],
@@ -274,13 +322,63 @@ def render_legal_assistant():
             else:
                 st.error(result['message'])
 
-    #合同起草功能
+    # 合同起草标签页
     with tabs[1]:
         from contract_generator import render_contract_generator
         render_contract_generator()
 
-    # 风险评估标签页
+    # 法律咨询标签页
     with tabs[2]:
+        st.subheader("法律咨询")
+
+        # 案例描述
+        case_description = st.text_area(
+            "案例描述",
+            height=150,
+            placeholder="请详细描述您的法律问题或案例情况...",
+            key="case_description"
+        )
+
+        # 具体问题
+        specific_question = st.text_area(
+            "具体问题",
+            height=100,
+            placeholder="请输入您想咨询的具体法律问题...",
+            key="specific_question"
+        )
+
+        # 获取建议按钮
+        if st.button("获取法律建议", use_container_width=True):
+            if not case_description or not specific_question:
+                st.warning("请填写完整的案例描述和具体问题")
+            else:
+                with st.spinner("正在分析案例..."):
+                    result = get_legal_advice(
+                        case_description=case_description,
+                        question=specific_question,
+                        model_type="glm",
+                        api_key=st.session_state.api_keys.get('glm', '')
+                    )
+
+                    # 保存咨询结果
+                    st.session_state.legal_advice = result
+
+        # 显示法律建议
+        if st.session_state.get('legal_advice'):
+            result = st.session_state.legal_advice
+            if result['status'] == 'success':
+                st.markdown("### 📋 法律建议")
+                st.write(result['advice'])
+                create_copy_button(
+                    text=result['advice'],
+                    button_text="📋 复制建议内容",
+                    key=f"copy_advice_{hash(result['advice'])}"
+                )
+            else:
+                st.error(result['message'])
+
+    # 风险评估标签页
+    with tabs[3]:
         st.subheader("风险评估")
 
         scenario = st.text_area(
