@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum MessageRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+enum MessageStatus {
+  PENDING
+  COMPLETE
+  ERROR
+}
+
+model Profile {
+  id          String   @id @db.Uuid
+  email       String   @unique
+  displayName String?  @map("display_name")
+  avatarUrl   String?  @map("avatar_url")
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  personas      Persona[]
+  conversations Conversation[]
+  memories      Memory[]
+  images        GeneratedImage[]
+
+  @@map("profiles")
+}
+
+model Persona {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  name          String
+  avatarUrl     String?  @map("avatar_url")
+  description   String?
+  personality   String
+  identity      String?
+  speakingStyle String?  @map("speaking_style")
+  expertise     String?
+  systemPrompt  String   @map("system_prompt")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("personas")
+}
+
+model Conversation {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  personaId String?  @map("persona_id") @db.Uuid
+  title     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user     Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona  Persona?   @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  messages Message[]
+  memories Memory[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("conversations")
+}
+
+model Message {
+  id             String        @id @default(uuid()) @db.Uuid
+  conversationId String        @map("conversation_id") @db.Uuid
+  role           MessageRole
+  content        String
+  status         MessageStatus @default(COMPLETE)
+  provider       String?
+  model          String?
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Memory {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @map("user_id") @db.Uuid
+  content              String
+  category             String
+  importance           Int      @default(3)
+  sourceConversationId String?  @map("source_conversation_id") @db.Uuid
+  enabled              Boolean  @default(true)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user               Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceConversation Conversation? @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
+
+  @@index([userId, enabled, importance])
+  @@map("memories")
+}
+
+model GeneratedImage {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  prompt      String
+  provider    String
+  model       String
+  storagePath String   @map("storage_path")
+  width       Int?
+  height      Int?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("generated_images")
+}
+
+model ModelConfig {
+  id           String   @id @default(uuid()) @db.Uuid
+  provider     String
+  model        String
+  capabilities String[]
+  enabled      Boolean  @default(true)
+  parameters   Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([provider, model])
+  @@map("model_configs")
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("app_settings")
+}
