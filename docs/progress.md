@@ -6,7 +6,7 @@
 - [x] 目标架构与迁移策略
 - [x] 数据库与部署设计
 - [x] Phase 1：项目初始化
-- [ ] Phase 2：基础系统（代码完成，等待 Supabase 联调）
+- [x] Phase 2：基础系统
 - [ ] Phase 3：AI 聊天
 - [ ] Phase 4：人格系统
 - [ ] Phase 5：记忆系统
@@ -41,6 +41,7 @@
 ## Phase 2 实施记录
 
 实施时间：2026-07-11
+完成验收：2026-07-12
 
 - 增加 Prisma 6.19.3 schema、初始 SQL migration 和 Supabase RLS/新用户 trigger。
 - 建立 Profile、Persona、Conversation、Message、Memory、GeneratedImage、ModelConfig 与 AppSetting 数据模型。
@@ -57,10 +58,15 @@
 - `pnpm build`：通过，公开页面可静态生成，账号/管理员页面按需动态渲染
 - Production smoke：`/` 与 `/login` 返回 200；无 Supabase 配置访问 `/account` 返回 307 到配置提示页
 
-### 待外部配置验证
+### 真实 Supabase 联调
 
-- 在真实 Supabase 项目执行 migration 与 `prisma/rls.sql`。
-- 验证注册邮件、登录、退出、会话刷新和 Profile trigger。
-- 由项目所有者显式授予首个 ADMIN，并验证普通用户无法进入 `/admin`。
+- Prisma migration 执行成功。
+- `prisma/rls.sql` 执行成功。
+- 用户注册与邮箱验证成功。
+- 登录、退出和会话保持正常。
+- Profile 可自动创建，默认角色为 `USER`。
+- `USER` 无法访问 `/admin`。
+- 提升为 `ADMIN` 后可以访问 `/admin`。
+- 本地 `.env` 未提交 Git。
 
-上述联调完成前，Phase 2 不标记为完全验收。真实 Supabase 配置不得写入 Git。
+Phase 2 真实环境联调与权限验收已全部通过。
