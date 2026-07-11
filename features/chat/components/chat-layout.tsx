@@ -1,0 +1,138 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Menu, Sparkles, X } from "lucide-react";
+
+import { ChatComposer } from "@/features/chat/components/chat-composer";
+import { ConversationList } from "@/features/chat/components/conversation-list";
+import { MessageList } from "@/features/chat/components/message-list";
+import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
+
+interface ChatLayoutProps {
+  conversations: ConversationSummary[];
+  conversation: ConversationDetail | null;
+  aiConfigured: boolean;
+  maxInputChars: number;
+}
+
+async function readChatEvents(response: Response, onEvent: (event: ChatStreamEvent) => void) {
+  if (!response.ok || !response.body) {
+    const body = await response.json().catch(() => null) as { message?: string } | null;
+    throw new Error(body?.message ?? "消息发送失败，请稍后重试。");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, "\n");
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      const event = block.split("\n").find((line) => line.startsWith("event:"))?.slice(6).trim();
+      const data = block.split("\n").find((line) => line.startsWith("data:"))?.slice(5).trim();
+      if (event && data) {
+        try { onEvent({ event, data: JSON.parse(data) } as ChatStreamEvent); } catch { /* Ignore malformed app events. */ }
+      }
+      boundary = buffer.indexOf("\n\n");
+    }
+    if (done) break;
+  }
+}
+
+export function ChatLayout({ conversations, conversation, aiConfigured, maxInputChars }: ChatLayoutProps) {
+  const router = useRouter();
+  const [messages, setMessages] = useState<ChatMessageView[]>(conversation?.messages ?? []);
+  const [draft, setDraft] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState<string>();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [controller, setController] = useState<AbortController>();
+
+  async function sendMessage() {
+    const content = draft.trim();
+    if (!content || generating || !aiConfigured) return;
+
+    const requestController = new AbortController();
+    const userId = `user-${crypto.randomUUID()}`;
+    const assistantId = `assistant-${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+    let createdConversationId = conversation?.id;
+    let assistantContent = "";
+    setDraft("");
+    setError(undefined);
+    setGenerating(true);
+    setController(requestController);
+    setMessages((current) => [...current,
+      { id: userId, role: "user", content, status: "complete", createdAt: now },
+      { id: assistantId, role: "assistant", content: "", status: "pending", createdAt: now },
+    ]);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationId: conversation?.id, content }),
+        signal: requestController.signal,
+      });
+
+      await readChatEvents(response, (streamEvent) => {
+        if (streamEvent.event === "conversation") createdConversationId = streamEvent.data.conversationId;
+        if (streamEvent.event === "delta") {
+          assistantContent += streamEvent.data.text;
+          setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: assistantContent } : message));
+        }
+        if (streamEvent.event === "done") {
+          setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, id: streamEvent.data.messageId, status: "complete" } : message));
+        }
+        if (streamEvent.event === "error") {
+          setError(streamEvent.data.message);
+          setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "error" } : message));
+        }
+      });
+
+      if (createdConversationId && !conversation?.id) router.replace(`/chat/${createdConversationId}`);
+      router.refresh();
+    } catch (caughtError) {
+      if (requestController.signal.aborted) {
+        setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: assistantContent ? "complete" : "error" } : message));
+      } else {
+        setDraft(content);
+        setMessages((current) => current.filter((message) => message.id !== userId && message.id !== assistantId));
+        setError(caughtError instanceof Error ? caughtError.message : "消息发送失败，请稍后重试。");
+      }
+    } finally {
+      setGenerating(false);
+      setController(undefined);
+    }
+  }
+
+  return (
+    <div className="flex h-[100dvh] max-w-[100vw] overflow-hidden bg-background">
+      <aside className="hidden w-72 shrink-0 border-r bg-card/70 md:block"><ConversationList activeId={conversation?.id} conversations={conversations} /></aside>
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/45 md:hidden" onClick={() => setDrawerOpen(false)}>
+          <aside className="h-full w-[min(85vw,20rem)] border-r bg-card" onClick={(event) => event.stopPropagation()}>
+            <div className="flex h-14 items-center justify-between border-b px-4"><span className="font-semibold">对话历史</span><button aria-label="关闭历史" onClick={() => setDrawerOpen(false)} type="button"><X className="size-5" /></button></div>
+            <ConversationList activeId={conversation?.id} conversations={conversations} onNavigate={() => setDrawerOpen(false)} />
+          </aside>
+        </div>
+      )}
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card/75 px-3 backdrop-blur md:px-5">
+          <button aria-label="打开对话历史" className="rounded-lg p-2 hover:bg-muted md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
+          <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="size-4" /></span>
+          <div className="min-w-0"><h1 className="truncate text-sm font-semibold">{conversation?.title ?? "新对话"}</h1><p className="text-xs text-muted-foreground">默认 AI 助手</p></div>
+          {generating && <span className="ml-auto text-xs text-primary">正在生成…</span>}
+        </header>
+        {!aiConfigured && <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-200">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
+        {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
+        <MessageList messages={messages} />
+        <ChatComposer disabled={!aiConfigured} generating={generating} maxInputChars={maxInputChars} onChange={setDraft} onSend={sendMessage} onStop={() => controller?.abort()} value={draft} />
+      </section>
+    </div>
+  );
+}
