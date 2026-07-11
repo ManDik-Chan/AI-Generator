@@ -1,0 +1,32 @@
+# dependencies
+/node_modules
+/.pnpm-store
+
+# Next.js
+/.next
+/out
+
+# environment and local secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+secrets.toml
+
+# local environments and editors
+/venv
+/.venv
+/.idea
+
+# logs and tooling
+*.log
+*.tmp
+*.temp
+*.tsbuildinfo
+.vercel
+.DS_Store
+Thumbs.db
+
+# Python legacy caches
+__pycache__/
+*.py[cod]

@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Preserve archived source bytes exactly as they existed on main.
+legacy/streamlit/** -text
+
+*.png binary
+*.pyc binary
