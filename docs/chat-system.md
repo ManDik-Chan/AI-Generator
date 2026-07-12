@@ -2,7 +2,7 @@
 
 ## 功能边界
 
-Phase 3 建立默认助手聊天基础；Phase 4A 增加可选 Persona 绑定；Phase 5A1 增加用户显式控制的手动长期记忆。不包含任意历史消息编辑、对话分支、自动记忆提取、向量检索、文件、图片、搜索、语音、重新生成或模型选择 UI。
+Phase 3 建立默认助手聊天基础；Phase 4A 增加可选 Persona 绑定；Phase 5A1 在成功回答后自动整理长期记忆。不包含任意历史消息编辑、对话分支、向量检索、文件、图片、搜索、语音、重新生成或模型选择 UI。
 
 ## 请求与持久化流程
 
@@ -73,6 +73,8 @@ data: {"message":"..."}
 - 召回异常会记录不含记忆内容的结构化警告并继续无记忆聊天。
 - `memory` SSE 仅返回使用条数；助手消息可显示“已参考 N 条长期记忆”，但浏览器不会收到记忆 ID、类别、重要程度或原始召回列表。
 - 只有 Provider 正常完成且助手消息持久化为 COMPLETE 后才更新所选记忆的 `lastUsedAt`。
+- `done` 发出后通过 Next.js `after` 安排单次自动提取；停止、Provider ERROR、superseded 消息或总开关关闭时不安排。
+- 新对话收到 `conversationId` 后使用 `window.history.replaceState` 浅更新 URL；每轮结束不调用 App Router refresh/replace，不重新挂载 ChatLayout。
 
 ## Markdown 安全
 

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { Prisma } from "@prisma/client";
 
@@ -22,6 +22,8 @@ import { createChatRequestSchema } from "@/features/chat/schemas";
 import { getMemoryRuntimeLimits } from "@/features/memory/constants";
 import { selectRelevantMemories } from "@/features/memory/selection";
 import { buildUserMemoryBlock } from "@/lib/ai/prompts/user-memory";
+import { scheduleMemoryExtraction } from "@/features/memory/after";
+import { extractAndPersistMemories } from "@/features/memory/extractor";
 import {
   createConversationTitle,
   encodeChatSse,
@@ -39,6 +41,7 @@ function errorResponse(message: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  const requestId = request.headers.get("x-request-id")?.slice(0, 100) || crypto.randomUUID();
   let user: User | null;
   try {
     const supabase = await createSupabaseServerClient();
@@ -249,9 +252,25 @@ export async function POST(request: Request) {
           controller.enqueue(encoder.encode(encodeChatSse("delta", { text })));
         }
 
-        await finalizeAssistantMessage(assistantMessageId, fullContent, "COMPLETE");
-        if (selectedMemories.length) { try { await prisma.memory.updateMany({ where: { userId: user.id, id: { in: selectedMemories.map((memory) => memory.id) } }, data: { lastUsedAt: new Date() } }); } catch { console.warn("memory_last_used_update_failed", { userId: user.id, conversationId, count: selectedMemories.length }); } }
+        const finalized = await finalizeAssistantMessage(assistantMessageId, fullContent, "COMPLETE");
+        if (finalized && selectedMemories.length) { try { await prisma.memory.updateMany({ where: { userId: user.id, id: { in: selectedMemories.map((memory) => memory.id) } }, data: { lastUsedAt: new Date() } }); } catch { console.warn("memory_last_used_update_failed", { userId: user.id, conversationId, count: selectedMemories.length }); } }
         controller.enqueue(encoder.encode(encodeChatSse("done", { messageId: assistantMessageId })));
+        if (finalized && (profile?.memoryEnabled ?? true)) {
+          const recentTurns = context
+            .slice(0, -1)
+            .filter((message): message is { role: "user" | "assistant"; content: string } => message.role !== "system")
+            .slice(-8);
+          scheduleMemoryExtraction(after, () => extractAndPersistMemories({
+            userId: user.id,
+            conversationId,
+            sourceMessageId: userMessageId,
+            assistantMessageId,
+            currentUserMessage: parsed.data.content,
+            assistantResponse: fullContent,
+            recentTurns,
+            persona: runtimePersonaId && runtimePersona ? { id: runtimePersonaId, name: runtimePersona.name } : undefined,
+          }).then(() => undefined), { requestId, userId: user.id, conversationId, sourceMessageId: userMessageId });
+        }
       } catch (error) {
         const stopped = error instanceof AiProviderError && error.code === "ABORTED";
         await finalizeAssistantMessage(

@@ -57,8 +57,8 @@ export function MemoryManager({
       )}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4">
         <div>
-          <p className="font-medium">使用长期记忆</p>
-          <p className="text-xs text-muted-foreground">关闭后保留数据，但聊天不会召回记忆。</p>
+          <p className="font-medium">允许 AI 使用和更新记忆</p>
+          <p className="text-xs text-muted-foreground">关闭后保留现有内容，但聊天不会召回或自动整理记忆。</p>
         </div>
         <Button
           disabled={pending}
@@ -96,14 +96,14 @@ export function MemoryManager({
             </option>
           ))}
         </select>
-        <Button
-          onClick={() => {
-            setEditing(undefined);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="size-4" />创建记忆
-        </Button>
+        <details className="relative ml-auto">
+          <summary className="cursor-pointer rounded-xl border px-3 py-2 text-sm">更多操作</summary>
+          <div className="absolute right-0 z-10 mt-2 w-48 rounded-xl border bg-card p-2 shadow-lg">
+            <Button className="w-full justify-start" onClick={() => { setEditing(undefined); setFormOpen(true); }} variant="ghost">
+              <Plus className="size-4" />手动添加记忆
+            </Button>
+          </div>
+        </details>
       </div>
       {shown.length ? (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -122,8 +122,9 @@ export function MemoryManager({
                     <span>{memory.scope === "GLOBAL" ? "全局" : memory.personaName || "Persona"}</span>
                     <span>重要程度 {memory.importance}</span>
                     <span>{memory.enabled ? "已启用" : "已停用"}</span>
-                    <span>{memory.origin === "CHAT_MESSAGE" ? "聊天消息" : "手动"}</span>
+                    <span>{memory.origin === "MANUAL" ? "手动添加" : "从对话中记住"}</span>
                     <span>更新于 {memory.updatedAt.slice(0, 10)}</span>
+                    <span>最近使用 {memory.lastUsedAt ? memory.lastUsedAt.slice(0, 10) : "尚未使用"}</span>
                   </div>
                   {memory.sourceConversationId ? (
                     <Link
@@ -132,7 +133,7 @@ export function MemoryManager({
                     >
                       查看来源对话
                     </Link>
-                  ) : memory.origin === "CHAT_MESSAGE" ? (
+                  ) : memory.origin !== "MANUAL" ? (
                     <p className="mt-2 text-xs text-muted-foreground">来源对话已删除</p>
                   ) : null}
                 </div>
@@ -176,10 +177,8 @@ export function MemoryManager({
       ) : (
         <div className="rounded-2xl border border-dashed p-10 text-center">
           <Brain className="mx-auto size-8 text-muted-foreground" />
-          <h2 className="mt-3 font-semibold">还没有长期记忆</h2>
-          <Button className="mt-4" onClick={() => setFormOpen(true)}>
-            创建第一条记忆
-          </Button>
+          <h2 className="mt-3 font-semibold">AI 还没有记住关于你的长期信息。</h2>
+          <p className="mt-2 text-sm text-muted-foreground">在聊天中自然交流，值得长期保留的信息会出现在这里。</p>
         </div>
       )}
       <MemoryFormDialog

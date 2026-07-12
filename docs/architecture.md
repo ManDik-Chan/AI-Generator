@@ -8,11 +8,11 @@ Persona 头像使用独立 `ImageProvider`，不进入文本 `AiProvider`。GLM-
 
 ## Phase 5A1 记忆边界
 
-长期记忆位于 `features/memory`，页面与 Server Actions 只操作当前用户的数据。`Memory.scope` 明确区分 GLOBAL 与 PERSONA；PERSONA、来源 Conversation 和来源 Message 均由服务端按所有权校验，数据库 RLS 再次约束关联资源。`AUTO_EXTRACTED` 仅作为未来枚举预留，本阶段没有自动提取任务或额外模型调用。
+长期记忆位于 `features/memory`，页面与 Server Actions 只操作当前用户的数据。`Memory.scope` 明确区分 GLOBAL 与 PERSONA；PERSONA、来源 Conversation 和来源 Message 均由服务端按所有权校验，数据库 RLS 再次约束关联资源。助手回复成功持久化为 COMPLETE 后，Route Handler 用 Next.js `after` 安排一次自动提取；SSE `done`、输入框恢复和当前消息状态均不等待该任务。
 
 聊天请求从启用且属于当前用户的候选中，以当前消息、近期用户消息、作用域、重要程度和更新时间执行确定性排序，并同时受条目数与字符数预算约束。选中的文本经过 XML 转义后作为“不可信用户保存信息”追加到服务端 system message；它不能覆盖安全规则、Persona 边界或当前请求。召回失败降级为无记忆聊天，浏览器 SSE 仅收到数量，不收到记忆内容或数据库标识。
 
-`lastUsedAt` 只在助手消息成功写为 COMPLETE 后更新。Provider 失败、取消或记忆状态写入失败不会破坏主聊天流程。本阶段不引入 Embedding、向量库、语义检索、自动总结或记忆冲突合并。
+提取模型返回最多三项严格 JSON CREATE / UPDATE / IGNORE。服务端以 0.85 置信度、候选 ID 白名单、当前 Persona 映射、凭据检测、Zod 和 Serializable 事务执行最终决定；模型不能控制所有权、来源或启用状态。来源消息、助手消息、总开关和 superseded 状态在模型前及事务内检查。`lastUsedAt` 只在助手消息成功写为 COMPLETE 后更新。本阶段不引入 Embedding、向量库或 RAG。
 
 新聊天在 `xl` 桌面断点使用固定右侧助手栏，窄屏使用无第三方依赖的可访问抽屉；两者共享同一选择组件。选择状态保留在现有 `ChatLayout`，通过 History API 更新 `/chat?personaId=`，不创建数据库记录、不清空 Composer 草稿。已有 Conversation 不渲染选择栏，服务端继续拥有 Persona 绑定的最终决定权。
 

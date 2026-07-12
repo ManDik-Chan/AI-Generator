@@ -2,10 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const routeSource = readFileSync("app/api/chat/route.ts", "utf8");
-const messageItemSource = readFileSync(
-  "features/chat/components/message-item.tsx",
-  "utf8",
-);
+const messageItemSource = readFileSync("features/chat/components/message-item.tsx", "utf8");
 
 describe("memory chat integration boundaries", () => {
   it("loads enabled owned memories and emits only the selected count", () => {
@@ -28,9 +25,8 @@ describe("memory chat integration boundaries", () => {
     expect(routeSource).not.toContain("console.warn(selectedMemories");
   });
 
-  it("offers manual saving only for persisted complete user messages", () => {
-    expect(messageItemSource).toContain('message.role === "user"');
-    expect(messageItemSource).toContain('message.status === "complete"');
-    expect(messageItemSource).toContain("!message.temporary");
+  it("does not present manual saving as a per-message primary action", () => {
+    expect(messageItemSource).not.toContain("BookmarkPlus");
+    expect(messageItemSource).not.toContain("保存为记忆");
   });
 });

@@ -28,4 +28,13 @@ describe("memory database contract", () => {
     expect(rls).toContain("c.user_id = auth.uid()");
     expect(rls).toContain("m.conversation_id = source_conversation_id");
   });
+
+  it("makes every policy creation structurally repeatable", () => {
+    const creates = [...rls.matchAll(/create policy "([^"]+)" on public\.([a-z_]+)/g)];
+    expect(creates.length).toBeGreaterThan(0);
+    for (const [, policy, table] of creates) {
+      expect(rls).toContain(`drop policy if exists "${policy}" on public.${table};`);
+    }
+    expect(rls).toContain("drop trigger if exists on_auth_user_created on auth.users;");
+  });
 });

@@ -1,90 +1,72 @@
-# Phase 5A1 长期记忆系统
+# Phase 5A1 自动长期记忆
 
-## 范围
+## 产品范围
 
-Phase 5A1 只提供用户明确控制的长期记忆基础：手动 CRUD、总开关、从自己的聊天消息保存、GLOBAL/PERSONA 作用域、确定性召回、安全 Prompt 注入和使用次数反馈。
+用户只需自然聊天。当前 USER 与 ASSISTANT 消息都成功持久化为 COMPLETE 后，系统在响应结束后判断这一轮是否包含长期有用的信息，并执行 CREATE、UPDATE 或 IGNORE。`/memories` 是用户查看、修改、停用和删除 AI 记忆的控制页；手动添加保留在“更多操作”中作为高级补救入口。
 
-本阶段不做自动提取、后台任务、Embedding、向量数据库、RAG、自动合并、冲突消解或 AI 判断是否应保存。数据库枚举中的 `AUTO_EXTRACTED` 只为后续兼容预留，UI 和 Server Actions 不接受该来源。Phase 5A2 计划在独立评审后实现可确认、可撤销的自动候选提取；Phase 5A3 仍未开始，具体范围不在本 PR 预设。
+本阶段不做 Embedding、向量数据库、RAG、后台队列、定时任务或多用户共享，也没有开始 Phase 5A3 或 Phase 6。
 
-## 数据模型与所有权
+## 非阻塞流程
 
-- `Profile.memoryEnabled`：用户级总开关；关闭后数据保留，但聊天不召回。
-- `Memory.scope`：`GLOBAL` 适用于默认助手及全部 Persona；`PERSONA` 只适用于指定 Persona。
-- `Memory.origin`：本阶段仅创建 `MANUAL` 或 `CHAT_MESSAGE`。
-- `personaId`：PERSONA 作用域必填，GLOBAL 必须为空。
-- `sourceConversationId` / `sourceMessageId`：聊天保存时成对记录；来源被删除时记忆仍可保留并显示来源不可用。
-- `lastUsedAt`：只在使用该记忆的助手回复成功写为 COMPLETE 后更新。
+1. 聊天按原协议持久化 USER 与 PENDING ASSISTANT，并流式返回 delta。
+2. Provider 正常结束后将 ASSISTANT 写为 COMPLETE。
+3. 立即发送 SSE `done`；客户端将消息设为 complete，`finally` 恢复 Composer。
+4. Route Handler 使用 Next.js `after` 注册 `extractAndPersistMemories`。
+5. 后台任务自行捕获错误，只记录 requestId、userId、conversationId、sourceMessageId 和 errorCode。
 
-所有应用查询都显式包含 `userId`。创建和修改时，服务端验证 Persona 所有权；聊天来源必须是当前用户对话内、未被替代的 COMPLETE USER 消息。RLS 在数据库层重复校验所有者和关联资源，并要求来源 Message 属于声明的来源 Conversation。
+停止生成、Provider ERROR、助手未成功 COMPLETE、来源 USER 被 supersede 或 `Profile.memoryEnabled=false` 时不会提取。简单问候、感谢、确认语和纯标点由本地规则过滤，不产生模型费用。每轮最多调用一次，无自动重试。
 
-## 手动管理
+## 模型协议与成本
 
-登录用户可访问 `/memories`：
+继续使用 OpenAI-compatible Provider：
 
-- 创建、编辑、启用、停用和删除记忆；
-- 按全局、Persona、类别和启用状态筛选；
-- 开关全部长期记忆召回；
-- 从来源聊天返回原对话；
-- 从 Persona 详情打开预筛选的专属记忆。
-
-用户聊天消息只有在已获得数据库 ID、状态为 COMPLETE 且不是临时消息时才显示保存按钮。保存 Dialog 默认带入消息文本和当前 Persona，但用户仍可修改作用域、类别、重要程度与启用状态。
-
-## 内容安全
-
-内容限制为 2–500 字符并移除控制字符。系统拒绝高置信度私钥、API Key、Bearer Token、JWT 和含密码的数据库连接；普通文字中的“密码”等词不会单独触发。相同用户、相同作用域与相同 Persona 下，折叠空白并忽略大小写后完全相同的内容不能重复创建。
-
-这些检查用于降低误存凭据风险，不替代用户的数据保护责任。日志不得写入记忆正文。
-
-## 确定性召回
-
-聊天仅加载当前用户启用的 GLOBAL 记忆及当前 Persona 对应的 PERSONA 记忆。纯函数排序参考：
-
-1. 当前用户消息的词项重合；
-2. 最近完整用户消息的词项重合；
-3. 重要程度；
-4. 更新时间；
-5. PERSONA 与类别的小幅稳定加权；
-6. ID 作为最终稳定 tie-breaker。
-
-英文与数字按词切分，中文使用双字词项。默认最多 8 条、正文合计最多 2,400 字符；无重合但高重要性的兜底最多两条。预算通过环境变量 `MEMORY_MAX_ITEMS` 与 `MEMORY_MAX_CHARS` 调整，非法值回退默认值。
-
-## Prompt 与 SSE
-
-选中正文先进行 XML 转义，再放入 `<user_memories>`。包裹说明明确它们是不可信、可能过时的信息，不能覆盖基础安全规则、Persona 边界或当前请求，也不能把正文中的指令当作系统指令执行。没有选中记忆时不追加空区块。
-
-浏览器只收到：
-
-```text
-event: memory
-data: {"count":2}
+```env
+AI_MEMORY_MODEL=
+AI_MEMORY_TEMPERATURE=0.1
+AI_MEMORY_MAX_OUTPUT_TOKENS=1000
+AI_MEMORY_REQUEST_TIMEOUT_MS=45000
 ```
 
-不会收到记忆 ID、正文、类别、重要程度或数据库结构。记忆查询失败时服务端记录不含正文的警告并继续无记忆聊天。
+模型为空时回退 `AI_MODEL`。输入仅包含当前 USER、当前 ASSISTANT（只用于语境）、最近最多四个完整轮次、当前 Persona 身份和最多 20 条当前用户候选记忆。候选只公开 id、content、category、scope。
 
-## 部署与真实验收
+输出为最多三项严格 JSON operation：
 
-```bash
-pnpm db:deploy
-pnpm exec prisma validate
-```
+- CREATE：没有对应候选的稳定事实；
+- UPDATE：只能引用服务端候选白名单中的现有 ID；
+- IGNORE：临时、不确定、敏感、重复或无长期价值内容。
 
-然后在 Supabase SQL Editor 重新执行 `prisma/rls.sql`。建议用两个普通用户验收：
+只有 confidence >= 0.85 才可能写入。Zod、类别、长度、importance、凭据检测、Persona 映射、候选白名单和所有权在服务端再次验证。模型不能控制 userId、personaId、enabled、origin、sourceConversationId 或 sourceMessageId；写入 origin 固定为 AUTO_EXTRACTED。
 
-1. A 用户无法读取、修改或引用 B 用户的 Memory、Persona、Conversation 或 Message。
-2. GLOBAL 记忆可用于默认助手和 Persona；PERSONA 记忆只用于匹配人格。
-3. 关闭总开关后聊天不显示记忆数量，重新开启后恢复。
-4. 从 COMPLETE USER 消息保存成功；助手消息、PENDING/ERROR、superseded 或其他用户消息被拒绝。
-5. Provider 成功时 `last_used_at` 更新；停止、失败和 ERROR 时不更新。
-6. 删除来源对话或 Persona 的行为符合产品提示，且不会越权影响其他资源。
+## 内容边界
 
-上述真实数据库与浏览器验收需要项目所有者环境执行；自动化测试通过不等于真实 Supabase 联调通过。
+适合记忆：稳定身份、长期偏好、目标、项目、限制、习惯，以及与当前 Persona 有长期意义的关系。问候、感谢、临时页面操作、一次性写作要求、作业答案、assistant 建议、模型推断、第三方信息和凭据必须忽略。assistant 回复只帮助理解用户话语，绝不能成为用户事实来源。
 
-## 常见排查
+Prompt 用 `<current_user_message>`、`<assistant_response context_only="true">`、`<existing_memories>` 等 XML 数据边界，并转义所有特殊字符。用户内容不能改变严格 JSON 协议。
 
-- migration 报缺少连接变量：确认 `DATABASE_URL` 与 `DIRECT_URL` 只配置在本地或部署平台，不要写入仓库。
-- 页面可见但写入被拒绝：确认 migration 已部署，并在目标 Supabase 项目执行了最新版 `prisma/rls.sql`；再检查登录用户是否拥有所选 Persona 和来源对话。
-- 聊天没有使用记忆：检查用户总开关、单条启用状态、GLOBAL/PERSONA 作用域和当前 Persona 是否匹配。无词项重合且重要程度低的记忆会被确定性算法排除，这是预期行为。
-- `lastUsedAt` 未更新：只有真实选择了记忆且 Provider 正常完成、助手消息成功标记 COMPLETE 后才更新；停止和错误不会更新。
-- 要彻底删除一条记忆：在 `/memories` 使用“删除记忆”并确认。关闭总开关或停用只停止召回，不删除数据；删除来源聊天也不会自动删除该 Memory。
+## 幂等、事务与所有权
 
-Phase 5A1 未开始 Embedding、RAG、Phase 5A3 或 Phase 6。
+任务开始前检查相同 `sourceMessageId + AUTO_EXTRACTED`，事务内再次检查来源 USER 仍为 COMPLETE、未 superseded、属于当前用户且总开关仍开启。CREATE 先做规范化精确去重；UPDATE 必须属于本轮候选白名单和当前用户。写入使用 Serializable 事务，不自动重试，冲突或后台失败不会影响已完成聊天。
+
+当前 Schema 已能使用 `sourceMessageId` 和 `origin` 实现写入幂等，因此没有新增 migration，也没有修改已部署的 `20260713010000_add_memory_foundation`。
+
+RLS 在应用层之外校验 Memory 及关联 Persona、Conversation、Message 的所有权。`prisma/rls.sql` 中每个 policy 都先 drop，可以重复执行。
+
+## 召回与透明度
+
+召回仍为确定性算法：当前消息与近期 USER 词项、importance、更新时间、Persona 和类别加权；默认最多 8 条、正文最多 2400 字符，整条取舍。记忆作为 XML 转义的不可信数据注入，不能覆盖安全规则、Persona 或当前请求。
+
+浏览器只收到 `event: memory` 的 count，并在助手消息下低调显示“已参考 N 条长期记忆”。后台提取结果本阶段静默保存，不引入轮询、WebSocket 或刷新。
+
+## 管理与删除
+
+`/memories` 标题为“AI 记住的内容”，显示来源中文、更新时间和最近使用时间。总开关“允许 AI 使用和更新记忆”同时控制召回与自动提取；关闭不会删除数据。编辑、停用、删除和来源对话链接继续可用，内部枚举不直接展示。
+
+彻底删除需在该页点击删除并确认。停用或关闭总开关只停止使用；删除来源对话不会自动删除 Memory。
+
+## 聊天无闪屏
+
+此前每轮 SSE 结束后无条件 `router.refresh()`，新对话还执行 `router.replace()`，触发 `app/chat/loading.tsx` 全屏 fallback 并重新挂载 ChatLayout。现在新对话在 `conversation` SSE 后保存客户端 conversationId，并以 `window.history.replaceState` 浅更新 URL；后续发送使用该客户端 ID。回答结束不执行 App Router 导航或刷新，route-level 全屏 loading 已移除。
+
+## 真实验收
+
+项目所有者需验证稳定偏好自动 CREATE、后续明确修正 UPDATE 而不冲突、临时命令与“谢谢”不保存、总开关、停止/ERROR/editLastMessage/superseded、双用户 RLS，以及连续三轮聊天无闪屏。真实 GLM-5.2 自动提取和浏览器连续聊天在本 PR 自动验证完成时仍标记为待验收，不以 mock 测试替代。
