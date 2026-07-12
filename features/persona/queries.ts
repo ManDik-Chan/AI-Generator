@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { PersonaChatIdentity, PersonaView } from "@/features/persona/types";
 
 const personaSelect = {
-  id: true, name: true, avatarUrl: true, description: true, identity: true, personality: true,
+  id: true, name: true, avatarUrl: true, avatarPrompt: true, description: true, identity: true, personality: true,
   speakingStyle: true, expertise: true, greeting: true, systemPrompt: true, archivedAt: true,
   createdAt: true, updatedAt: true,
 } as const;
@@ -14,6 +14,7 @@ function toView(persona: SelectedPersona): PersonaView {
   return {
     ...persona,
     avatarUrl: persona.avatarUrl ?? undefined,
+    avatarPrompt: persona.avatarPrompt ?? undefined,
     description: persona.description ?? undefined,
     identity: persona.identity ?? undefined,
     speakingStyle: persona.speakingStyle ?? undefined,

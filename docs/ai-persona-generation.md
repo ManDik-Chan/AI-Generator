@@ -1,5 +1,11 @@
 # AI 生成人格草稿
 
+## 与 Phase 4A3 的关系
+
+Phase 4A2 只在同一次文本响应中产生 provider-agnostic 的 `avatarPrompt`，不会自动调用图片模型。Persona 保存后，Phase 4A3 才允许用户修改 prompt 并明确点击生成；图片流程不会为 prompt 再调用一次文本模型。
+
+`POST /api/personas/generate` 现在使用 SSE 报告真实执行阶段：`preparing`、`generating`、`validating`、可选的 `repairing` 与 `drafting`，最后以 `done` 返回可编辑草稿。`repairing` 只在首次 JSON 校验失败、确实发起唯一一次修复调用时出现；正常结果仍只有一次文本模型调用。客户端使用 AbortSignal 和请求版本阻止取消后的迟到事件覆盖表单，错误不会清空描述或上一份有效草稿。
+
 ## 流程与阶段边界
 
 Phase 4A1 提供手动 Persona 基础；Phase 4A2 只把自然语言描述转换为可编辑草稿。用户进入 `/personas/new` 后可在“手动创建”和“AI 生成”间切换。AI 成功结果填入原 PersonaForm，用户点击保存前不写入任何 Persona、Conversation 或 Message。

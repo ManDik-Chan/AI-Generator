@@ -1,12 +1,16 @@
 # Persona 人格核心系统
 
+> Phase 4A3 已实现原有头像扩展点：`avatarPrompt` 保存可编辑提示词，`avatarImageId` 指向正式使用的 `GeneratedImage`，`avatarUrl` 保存稳定的应用内私有读取路由。列表、详情、编辑预览、聊天顶部、空状态和 assistant 消息仍只读取 `Persona.avatarUrl`，不感知 GLM-Image、bucket 或 signed URL。详见 `docs/persona-avatar-generation.md`。
+
+用户侧将软删除表达为“移至回收站”：详情页三点菜单打开非原生确认对话框，成功后进入 `/personas` 并显示提示；`/personas/trash` 仅查询当前用户 `archivedAt != null` 的 Persona 并支持恢复。底层不物理删除 Persona、Conversation、Message 或 GeneratedImage。回收站 Persona 仍保留历史对话身份与头像，但 Chat Composer 和服务端 Chat API 都会阻止新消息，恢复后沿用原 `conversation.personaId`。
+
 ## Phase 4A 边界
 
-Phase 4A 只实现用户私有的手动人格：创建、编辑、查看、归档、恢复、选择并绑定新对话。AI 自动生成人格属于 Phase 4B；长期记忆、RAG、文件、图片、公开市场、分享和导入导出均不在本阶段。
+Phase 4A 实现用户私有 Persona：手动管理、对话绑定、AI 可编辑草稿和 GLM-Image 单张头像。长期记忆、RAG、通用图片工具、公开市场、分享和导入导出均不在本阶段。
 
 Phase 4A1 完成人格基础；Phase 4A2 增加自然语言生成“可编辑草稿”。生成成功不会自动保存，最终仍复用同一 PersonaForm、Zod Schema 和创建 Action。AI 返回的 `systemPrompt`、`avatarUrl` 或额外字段不会进入草稿。
 
-Phase 4A2 同时保存于客户端草稿中的 `avatarPrompt` 只用于未来图片生成边界，本阶段不调用图片 API、不上传 Storage、不创建 GeneratedImage，也不新增数据库字段。
+Phase 4A2 产生 provider-agnostic 的 `avatarPrompt`；Phase 4A3 将其持久化，并仅在用户明确操作时调用图片 API、上传 private Storage 和创建 `GeneratedImage` 候选。
 
 ## 字段与验证
 

@@ -9,7 +9,7 @@ import { buildPersonaAssistantPrompt, type RuntimePersonaPrompt } from "@/lib/ai
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
 import { ownedConversationWhere } from "@/features/chat/access";
-import { activeOwnedPersonaWhere, newConversationPersonaData } from "@/features/persona/chat";
+import { activeOwnedPersonaWhere, newConversationPersonaData, personaConversationUnavailableMessage } from "@/features/persona/chat";
 import {
   assertConversationVersion,
   assertSupersedeCount,
@@ -83,10 +83,12 @@ export async function POST(request: Request) {
   if (conversationId) {
     const ownedConversation = await prisma.conversation.findFirst({
       where: ownedConversationWhere(user.id, conversationId),
-      select: { id: true, personaId: true, persona: { select: { name: true, identity: true, personality: true, speakingStyle: true, expertise: true, systemPrompt: true } } },
+      select: { id: true, personaId: true, persona: { select: { name: true, identity: true, personality: true, speakingStyle: true, expertise: true, systemPrompt: true, archivedAt: true } } },
     });
     if (!ownedConversation) return errorResponse("对话不存在或无权访问。", 404);
     if (ownedConversation.personaId && !ownedConversation.persona) console.error("[chat] Persona relation missing", { conversationId });
+    const unavailableMessage = personaConversationUnavailableMessage(ownedConversation.persona?.archivedAt);
+    if (unavailableMessage) return errorResponse(unavailableMessage, 409);
     runtimePersona = ownedConversation.persona;
   } else {
     if (parsed.data.personaId) {
@@ -94,7 +96,7 @@ export async function POST(request: Request) {
         where: activeOwnedPersonaWhere(user.id, parsed.data.personaId),
         select: { id: true, name: true, identity: true, personality: true, speakingStyle: true, expertise: true, systemPrompt: true },
       });
-      if (!persona) return errorResponse("人格不存在、已归档或无权访问。", 404);
+      if (!persona) return errorResponse("人格不存在、已删除或无权访问。", 404);
       runtimePersona = persona;
     }
     const conversation = await prisma.conversation.create({

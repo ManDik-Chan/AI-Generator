@@ -1,5 +1,13 @@
 # AI-Generator V2 架构设计
 
+## Phase 4A3 图片边界
+
+Persona 头像使用独立 `ImageProvider`，不进入文本 `AiProvider`。GLM-Image 临时 URL 经 SSRF 安全下载后写入 Supabase private Storage，`GeneratedImage` 保存来源元数据，Persona 通过稳定的所有权校验路由暴露 `avatarUrl`。生成候选与 Apply 分离，模型成功不会自动覆盖现有头像。
+
+文本人格草稿与头像候选生成都使用统一的 SSE 进度消费方式和 `GenerationProgress` 组件，但服务端只在真实执行点发送阶段事件，不使用计时器伪造进度。头像安全下载在字节读取完成、进入魔数检查前发出 `validating`；Apply 仍是独立事务，并把稳定 cache-buster URL 返回给客户端进行即时状态更新。
+
+新聊天在 `xl` 桌面断点使用固定右侧助手栏，窄屏使用无第三方依赖的可访问抽屉；两者共享同一选择组件。选择状态保留在现有 `ChatLayout`，通过 History API 更新 `/chat?personaId=`，不创建数据库记录、不清空 Composer 草稿。已有 Conversation 不渲染选择栏，服务端继续拥有 Persona 绑定的最终决定权。
+
 ## 1. 现状审计
 
 ### 当前技术栈

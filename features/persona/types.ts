@@ -1,6 +1,8 @@
 export interface PersonaInput {
   name: string;
   avatarUrl?: string;
+  avatarPrompt?: string;
+  avatarChoice?: "keep-current" | "preset";
   description?: string;
   identity?: string;
   personality: string;

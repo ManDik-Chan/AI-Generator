@@ -27,9 +27,12 @@ describe("AI persona generation", () => {
   });
   it("repairs invalid JSON exactly once", async () => {
     const generate = vi.fn().mockResolvedValueOnce("bad").mockResolvedValueOnce(JSON.stringify(valid));
-    await expect(generatePersonaDraftWithRepair(generate)).resolves.toMatchObject({ name: "林老师" });
+    const progress = vi.fn();
+    await expect(generatePersonaDraftWithRepair(generate, progress)).resolves.toMatchObject({ name: "林老师" });
     expect(generate).toHaveBeenCalledTimes(2);
+    expect(progress.mock.calls.map(([stage]) => stage)).toEqual(["validating", "repairing", "validating"]);
   });
+  it("does not report repairing or make another call for valid output", async () => { const generate = vi.fn().mockResolvedValue(JSON.stringify(valid)); const progress = vi.fn(); await generatePersonaDraftWithRepair(generate, progress); expect(generate).toHaveBeenCalledTimes(1); expect(progress).toHaveBeenCalledWith("validating"); expect(progress).not.toHaveBeenCalledWith("repairing"); });
   it("stops after a failed repair", async () => {
     const generate = vi.fn().mockResolvedValue("bad");
     await expect(generatePersonaDraftWithRepair(generate)).rejects.toThrow("格式不完整");

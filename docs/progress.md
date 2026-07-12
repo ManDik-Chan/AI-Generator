@@ -1,5 +1,21 @@
 # 重构进度
 
+## Phase 4A3 当前进度
+
+- [x] Phase 4A1：人格管理与人格聊天
+- [x] Phase 4A2：AI 人格草稿生成
+- [x] Phase 4A3：GLM-Image 人格头像、交互收尾与自动化验证
+- [x] Phase 4A3：项目所有者真实 GLM-Image / Supabase Storage 联调
+- [ ] Phase 5：尚未开始
+
+Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`GeneratedImage` 候选、显式 Apply、头像私有读取以及 `20260712190000_add_persona_avatar_image` migration。所有 UI 继续只读取 `Persona.avatarUrl`。项目所有者已于 2026-07-13 完成真实 GLM-Image、Supabase Storage 与完整产品交互验收，Phase 4A3 已完成。
+
+真实联调反馈的通用 `UNSAFE_IMAGE` 已拆分为脱敏服务端阶段诊断和安全的前端分类提示；同时兼容常见 JPEG/octet-stream MIME 别名与缺失 Header。SSRF、DNS 私网/Fake-IP、重定向、15 MB 和魔数限制保持启用。
+
+Phase 4A3 交互收尾将新对话的顶部横向人格选择器迁移为桌面右侧助手栏和移动端抽屉；选择只更新客户端空状态与 URL，首条消息发送时才绑定 Persona。用户可见的“归档”流程改为三点菜单中的“删除人格”、确认对话框与 `/personas/trash` 回收站；底层继续使用 `archivedAt`，没有新增 migration。回收站人格的历史对话可查看但前后端均禁止继续发送，恢复后原对话重新可用。
+
+真实视觉验收发现的头像 Dialog 条件卸载问题已通过稳定的受控 `PersonaHeaderClient` 修复；AI 头像入口恢复为详情页显式主操作。AI 人格草稿和 GLM-Image 候选接口均改为真实 SSE 阶段反馈，共享无虚假百分比的计时进度组件。Apply API 返回 cache-buster `avatarUrl`，详情页本地状态即时更新，不依赖 `router.refresh()` 显示。
+
 ## 当前状态
 
 - [x] 现有 Streamlit 项目审计
@@ -8,7 +24,7 @@
 - [x] Phase 1：项目初始化
 - [x] Phase 2：基础系统
 - [x] Phase 3：AI 聊天
-- [ ] Phase 4：人格系统（4A1 完成，4A2 本 PR 实施）
+- [ ] Phase 4：人格系统（4A1、4A2、4A3 已完成）
 - [ ] Phase 5：记忆系统
 - [ ] Phase 6：工具箱
 - [ ] Phase 7：优化与部署
