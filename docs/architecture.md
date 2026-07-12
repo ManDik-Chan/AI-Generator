@@ -6,6 +6,14 @@ Persona 头像使用独立 `ImageProvider`，不进入文本 `AiProvider`。GLM-
 
 文本人格草稿与头像候选生成都使用统一的 SSE 进度消费方式和 `GenerationProgress` 组件，但服务端只在真实执行点发送阶段事件，不使用计时器伪造进度。头像安全下载在字节读取完成、进入魔数检查前发出 `validating`；Apply 仍是独立事务，并把稳定 cache-buster URL 返回给客户端进行即时状态更新。
 
+## Phase 5A1 记忆边界
+
+长期记忆位于 `features/memory`，页面与 Server Actions 只操作当前用户的数据。`Memory.scope` 明确区分 GLOBAL 与 PERSONA；PERSONA、来源 Conversation 和来源 Message 均由服务端按所有权校验，数据库 RLS 再次约束关联资源。`AUTO_EXTRACTED` 仅作为未来枚举预留，本阶段没有自动提取任务或额外模型调用。
+
+聊天请求从启用且属于当前用户的候选中，以当前消息、近期用户消息、作用域、重要程度和更新时间执行确定性排序，并同时受条目数与字符数预算约束。选中的文本经过 XML 转义后作为“不可信用户保存信息”追加到服务端 system message；它不能覆盖安全规则、Persona 边界或当前请求。召回失败降级为无记忆聊天，浏览器 SSE 仅收到数量，不收到记忆内容或数据库标识。
+
+`lastUsedAt` 只在助手消息成功写为 COMPLETE 后更新。Provider 失败、取消或记忆状态写入失败不会破坏主聊天流程。本阶段不引入 Embedding、向量库、语义检索、自动总结或记忆冲突合并。
+
 新聊天在 `xl` 桌面断点使用固定右侧助手栏，窄屏使用无第三方依赖的可访问抽屉；两者共享同一选择组件。选择状态保留在现有 `ChatLayout`，通过 History API 更新 `/chat?personaId=`，不创建数据库记录、不清空 Composer 草稿。已有 Conversation 不渲染选择栏，服务端继续拥有 Persona 绑定的最终决定权。
 
 ## 1. 现状审计

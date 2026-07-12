@@ -2,6 +2,8 @@ import { signOut } from "@/features/auth/actions";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Brain } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,7 @@ export default async function AccountPage() {
         <form action={signOut} className="mt-6">
           <Button type="submit" variant="outline">退出登录</Button>
         </form>
+        <Button asChild className="mt-3" variant="outline"><Link href="/memories"><Brain className="size-4" />记忆管理</Link></Button>
       </div>
     </main>
   );

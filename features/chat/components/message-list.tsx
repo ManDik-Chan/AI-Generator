@@ -18,6 +18,7 @@ interface MessageListProps {
   onCancelEdit(): void;
   onEditChange(value: string): void;
   onSubmitEdit(): void;
+  onSaveMemory?(message: ChatMessageView): void;
   persona?: PersonaChatIdentity;
 }
 
@@ -57,6 +58,7 @@ export function MessageList(props: MessageListProps) {
             onCancelEdit={props.onCancelEdit}
             onEditChange={props.onEditChange}
             onSubmitEdit={props.onSubmitEdit}
+            onSaveMemory={message.role === "user" ? () => props.onSaveMemory?.(message) : undefined}
             persona={props.persona}
           />;
         }) : (

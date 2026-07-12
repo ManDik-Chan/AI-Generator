@@ -10,6 +10,7 @@ import { ConversationList } from "@/features/chat/components/conversation-list";
 import { MessageList } from "@/features/chat/components/message-list";
 import { AssistantSelectorPanel } from "@/features/chat/components/assistant-selector-panel";
 import { DeletedPersonaNotice } from "@/features/chat/components/deleted-persona-notice";
+import { MemoryFormDialog } from "@/features/memory/components/memory-form-dialog";
 import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import type { PersonaChatIdentity } from "@/features/persona/types";
 import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
@@ -65,6 +66,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   const [controller, setController] = useState<AbortController>();
   const [editingMessage, setEditingMessage] = useState<ChatMessageView>();
   const [editValue, setEditValue] = useState("");
+  const [memorySource, setMemorySource] = useState<ChatMessageView>();
+  const [memoryNotice, setMemoryNotice] = useState<string>();
   const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
   const pendingStopEditRef = useRef(false);
 
@@ -147,6 +150,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           assistantContent += streamEvent.data.text;
           setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: assistantContent } : message));
         }
+        if (streamEvent.event === "memory") setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, memoryCount: streamEvent.data.count } : message));
         if (streamEvent.event === "done") {
           setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, id: streamEvent.data.messageId, status: "complete" } : message));
         }
@@ -214,6 +218,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         </header>
         {!aiConfigured && <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-200">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
         {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
+        {memoryNotice && <div className="border-b bg-emerald-500/10 px-4 py-2 text-center text-sm text-emerald-700">{memoryNotice}</div>}
         {conversation?.persona?.archived && <DeletedPersonaNotice personaId={conversation.persona.id} />}
         <div className="flex min-h-0 min-w-0 flex-1"><main className="flex min-w-0 flex-1 flex-col"><MessageList
           editDisabled={generating}
@@ -225,6 +230,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           onCancelEdit={() => { setEditingMessage(undefined); setEditValue(""); pendingStopEditRef.current = false; }}
           onEditChange={setEditValue}
           onSubmitEdit={() => { if (editingMessage) void sendMessage(editingMessage); }}
+          onSaveMemory={(message) => setMemorySource(message)}
           persona={conversation?.persona || activePersona}
         />
         <ChatComposer
@@ -238,6 +244,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         />
         </main>{!conversation?.id && <AssistantSelectorPanel onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}</div>
         {!conversation?.id && assistantDrawerOpen && <AssistantSelectorPanel mobile onClose={() => setAssistantDrawerOpen(false)} onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}
+        <MemoryFormDialog onOpenChange={(open) => { if (!open) setMemorySource(undefined); }} onSaved={setMemoryNotice} open={Boolean(memorySource)} personas={(conversation?.persona || activePersona) ? [{ id: (conversation?.persona || activePersona)!.id, name: (conversation?.persona || activePersona)!.name }] : []} source={memorySource && (activeConversationRef.current.id || conversation?.id) ? { content: memorySource.content, conversationId: (activeConversationRef.current.id || conversation!.id)!, messageId: memorySource.id, personaId: (conversation?.persona || activePersona)?.id } : undefined} />
       </section>
     </div>
   );

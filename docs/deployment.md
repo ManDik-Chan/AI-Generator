@@ -31,12 +31,16 @@ AI_MAX_OUTPUT_TOKENS=4096
 AI_DAILY_MESSAGE_LIMIT=50
 AI_MAX_INPUT_CHARS=8000
 AI_REQUEST_TIMEOUT_MS=120000
+MEMORY_MAX_ITEMS=8
+MEMORY_MAX_CHARS=2400
 AUTH_SECRET=
 ```
 
 Supabase URL 与 anon key 可在客户端使用；service role、数据库连接、AI Key 和 AUTH_SECRET 只能在服务端使用。代码不得通过 `NEXT_PUBLIC_` 暴露敏感值。
 
 AI 环境变量必须分别配置到 Vercel Preview 与 Production，禁止写入仓库。未配置 AI 时构建仍会成功，聊天页显示配置提示，`POST /api/chat` 返回友好 503，不泄露内部配置。
+
+Phase 5A1 需要部署 `20260713010000_add_memory_foundation` migration，并重新执行 `prisma/rls.sql`。`MEMORY_MAX_ITEMS` 和 `MEMORY_MAX_CHARS` 是服务端召回预算，不是密钥；默认值分别为 8 和 2400。上线前应使用两个真实用户验证跨用户 Persona、Conversation、Message 与 Memory 均被 RLS 拒绝。
 
 ## Vercel 流程
 
