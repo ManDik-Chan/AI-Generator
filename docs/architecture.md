@@ -1,5 +1,9 @@
 # AI-Generator V2 架构设计
 
+## Phase 4A3 图片边界
+
+Persona 头像使用独立 `ImageProvider`，不进入文本 `AiProvider`。GLM-Image 临时 URL 经 SSRF 安全下载后写入 Supabase private Storage，`GeneratedImage` 保存来源元数据，Persona 通过稳定的所有权校验路由暴露 `avatarUrl`。生成候选与 Apply 分离，模型成功不会自动覆盖现有头像。
+
 ## 1. 现状审计
 
 ### 当前技术栈

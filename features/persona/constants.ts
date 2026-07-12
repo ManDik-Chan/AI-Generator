@@ -27,4 +27,5 @@ export const PERSONA_LIMITS = {
   expertise: 1000,
   greeting: 1000,
   systemPrompt: 4000,
+  avatarPrompt: 900,
 } as const;

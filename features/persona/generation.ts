@@ -11,7 +11,7 @@ export const generatedPersonaSchema = z.object({
   personality: z.string().transform(clean).pipe(z.string().min(1).max(PERSONA_LIMITS.personality)),
   speakingStyle: optional(PERSONA_LIMITS.speakingStyle), expertise: optional(PERSONA_LIMITS.expertise), greeting: optional(PERSONA_LIMITS.greeting),
   avatarPresetId: z.string().max(80).optional(),
-  avatarPrompt: z.string().transform(clean).pipe(z.string().min(1).max(1200)).refine((value) => !/(?:https?:|javascript:|data:|openai|glm|智谱|api[_ -]?key|\b\d{2,4}x\d{2,4}\b)/i.test(value), "avatarPrompt 包含不允许的供应商、URL 或 API 参数。"),
+  avatarPrompt: z.string().transform(clean).pipe(z.string().min(1).max(900)).refine((value) => !/(?:https?:|javascript:|data:|api[_ -]?key|openai.{0,20}(?:image|api)|\b\d{2,4}x\d{2,4}\b)/i.test(value), "avatarPrompt 包含不允许的 URL 或 API 参数。"),
 }).strip();
 
 export type GeneratedPersonaModelDraft = z.infer<typeof generatedPersonaSchema>;

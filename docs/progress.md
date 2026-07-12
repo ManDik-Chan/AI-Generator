@@ -1,5 +1,15 @@
 # 重构进度
 
+## Phase 4A3 当前进度
+
+- [x] Phase 4A1：人格管理与人格聊天
+- [x] Phase 4A2：AI 人格草稿生成
+- [x] Phase 4A3：GLM-Image 人格头像代码、migration 与自动化验证
+- [ ] Phase 4A3：项目所有者真实 GLM-Image / Supabase Storage 联调
+- [ ] Phase 5：尚未开始
+
+Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`GeneratedImage` 候选、显式 Apply、头像私有读取以及 `20260712190000_add_persona_avatar_image` migration。所有 UI 继续只读取 `Persona.avatarUrl`。本环境无真实图片 Key 和 Service Role Key，因此不声明真实联调通过。
+
 ## 当前状态
 
 - [x] 现有 Streamlit 项目审计
@@ -8,7 +18,7 @@
 - [x] Phase 1：项目初始化
 - [x] Phase 2：基础系统
 - [x] Phase 3：AI 聊天
-- [ ] Phase 4：人格系统（4A1 完成，4A2 本 PR 实施）
+- [ ] Phase 4：人格系统（4A1、4A2 已完成，4A3 本 PR 实施）
 - [ ] Phase 5：记忆系统
 - [ ] Phase 6：工具箱
 - [ ] Phase 7：优化与部署

@@ -48,6 +48,8 @@ model Persona {
   userId        String   @map("user_id") @db.Uuid
   name          String
   avatarUrl     String?  @map("avatar_url")
+  avatarPrompt  String?  @map("avatar_prompt")
+  avatarImageId String?  @unique @map("avatar_image_id") @db.Uuid
   description   String?
   personality   String
   identity      String?
@@ -61,6 +63,7 @@ model Persona {
 
   user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations Conversation[]
+  avatarImage   GeneratedImage? @relation("PersonaAvatarImage", fields: [avatarImageId], references: [id], onDelete: SetNull)
 
   @@index([userId, updatedAt(sort: Desc)])
   @@index([userId, archivedAt, updatedAt(sort: Desc)])
@@ -132,6 +135,7 @@ model GeneratedImage {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  personaAvatar Persona? @relation("PersonaAvatarImage")
 
   @@index([userId, createdAt(sort: Desc)])
   @@map("generated_images")

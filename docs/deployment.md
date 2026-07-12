@@ -1,5 +1,9 @@
 # 部署设计
 
+## Phase 4A3 头像部署
+
+在 Supabase 预先创建 private bucket `persona-avatars`（PNG/JPEG/WebP，最大 15 MB），运行 `pnpm db:deploy`，并仅在服务端配置 `AI_IMAGE_PROVIDER`、`AI_IMAGE_BASE_URL`、`AI_IMAGE_API_KEY`、`AI_IMAGE_MODEL`、`AI_IMAGE_SIZE`、`AI_IMAGE_REQUEST_TIMEOUT_MS`、`SUPABASE_SERVICE_ROLE_KEY` 和 `SUPABASE_PERSONA_AVATAR_BUCKET`。应用不会在图片请求中自动创建 bucket；Service Role Key 禁止使用 `NEXT_PUBLIC_`。
+
 ## 目标拓扑
 
 - Web 与 Route Handlers：Vercel

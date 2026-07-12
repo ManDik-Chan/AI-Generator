@@ -1,5 +1,9 @@
 # AI 生成人格草稿
 
+## 与 Phase 4A3 的关系
+
+Phase 4A2 只在同一次文本响应中产生 provider-agnostic 的 `avatarPrompt`，不会自动调用图片模型。Persona 保存后，Phase 4A3 才允许用户修改 prompt 并明确点击生成；图片流程不会为 prompt 再调用一次文本模型。
+
 ## 流程与阶段边界
 
 Phase 4A1 提供手动 Persona 基础；Phase 4A2 只把自然语言描述转换为可编辑草稿。用户进入 `/personas/new` 后可在“手动创建”和“AI 生成”间切换。AI 成功结果填入原 PersonaForm，用户点击保存前不写入任何 Persona、Conversation 或 Message。

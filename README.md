@@ -1,5 +1,7 @@
 # AI-Generator V2
 
+> Phase 4A3：已保存 Persona 现可使用 GLM-Image 生成单张候选头像，经安全下载保存到 Supabase private Storage，并在用户明确确认后应用。未配置图片密钥时不影响构建、预设头像、文本聊天或 AI 人格草稿。详见 `docs/persona-avatar-generation.md`。
+
 面向亲朋好友使用的私人 AI 助手平台。V2 使用 Next.js 15、TypeScript 与 Tailwind CSS 重构，目标是简单、稳定、美观和易维护。
 
 ## 本地开发

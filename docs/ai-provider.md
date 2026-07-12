@@ -1,5 +1,9 @@
 # AI Provider 与 GLM-5.2 配置
 
+## GLM-Image Provider 补充
+
+Persona 头像由 `lib/ai/image` 的独立 Provider 调用 `POST /images/generations`，不参与 GLM-5.2 文本聊天或 Phase 4A2 人格草稿生成。请求仅包含 `model`、`prompt`、`size`，默认 `glm-image` 与 `1280x1280`。详细安全边界见 `docs/persona-avatar-generation.md`。
+
 ## 架构
 
 聊天业务依赖统一 `AiProvider.streamText()` 接口。当前只有 OpenAI-compatible 实现，使用原生 `fetch` 与标准 Chat Completions SSE：
