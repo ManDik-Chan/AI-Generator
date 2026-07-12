@@ -28,6 +28,10 @@ Provider 返回的临时 URL 不稳定，也不受应用控制，因此绝不直
 
 ## 配置与排错
 
+下载安全错误在浏览器中只显示分类后的友好提示；服务端会记录脱敏 diagnostics，包括 `url`、`dns`、`redirect`、`http-status`、`content-length`、`content-type`、`image-signature` 或 `mime-mismatch` 阶段。日志只包含 hostname、状态码、重定向次数、标准化 MIME 和长度，不包含完整 URL、query、签名、Cookie 或密钥。若本机代理把 CDN 域名解析到私网或 `198.18.0.0/15` 等 Fake-IP 保留段，系统仍拒绝连接并提示调整代理 DNS/TUN 模式，不会放宽 SSRF 规则。
+
+Content-Type 会兼容 `image/jpg`、`image/pjpeg`、`binary/octet-stream` 与 `application/x-octet-stream`。缺失或二进制类型必须通过 PNG/JPEG/WebP 魔数；最终上传 MIME 始终来自魔数。受支持图片 Header 与魔数不一致时记录 `mime-mismatch` 并采用魔数结果，以兼容真实 CDN；HTML、JSON、纯文本、SVG 和未知魔数仍拒绝。
+
 ```env
 AI_IMAGE_PROVIDER=zhipu-glm-image
 AI_IMAGE_BASE_URL=https://open.bigmodel.cn/api/paas/v4

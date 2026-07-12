@@ -10,6 +10,8 @@
 
 Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`GeneratedImage` 候选、显式 Apply、头像私有读取以及 `20260712190000_add_persona_avatar_image` migration。所有 UI 继续只读取 `Persona.avatarUrl`。本环境无真实图片 Key 和 Service Role Key，因此不声明真实联调通过。
 
+真实联调反馈的通用 `UNSAFE_IMAGE` 已拆分为脱敏服务端阶段诊断和安全的前端分类提示；同时兼容常见 JPEG/octet-stream MIME 别名与缺失 Header。SSRF、DNS 私网/Fake-IP、重定向、15 MB 和魔数限制保持启用。
+
 ## 当前状态
 
 - [x] 现有 Streamlit 项目审计
