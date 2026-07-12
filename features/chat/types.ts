@@ -7,6 +7,7 @@ export interface ChatMessageView {
   content: string;
   status: ChatMessageStatus;
   createdAt: string;
+  temporary?: boolean;
 }
 
 export interface ConversationSummary {
@@ -20,7 +21,7 @@ export interface ConversationDetail extends ConversationSummary {
 }
 
 export type ChatStreamEvent =
-  | { event: "conversation"; data: { conversationId: string } }
+  | { event: "conversation"; data: { conversationId: string; updatedAt: string } }
   | { event: "turn"; data: { conversationId: string; userMessageId: string; assistantMessageId: string; editedMessageId?: string } }
   | { event: "delta"; data: { text: string } }
   | { event: "done"; data: { messageId: string } }

@@ -17,6 +17,20 @@ export function assertSupersedeCount(expected: number, actual: number) {
   if (expected !== actual) throw new ChatEditConflictError();
 }
 
+export function assertConversationVersion(actual: Date, expected: string) {
+  if (actual.toISOString() !== expected) throw new ChatEditConflictError();
+}
+
+export function resolveEditMessageId(
+  messages: EditableMessage[],
+  explicitMessageId: string | undefined,
+  editLastMessage: boolean,
+) {
+  if (explicitMessageId) return explicitMessageId;
+  if (!editLastMessage) return undefined;
+  return [...messages].reverse().find((message) => !message.supersededAt && message.role === "USER")?.id;
+}
+
 export function planLastUserMessageEdit(messages: EditableMessage[], targetId: string) {
   const activeMessages = messages.filter((message) => !message.supersededAt);
   const targetIndex = activeMessages.findIndex((message) => message.id === targetId);

@@ -9,7 +9,13 @@ import { DEFAULT_ASSISTANT_SYSTEM_PROMPT } from "@/lib/ai/prompts/default-assist
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
 import { ownedConversationWhere } from "@/features/chat/access";
-import { assertSupersedeCount, ChatEditConflictError, planLastUserMessageEdit } from "@/features/chat/edit";
+import {
+  assertConversationVersion,
+  assertSupersedeCount,
+  ChatEditConflictError,
+  planLastUserMessageEdit,
+  resolveEditMessageId,
+} from "@/features/chat/edit";
 import { finalizeAssistantMessage } from "@/features/chat/persistence";
 import { createChatRequestSchema } from "@/features/chat/schemas";
 import {
@@ -91,18 +97,35 @@ export async function POST(request: Request) {
 
   let assistantMessageId: string;
   let userMessageId: string;
+  let editedMessageId: string | undefined;
+  let conversationUpdatedAt: Date;
   try {
     const result = await prisma.$transaction(async (transaction) => {
       let updateTitle = false;
-      if (parsed.data.editMessageId) {
+      let resolvedEditMessageId = parsed.data.editMessageId;
+      if (parsed.data.editMessageId || parsed.data.editLastMessage) {
+        if (parsed.data.editLastMessage) {
+          const currentConversation = await transaction.conversation.findUnique({
+            where: { id: conversationId },
+            select: { updatedAt: true },
+          });
+          if (!currentConversation) throw new ChatEditConflictError();
+          assertConversationVersion(currentConversation.updatedAt, parsed.data.editConversationUpdatedAt!);
+        }
         const activeMessages = await transaction.message.findMany({
           where: { conversationId, supersededAt: null },
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           select: { id: true, role: true, status: true, content: true, supersededAt: true },
         });
-        const target = activeMessages.find((message) => message.id === parsed.data.editMessageId);
+        resolvedEditMessageId = resolveEditMessageId(
+          activeMessages,
+          resolvedEditMessageId,
+          Boolean(parsed.data.editLastMessage),
+        );
+        if (!resolvedEditMessageId) throw new ChatEditConflictError();
+        const target = activeMessages.find((message) => message.id === resolvedEditMessageId);
         if (target?.content === parsed.data.content) throw new ChatEditConflictError("编辑内容没有变化。");
-        const plan = planLastUserMessageEdit(activeMessages, parsed.data.editMessageId);
+        const plan = planLastUserMessageEdit(activeMessages, resolvedEditMessageId);
         const superseded = await transaction.message.updateMany({
           where: { id: { in: plan.supersedeIds }, conversationId, supersededAt: null },
           data: { supersededAt: new Date() },
@@ -119,17 +142,25 @@ export async function POST(request: Request) {
         data: { conversationId, role: "ASSISTANT", content: "", status: "PENDING" },
         select: { id: true },
       });
-      await transaction.conversation.update({
+      const updatedConversation = await transaction.conversation.update({
         where: { id: conversationId },
         data: {
           updatedAt: new Date(),
           ...(updateTitle ? { title: createConversationTitle(parsed.data.content) } : {}),
         },
+        select: { updatedAt: true },
       });
-      return { assistantMessageId: assistantMessage.id, userMessageId: userMessage.id };
+      return {
+        assistantMessageId: assistantMessage.id,
+        userMessageId: userMessage.id,
+        editedMessageId: resolvedEditMessageId,
+        conversationUpdatedAt: updatedConversation.updatedAt,
+      };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     assistantMessageId = result.assistantMessageId;
     userMessageId = result.userMessageId;
+    editedMessageId = result.editedMessageId;
+    conversationUpdatedAt = result.conversationUpdatedAt;
   } catch (error) {
     if (error instanceof ChatEditConflictError || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")) {
       return errorResponse(error instanceof ChatEditConflictError ? error.message : "对话内容已发生变化，请刷新后重试。", 409);
@@ -165,12 +196,15 @@ export async function POST(request: Request) {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      controller.enqueue(encoder.encode(encodeChatSse("conversation", { conversationId })));
+      controller.enqueue(encoder.encode(encodeChatSse("conversation", {
+        conversationId,
+        updatedAt: conversationUpdatedAt.toISOString(),
+      })));
       controller.enqueue(encoder.encode(encodeChatSse("turn", {
         conversationId,
         userMessageId,
         assistantMessageId,
-        ...(parsed.data.editMessageId ? { editedMessageId: parsed.data.editMessageId } : {}),
+        ...(editedMessageId ? { editedMessageId } : {}),
       })));
 
       try {

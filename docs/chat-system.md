@@ -26,6 +26,9 @@ Phase 3 仅提供默认助手：新建、多轮流式聊天、历史、删除、
 - 同一消息在两个页面并发编辑时，后提交者收到 `409`：“对话内容已发生变化，请刷新后重试。”
 - 助手流只可把 `PENDING` 且 `superseded_at IS NULL` 的记录收尾，已被编辑替代的旧流无法迟到覆盖。
 - 每日配额统计全部 `USER` 消息（包括被替代版本），因此每次编辑重提都会消耗一次额度。
+- 客户端明确区分 `user-…`/`assistant-…` 临时 ID 与 `turn` 确认后的数据库 UUID；临时 ID 永远不会作为 `editMessageId` 发送。
+- 慢网络下若停止编辑发生在 `turn` 前，客户端等待带对话版本的 `conversation` 事件后使用 `editLastMessage=true`；服务端在 Serializable 事务中校验所有权、对话版本和最后一个 active USER。其他标签页已改变对话时返回 409，不会误改新的消息。
+- Composer 的禁用原因独立表达：真正缺少 AI 配置时显示“AI 服务尚未配置”，内联编辑时显示“正在编辑上一条消息”，取消编辑后保留并恢复原草稿。
 
 用户消息持久化后，即使 Provider 失败也会保留。数据库与 Provider 错误会转换成可理解的中文提示，不向浏览器返回内部结构。
 
@@ -33,7 +36,7 @@ Phase 3 仅提供默认助手：新建、多轮流式聊天、历史、删除、
 
 ```text
 event: conversation
-data: {"conversationId":"..."}
+data: {"conversationId":"...","updatedAt":"2026-07-12T12:00:00.000Z"}
 
 event: turn
 data: {"conversationId":"...","userMessageId":"...","assistantMessageId":"...","editedMessageId":"..."}

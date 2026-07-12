@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu, Sparkles, X } from "lucide-react";
 
 import { ChatComposer } from "@/features/chat/components/chat-composer";
 import { ConversationList } from "@/features/chat/components/conversation-list";
 import { MessageList } from "@/features/chat/components/message-list";
+import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
+import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
 
 interface ChatLayoutProps {
@@ -51,12 +53,24 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   const [error, setError] = useState<string>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [controller, setController] = useState<AbortController>();
-  const [editingMessageId, setEditingMessageId] = useState<string>();
+  const [editingMessage, setEditingMessage] = useState<ChatMessageView>();
   const [editValue, setEditValue] = useState("");
+  const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
+  const pendingStopEditRef = useRef(false);
 
-  async function sendMessage(editMessageId?: string) {
-    const content = (editMessageId ? editValue : draft).trim();
+  async function sendMessage(messageToEdit?: ChatMessageView) {
+    const content = (messageToEdit ? editValue : draft).trim();
     if (!content || generating || !aiConfigured) return;
+
+    const editTarget = messageToEdit ? createEditRequestTarget({
+      message: messageToEdit,
+      conversationId: activeConversationRef.current.id ?? conversation?.id,
+      conversationUpdatedAt: activeConversationRef.current.updatedAt,
+    }) : undefined;
+    if (messageToEdit && !editTarget) {
+      setError("正在确认对话，请稍后重试编辑。");
+      return;
+    }
 
     const requestController = new AbortController();
     let userId = `user-${crypto.randomUUID()}`;
@@ -65,41 +79,53 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
     let createdConversationId = conversation?.id;
     let assistantContent = "";
     const previousMessages = messages;
-    const editIndex = editMessageId ? messages.findIndex((message) => message.id === editMessageId) : -1;
-    if (editMessageId && editIndex < 0) return;
-    if (editMessageId) {
-      setEditingMessageId(undefined);
+    const editIndex = messageToEdit ? messages.findIndex((message) => message.id === messageToEdit.id) : -1;
+    if (messageToEdit && editIndex < 0) return;
+    if (messageToEdit) {
+      setEditingMessage(undefined);
       setEditValue("");
     } else setDraft("");
     setError(undefined);
     setGenerating(true);
     setController(requestController);
+    pendingStopEditRef.current = false;
+    if (!messageToEdit) activeConversationRef.current = { id: conversation?.id };
     const retainedMessages = editIndex >= 0 ? messages.slice(0, editIndex) : messages;
     setMessages([...retainedMessages,
-      { id: userId, role: "user", content, status: "complete", createdAt: now },
-      { id: assistantId, role: "assistant", content: "", status: "pending", createdAt: now },
+      { id: userId, role: "user", content, status: "complete", createdAt: now, temporary: true },
+      { id: assistantId, role: "assistant", content: "", status: "pending", createdAt: now, temporary: true },
     ]);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: conversation?.id, content, ...(editMessageId ? { editMessageId } : {}) }),
+        body: JSON.stringify({ content, ...(editTarget ?? { conversationId: conversation?.id }) }),
         signal: requestController.signal,
       });
 
       await readChatEvents(response, (streamEvent) => {
-        if (streamEvent.event === "conversation") createdConversationId = streamEvent.data.conversationId;
+        if (streamEvent.event === "conversation") {
+          createdConversationId = streamEvent.data.conversationId;
+          activeConversationRef.current = { id: streamEvent.data.conversationId, updatedAt: streamEvent.data.updatedAt };
+          queueMicrotask(() => {
+            if (pendingStopEditRef.current) {
+              pendingStopEditRef.current = false;
+              requestController.abort();
+            }
+          });
+        }
         if (streamEvent.event === "turn") {
           const temporaryUserId = userId;
           const temporaryAssistantId = assistantId;
           userId = streamEvent.data.userMessageId;
           assistantId = streamEvent.data.assistantMessageId;
-          setMessages((current) => current.map((message) => {
-            if (message.id === temporaryUserId) return { ...message, id: userId };
-            if (message.id === temporaryAssistantId) return { ...message, id: assistantId };
-            return message;
-          }));
+          setMessages((current) => confirmOptimisticTurn(current, temporaryUserId, temporaryAssistantId, userId, assistantId));
+          setEditingMessage((current) => current?.id === temporaryUserId ? { ...current, id: userId, temporary: false } : current);
+          if (pendingStopEditRef.current) {
+            pendingStopEditRef.current = false;
+            requestController.abort();
+          }
         }
         if (streamEvent.event === "delta") {
           assistantContent += streamEvent.data.text;
@@ -120,9 +146,9 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       if (requestController.signal.aborted) {
         setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: assistantContent ? "complete" : "error" } : message));
       } else {
-        if (editMessageId) {
+        if (messageToEdit) {
           setMessages(previousMessages);
-          setEditingMessageId(editMessageId);
+          setEditingMessage(messageToEdit);
           setEditValue(content);
         } else {
           setDraft(content);
@@ -133,14 +159,21 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
     } finally {
       setGenerating(false);
       setController(undefined);
+      pendingStopEditRef.current = false;
     }
   }
 
   function beginEdit(message: ChatMessageView) {
-    if (generating) controller?.abort();
-    setEditingMessageId(message.id);
+    setEditingMessage(message);
     setEditValue(message.content);
     setError(undefined);
+    if (generating) {
+      if (message.temporary && !activeConversationRef.current.updatedAt) {
+        pendingStopEditRef.current = true;
+      } else {
+        controller?.abort();
+      }
+    }
   }
 
   return (
@@ -165,16 +198,24 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
         <MessageList
           editDisabled={generating}
-          editingMessageId={editingMessageId}
+          editingMessageId={editingMessage?.id}
           editValue={editValue}
           maxInputChars={maxInputChars}
           messages={messages}
           onBeginEdit={beginEdit}
-          onCancelEdit={() => { setEditingMessageId(undefined); setEditValue(""); }}
+          onCancelEdit={() => { setEditingMessage(undefined); setEditValue(""); pendingStopEditRef.current = false; }}
           onEditChange={setEditValue}
-          onSubmitEdit={() => { if (editingMessageId) void sendMessage(editingMessageId); }}
+          onSubmitEdit={() => { if (editingMessage) void sendMessage(editingMessage); }}
         />
-        <ChatComposer disabled={!aiConfigured || Boolean(editingMessageId)} generating={generating} maxInputChars={maxInputChars} onChange={setDraft} onSend={() => void sendMessage()} onStop={() => controller?.abort()} value={draft} />
+        <ChatComposer
+          disabledReason={getComposerDisabledReason(aiConfigured, Boolean(editingMessage))}
+          generating={generating}
+          maxInputChars={maxInputChars}
+          onChange={setDraft}
+          onSend={() => void sendMessage()}
+          onStop={() => controller?.abort()}
+          value={draft}
+        />
       </section>
     </div>
   );

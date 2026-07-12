@@ -4,10 +4,11 @@ import { useRef } from "react";
 import { Send, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { getComposerPlaceholder, type ComposerDisabledReason } from "@/features/chat/composer-state";
 
 interface ChatComposerProps {
   value: string;
-  disabled: boolean;
+  disabledReason: ComposerDisabledReason;
   generating: boolean;
   maxInputChars: number;
   onChange(value: string): void;
@@ -17,7 +18,8 @@ interface ChatComposerProps {
 
 export function ChatComposer(props: ChatComposerProps) {
   const composingRef = useRef(false);
-  const canSend = props.value.trim().length > 0 && !props.disabled && !props.generating;
+  const disabled = Boolean(props.disabledReason);
+  const canSend = props.value.trim().length > 0 && !disabled && !props.generating;
 
   return (
     <div className="border-t bg-background/90 px-3 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6">
@@ -26,7 +28,7 @@ export function ChatComposer(props: ChatComposerProps) {
           <textarea
             aria-label="消息内容"
             className="max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
-            disabled={props.disabled}
+            disabled={disabled}
             maxLength={props.maxInputChars}
             onChange={(event) => props.onChange(event.target.value)}
             onCompositionEnd={() => { composingRef.current = false; }}
@@ -37,7 +39,7 @@ export function ChatComposer(props: ChatComposerProps) {
                 if (canSend) props.onSend();
               }
             }}
-            placeholder={props.disabled ? "AI 服务尚未配置" : "输入消息，Enter 发送，Shift + Enter 换行"}
+            placeholder={getComposerPlaceholder(props.disabledReason)}
             rows={1}
             value={props.value}
           />

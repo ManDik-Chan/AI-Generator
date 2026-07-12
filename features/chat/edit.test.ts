@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertSupersedeCount, ChatEditConflictError, planLastUserMessageEdit, type EditableMessage } from "@/features/chat/edit";
+import { assertConversationVersion, assertSupersedeCount, ChatEditConflictError, planLastUserMessageEdit, resolveEditMessageId, type EditableMessage } from "@/features/chat/edit";
 
 const row = (id: string, role: "USER" | "ASSISTANT", status: "PENDING" | "COMPLETE" | "ERROR" = "COMPLETE", supersededAt: Date | null = null): EditableMessage => ({ id, role, status, content: id, supersededAt });
 
@@ -25,5 +25,15 @@ describe("last user message editing", () => {
 
   it("turns a concurrent supersede count mismatch into the required conflict", () => {
     expect(() => assertSupersedeCount(2, 1)).toThrow("对话内容已发生变化，请刷新后重试。");
+  });
+
+  it("resolves editLastMessage to the last active user", () => {
+    const rows = [row("u1", "USER"), row("a1", "ASSISTANT"), row("old", "USER", "COMPLETE", new Date()), row("u2", "USER"), row("a2", "ASSISTANT", "ERROR")];
+    expect(resolveEditMessageId(rows, undefined, true)).toBe("u2");
+    expect(resolveEditMessageId(rows, "u1", false)).toBe("u1");
+  });
+
+  it("rejects an editLastMessage request after another tab changes the conversation", () => {
+    expect(() => assertConversationVersion(new Date("2026-07-12T12:00:01.000Z"), "2026-07-12T12:00:00.000Z")).toThrow(ChatEditConflictError);
   });
 });
