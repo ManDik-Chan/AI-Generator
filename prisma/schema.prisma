@@ -53,7 +53,9 @@ model Persona {
   identity      String?
   speakingStyle String?  @map("speaking_style")
   expertise     String?
+  greeting      String?
   systemPrompt  String   @map("system_prompt")
+  archivedAt    DateTime? @map("archived_at") @db.Timestamptz(6)
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -61,6 +63,7 @@ model Persona {
   conversations Conversation[]
 
   @@index([userId, updatedAt(sort: Desc)])
+  @@index([userId, archivedAt, updatedAt(sort: Desc)])
   @@map("personas")
 }
 

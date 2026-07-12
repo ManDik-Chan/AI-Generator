@@ -14,6 +14,7 @@ export interface ConversationSummary {
   id: string;
   title: string;
   updatedAt: string;
+  persona?: import("@/features/persona/types").PersonaChatIdentity;
 }
 
 export interface ConversationDetail extends ConversationSummary {

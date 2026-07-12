@@ -19,6 +19,16 @@ pnpm dev
 
 Phase 3 提供 `/chat` 流式聊天、历史记录、删除、Markdown 与代码块。Provider 使用 OpenAI-compatible Chat Completions；GLM-5.2 与未来 OpenAI 均通过服务端环境变量切换，不需要改写聊天页面或 API。配置与联调步骤见 `docs/ai-provider.md` 和 `docs/chat-system.md`。
 
+## AI 人格
+
+Phase 4A 提供 `/personas` 私有人格管理：手动创建、编辑、预设头像、归档恢复，并可将人格绑定到新对话。人格 Prompt 只在服务端拼装，不返回浏览器；详细设计见 `docs/persona-system.md`。
+
+新增 Persona migration 后，项目所有者需在真实数据库执行：
+
+```bash
+pnpm db:deploy
+```
+
 ## 质量检查
 
 ```bash

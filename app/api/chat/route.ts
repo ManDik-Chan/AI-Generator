@@ -5,10 +5,11 @@ import { Prisma } from "@prisma/client";
 import { getAiProvider } from "@/lib/ai/registry";
 import { getAiConfigurationStatus, getAiRuntimeLimits } from "@/lib/ai/config";
 import { AiProviderError, toPublicAiError } from "@/lib/ai/errors";
-import { DEFAULT_ASSISTANT_SYSTEM_PROMPT } from "@/lib/ai/prompts/default-assistant";
+import { buildPersonaAssistantPrompt, type RuntimePersonaPrompt } from "@/lib/ai/prompts/persona-assistant";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
 import { ownedConversationWhere } from "@/features/chat/access";
+import { activeOwnedPersonaWhere, newConversationPersonaData } from "@/features/persona/chat";
 import {
   assertConversationVersion,
   assertSupersedeCount,
@@ -78,16 +79,28 @@ export async function POST(request: Request) {
   }
 
   let conversationId = parsed.data.conversationId;
+  let runtimePersona: RuntimePersonaPrompt | null = null;
   if (conversationId) {
     const ownedConversation = await prisma.conversation.findFirst({
       where: ownedConversationWhere(user.id, conversationId),
-      select: { id: true },
+      select: { id: true, personaId: true, persona: { select: { name: true, identity: true, personality: true, speakingStyle: true, expertise: true, systemPrompt: true } } },
     });
     if (!ownedConversation) return errorResponse("对话不存在或无权访问。", 404);
+    if (ownedConversation.personaId && !ownedConversation.persona) console.error("[chat] Persona relation missing", { conversationId });
+    runtimePersona = ownedConversation.persona;
   } else {
+    if (parsed.data.personaId) {
+      const persona = await prisma.persona.findFirst({
+        where: activeOwnedPersonaWhere(user.id, parsed.data.personaId),
+        select: { id: true, name: true, identity: true, personality: true, speakingStyle: true, expertise: true, systemPrompt: true },
+      });
+      if (!persona) return errorResponse("人格不存在、已归档或无权访问。", 404);
+      runtimePersona = persona;
+    }
     const conversation = await prisma.conversation.create({
       data: {
         userId: user.id,
+        ...newConversationPersonaData(parsed.data.personaId),
         title: createConversationTitle(parsed.data.content),
       },
       select: { id: true },
@@ -209,7 +222,7 @@ export async function POST(request: Request) {
 
       try {
         for await (const text of provider.streamText({
-          messages: [{ role: "system", content: DEFAULT_ASSISTANT_SYSTEM_PROMPT }, ...context],
+          messages: [{ role: "system", content: buildPersonaAssistantPrompt(runtimePersona) }, ...context],
           model: config.model,
           temperature: config.temperature,
           maxOutputTokens: config.maxOutputTokens,

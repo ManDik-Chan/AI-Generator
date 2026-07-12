@@ -3,6 +3,7 @@ import { z } from "zod";
 export function createChatRequestSchema(maxInputChars: number) {
   return z.object({
     conversationId: z.uuid("conversationId 格式无效。").optional(),
+    personaId: z.uuid("personaId 格式无效。").optional(),
     editMessageId: z.uuid("editMessageId 格式无效。").optional(),
     editLastMessage: z.literal(true, { error: "editLastMessage 必须为 true。" }).optional(),
     editConversationUpdatedAt: z.iso.datetime({ error: "editConversationUpdatedAt 格式无效。" }).optional(),
@@ -23,6 +24,9 @@ export function createChatRequestSchema(maxInputChars: number) {
     }
     if (!value.editLastMessage && value.editConversationUpdatedAt) {
       context.addIssue({ code: "custom", path: ["editConversationUpdatedAt"], message: "对话版本只能用于 editLastMessage。" });
+    }
+    if (value.conversationId && value.personaId) {
+      context.addIssue({ code: "custom", path: ["personaId"], message: "已有对话不能切换人格。" });
     }
   });
 }
