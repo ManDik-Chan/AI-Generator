@@ -1,0 +1,3 @@
+export const CHAT_CONTEXT_MESSAGE_LIMIT = 20;
+export const CHAT_CONTEXT_CHAR_BUDGET = 24_000;
+export const CHAT_TITLE_MAX_LENGTH = 48;

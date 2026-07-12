@@ -1,7 +1,33 @@
-export type AiCapability = "text" | "vision" | "image-generation";
+export type AiMessageRole = "system" | "user" | "assistant";
 
-export interface AiModelDescriptor {
-  id: string;
-  provider: string;
-  capabilities: AiCapability[];
+export interface AiMessage {
+  role: AiMessageRole;
+  content: string;
+}
+
+export interface AiStreamRequest {
+  messages: AiMessage[];
+  model: string;
+  temperature: number;
+  maxOutputTokens: number;
+  signal?: AbortSignal;
+}
+
+export interface AiProvider {
+  streamText(request: AiStreamRequest): AsyncIterable<string>;
+}
+
+export interface AiProviderConfig {
+  provider: "openai-compatible";
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  temperature: number;
+  maxOutputTokens: number;
+  requestTimeoutMs: number;
+}
+
+export interface AiRuntimeLimits {
+  dailyMessageLimit: number;
+  maxInputChars: number;
 }

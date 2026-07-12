@@ -78,6 +78,16 @@ Supabase Auth + PostgreSQL + Object Storage + AI Providers
 
 所有 Provider 只在服务端实例化。统一接口至少包含 `streamText`、`generateText` 和 `analyzeImage`。业务代码传入能力需求，不直接拼接供应商 URL。Provider 与模型通过环境变量和服务端配置选择。
 
+Phase 3 首个实现位于 `lib/ai/providers/openai-compatible.ts`，使用原生 `fetch` 调用 Chat Completions SSE。聊天 API 只消费统一文本增量，不解析或向前端暴露服务商原始结构。Provider 配置延迟到实际请求时读取，因此没有 AI Key 的构建和页面仍可正常工作。
+
+聊天业务按以下边界拆分：
+
+- `app/api/chat/route.ts`：认证、输入校验、限额编排和统一 SSE 响应。
+- `features/chat/queries.ts` 与 `access.ts`：显式 `userId` 数据边界。
+- `features/chat/utils.ts`：标题、上下文预算、UTC 日界线等纯逻辑。
+- `features/chat/components`：历史、消息、Markdown 和流式交互。
+- `lib/ai`：配置、错误归一化、SSE 解析和 Provider 注册。
+
 ### 安全基线
 
 - 用户身份由 Supabase Auth 管理，服务端校验会话。
