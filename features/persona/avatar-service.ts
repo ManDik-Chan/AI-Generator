@@ -19,18 +19,24 @@ export function buildFinalAvatarPrompt(prompt: string) {
   return `${clean}${FINAL_PROMPT_SUFFIX}`.slice(0, 1000);
 }
 
-export async function generatePersonaAvatarCandidate(userId: string, personaId: string, suppliedPrompt?: string, signal?: AbortSignal) {
+export type PersonaAvatarGenerationStage = "preparing" | "generating" | "downloading" | "validating" | "uploading" | "saving";
+export async function generatePersonaAvatarCandidate(userId: string, personaId: string, suppliedPrompt?: string, signal?: AbortSignal, onProgress?: (stage: PersonaAvatarGenerationStage) => void) {
+  onProgress?.("preparing");
   const persona = await prisma.persona.findFirst({ where: { id: personaId, userId }, select: { id: true, name: true, avatarPrompt: true, identity: true, personality: true, speakingStyle: true, expertise: true } });
   if (!persona) return null;
   const prompt = resolvePersonaAvatarPrompt({ name: persona.name, personality: persona.personality, identity: persona.identity ?? undefined, speakingStyle: persona.speakingStyle ?? undefined, expertise: persona.expertise ?? undefined, avatarPrompt: suppliedPrompt ?? persona.avatarPrompt ?? undefined });
   const finalPrompt = buildFinalAvatarPrompt(prompt);
   const config = requireImageConfig();
+  onProgress?.("generating");
   const result = await getImageProvider().generateImage({ prompt: finalPrompt, size: config.size, signal });
-  const downloaded = await downloadRemoteImageSafely(result.remoteUrl, { signal });
+  onProgress?.("downloading");
+  const downloaded = await downloadRemoteImageSafely(result.remoteUrl, { signal, onProgress: () => onProgress?.("validating") });
   const generatedImageId = randomUUID();
   const storagePath = buildPersonaAvatarStoragePath(userId, personaId, generatedImageId, downloaded.extension);
+  onProgress?.("uploading");
   await uploadPersonaAvatar(storagePath, downloaded.bytes, downloaded.mimeType);
   try {
+    onProgress?.("saving");
     await prisma.generatedImage.create({ data: { id: generatedImageId, userId, prompt, provider: result.provider, model: result.model, storagePath, width: result.width, height: result.height } });
   } catch {
     try { await removePersonaAvatar(storagePath); } catch { /* best-effort rollback */ }
@@ -52,7 +58,7 @@ export async function applyPersonaAvatar(userId: string, personaId: string, gene
   if (!result) return null;
   revalidatePersonaAvatar(personaId);
   if (result.oldImageId && result.oldImageId !== generatedImageId) await cleanupUnusedGeneratedImage(userId, result.oldImageId);
-  return true;
+  return { avatarUrl: `/api/personas/${personaId}/avatar?v=${generatedImageId}`, avatarImageId: generatedImageId };
 }
 
 export async function deleteGeneratedAvatar(userId: string, generatedImageId: string) {

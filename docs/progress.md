@@ -14,6 +14,8 @@ Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`G
 
 Phase 4A3 交互收尾将新对话的顶部横向人格选择器迁移为桌面右侧助手栏和移动端抽屉；选择只更新客户端空状态与 URL，首条消息发送时才绑定 Persona。用户可见的“归档”流程改为三点菜单中的“删除人格”、确认对话框与 `/personas/trash` 回收站；底层继续使用 `archivedAt`，没有新增 migration。回收站人格的历史对话可查看但前后端均禁止继续发送，恢复后原对话重新可用。
 
+真实视觉验收发现的头像 Dialog 条件卸载问题已通过稳定的受控 `PersonaHeaderClient` 修复；AI 头像入口恢复为详情页显式主操作。AI 人格草稿和 GLM-Image 候选接口均改为真实 SSE 阶段反馈，共享无虚假百分比的计时进度组件。Apply API 返回 cache-buster `avatarUrl`，详情页本地状态即时更新，不依赖 `router.refresh()` 显示。
+
 ## 当前状态
 
 - [x] 现有 Streamlit 项目审计

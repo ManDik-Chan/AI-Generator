@@ -26,6 +26,8 @@ Provider 返回的临时 URL 不稳定，也不受应用控制，因此绝不直
 
 生成 API 只创建候选 Storage 文件和 `GeneratedImage`，不会修改 Persona。用户确认“使用此头像”后，Apply API 在事务中同时验证 Persona 和候选图片所有权，再更新上述三个 Persona 字段。放弃候选会删除 Storage 与数据库记录；正在使用的图片拒绝删除。替换旧 AI 头像或切换为白名单预设头像时，先成功更新数据库，再尽力清理旧文件，清理失败不会回滚已经正确应用的新头像。
 
+候选生成接口通过 SSE 按真实代码位置依次发送 `preparing`、`generating`、`downloading`、`validating`、`uploading`、`saving`，再以 `done` 返回候选；事件不包含远程 URL、query、Storage 路径或密钥，也不会增加 GLM-Image 调用或自动重试。详情页使用始终挂载的受控 Dialog，入口是“开始对话”旁的显式次要按钮。Apply 成功返回带 `v=<generatedImageId>` 的 `avatarUrl` 和 `avatarImageId`，客户端立即更新主头像并显示“头像已更新”，页面显示不依赖刷新。
+
 ## 配置与排错
 
 下载安全错误在浏览器中只显示分类后的友好提示；服务端会记录脱敏 diagnostics，包括 `url`、`dns`、`redirect`、`http-status`、`content-length`、`content-type`、`image-signature` 或 `mime-mismatch` 阶段。日志只包含 hostname、状态码、重定向次数、标准化 MIME 和长度，不包含完整 URL、query、签名、Cookie 或密钥。若本机代理把 CDN 域名解析到私网或 `198.18.0.0/15` 等 Fake-IP 保留段，系统仍拒绝连接并提示调整代理 DNS/TUN 模式，不会放宽 SSRF 规则。

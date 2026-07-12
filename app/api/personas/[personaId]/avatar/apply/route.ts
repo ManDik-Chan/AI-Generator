@@ -12,6 +12,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ per
   const parsed = avatarApplySchema.safeParse(body); if (!parsed.success) return NextResponse.json({ error: "候选头像或提示词格式无效。" }, { status: 400 });
   try {
     const applied = await applyPersonaAvatar(user.id, personaId, parsed.data.generatedImageId, parsed.data.prompt);
-    return applied ? NextResponse.json({ success: true }) : NextResponse.json({ error: "人格或候选头像不存在。" }, { status: 404 });
+    return applied ? NextResponse.json({ success: true, ...applied }) : NextResponse.json({ error: "人格或候选头像不存在。" }, { status: 404 });
   } catch (error) { return avatarApiError(error); }
 }

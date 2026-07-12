@@ -24,6 +24,7 @@ export interface DownloadRemoteImageOptions {
   maxBytes?: number;
   fetcher?: typeof fetch;
   lookup?: Lookup;
+  onProgress?(stage: "validating"): void;
 }
 
 function safetyError(code: "UNSAFE_IMAGE" | "PROXY_DNS" | "UNAVAILABLE", message: string, diagnostics: ImageSafetyDiagnostics, status?: number) {
@@ -99,6 +100,7 @@ export async function downloadRemoteImageSafely(rawUrl: string, options: Downloa
       const reader = response.body.getReader(); const chunks: Uint8Array[] = []; let length = 0;
       while (true) { const { done, value } = await reader.read(); if (done) break; length += value.length; if (length > limit) { await reader.cancel(); throw safetyError("UNSAFE_IMAGE", "Remote image is too large", { stage: "content-length", hostname, redirectCount: redirects, declaredType: declaredType || undefined, declaredLength: declaredLength || undefined, downloadedLength: length }); } chunks.push(value); }
       const bytes = new Uint8Array(length); let offset = 0; for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+      options.onProgress?.("validating");
       const baseDiagnostics = { hostname, redirectCount: redirects, declaredType: declaredType || undefined, declaredLength: declaredLength || undefined, downloadedLength: length };
       const detected = detectImage(bytes, baseDiagnostics);
       if (SUPPORTED_IMAGE_TYPES.has(declaredType) && declaredType !== detected.mimeType) {
