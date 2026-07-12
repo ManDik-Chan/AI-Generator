@@ -8,6 +8,9 @@ import { House, Menu, Sparkles, X } from "lucide-react";
 import { ChatComposer } from "@/features/chat/components/chat-composer";
 import { ConversationList } from "@/features/chat/components/conversation-list";
 import { MessageList } from "@/features/chat/components/message-list";
+import { PersonaSelector } from "@/features/chat/components/persona-selector";
+import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
+import type { PersonaChatIdentity } from "@/features/persona/types";
 import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
@@ -18,6 +21,8 @@ interface ChatLayoutProps {
   conversation: ConversationDetail | null;
   aiConfigured: boolean;
   maxInputChars: number;
+  personas?: PersonaChatIdentity[];
+  selectedPersona?: PersonaChatIdentity;
 }
 
 async function readChatEvents(response: Response, onEvent: (event: ChatStreamEvent) => void) {
@@ -47,7 +52,7 @@ async function readChatEvents(response: Response, onEvent: (event: ChatStreamEve
   }
 }
 
-export function ChatLayout({ conversations, conversation, aiConfigured, maxInputChars }: ChatLayoutProps) {
+export function ChatLayout({ conversations, conversation, aiConfigured, maxInputChars, personas = [], selectedPersona }: ChatLayoutProps) {
   const router = useRouter();
   const [messages, setMessages] = useState<ChatMessageView[]>(conversation?.messages ?? []);
   const [draft, setDraft] = useState("");
@@ -102,7 +107,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, ...(editTarget ?? { conversationId: conversation?.id }) }),
+        body: JSON.stringify({ content, ...(editTarget ?? { conversationId: conversation?.id, ...(!conversation?.id && selectedPersona ? { personaId: selectedPersona.id } : {}) }) }),
         signal: requestController.signal,
       });
 
@@ -193,12 +198,13 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         <header className="flex h-14 shrink-0 items-center gap-1.5 border-b bg-card/75 px-2 backdrop-blur sm:gap-2 sm:px-3 md:gap-3 md:px-5">
           <button aria-label="打开对话历史" className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
           <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
-          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><Sparkles className="size-4" /></Link>
-          <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{conversation?.title ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">默认 AI 助手</p></div>
+          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || selectedPersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || selectedPersona)!.name} src={(conversation?.persona || selectedPersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>
+          <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{conversation?.title ?? selectedPersona?.name ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">{conversation?.persona ? `${conversation.persona.description || "AI 人格助手"}${conversation.persona.archived ? " · 已归档" : ""}` : selectedPersona?.description || (selectedPersona ? "AI 人格助手" : "默认 AI 助手")}</p></div>
           {generating && <span className="hidden shrink-0 text-xs text-primary sm:inline">正在生成…</span>}
         </header>
         {!aiConfigured && <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-200">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
         {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
+        {!conversation?.id && messages.length === 0 && <PersonaSelector personas={personas} selectedId={selectedPersona?.id} />}
         <MessageList
           editDisabled={generating}
           editingMessageId={editingMessage?.id}
@@ -209,6 +215,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           onCancelEdit={() => { setEditingMessage(undefined); setEditValue(""); pendingStopEditRef.current = false; }}
           onEditChange={setEditValue}
           onSubmitEdit={() => { if (editingMessage) void sendMessage(editingMessage); }}
+          persona={conversation?.persona || selectedPersona}
         />
         <ChatComposer
           disabledReason={getComposerDisabledReason(aiConfigured, Boolean(editingMessage))}

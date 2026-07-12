@@ -7,6 +7,7 @@ const schema = createChatRequestSchema(8);
 describe("chat request validation", () => {
   it("accepts valid content and an optional UUID", () => {
     expect(schema.safeParse({ content: "hello" }).success).toBe(true);
+    expect(schema.safeParse({ personaId: "550e8400-e29b-41d4-a716-446655440002", content: "hello" }).success).toBe(true);
     expect(schema.safeParse({ conversationId: "550e8400-e29b-41d4-a716-446655440000", content: "hello" }).success).toBe(true);
     expect(schema.safeParse({ conversationId: "550e8400-e29b-41d4-a716-446655440000", editMessageId: "550e8400-e29b-41d4-a716-446655440001", content: "hello" }).success).toBe(true);
     expect(schema.safeParse({
@@ -23,6 +24,8 @@ describe("chat request validation", () => {
     { content: 123 },
     { content: "123456789" },
     { conversationId: "not-a-uuid", content: "hello" },
+    { personaId: "not-a-uuid", content: "hello" },
+    { conversationId: "550e8400-e29b-41d4-a716-446655440000", personaId: "550e8400-e29b-41d4-a716-446655440002", content: "hello" },
     { editMessageId: "550e8400-e29b-41d4-a716-446655440001", content: "hello" },
     { conversationId: "550e8400-e29b-41d4-a716-446655440000", editMessageId: "not-a-uuid", content: "hello" },
     { conversationId: "550e8400-e29b-41d4-a716-446655440000", editMessageId: "user-550e8400-e29b-41d4-a716-446655440001", content: "hello" },

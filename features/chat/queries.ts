@@ -5,12 +5,14 @@ export async function getConversationList(userId: string): Promise<ConversationS
   const conversations = await prisma.conversation.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, title: true, updatedAt: true },
+    select: { id: true, title: true, updatedAt: true, persona: { select: { id: true, name: true, avatarUrl: true, description: true, greeting: true, archivedAt: true } } },
   });
 
   return conversations.map((conversation) => ({
-    ...conversation,
+    id: conversation.id,
+    title: conversation.title,
     updatedAt: conversation.updatedAt.toISOString(),
+    persona: conversation.persona ? { id: conversation.persona.id, name: conversation.persona.name, avatarUrl: conversation.persona.avatarUrl ?? undefined, description: conversation.persona.description ?? undefined, greeting: conversation.persona.greeting ?? undefined, archived: Boolean(conversation.persona.archivedAt) } : undefined,
   }));
 }
 
@@ -24,6 +26,7 @@ export async function getConversationDetail(
       id: true,
       title: true,
       updatedAt: true,
+      persona: { select: { id: true, name: true, avatarUrl: true, description: true, greeting: true, archivedAt: true } },
       messages: {
         where: { supersededAt: null },
         orderBy: { createdAt: "asc" },
@@ -38,6 +41,7 @@ export async function getConversationDetail(
     id: conversation.id,
     title: conversation.title,
     updatedAt: conversation.updatedAt.toISOString(),
+    persona: conversation.persona ? { id: conversation.persona.id, name: conversation.persona.name, avatarUrl: conversation.persona.avatarUrl ?? undefined, description: conversation.persona.description ?? undefined, greeting: conversation.persona.greeting ?? undefined, archived: Boolean(conversation.persona.archivedAt) } : undefined,
     messages: conversation.messages
       .filter((message) => message.role === "USER" || message.role === "ASSISTANT")
       .map((message) => ({

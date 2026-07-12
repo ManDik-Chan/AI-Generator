@@ -8,7 +8,7 @@
 - [x] Phase 1：项目初始化
 - [x] Phase 2：基础系统
 - [x] Phase 3：AI 聊天
-- [ ] Phase 4：人格系统
+- [ ] Phase 4：人格系统（4A 手动人格核心实施中）
 - [ ] Phase 5：记忆系统
 - [ ] Phase 6：工具箱
 - [ ] Phase 7：优化与部署
@@ -105,3 +105,31 @@ Phase 2 真实环境联调与权限验收已全部通过。
 - 390px、430px、1440px 布局通过，浏览器控制台无严重错误。
 
 Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
+
+## Phase 4A 实施记录
+
+实施时间：2026-07-12
+
+- 增加 Persona `greeting` 与 `archivedAt`，以软归档保留历史 Conversation 关系。
+- 实现私有人格活跃/归档列表、手动创建、编辑、详情、归档和恢复。
+- 提供 12 个本地 SVG 预设头像和名称首字渐变回退，不接入上传、Storage 或图片生成。
+- 建立字段验证、本地 systemPrompt 构建、实时预览和服务端所有者校验。
+- 新对话可选择 active Persona 并写入现有 `Conversation.personaId`；已有对话禁止切换。
+- 服务端在基础安全 Prompt 之后注入 Persona，归档人格的历史对话继续可用。
+- greeting 仅作为空页面欢迎内容，不创建 Message、不进入上下文。
+- 未实现 AI 生成人格、人格市场、分享、版本历史、长期记忆、RAG、文件或图片功能。
+
+### 自动验证
+
+- `pnpm test`：17 个测试文件、78 项测试通过。
+- `pnpm lint`：通过，0 warnings。
+- `pnpm typecheck`：通过。
+- `pnpm build`：无 Supabase/GLM 密钥环境通过。
+- `pnpm exec prisma validate`：通过。
+- 无配置 Production smoke：`/` 返回 200，`/personas` 返回 307 到配置提示登录页。
+
+### 待项目所有者真实验收
+
+- 在真实 Supabase 执行 `pnpm db:deploy`。
+- 验证创建、编辑、归档、恢复、人格聊天、历史对话继续使用归档人格和默认助手回归。
+- 使用真实 GLM-5.2 检查人格表达与基础安全规则。
