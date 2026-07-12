@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
+import { Prisma } from "@prisma/client";
 
 import { getAiProvider } from "@/lib/ai/registry";
 import { getAiConfigurationStatus, getAiRuntimeLimits } from "@/lib/ai/config";
@@ -7,14 +8,15 @@ import { AiProviderError, toPublicAiError } from "@/lib/ai/errors";
 import { DEFAULT_ASSISTANT_SYSTEM_PROMPT } from "@/lib/ai/prompts/default-assistant";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
-import { CHAT_CONTEXT_MESSAGE_LIMIT } from "@/features/chat/constants";
 import { ownedConversationWhere } from "@/features/chat/access";
+import { assertSupersedeCount, ChatEditConflictError, planLastUserMessageEdit } from "@/features/chat/edit";
+import { finalizeAssistantMessage } from "@/features/chat/persistence";
 import { createChatRequestSchema } from "@/features/chat/schemas";
 import {
   createConversationTitle,
   encodeChatSse,
   hasReachedDailyMessageLimit,
-  selectContextMessages,
+  buildCompleteTurnContext,
   startOfUtcDay,
 } from "@/features/chat/utils";
 
@@ -24,14 +26,6 @@ const encoder = new TextEncoder();
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ message }, { status });
-}
-
-async function finalizeAssistantMessage(messageId: string, content: string, status: "COMPLETE" | "ERROR") {
-  try {
-    await prisma.message.update({ where: { id: messageId }, data: { content, status } });
-  } catch {
-    console.error("[chat] Unable to finalize assistant message", { messageId, status });
-  }
 }
 
 export async function POST(request: Request) {
@@ -96,47 +90,72 @@ export async function POST(request: Request) {
   }
 
   let assistantMessageId: string;
+  let userMessageId: string;
   try {
     const result = await prisma.$transaction(async (transaction) => {
-      await transaction.message.create({
+      let updateTitle = false;
+      if (parsed.data.editMessageId) {
+        const activeMessages = await transaction.message.findMany({
+          where: { conversationId, supersededAt: null },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          select: { id: true, role: true, status: true, content: true, supersededAt: true },
+        });
+        const target = activeMessages.find((message) => message.id === parsed.data.editMessageId);
+        if (target?.content === parsed.data.content) throw new ChatEditConflictError("编辑内容没有变化。");
+        const plan = planLastUserMessageEdit(activeMessages, parsed.data.editMessageId);
+        const superseded = await transaction.message.updateMany({
+          where: { id: { in: plan.supersedeIds }, conversationId, supersededAt: null },
+          data: { supersededAt: new Date() },
+        });
+        assertSupersedeCount(plan.supersedeIds.length, superseded.count);
+        updateTitle = plan.updateTitle;
+      }
+
+      const userMessage = await transaction.message.create({
         data: { conversationId, role: "USER", content: parsed.data.content, status: "COMPLETE" },
+        select: { id: true },
       });
       const assistantMessage = await transaction.message.create({
         data: { conversationId, role: "ASSISTANT", content: "", status: "PENDING" },
         select: { id: true },
       });
-      await transaction.conversation.update({ where: { id: conversationId }, data: { updatedAt: new Date() } });
-      return assistantMessage;
-    });
-    assistantMessageId = result.id;
-  } catch {
+      await transaction.conversation.update({
+        where: { id: conversationId },
+        data: {
+          updatedAt: new Date(),
+          ...(updateTitle ? { title: createConversationTitle(parsed.data.content) } : {}),
+        },
+      });
+      return { assistantMessageId: assistantMessage.id, userMessageId: userMessage.id };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    assistantMessageId = result.assistantMessageId;
+    userMessageId = result.userMessageId;
+  } catch (error) {
+    if (error instanceof ChatEditConflictError || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")) {
+      return errorResponse(error instanceof ChatEditConflictError ? error.message : "对话内容已发生变化，请刷新后重试。", 409);
+    }
     console.error("[chat] Unable to persist new messages", { conversationId, userId: user.id });
     return errorResponse("消息保存失败，请稍后重试。", 500);
   }
 
-  let recentMessages: Array<{ role: string; content: string }>;
+  let recentMessages;
   try {
     recentMessages = await prisma.message.findMany({
       where: {
         conversationId,
-        status: "COMPLETE",
+        supersededAt: null,
         role: { in: ["USER", "ASSISTANT"] },
       },
       orderBy: { createdAt: "desc" },
-      take: CHAT_CONTEXT_MESSAGE_LIMIT,
-      select: { role: true, content: true },
+      take: 100,
+      select: { id: true, role: true, status: true, content: true, createdAt: true, supersededAt: true },
     });
   } catch {
     await finalizeAssistantMessage(assistantMessageId, "", "ERROR");
     console.error("[chat] Unable to load conversation context", { conversationId, userId: user.id });
     return errorResponse("对话上下文读取失败，请稍后重试。", 500);
   }
-  const context = selectContextMessages(
-    recentMessages.map((message) => ({
-      role: message.role === "USER" ? "user" as const : "assistant" as const,
-      content: message.content,
-    })),
-  );
+  const context = buildCompleteTurnContext(recentMessages, userMessageId);
   const { config, provider } = getAiProvider();
   const abortController = new AbortController();
   const abortFromRequest = () => abortController.abort();
@@ -147,6 +166,12 @@ export async function POST(request: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       controller.enqueue(encoder.encode(encodeChatSse("conversation", { conversationId })));
+      controller.enqueue(encoder.encode(encodeChatSse("turn", {
+        conversationId,
+        userMessageId,
+        assistantMessageId,
+        ...(parsed.data.editMessageId ? { editedMessageId: parsed.data.editMessageId } : {}),
+      })));
 
       try {
         for await (const text of provider.streamText({

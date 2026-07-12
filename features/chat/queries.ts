@@ -25,6 +25,7 @@ export async function getConversationDetail(
       title: true,
       updatedAt: true,
       messages: {
+        where: { supersededAt: null },
         orderBy: { createdAt: "asc" },
         select: { id: true, role: true, content: true, status: true, createdAt: true },
       },

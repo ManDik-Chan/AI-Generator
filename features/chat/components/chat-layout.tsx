@@ -51,22 +51,31 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   const [error, setError] = useState<string>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [controller, setController] = useState<AbortController>();
+  const [editingMessageId, setEditingMessageId] = useState<string>();
+  const [editValue, setEditValue] = useState("");
 
-  async function sendMessage() {
-    const content = draft.trim();
+  async function sendMessage(editMessageId?: string) {
+    const content = (editMessageId ? editValue : draft).trim();
     if (!content || generating || !aiConfigured) return;
 
     const requestController = new AbortController();
-    const userId = `user-${crypto.randomUUID()}`;
-    const assistantId = `assistant-${crypto.randomUUID()}`;
+    let userId = `user-${crypto.randomUUID()}`;
+    let assistantId = `assistant-${crypto.randomUUID()}`;
     const now = new Date().toISOString();
     let createdConversationId = conversation?.id;
     let assistantContent = "";
-    setDraft("");
+    const previousMessages = messages;
+    const editIndex = editMessageId ? messages.findIndex((message) => message.id === editMessageId) : -1;
+    if (editMessageId && editIndex < 0) return;
+    if (editMessageId) {
+      setEditingMessageId(undefined);
+      setEditValue("");
+    } else setDraft("");
     setError(undefined);
     setGenerating(true);
     setController(requestController);
-    setMessages((current) => [...current,
+    const retainedMessages = editIndex >= 0 ? messages.slice(0, editIndex) : messages;
+    setMessages([...retainedMessages,
       { id: userId, role: "user", content, status: "complete", createdAt: now },
       { id: assistantId, role: "assistant", content: "", status: "pending", createdAt: now },
     ]);
@@ -75,12 +84,23 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: conversation?.id, content }),
+        body: JSON.stringify({ conversationId: conversation?.id, content, ...(editMessageId ? { editMessageId } : {}) }),
         signal: requestController.signal,
       });
 
       await readChatEvents(response, (streamEvent) => {
         if (streamEvent.event === "conversation") createdConversationId = streamEvent.data.conversationId;
+        if (streamEvent.event === "turn") {
+          const temporaryUserId = userId;
+          const temporaryAssistantId = assistantId;
+          userId = streamEvent.data.userMessageId;
+          assistantId = streamEvent.data.assistantMessageId;
+          setMessages((current) => current.map((message) => {
+            if (message.id === temporaryUserId) return { ...message, id: userId };
+            if (message.id === temporaryAssistantId) return { ...message, id: assistantId };
+            return message;
+          }));
+        }
         if (streamEvent.event === "delta") {
           assistantContent += streamEvent.data.text;
           setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: assistantContent } : message));
@@ -100,14 +120,27 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       if (requestController.signal.aborted) {
         setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: assistantContent ? "complete" : "error" } : message));
       } else {
-        setDraft(content);
-        setMessages((current) => current.filter((message) => message.id !== userId && message.id !== assistantId));
+        if (editMessageId) {
+          setMessages(previousMessages);
+          setEditingMessageId(editMessageId);
+          setEditValue(content);
+        } else {
+          setDraft(content);
+          setMessages(previousMessages);
+        }
         setError(caughtError instanceof Error ? caughtError.message : "消息发送失败，请稍后重试。");
       }
     } finally {
       setGenerating(false);
       setController(undefined);
     }
+  }
+
+  function beginEdit(message: ChatMessageView) {
+    if (generating) controller?.abort();
+    setEditingMessageId(message.id);
+    setEditValue(message.content);
+    setError(undefined);
   }
 
   return (
@@ -130,8 +163,18 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         </header>
         {!aiConfigured && <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-200">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
         {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
-        <MessageList messages={messages} />
-        <ChatComposer disabled={!aiConfigured} generating={generating} maxInputChars={maxInputChars} onChange={setDraft} onSend={sendMessage} onStop={() => controller?.abort()} value={draft} />
+        <MessageList
+          editDisabled={generating}
+          editingMessageId={editingMessageId}
+          editValue={editValue}
+          maxInputChars={maxInputChars}
+          messages={messages}
+          onBeginEdit={beginEdit}
+          onCancelEdit={() => { setEditingMessageId(undefined); setEditValue(""); }}
+          onEditChange={setEditValue}
+          onSubmitEdit={() => { if (editingMessageId) void sendMessage(editingMessageId); }}
+        />
+        <ChatComposer disabled={!aiConfigured || Boolean(editingMessageId)} generating={generating} maxInputChars={maxInputChars} onChange={setDraft} onSend={() => void sendMessage()} onStop={() => controller?.abort()} value={draft} />
       </section>
     </div>
   );
