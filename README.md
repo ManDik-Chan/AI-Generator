@@ -23,6 +23,8 @@ Phase 3 提供 `/chat` 流式聊天、历史记录、删除、Markdown 与代码
 
 Phase 4A 提供 `/personas` 私有人格管理：手动创建、编辑、预设头像、归档恢复，并可将人格绑定到新对话。人格 Prompt 只在服务端拼装，不返回浏览器；详细设计见 `docs/persona-system.md`。
 
+Phase 4A2 在 `/personas/new` 增加可选的 AI 草稿模式：自然语言描述经现有 OpenAI-compatible Provider 转为严格结构化草稿，用户修改并确认后才使用原创建流程保存。配置和错误排查见 `docs/ai-persona-generation.md`。
+
 新增 Persona migration 后，项目所有者需在真实数据库执行：
 
 ```bash

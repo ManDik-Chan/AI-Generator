@@ -8,7 +8,7 @@
 - [x] Phase 1：项目初始化
 - [x] Phase 2：基础系统
 - [x] Phase 3：AI 聊天
-- [ ] Phase 4：人格系统（4A 手动人格核心实施中）
+- [ ] Phase 4：人格系统（4A1 完成，4A2 本 PR 实施）
 - [ ] Phase 5：记忆系统
 - [ ] Phase 6：工具箱
 - [ ] Phase 7：优化与部署
@@ -134,3 +134,20 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 - Persona 绑定、刷新恢复、归档人格历史对话、默认助手和真实 GLM-5.2 人格表达通过。
 - 页面、移动端布局、停止生成和编辑重提回归通过。
 - 已修复 Persona 对话助手消息仍显示默认 Bot 的头像传递问题：所有助手消息状态统一复用 `AssistantAvatar`，只读取 `Persona.avatarUrl`；待项目所有者按头像专项步骤复测。
+
+## Phase 4A2 实施记录
+
+- `/personas/new` 保留手动创建，并增加 AI 生成草稿模式、示例填充、取消、重新生成确认和失败保留旧草稿。
+- 新增登录态 `POST /api/personas/generate`；打开页面和示例按钮不会调用模型，保存前不写 Persona、Conversation 或 Message。
+- 复用 OpenAI-compatible `streamText`，通过独立 `collectGeneratedText` 收集非流式文本，不复制 SSE 解析。
+- 严格校验描述与模型 JSON，兼容 JSON code fence/首个完整对象；仅失败时允许一次修复请求。
+- 模型不能控制 `systemPrompt`、`avatarUrl`、ID 或所有者；服务端只映射稳定 `avatarPresetId` 并生成安全 Prompt 预览。
+- 同一次模型响应生成 `avatarPrompt`；本阶段不调用图片模型、Storage 或 GeneratedImage。
+- Phase 5 记忆系统未开始。
+
+### 自动验证
+
+- `pnpm install --frozen-lockfile`：通过。
+- `pnpm test`：21 个测试文件、113 项测试通过。
+- `pnpm lint`、`pnpm typecheck`、`pnpm build`、`pnpm exec prisma validate`：通过。
+- 无 AI Key 构建通过；未新增数据库 migration。

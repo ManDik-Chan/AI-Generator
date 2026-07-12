@@ -17,6 +17,13 @@ export interface AiProvider {
   streamText(request: AiStreamRequest): AsyncIterable<string>;
 }
 
+export interface PersonaGenerationConfig {
+  model: string;
+  temperature: number;
+  maxOutputTokens: number;
+  requestTimeoutMs: number;
+}
+
 export interface AiProviderConfig {
   provider: "openai-compatible";
   baseUrl: string;

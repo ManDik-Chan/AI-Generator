@@ -19,13 +19,14 @@ const fields = [
   ["systemPrompt", "高级补充指令", PERSONA_LIMITS.systemPrompt, "留空时系统会根据上方字段自动构建"],
 ] as const;
 
-export function PersonaForm({ initial }: { initial?: PersonaView }) {
+export function PersonaForm({ initial, draft }: { initial?: PersonaView; draft?: PersonaInput }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
-  const [value, setValue] = useState<PersonaInput>({ name: initial?.name ?? "", avatarUrl: initial?.avatarUrl ?? "/personas/avatar-1.svg", description: initial?.description ?? "", identity: initial?.identity ?? "", personality: initial?.personality ?? "", speakingStyle: initial?.speakingStyle ?? "", expertise: initial?.expertise ?? "", greeting: initial?.greeting ?? "", systemPrompt: initial?.systemPrompt ?? "" });
+  const seed = initial ?? draft;
+  const [value, setValue] = useState<PersonaInput>({ name: seed?.name ?? "", avatarUrl: seed?.avatarUrl ?? "/personas/avatar-1.svg", description: seed?.description ?? "", identity: seed?.identity ?? "", personality: seed?.personality ?? "", speakingStyle: seed?.speakingStyle ?? "", expertise: seed?.expertise ?? "", greeting: seed?.greeting ?? "", systemPrompt: seed?.systemPrompt ?? "" });
 
   useEffect(() => { const handler = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); }; window.addEventListener("beforeunload", handler); return () => window.removeEventListener("beforeunload", handler); }, [dirty]);
   function change(field: keyof PersonaInput, next: string) { setDirty(true); setValue((current) => ({ ...current, [field]: next })); }

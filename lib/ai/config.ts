@@ -1,5 +1,5 @@
 import { AiProviderError } from "@/lib/ai/errors";
-import type { AiProviderConfig, AiRuntimeLimits } from "@/lib/ai/types";
+import type { AiProviderConfig, AiRuntimeLimits, PersonaGenerationConfig } from "@/lib/ai/types";
 
 type Environment = Record<string, string | undefined>;
 
@@ -19,6 +19,16 @@ function numberFromEnvironment(
 ) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= minimum && parsed <= maximum ? parsed : fallback;
+}
+
+export function getPersonaGenerationConfig(env: Environment = process.env): PersonaGenerationConfig {
+  const base = requireAiProviderConfig(env);
+  return {
+    model: env.AI_PERSONA_MODEL?.trim() || base.model,
+    temperature: numberFromEnvironment(env.AI_PERSONA_TEMPERATURE, 0.8, 0, 2),
+    maxOutputTokens: numberFromEnvironment(env.AI_PERSONA_MAX_OUTPUT_TOKENS, 1800, 200, 8000),
+    requestTimeoutMs: numberFromEnvironment(env.AI_PERSONA_REQUEST_TIMEOUT_MS, 90_000, 1_000, 300_000),
+  };
 }
 
 export function getAiRuntimeLimits(env: Environment = process.env): AiRuntimeLimits {

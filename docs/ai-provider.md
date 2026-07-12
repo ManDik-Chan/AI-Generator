@@ -22,11 +22,16 @@ AI_MAX_OUTPUT_TOKENS=4096
 AI_DAILY_MESSAGE_LIMIT=50
 AI_MAX_INPUT_CHARS=8000
 AI_REQUEST_TIMEOUT_MS=120000
+AI_PERSONA_MODEL=
+AI_PERSONA_TEMPERATURE=0.8
+AI_PERSONA_MAX_OUTPUT_TOKENS=1800
+AI_PERSONA_REQUEST_TIMEOUT_MS=90000
 ```
 
 - `AI_BASE_URL`、`AI_API_KEY`、`AI_MODEL` 必填，但只在真实聊天请求时读取。
 - `AI_MODEL` 必须使用服务商控制台显示的准确 ID，不得根据产品名称猜测。
 - `AI_API_KEY` 只能存在于 `.env.local` 或部署平台密钥变量，不能使用 `NEXT_PUBLIC_`。
+- `AI_PERSONA_MODEL` 为空时回退到 `AI_MODEL`；Persona 页面和 API 不包含 GLM/OpenAI 分支，切换服务商仍只修改服务端环境变量。
 - temperature 范围为 0–2；非法值回退到 0.7。
 - max output tokens、每日次数、输入长度和超时均有安全默认值与范围校验。
 
