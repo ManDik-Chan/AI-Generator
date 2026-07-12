@@ -49,6 +49,16 @@ SUPABASE_PERSONA_AVATAR_BUCKET=persona-avatars
 
 ## 项目所有者真实验收
 
+状态：**已通过（2026-07-13）**。
+
+- 智谱 GLM-Image 真实生成、安全下载、private Storage 上传与 `GeneratedImage` 候选记录通过。
+- 候选预览、取消、显式 Apply 和头像即时更新通过，无需手动刷新。
+- Persona 列表、详情、编辑预览、聊天顶部及 assistant 消息头像同步通过。
+- AI 人格草稿与头像生成真实阶段进度、已用时间和取消行为通过。
+- 桌面助手右栏、移动助手抽屉、删除/回收站/恢复及已删除人格历史对话保护通过。
+- 390px、430px、1440px 响应式与浏览器控制台检查通过。
+- 仓库未提交 API Key、Service Role Key 或数据库密码。
+
 1. 创建 private bucket `persona-avatars`，配置上述环境变量并运行 `pnpm db:deploy`。
 2. 保存一个 Persona，在详情页点击“AI 生成头像”，确认生成前原头像不变。
 3. 修改提示词、生成候选、放弃或重新生成，再点击“使用此头像”。
@@ -57,4 +67,4 @@ SUPABASE_PERSONA_AVATAR_BUCKET=persona-avatars
 6. 使用另一用户确认候选和正式头像路由均不可越权读取。
 7. 检查 Storage、`GeneratedImage`、Persona 三个头像字段及浏览器控制台，并确认 Git 中没有任何密钥。
 
-当前没有可用于真实调用的 GLM-Image Key 或 Service Role Key，因此自动化测试使用 mock，真实 GLM-Image 调用和 Storage 上传需要项目所有者执行。Phase 5 尚未开始。
+真实环境验收已完成；密钥仅保存在项目所有者的本地或部署环境中，未进入 Git。Phase 5 尚未开始。
