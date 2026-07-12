@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAiConfigurationStatus, getAiRuntimeLimits, requireAiProviderConfig } from "@/lib/ai/config";
+import { getAiConfigurationStatus, getAiRuntimeLimits, getPersonaGenerationConfig, requireAiProviderConfig } from "@/lib/ai/config";
 
 describe("AI configuration", () => {
   it("reports missing required server configuration", () => {
@@ -19,5 +19,11 @@ describe("AI configuration", () => {
 
   it("uses safe defaults for invalid runtime limits", () => {
     expect(getAiRuntimeLimits({ AI_DAILY_MESSAGE_LIMIT: "0", AI_MAX_INPUT_CHARS: "invalid" })).toEqual({ dailyMessageLimit: 50, maxInputChars: 8000 });
+  });
+
+  it("uses persona overrides while falling back to the same provider model", () => {
+    const base = { AI_BASE_URL: "https://example.com/v1", AI_API_KEY: "secret", AI_MODEL: "shared" };
+    expect(getPersonaGenerationConfig(base)).toMatchObject({ model: "shared", temperature: 0.8, maxOutputTokens: 1800, requestTimeoutMs: 90000 });
+    expect(getPersonaGenerationConfig({ ...base, AI_PERSONA_MODEL: "persona-model", AI_PERSONA_TEMPERATURE: "1.1" })).toMatchObject({ model: "persona-model", temperature: 1.1 });
   });
 });

@@ -4,6 +4,10 @@
 
 Phase 4A 只实现用户私有的手动人格：创建、编辑、查看、归档、恢复、选择并绑定新对话。AI 自动生成人格属于 Phase 4B；长期记忆、RAG、文件、图片、公开市场、分享和导入导出均不在本阶段。
 
+Phase 4A1 完成人格基础；Phase 4A2 增加自然语言生成“可编辑草稿”。生成成功不会自动保存，最终仍复用同一 PersonaForm、Zod Schema 和创建 Action。AI 返回的 `systemPrompt`、`avatarUrl` 或额外字段不会进入草稿。
+
+Phase 4A2 同时保存于客户端草稿中的 `avatarPrompt` 只用于未来图片生成边界，本阶段不调用图片 API、不上传 Storage、不创建 GeneratedImage，也不新增数据库字段。
+
 ## 字段与验证
 
 - 名称：必填，1–40 字符。
