@@ -62,10 +62,12 @@ async function setArchived(personaId: string, archived: boolean): Promise<Person
   try {
     const result = await prisma.persona.updateMany({ where: { id: personaId, userId: user.id }, data: { archivedAt: archived ? new Date() : null } });
     if (result.count !== 1) return failure("人格不存在或无权访问。");
-    revalidatePath("/personas"); revalidatePath(`/personas/${personaId}`);
-    return { success: true, id: personaId, message: archived ? "人格已归档。" : "人格已恢复。" };
-  } catch { return failure(archived ? "人格归档失败，请稍后重试。" : "人格恢复失败，请稍后重试。"); }
+    revalidatePath("/personas"); revalidatePath("/personas/trash"); revalidatePath(`/personas/${personaId}`); revalidatePath("/chat", "layout");
+    return { success: true, id: personaId, message: archived ? "人格已移至回收站" : "人格已恢复。" };
+  } catch { return failure(archived ? "人格移至回收站失败，请稍后重试。" : "人格恢复失败，请稍后重试。"); }
 }
 
-export async function archivePersonaAction(personaId: string) { return setArchived(personaId, true); }
-export async function restorePersonaAction(personaId: string) { return setArchived(personaId, false); }
+export async function movePersonaToTrash(personaId: string) { return setArchived(personaId, true); }
+export async function restorePersonaFromTrash(personaId: string) { return setArchived(personaId, false); }
+export const archivePersonaAction = movePersonaToTrash;
+export const restorePersonaAction = restorePersonaFromTrash;

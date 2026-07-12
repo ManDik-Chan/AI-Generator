@@ -9,7 +9,7 @@ import { PERSONA_LIMITS } from "@/features/persona/constants";
 
 interface Candidate { generatedImageId: string; previewUrl: string; prompt: string; width: number; height: number }
 
-export function AiAvatarDialog({ personaId, personaName, initialPrompt = "", configured }: { personaId: string; personaName: string; initialPrompt?: string; configured: boolean }) {
+export function AiAvatarDialog({ personaId, personaName, initialPrompt = "", configured, menuItem = false, onOpen }: { personaId: string; personaName: string; initialPrompt?: string; configured: boolean; menuItem?: boolean; onOpen?(): void }) {
   const router = useRouter(); const controller = useRef<AbortController | undefined>(undefined);
   const [open, setOpen] = useState(false); const [prompt, setPrompt] = useState(initialPrompt); const [candidate, setCandidate] = useState<Candidate>();
   const [busy, setBusy] = useState(false); const [error, setError] = useState<string>();
@@ -24,7 +24,7 @@ export function AiAvatarDialog({ personaId, personaName, initialPrompt = "", con
   async function apply() { if (!candidate) return; setBusy(true); setError(undefined); try { const response = await fetch(`/api/personas/${personaId}/avatar/apply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ generatedImageId: candidate.generatedImageId, prompt }) }); const body = await response.json() as { error?: string }; if (!response.ok) throw new Error(body.error || "头像应用失败。"); setCandidate(undefined); setOpen(false); router.refresh(); } catch (reason) { setError(reason instanceof Error ? reason.message : "头像应用失败。"); } finally { setBusy(false); } }
   async function close() { if (busy) { controller.current?.abort(); return; } await discard(); setOpen(false); setError(undefined); }
   return <>
-    <Button onClick={() => setOpen(true)} type="button" variant="outline"><ImageIcon className="size-4" />AI 生成头像</Button>
+    <Button className={menuItem ? "w-full justify-start" : undefined} onClick={() => { onOpen?.(); setOpen(true); }} size={menuItem ? "sm" : "default"} type="button" variant={menuItem ? "ghost" : "outline"}><ImageIcon className="size-4" />AI 生成头像</Button>
     {open && <div aria-labelledby="ai-avatar-title" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/55 p-3" role="dialog">
       <div className="my-auto w-full max-w-xl rounded-2xl border bg-card p-4 shadow-xl sm:p-6">
         <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-semibold" id="ai-avatar-title">AI 生成头像</h2><p className="mt-1 text-sm text-muted-foreground">调用 GLM-Image 会产生费用，仅在点击生成后调用一次。</p></div><Button aria-label="关闭" disabled={busy} onClick={close} size="icon" type="button" variant="ghost"><X className="size-4" /></Button></div>

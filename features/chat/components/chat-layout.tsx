@@ -3,12 +3,13 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { House, Menu, Sparkles, X } from "lucide-react";
+import { Bot, House, Menu, Sparkles, X } from "lucide-react";
 
 import { ChatComposer } from "@/features/chat/components/chat-composer";
 import { ConversationList } from "@/features/chat/components/conversation-list";
 import { MessageList } from "@/features/chat/components/message-list";
-import { PersonaSelector } from "@/features/chat/components/persona-selector";
+import { AssistantSelectorPanel } from "@/features/chat/components/assistant-selector-panel";
+import { DeletedPersonaNotice } from "@/features/chat/components/deleted-persona-notice";
 import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import type { PersonaChatIdentity } from "@/features/persona/types";
 import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
@@ -59,11 +60,19 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string>();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [assistantDrawerOpen, setAssistantDrawerOpen] = useState(false);
+  const [activePersona, setActivePersona] = useState(selectedPersona);
   const [controller, setController] = useState<AbortController>();
   const [editingMessage, setEditingMessage] = useState<ChatMessageView>();
   const [editValue, setEditValue] = useState("");
   const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
   const pendingStopEditRef = useRef(false);
+
+  function selectAssistant(persona?: PersonaChatIdentity) {
+    setActivePersona(persona);
+    const nextUrl = persona ? `/chat?personaId=${encodeURIComponent(persona.id)}` : "/chat";
+    window.history.replaceState(window.history.state, "", nextUrl);
+  }
 
   async function sendMessage(messageToEdit?: ChatMessageView) {
     const content = (messageToEdit ? editValue : draft).trim();
@@ -107,7 +116,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, ...(editTarget ?? { conversationId: conversation?.id, ...(!conversation?.id && selectedPersona ? { personaId: selectedPersona.id } : {}) }) }),
+        body: JSON.stringify({ content, ...(editTarget ?? { conversationId: conversation?.id, ...(!conversation?.id && activePersona ? { personaId: activePersona.id } : {}) }) }),
         signal: requestController.signal,
       });
 
@@ -198,14 +207,15 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         <header className="flex h-14 shrink-0 items-center gap-1.5 border-b bg-card/75 px-2 backdrop-blur sm:gap-2 sm:px-3 md:gap-3 md:px-5">
           <button aria-label="打开对话历史" className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
           <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
-          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || selectedPersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || selectedPersona)!.name} src={(conversation?.persona || selectedPersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>
-          <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{conversation?.title ?? selectedPersona?.name ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">{conversation?.persona ? `${conversation.persona.description || "AI 人格助手"}${conversation.persona.archived ? " · 已归档" : ""}` : selectedPersona?.description || (selectedPersona ? "AI 人格助手" : "默认 AI 助手")}</p></div>
+          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || activePersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || activePersona)!.name} src={(conversation?.persona || activePersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>
+          <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{conversation?.title ?? activePersona?.name ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">{conversation?.persona ? `${conversation.persona.description || "AI 人格助手"}${conversation.persona.archived ? " · 已在回收站" : ""}` : activePersona?.description || (activePersona ? "AI 人格助手" : "默认 AI 助手")}</p></div>
+          {!conversation?.id && <button aria-label="选择助手" className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted xl:hidden" onClick={() => setAssistantDrawerOpen(true)} title="选择助手" type="button"><Bot className="size-5" /></button>}
           {generating && <span className="hidden shrink-0 text-xs text-primary sm:inline">正在生成…</span>}
         </header>
         {!aiConfigured && <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-200">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
         {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
-        {!conversation?.id && messages.length === 0 && <PersonaSelector personas={personas} selectedId={selectedPersona?.id} />}
-        <MessageList
+        {conversation?.persona?.archived && <DeletedPersonaNotice personaId={conversation.persona.id} />}
+        <div className="flex min-h-0 min-w-0 flex-1"><main className="flex min-w-0 flex-1 flex-col"><MessageList
           editDisabled={generating}
           editingMessageId={editingMessage?.id}
           editValue={editValue}
@@ -215,10 +225,10 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           onCancelEdit={() => { setEditingMessage(undefined); setEditValue(""); pendingStopEditRef.current = false; }}
           onEditChange={setEditValue}
           onSubmitEdit={() => { if (editingMessage) void sendMessage(editingMessage); }}
-          persona={conversation?.persona || selectedPersona}
+          persona={conversation?.persona || activePersona}
         />
         <ChatComposer
-          disabledReason={getComposerDisabledReason(aiConfigured, Boolean(editingMessage))}
+          disabledReason={getComposerDisabledReason(aiConfigured, Boolean(editingMessage), Boolean(conversation?.persona?.archived))}
           generating={generating}
           maxInputChars={maxInputChars}
           onChange={setDraft}
@@ -226,6 +236,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           onStop={() => controller?.abort()}
           value={draft}
         />
+        </main>{!conversation?.id && <AssistantSelectorPanel onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}</div>
+        {!conversation?.id && assistantDrawerOpen && <AssistantSelectorPanel mobile onClose={() => setAssistantDrawerOpen(false)} onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}
       </section>
     </div>
   );

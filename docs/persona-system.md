@@ -2,6 +2,8 @@
 
 > Phase 4A3 已实现原有头像扩展点：`avatarPrompt` 保存可编辑提示词，`avatarImageId` 指向正式使用的 `GeneratedImage`，`avatarUrl` 保存稳定的应用内私有读取路由。列表、详情、编辑预览、聊天顶部、空状态和 assistant 消息仍只读取 `Persona.avatarUrl`，不感知 GLM-Image、bucket 或 signed URL。详见 `docs/persona-avatar-generation.md`。
 
+用户侧将软删除表达为“移至回收站”：详情页三点菜单打开非原生确认对话框，成功后进入 `/personas` 并显示提示；`/personas/trash` 仅查询当前用户 `archivedAt != null` 的 Persona 并支持恢复。底层不物理删除 Persona、Conversation、Message 或 GeneratedImage。回收站 Persona 仍保留历史对话身份与头像，但 Chat Composer 和服务端 Chat API 都会阻止新消息，恢复后沿用原 `conversation.personaId`。
+
 ## Phase 4A 边界
 
 Phase 4A 实现用户私有 Persona：手动管理、对话绑定、AI 可编辑草稿和 GLM-Image 单张头像。长期记忆、RAG、通用图片工具、公开市场、分享和导入导出均不在本阶段。

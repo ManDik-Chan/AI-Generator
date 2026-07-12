@@ -12,6 +12,8 @@ Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`G
 
 真实联调反馈的通用 `UNSAFE_IMAGE` 已拆分为脱敏服务端阶段诊断和安全的前端分类提示；同时兼容常见 JPEG/octet-stream MIME 别名与缺失 Header。SSRF、DNS 私网/Fake-IP、重定向、15 MB 和魔数限制保持启用。
 
+Phase 4A3 交互收尾将新对话的顶部横向人格选择器迁移为桌面右侧助手栏和移动端抽屉；选择只更新客户端空状态与 URL，首条消息发送时才绑定 Persona。用户可见的“归档”流程改为三点菜单中的“删除人格”、确认对话框与 `/personas/trash` 回收站；底层继续使用 `archivedAt`，没有新增 migration。回收站人格的历史对话可查看但前后端均禁止继续发送，恢复后原对话重新可用。
+
 ## 当前状态
 
 - [x] 现有 Streamlit 项目审计

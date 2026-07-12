@@ -30,7 +30,7 @@ describe("persona mutations", () => {
     expect(mocks.updateMany.mock.calls[0][0].data.description).toBeNull();
   });
 
-  it("archives and restores without deleting conversations or messages", async () => {
+  it("moves to trash and restores by changing only archivedAt", async () => {
     mocks.updateMany.mockResolvedValue({ count: 1 });
     await archivePersonaAction("550e8400-e29b-41d4-a716-446655440001");
     expect(mocks.updateMany.mock.calls[0][0].data.archivedAt).toBeInstanceOf(Date);

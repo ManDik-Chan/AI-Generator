@@ -21,4 +21,10 @@ describe("chat composer disabled reasons", () => {
     expect(getComposerDisabledReason(true, false)).toBeUndefined();
     expect(getComposerDisabledReason(true, true)).toBe("editing");
   });
+
+  it("disables an existing deleted-persona conversation with a recovery prompt", () => {
+    const reason = getComposerDisabledReason(true, false, true);
+    expect(reason).toBe("persona-deleted");
+    expect(getComposerPlaceholder(reason)).toBe("恢复人格后可以继续对话");
+  });
 });
