@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   collect: vi.fn(),
   messageFindFirst: vi.fn(),
+  messageFindMany: vi.fn(),
   memoryFindFirst: vi.fn(),
   memoryFindMany: vi.fn(),
   memoryCreate: vi.fn(),
@@ -16,7 +17,7 @@ vi.mock("@/lib/ai/registry", () => ({
 }));
 vi.mock("@/lib/database/prisma", () => ({
   prisma: {
-    message: { findFirst: mocks.messageFindFirst },
+    message: { findFirst: mocks.messageFindFirst, findMany: mocks.messageFindMany },
     memory: { findFirst: mocks.memoryFindFirst, findMany: mocks.memoryFindMany, create: mocks.memoryCreate, updateMany: mocks.memoryUpdateMany },
     $transaction: mocks.transaction,
   },
@@ -46,6 +47,7 @@ function eligible(personaId: string | null = null) {
 describe("automatic memory persistence", () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
+    mocks.messageFindMany.mockResolvedValue([]);
     mocks.transaction.mockImplementation(async (callback) => callback({ message: { findFirst: mocks.messageFindFirst }, memory: { findFirst: mocks.memoryFindFirst, findMany: mocks.memoryFindMany, create: mocks.memoryCreate, updateMany: mocks.memoryUpdateMany } }));
     mocks.memoryCreate.mockResolvedValue({ id: "memory-new" });
     mocks.memoryUpdateMany.mockResolvedValue({ count: 1 });
@@ -102,5 +104,61 @@ describe("automatic memory persistence", () => {
     mocks.messageFindFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: input.assistantMessageId });
     await expect(extractAndPersistMemories(input)).resolves.toEqual({ created: 0, updated: 0 });
     expect(mocks.collect).not.toHaveBeenCalled();
+  });
+
+  it("loads earlier USER messages for an explicit previous-context request and creates one consolidated configuration", async () => {
+    eligible();
+    mocks.messageFindMany.mockResolvedValue([
+      { role: "ASSISTANT", content: "你的配置包括这些硬件。" },
+      { role: "USER", content: "我的显卡是 RTX 5070 Ti，处理器是 Intel Core i5-12600K，显示器是 2K 240Hz。" },
+    ]);
+    mocks.collect.mockResolvedValue('```json\n{"operations":[{"action":"CREATE","content":"用户的电脑配置为：RTX 5070 Ti 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。","category":"profile","scope":"GLOBAL","importance":4,"confidence":0.98,"reasonCode":"stable_fact"}]}\n```');
+    const result = await extractAndPersistMemories({ ...input, currentUserMessage: "我需要你记住我的电脑配置。" });
+    expect(result).toEqual({ created: 1, updated: 0 });
+    expect(mocks.messageFindMany).toHaveBeenCalledWith(expect.objectContaining({ take: 30, where: expect.objectContaining({ conversationId: "conversation-a", conversation: { userId: "user-a" } }) }));
+    expect(mocks.memoryCreate).toHaveBeenCalledTimes(1);
+    expect(mocks.memoryCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ content: expect.stringContaining("RTX 5070 Ti") }) });
+  });
+
+  it("does not save hardware suggested only by the assistant", async () => {
+    eligible();
+    mocks.messageFindMany.mockResolvedValue([{ role: "ASSISTANT", content: "我推荐 RTX 5090。" }, { role: "USER", content: "我想升级电脑，但还没有决定型号。" }]);
+    mocks.collect.mockResolvedValue(JSON.stringify({ operations: [{ action: "CREATE", content: "用户的显卡是 RTX 5090", category: "profile", scope: "GLOBAL", importance: 4, confidence: 0.99, reasonCode: "stable_fact" }] }));
+    await extractAndPersistMemories({ ...input, currentUserMessage: "对，就这些，帮我记住。" });
+    expect(mocks.memoryCreate).not.toHaveBeenCalled();
+  });
+
+  it("allows a confirmed assistant summary only when earlier USER evidence exists", async () => {
+    eligible();
+    mocks.messageFindMany.mockResolvedValue([{ role: "ASSISTANT", content: "你的显卡是 RTX 5070 Ti。" }, { role: "USER", content: "我的显卡是 RTX 5070 Ti。" }]);
+    mocks.collect.mockResolvedValue(JSON.stringify({ operations: [{ action: "CREATE", content: "用户的显卡是 RTX 5070 Ti", category: "profile", scope: "GLOBAL", importance: 4, confidence: 0.99, reasonCode: "stable_fact" }] }));
+    await extractAndPersistMemories({ ...input, currentUserMessage: "对，就这些，帮我记住。" });
+    expect(mocks.memoryCreate).toHaveBeenCalledOnce();
+  });
+
+  it("requests JSON repair at most once", async () => {
+    eligible();
+    mocks.collect.mockResolvedValueOnce("not json").mockResolvedValueOnce(JSON.stringify({ operations: [] }));
+    await extractAndPersistMemories(input);
+    expect(mocks.collect).toHaveBeenCalledTimes(2);
+
+    Object.values(mocks).forEach((mock) => mock.mockReset());
+    mocks.messageFindMany.mockResolvedValue([]);
+    mocks.transaction.mockImplementation(async (callback) => callback({ message: { findFirst: mocks.messageFindFirst }, memory: { findFirst: mocks.memoryFindFirst, findMany: mocks.memoryFindMany, create: mocks.memoryCreate, updateMany: mocks.memoryUpdateMany } }));
+    eligible();
+    mocks.collect.mockResolvedValue("still invalid");
+    await expect(extractAndPersistMemories(input)).rejects.toBeTruthy();
+    expect(mocks.collect).toHaveBeenCalledTimes(2);
+  });
+
+  it("updates a consolidated computer configuration instead of creating a conflicting GPU memory", async () => {
+    const candidateId = "66666666-6666-4666-8666-666666666666";
+    eligible();
+    mocks.messageFindMany.mockResolvedValue([{ role: "USER", content: "我的电脑原来是 RTX 5070 Ti、i5-12600K 和 2K 240Hz。" }]);
+    mocks.memoryFindMany.mockReset().mockResolvedValueOnce([{ id: candidateId, content: "用户的电脑配置为：RTX 5070 Ti 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。", category: "profile", scope: "GLOBAL", importance: 4, updatedAt: new Date() }]).mockResolvedValueOnce([]);
+    mocks.collect.mockResolvedValue(JSON.stringify({ operations: [{ action: "UPDATE", existingMemoryId: candidateId, content: "用户的电脑配置为：RTX 5080 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。", category: "profile", scope: "GLOBAL", importance: 4, confidence: 0.99, reasonCode: "stable_fact" }] }));
+    await extractAndPersistMemories({ ...input, currentUserMessage: "我的显卡换成 RTX 5080 了，记住一下。" });
+    expect(mocks.memoryCreate).not.toHaveBeenCalled();
+    expect(mocks.memoryUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: candidateId, userId: "user-a" }, data: expect.objectContaining({ content: expect.stringContaining("RTX 5080"), sourceMessageId: input.sourceMessageId }) }));
   });
 });

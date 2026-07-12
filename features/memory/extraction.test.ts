@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-  parseMemoryExtraction,
+  detectExplicitMemoryIntent,
+  hasTraceableUserEvidence,
+  parseMemoryExtractionOutput,
   selectExtractionCandidates,
   shouldRunMemoryExtraction,
 } from "@/features/memory/extraction";
@@ -19,16 +21,31 @@ describe("automatic memory extraction protocol", () => {
   });
 
   it("accepts at most three strict operations", () => {
-    const result = parseMemoryExtraction(JSON.stringify({ operations: [{ action: "CREATE", content: "用户偏好先给结论", category: "preference", scope: "GLOBAL", importance: 4, confidence: 0.93, reasonCode: "preference" }] }));
+    const result = parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "CREATE", content: "用户偏好先给结论", category: "preference", scope: "GLOBAL", importance: 4, confidence: 0.93, reasonCode: "preference" }] }));
     expect(result.operations[0]?.action).toBe("CREATE");
-    expect(() => parseMemoryExtraction(JSON.stringify({ operations: Array.from({ length: 4 }, () => ({ action: "IGNORE", confidence: 1, reasonCode: "temporary" })) }))).toThrow();
-    expect(() => parseMemoryExtraction('```json\n{"operations":[]}\n```')).toThrow();
+    expect(() => parseMemoryExtractionOutput(JSON.stringify({ operations: Array.from({ length: 4 }, () => ({ action: "IGNORE", confidence: 1, reasonCode: "temporary" })) }))).toThrow();
+    expect(parseMemoryExtractionOutput('```json\n{"operations":[]}\n```').operations).toEqual([]);
+    expect(parseMemoryExtractionOutput('```\n{"operations":[]}\n```').operations).toEqual([]);
+    expect(parseMemoryExtractionOutput('结果如下：\n{"operations":[]}\n请处理').operations).toEqual([]);
   });
 
   it("requires a candidate UUID for UPDATE and strips model-owned fields", () => {
-    expect(() => parseMemoryExtraction(JSON.stringify({ operations: [{ action: "UPDATE", content: "用户喜欢简洁回答", category: "preference", scope: "GLOBAL", importance: 4, confidence: 0.9, reasonCode: "preference" }] }))).toThrow();
-    const result = parseMemoryExtraction(JSON.stringify({ operations: [{ action: "IGNORE", confidence: 0.2, reasonCode: "uncertain", userId: "forbidden" }] }));
+    expect(() => parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "UPDATE", content: "用户喜欢简洁回答", category: "preference", scope: "GLOBAL", importance: 4, confidence: 0.9, reasonCode: "preference" }] }))).toThrow();
+    const result = parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "IGNORE", confidence: 0.2, reasonCode: "uncertain", userId: "forbidden" }] }));
     expect(result.operations[0]).not.toHaveProperty("userId");
+  });
+
+  it("distinguishes inline facts from requests for previous context", () => {
+    expect(detectExplicitMemoryIntent("我需要你记住我的电脑配置。")).toBe("PREVIOUS_CONTEXT");
+    expect(detectExplicitMemoryIntent("我的显卡换成 RTX 5080 了，记住一下。")).toBe("INLINE_FACT");
+    expect(detectExplicitMemoryIntent("以后记得先给结论。")).toBe("INLINE_FACT");
+    expect(detectExplicitMemoryIntent("别忘了我不吃香菜。")).toBe("INLINE_FACT");
+    expect(detectExplicitMemoryIntent("对，就这些，帮我记住。")).toBe("PREVIOUS_CONTEXT");
+  });
+
+  it("requires extracted facts to be traceable to user messages", () => {
+    expect(hasTraceableUserEvidence("用户的电脑配置为 RTX 5070 Ti 和 i5-12600K", ["我的显卡是 RTX 5070 Ti，处理器是 i5-12600K"])).toBe(true);
+    expect(hasTraceableUserEvidence("用户的电脑配置为 RTX 5090", ["我想升级电脑，但还没决定型号"])).toBe(false);
   });
 
   it("limits and deterministically ranks existing candidates", () => {

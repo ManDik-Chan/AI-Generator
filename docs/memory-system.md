@@ -14,7 +14,9 @@
 4. Route Handler 使用 Next.js `after` 注册 `extractAndPersistMemories`。
 5. 后台任务自行捕获错误，只记录 requestId、userId、conversationId、sourceMessageId 和 errorCode。
 
-停止生成、Provider ERROR、助手未成功 COMPLETE、来源 USER 被 supersede 或 `Profile.memoryEnabled=false` 时不会提取。简单问候、感谢、确认语和纯标点由本地规则过滤，不产生模型费用。每轮最多调用一次，无自动重试。
+停止生成、Provider ERROR、助手未成功 COMPLETE、来源 USER 被 supersede 或 `Profile.memoryEnabled=false` 时不会提取。简单问候、感谢、确认语和纯标点由本地规则过滤，不产生模型费用。每轮只有一次业务提取，不对 Provider 错误自动重试；仅 JSON 解析失败可追加一次格式修复请求。
+
+明确的“记住 / 请记住 / 帮我记住 / 以后记得 / 记下来 / 别忘了”会分类为 INLINE_FACT 或 PREVIOUS_CONTEXT。普通提取仍只使用少量近期轮次；明确请求会额外查询当前用户、当前对话最近 30 条有效消息，并最多提供 15 条历史 USER 消息。电脑配置等同一主题应合并为一条记忆；用户确认 assistant 总结时，所有事实仍必须能追溯到更早 USER 消息。
 
 ## 模型协议与成本
 
@@ -29,6 +31,8 @@ AI_MEMORY_REQUEST_TIMEOUT_MS=45000
 
 模型为空时回退 `AI_MODEL`。输入仅包含当前 USER、当前 ASSISTANT（只用于语境）、最近最多四个完整轮次、当前 Persona 身份和最多 20 条当前用户候选记忆。候选只公开 id、content、category、scope。
 
+模型输出优先按纯 JSON 解析，也兼容 `json`/普通代码块及前后少量说明中的首个完整 JSON 对象，之后始终通过同一 Zod Schema。首次解析失败时只允许一次低温度 JSON 修复请求；不因其他错误重试，修复失败由 `after` 安全记录且不影响聊天。
+
 输出为最多三项严格 JSON operation：
 
 - CREATE：没有对应候选的稳定事实；
@@ -40,6 +44,8 @@ AI_MEMORY_REQUEST_TIMEOUT_MS=45000
 ## 内容边界
 
 适合记忆：稳定身份、长期偏好、目标、项目、限制、习惯，以及与当前 Persona 有长期意义的关系。问候、感谢、临时页面操作、一次性写作要求、作业答案、assistant 建议、模型推断、第三方信息和凭据必须忽略。assistant 回复只帮助理解用户话语，绝不能成为用户事实来源。
+
+基础助手 Prompt 明确平台支持长期记忆：用户要求“记住”时不会再错误声称没有能力，也不会在后台写入完成前保证成功；若当前对话找不到明确事实，则询问用户具体需要记住什么。
 
 Prompt 用 `<current_user_message>`、`<assistant_response context_only="true">`、`<existing_memories>` 等 XML 数据边界，并转义所有特殊字符。用户内容不能改变严格 JSON 协议。
 

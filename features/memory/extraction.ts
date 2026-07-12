@@ -2,6 +2,7 @@ import { z } from "zod";
 import { MEMORY_CATEGORIES } from "@/features/memory/constants";
 import { memoryContentSchema } from "@/features/memory/schemas";
 import { memoryTerms } from "@/features/memory/selection";
+import { extractFirstJsonObject } from "@/features/persona/generation";
 
 export const MEMORY_EXTRACTION_CONFIDENCE = 0.85;
 export const MEMORY_EXTRACTION_MAX_OPERATIONS = 3;
@@ -38,8 +39,34 @@ export const memoryExtractionSchema = z.object({
 
 export type MemoryExtractionOperation = z.infer<typeof operationSchema>;
 
-export function parseMemoryExtraction(output: string) {
-  return memoryExtractionSchema.parse(JSON.parse(output.trim()));
+export function parseMemoryExtractionOutput(output: string) {
+  const trimmed = output.trim();
+  try {
+    return memoryExtractionSchema.parse(JSON.parse(trimmed));
+  } catch (directError) {
+    try {
+      return memoryExtractionSchema.parse(JSON.parse(extractFirstJsonObject(trimmed)));
+    } catch {
+      throw directError;
+    }
+  }
+}
+
+export type ExplicitMemoryIntent = "INLINE_FACT" | "PREVIOUS_CONTEXT";
+
+export function detectExplicitMemoryIntent(message: string): ExplicitMemoryIntent | undefined {
+  const text = message.trim();
+  if (!/(?:请|帮我|需要你)?记住|以后记得|把(?:这个|这些|它)?记下来|别忘了/u.test(text)) return undefined;
+  const withoutIntent = text
+    .replace(/(?:请|帮我|需要你)?记住(?:一下)?/gu, " ")
+    .replace(/以后记得/gu, " ")
+    .replace(/把(?:这个|这些|它)?记下来/gu, " ")
+    .replace(/别忘了/gu, " ")
+    .replace(/[，。！？,.!?]/g, " ")
+    .trim();
+  const explicitCarry = /(?:以后记得|别忘了)/u.test(text) && withoutIntent.length > 1 && !/^(?:这个|这些|它|我的?(?:电脑)?配置)$/u.test(withoutIntent);
+  const hasInlineFact = explicitCarry || /(?:是|为|叫|喜欢|偏好|换成|改成|使用|不要|总是|一直|以后|不吃|不喝|不使用).{1,}|(?:RTX|GTX|Core|Ryzen|\bi[3579]-?\d|\d+[KkPp]?(?:Hz|GB|TB|K)\b)/iu.test(withoutIntent);
+  return hasInlineFact ? "INLINE_FACT" : "PREVIOUS_CONTEXT";
 }
 
 export function shouldRunMemoryExtraction(message: string) {
@@ -74,4 +101,18 @@ export function selectExtractionCandidates(message: string, candidates: Extracti
       a.memory.id.localeCompare(b.memory.id))
     .slice(0, 20)
     .map(({ memory }) => memory);
+}
+
+export function hasTraceableUserEvidence(content: string, sourceMessages: string[]) {
+  if (!sourceMessages.length) return false;
+  const contentTerms = memoryTerms(content);
+  const sourceTerms = memoryTerms(sourceMessages.join("\n"));
+  let overlap = 0;
+  for (const term of contentTerms) {
+    if (!sourceTerms.has(term)) continue;
+    if (/^[a-z0-9]+$/i.test(term) && term.length >= 2) return true;
+    overlap += 1;
+    if (overlap >= 2) return true;
+  }
+  return false;
 }

@@ -17,4 +17,13 @@ describe("memory extractor prompt", () => {
     expect(prompt).toContain("不得输出 userId、personaId、enabled、origin 或 sourceMessageId");
     expect(prompt).not.toContain("importance=\"");
   });
+
+  it("treats earlier USER messages as the source of truth for explicit memory requests", () => {
+    const prompt = buildMemoryExtractorPrompt({ currentUserMessage: "记住我的电脑配置", assistantResponse: "你的配置是 RTX 5070 Ti", recentTurns: [], existingMemories: [], explicitIntent: "PREVIOUS_CONTEXT", priorUserMessages: ["我的显卡是 RTX 5070 Ti，处理器是 i5-12600K。"], supportingAssistantMessages: ["你的配置是 RTX 5070 Ti。"] });
+    expect(prompt).toContain("<explicit_memory_intent>PREVIOUS_CONTEXT</explicit_memory_intent>");
+    expect(prompt).toContain('prior_user_messages source_of_truth="true"');
+    expect(prompt).toContain('supporting_assistant_context source_of_truth="false"');
+    expect(prompt).toContain("同一主题必须合并为一条完整 Memory");
+    expect(prompt).toContain("事实必须能追溯到 USER 消息");
+  });
 });

@@ -13,4 +13,11 @@ describe("runtime persona assistant prompt", () => {
   it("falls back exactly to the default assistant when persona is missing", () => {
     expect(buildPersonaAssistantPrompt(null)).toBe(DEFAULT_ASSISTANT_SYSTEM_PROMPT);
   });
+
+  it("describes long-term memory honestly without claiming premature success", () => {
+    expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("当前平台支持长期记忆");
+    expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("我会尝试将这些信息整理到长期记忆中");
+    expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("不要在后台保存完成前保证已经保存成功");
+    expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).not.toContain("不声称具备联网搜索、读取文件、访问网页、长期记忆");
+  });
 });
