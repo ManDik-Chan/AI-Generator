@@ -121,15 +121,16 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 
 ### 自动验证
 
-- `pnpm test`：17 个测试文件、78 项测试通过。
+- `pnpm test`：18 个测试文件、86 项测试通过。
 - `pnpm lint`：通过，0 warnings。
 - `pnpm typecheck`：通过。
 - `pnpm build`：无 Supabase/GLM 密钥环境通过。
 - `pnpm exec prisma validate`：通过。
 - 无配置 Production smoke：`/` 返回 200，`/personas` 返回 307 到配置提示登录页。
 
-### 待项目所有者真实验收
+### 真实环境验收
 
-- 在真实 Supabase 执行 `pnpm db:deploy`。
-- 验证创建、编辑、归档、恢复、人格聊天、历史对话继续使用归档人格和默认助手回归。
-- 使用真实 GLM-5.2 检查人格表达与基础安全规则。
+- Supabase migration、创建、编辑、归档、恢复和用户数据隔离通过。
+- Persona 绑定、刷新恢复、归档人格历史对话、默认助手和真实 GLM-5.2 人格表达通过。
+- 页面、移动端布局、停止生成和编辑重提回归通过。
+- 已修复 Persona 对话助手消息仍显示默认 Bot 的头像传递问题：所有助手消息状态统一复用 `AssistantAvatar`，只读取 `Persona.avatarUrl`；待项目所有者按头像专项步骤复测。

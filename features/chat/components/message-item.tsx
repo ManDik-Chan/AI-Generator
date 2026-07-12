@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AlertCircle, Bot, Check, Pencil, UserRound, X } from "lucide-react";
+import { AlertCircle, Check, Pencil, UserRound, X } from "lucide-react";
 
+import { AssistantAvatar } from "@/features/chat/components/assistant-avatar";
 import { MarkdownMessage } from "@/features/chat/components/markdown-message";
+import { resolveMessageAssistantPersona } from "@/features/chat/assistant-identity";
 import type { ChatMessageView } from "@/features/chat/types";
+import type { PersonaChatIdentity } from "@/features/persona/types";
 
 interface MessageItemProps {
   message: ChatMessageView;
@@ -17,6 +20,7 @@ interface MessageItemProps {
   onCancelEdit(): void;
   onEditChange(value: string): void;
   onSubmitEdit(): void;
+  persona?: PersonaChatIdentity;
 }
 
 export function MessageItem(props: MessageItemProps) {
@@ -33,7 +37,7 @@ export function MessageItem(props: MessageItemProps) {
 
   return (
     <article className={isUser ? "flex justify-end gap-3" : "flex justify-start gap-3"}>
-      {!isUser && <span className="mt-1 grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground"><Bot className="size-4" /></span>}
+      {!isUser && <AssistantAvatar className="mt-1" persona={resolveMessageAssistantPersona(message.role, props.persona)} />}
       <div className={isUser ? "max-w-[85%] rounded-2xl rounded-tr-md bg-primary px-4 py-3 text-primary-foreground sm:max-w-[75%]" : "min-w-0 max-w-[calc(100%_-_2.75rem)] flex-1 rounded-2xl border bg-card px-4 py-3 sm:px-5"}>
         {isUser && props.editing ? (
           <div className="space-y-2">

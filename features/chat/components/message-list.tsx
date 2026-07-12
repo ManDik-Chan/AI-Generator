@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 import { MessageSquareText } from "lucide-react";
 
 import { MessageItem } from "@/features/chat/components/message-item";
+import { AssistantAvatar } from "@/features/chat/components/assistant-avatar";
 import type { ChatMessageView } from "@/features/chat/types";
-import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import type { PersonaChatIdentity } from "@/features/persona/types";
 
 interface MessageListProps {
@@ -57,11 +57,12 @@ export function MessageList(props: MessageListProps) {
             onCancelEdit={props.onCancelEdit}
             onEditChange={props.onEditChange}
             onSubmitEdit={props.onSubmitEdit}
+            persona={props.persona}
           />;
         }) : (
           <div className="grid min-h-[45vh] place-items-center text-center">
             <div>
-              {props.persona ? <PersonaAvatar className="mx-auto size-16" name={props.persona.name} src={props.persona.avatarUrl} /> : <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><MessageSquareText className="size-6" /></span>}
+              {props.persona ? <AssistantAvatar className="mx-auto size-16 rounded-2xl" persona={props.persona} /> : <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><MessageSquareText className="size-6" /></span>}
               <h2 className="mt-4 text-xl font-semibold">{props.persona ? `与 ${props.persona.name} 开始对话` : "开始一段新对话"}</h2>
               <p className="mt-2 max-w-sm whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{props.persona?.greeting || (props.persona ? props.persona.description || "发送第一条消息开始对话。" : "向默认 AI 助手提问。它会使用 Markdown 清晰回答，并保留本次对话历史。")}</p>
             </div>
