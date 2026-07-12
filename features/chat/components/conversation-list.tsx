@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { MessageSquare, Plus, Trash2 } from "lucide-react";
+import { House, MessageSquare, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { deleteConversationAction } from "@/features/chat/actions";
 import { DeleteConversationDialog } from "@/features/chat/components/delete-conversation-dialog";
+import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ConversationSummary } from "@/features/chat/types";
 
 export function ConversationList({ conversations, activeId, onNavigate }: { conversations: ConversationSummary[]; activeId?: string; onNavigate?(): void }) {
@@ -17,7 +18,14 @@ export function ConversationList({ conversations, activeId, onNavigate }: { conv
 
   return (
     <div className="flex h-full flex-col">
-      <div className="p-3"><Button asChild className="w-full justify-start"><Link href="/chat" onClick={onNavigate}><Plus className="size-4" />新建对话</Link></Button></div>
+      <div className="space-y-2 p-3">
+        <Button asChild className="w-full justify-start" variant="outline">
+          <Link href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate}><House className="size-4" />{CHAT_HOME_NAVIGATION.label}</Link>
+        </Button>
+        <Button asChild className="w-full justify-start">
+          <Link href="/chat" onClick={onNavigate}><Plus className="size-4" />新建对话</Link>
+        </Button>
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
         {error && <p className="mx-1 mb-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{error}</p>}
         {conversations.length ? (

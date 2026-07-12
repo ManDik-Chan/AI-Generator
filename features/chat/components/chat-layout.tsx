@@ -1,14 +1,16 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, Sparkles, X } from "lucide-react";
+import { House, Menu, Sparkles, X } from "lucide-react";
 
 import { ChatComposer } from "@/features/chat/components/chat-composer";
 import { ConversationList } from "@/features/chat/components/conversation-list";
 import { MessageList } from "@/features/chat/components/message-list";
 import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
+import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
 
 interface ChatLayoutProps {
@@ -188,11 +190,12 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         </div>
       )}
       <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-card/75 px-3 backdrop-blur md:px-5">
-          <button aria-label="打开对话历史" className="rounded-lg p-2 hover:bg-muted md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
-          <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground"><Sparkles className="size-4" /></span>
-          <div className="min-w-0"><h1 className="truncate text-sm font-semibold">{conversation?.title ?? "新对话"}</h1><p className="text-xs text-muted-foreground">默认 AI 助手</p></div>
-          {generating && <span className="ml-auto text-xs text-primary">正在生成…</span>}
+        <header className="flex h-14 shrink-0 items-center gap-1.5 border-b bg-card/75 px-2 backdrop-blur sm:gap-2 sm:px-3 md:gap-3 md:px-5">
+          <button aria-label="打开对话历史" className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
+          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
+          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><Sparkles className="size-4" /></Link>
+          <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{conversation?.title ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">默认 AI 助手</p></div>
+          {generating && <span className="hidden shrink-0 text-xs text-primary sm:inline">正在生成…</span>}
         </header>
         {!aiConfigured && <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-200">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
         {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
