@@ -1,12 +1,12 @@
 # 重构进度
 
-## Phase 5A1 当前进度
+## Phase 5A1 完成状态
 
 - [x] Phase 4A1：人格管理与人格聊天
 - [x] Phase 4A2：AI 人格草稿生成
 - [x] Phase 4A3：GLM-Image 人格头像、交互收尾与自动化验证
 - [x] Phase 4A3：项目所有者真实 GLM-Image / Supabase Storage 联调
-- [x] Phase 5A1：自动长期记忆、用户控制、安全召回与聊天注入（本 PR 实施）
+- [x] Phase 5A1：自动长期记忆、用户控制、安全召回与聊天注入（真实验收通过）
 - [ ] Phase 5A3：尚未开始
 
 Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`GeneratedImage` 候选、显式 Apply、头像私有读取以及 `20260712190000_add_persona_avatar_image` migration。所有 UI 继续只读取 `Persona.avatarUrl`。项目所有者已于 2026-07-13 完成真实 GLM-Image、Supabase Storage 与完整产品交互验收，Phase 4A3 已完成。
@@ -25,7 +25,7 @@ Phase 5A1 产品方向已调整为自然自动记忆：成功回答后通过 Nex
 
 最新真实日志确认 GLM-5.2 对记忆 system-only 请求返回 HTTP 400。提取与 JSON Repair 已改为 system policy + final user data；400 映射为 `INVALID_REQUEST`，安全提取并脱敏服务商 code/message，且不重试、不回退、不修复、不写 Memory。
 
-项目所有者已在真实 Supabase 执行 `20260713010000_add_memory_foundation`。本次没有修改该 migration，也没有新增 migration；真实 GLM-5.2 自动记忆与连续聊天无闪屏仍待验收。
+项目所有者已在真实 Supabase 执行 `20260713010000_add_memory_foundation`，并确认最新版 RLS 可重复执行。真实 GLM-5.2 system + user 自动记忆、明确记忆请求、PREVIOUS_CONTEXT、管理页控制和连续聊天无全屏 loading 均已通过。Phase 5A1 于 2026-07-13 完成。
 
 ## 当前状态
 
@@ -36,7 +36,7 @@ Phase 5A1 产品方向已调整为自然自动记忆：成功回答后通过 Nex
 - [x] Phase 2：基础系统
 - [x] Phase 3：AI 聊天
 - [ ] Phase 4：人格系统（4A1、4A2、4A3 已完成）
-- [ ] Phase 5：记忆系统（5A1 自动记忆代码实施，真实 GLM 验收待完成）
+- [ ] Phase 5：记忆系统（Phase 5A1 已完成；后续阶段未开始）
 - [ ] Phase 6：工具箱
 - [ ] Phase 7：优化与部署
 
@@ -182,6 +182,7 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 ## Phase 5A1 实施记录
 
 实施时间：2026-07-13
+完成验收：2026-07-13
 
 - 扩展现有 Memory 数据模型：GLOBAL/PERSONA、MANUAL/CHAT_MESSAGE/AUTO_EXTRACTED 来源、Persona、来源消息、`lastUsedAt` 与 Profile 总开关。
 - migration 对旧数据回填 GLOBAL/MANUAL，并增加关系约束、检查约束和查询索引；RLS 同时校验 Memory 所有者与关联 Persona/Conversation/Message 所有者。
@@ -203,4 +204,17 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 - `pnpm typecheck`：通过。
 - `pnpm build`：通过，`/memories` 按需动态渲染。
 - `pnpm exec prisma validate`：使用仅对验证进程生效的非真实占位 URL 通过 Schema 校验；没有连接真实数据库。
-- 真实 Supabase migration：项目所有者已执行。真实 GLM 自动记忆与浏览器连续聊天验收尚未执行。
+- 真实 Supabase migration、GLM 自动记忆与浏览器连续聊天无全屏 loading：项目所有者验收通过。
+
+### 真实环境验收
+
+- Supabase Memory migration 部署成功，最新版 RLS 脚本可重复执行。
+- 普通 GLM-5.2 聊天流式输出正常；自动记忆 system + user 请求成功且后台任务不阻塞聊天。
+- 明确“请记住”请求可创建 Memory，PREVIOUS_CONTEXT 可从当前对话更早 USER 消息提取事实。
+- 自动记忆可在 `/memories` 查看；总开关、编辑、停用和删除正常。
+- 助手不再虚假承诺已经保存成功。
+- 新对话通过 History API 浅更新 URL；回答完成后不再触发全屏 loading。
+- 未提交 `.env`、API Key、Service Role Key 或数据库密码。
+- 没有 Embedding 或 RAG；Phase 5A3 和 Phase 6 未开始。
+
+Phase 5A1 真实环境验收已全部通过。
