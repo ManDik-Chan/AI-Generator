@@ -87,4 +87,21 @@ describe("approved premium application shell", () => {
     expect(css).toContain("env(safe-area-inset-bottom)");
     expect(mobile).toContain("env(safe-area-inset-bottom)");
   });
+
+  it("opens the desktop profile menu upward without changing its role links", () => {
+    const sidebar = readFileSync(
+      "components/layout/desktop-sidebar.tsx",
+      "utf8",
+    );
+
+    expect(sidebar).toContain('placement="top-end"');
+    expect(sidebar).toContain('href="/account"');
+    expect(sidebar).toContain("账号与设置");
+    expect(sidebar).toContain('viewer?.role === "ADMIN"');
+    expect(sidebar).toContain('href="/admin"');
+    expect(sidebar).toContain("系统管理");
+    expect(sidebar).toContain("min-h-0 flex-1");
+    expect(sidebar).toContain("overflow-y-auto");
+    expect(sidebar).toContain("mt-auto shrink-0");
+  });
 });

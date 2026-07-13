@@ -40,7 +40,10 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
         </Link>
       </Button>
 
-      <nav aria-label="主导航" className="mt-6 space-y-5">
+      <nav
+        aria-label="主导航"
+        className="premium-scrollbar mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-1"
+      >
         {navigationGroups.map((group) => (
           <section key={group.label}>
             <p className="mb-2 px-2.5 text-[.625rem] font-extrabold uppercase tracking-[.14em] text-muted-foreground">
@@ -83,7 +86,7 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
         ))}
       </nav>
 
-      <div className="mt-auto space-y-2.5">
+      <div className="mt-auto shrink-0 space-y-2.5">
         <div className="rounded-control border border-border/12 bg-surface/70 p-1.5">
           <p className="px-2 pb-1.5 pt-1 text-[.6875rem] font-semibold text-muted-foreground">
             外观
@@ -93,6 +96,7 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
 
         <Dropdown
           className="w-full"
+          placement="top-end"
           trigger={
             <span className="flex min-h-[3.25rem] w-full items-center gap-2.5 rounded-control border border-border/12 bg-surface/76 px-2.5 text-left transition-colors hover:bg-surface-raised">
               <Avatar
