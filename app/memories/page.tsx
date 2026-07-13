@@ -20,6 +20,8 @@ export default async function MemoriesPage({ searchParams }: { searchParams: Pro
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           AI 会在对话中自动整理可能长期有用的信息。你可以随时修改、停用或删除。
         </p>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">语义召回可帮助 AI 理解不同表达方式下的相同含义。</p>
+        <p className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">启用语义召回时，记忆的整理文本和当前问题可能发送到配置的 Embedding Provider；向量只保存在当前项目数据库中，不返回浏览器，也不与其他用户共享。删除记忆会同步删除对应向量。</p>
       </div>
       <MemoryManager initialPersonaId={initialPersonaId} {...data} />
     </AppShell>

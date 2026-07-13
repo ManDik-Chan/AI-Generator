@@ -1,6 +1,6 @@
 # 重构进度
 
-## Phase 5A3-1 完成状态
+## Phase 5A3-2 当前进度
 
 - [x] Phase 4A1：人格管理与人格聊天
 - [x] Phase 4A2：AI 人格草稿生成
@@ -8,7 +8,7 @@
 - [x] Phase 4A3：项目所有者真实 GLM-Image / Supabase Storage 联调
 - [x] Phase 5A1：自动长期记忆、用户控制、安全召回与聊天注入（真实验收通过）
 - [x] Phase 5A3-1：记忆召回质量、主题冲突与容量治理（真实验收通过）
-- [ ] Phase 5A3-2：尚未开始
+- [ ] Phase 5A3-2：混合语义记忆召回（本 PR 实施，真实验收待完成）
 
 Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`GeneratedImage` 候选、显式 Apply、头像私有读取以及 `20260712190000_add_persona_avatar_image` migration。所有 UI 继续只读取 `Persona.avatarUrl`。项目所有者已于 2026-07-13 完成真实 GLM-Image、Supabase Storage 与完整产品交互验收，Phase 4A3 已完成。
 
@@ -34,7 +34,11 @@ Phase 5A3-1 自动验证：47 个测试文件、277 项测试通过。
 
 项目所有者已于 2026-07-13 完成 Phase 5A3-1 真实本地验收：`20260713110000_add_memory_governance` 已成功部署，`topicKey`、`keywords`、`pinned`、`useCount` 正常；GLM-5.2 自动 CREATE、关键词召回和同一对话第二次 UPDATE 通过。RTX 5070 Ti 可在保持原 Memory ID、CPU、显示器和 `topicKey` 的前提下更新为 RTX 5080，`keywords` 与 `sourceMessageId` 正确更新且不产生重复主题。`thinking: disabled` 已解决 reasoning-only 空响应，置顶、容量治理、使用统计、响应式管理页和聊天无刷新均通过真实验收。
 
-Phase 5A3-1 已完成。没有 Embedding、向量数据库或 RAG；Phase 5A3-2 和 Phase 6 未开始。
+Phase 5A3-1 已完成；该阶段本身没有引入 Embedding、向量数据库或 RAG。
+
+Phase 5A3-2 在确定性召回之上增加通用 OpenAI-compatible Embedding Provider、独立 512 维 `MemoryEmbedding`、Supabase pgvector 精确余弦查询、contentHash 生命周期、批量回填、adaptive 触发与稳定 Hybrid RRF。未配置或运行失败时安全退回现有确定性召回；不处理 Message、文件、网页或外部知识库，不属于文件 RAG。真实 Supabase migration、Embedding-3 回填和语义召回尚待项目所有者验收。Phase 6 未开始。
+
+Phase 5A3-2 自动验证：55 个测试文件、311 项测试通过；lint、typecheck、无专用 Embedding Key/无 pgvector 连接的生产构建和 Prisma Schema 校验通过。
 
 ## 当前状态
 
@@ -45,7 +49,7 @@ Phase 5A3-1 已完成。没有 Embedding、向量数据库或 RAG；Phase 5A3-2 
 - [x] Phase 2：基础系统
 - [x] Phase 3：AI 聊天
 - [ ] Phase 4：人格系统（4A1、4A2、4A3 已完成）
-- [ ] Phase 5：记忆系统（Phase 5A1、Phase 5A3-1 已完成；Phase 5A3-2 未开始）
+- [ ] Phase 5：记忆系统（Phase 5A1、Phase 5A3-1 已完成；Phase 5A3-2 实施中）
 - [ ] Phase 6：工具箱
 - [ ] Phase 7：优化与部署
 

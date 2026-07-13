@@ -6,6 +6,7 @@ alter table public.personas enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
 alter table public.memories enable row level security;
+alter table public.memory_embeddings enable row level security;
 alter table public.generated_images enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
@@ -29,6 +30,24 @@ drop policy if exists "memories_update_own_relations" on public.memories;
 create policy "memories_update_own_relations" on public.memories for update using (user_id = auth.uid()) with check (user_id = auth.uid() and (persona_id is null or exists (select 1 from public.personas p where p.id = persona_id and p.user_id = auth.uid())) and (source_conversation_id is null or exists (select 1 from public.conversations c where c.id = source_conversation_id and c.user_id = auth.uid())) and (source_message_id is null or exists (select 1 from public.messages m join public.conversations c on c.id = m.conversation_id where m.id = source_message_id and c.user_id = auth.uid() and (source_conversation_id is null or m.conversation_id = source_conversation_id))));
 drop policy if exists "memories_delete_own" on public.memories;
 create policy "memories_delete_own" on public.memories for delete using (user_id = auth.uid());
+drop policy if exists "memory_embeddings_select_own" on public.memory_embeddings;
+create policy "memory_embeddings_select_own" on public.memory_embeddings
+  for select using (user_id = auth.uid());
+drop policy if exists "memory_embeddings_insert_own_memory" on public.memory_embeddings;
+create policy "memory_embeddings_insert_own_memory" on public.memory_embeddings
+  for insert with check (
+    user_id = auth.uid()
+    and exists (select 1 from public.memories m where m.id = memory_id and m.user_id = auth.uid())
+  );
+drop policy if exists "memory_embeddings_update_own_memory" on public.memory_embeddings;
+create policy "memory_embeddings_update_own_memory" on public.memory_embeddings
+  for update using (user_id = auth.uid()) with check (
+    user_id = auth.uid()
+    and exists (select 1 from public.memories m where m.id = memory_id and m.user_id = auth.uid())
+  );
+drop policy if exists "memory_embeddings_delete_own" on public.memory_embeddings;
+create policy "memory_embeddings_delete_own" on public.memory_embeddings
+  for delete using (user_id = auth.uid());
 drop policy if exists "generated_images_own_all" on public.generated_images;
 create policy "generated_images_own_all" on public.generated_images
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());

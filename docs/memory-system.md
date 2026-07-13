@@ -106,7 +106,7 @@ Phase 5A1 已完成。没有 Embedding、向量数据库或 RAG。
 - `/memories` 支持置顶、容量提示、从未/长期未使用/同主题重复筛选和多种排序。删除仍完全由用户确认，没有自动清理。
 - `MEMORY_MAX_TOTAL` 默认 300；达到上限时 CREATE 拒绝、UPDATE 允许，不自动删除现有数据。
 
-本阶段新增独立 `20260713110000_add_memory_governance` migration，不修改已部署的 Phase 5A1 migration。没有 Embedding、向量数据库或 RAG；Phase 5A3-2 与 Phase 6 未开始。
+本阶段新增独立 `20260713110000_add_memory_governance` migration，不修改已部署的 Phase 5A1 migration。Phase 5A3-1 当时没有 Embedding、向量数据库或 RAG；后续 Phase 5A3-2 见下文。
 
 ## Phase 5A3-1 真实验收
 
@@ -123,4 +123,20 @@ Phase 5A1 已完成。没有 Embedding、向量数据库或 RAG。
 - 聊天流式输出、History API 浅 URL 更新和无全屏 loading：无回归。
 - 未提交 `.env`、API Key、Service Role Key 或数据库密码。
 
-Phase 5A3-1 已完成。没有 Embedding、向量数据库或 RAG；Phase 5A3-2 和 Phase 6 未开始。
+Phase 5A3-1 已完成。
+
+## Phase 5A3-2：混合语义召回
+
+- 原确定性排序始终保留为基础和失败兜底；语义层不会取代可信的关键词直匹配。
+- Memory 的 content、category、topic 可读片段和去重 keywords 形成固定文本，并用 SHA-256 `contentHash` 判断向量是否过期。ID、所有权、来源、置顶和使用统计不进入 Embedding 文本。
+- `memory_embeddings` 独立保存当前用户的 model、固定 512 维、hash 和向量；Memory/Profile 删除均 Cascade，停用只停止查询。
+- 自动 CREATE/UPDATE、手动创建/编辑和重新启用后在响应完成后后台同步；hash/model/dimensions 未变化不重复调用。
+- `adaptive` 只在有可用向量且确定性结果不足/无直接匹配/存在记忆意图时生成一次 query embedding；`off` 纯关键词，`always` 用于测试。
+- 语义 SQL 按当前 userId、enabled、GLOBAL/当前 Persona、模型、维度、阈值过滤，默认最多 20 个候选并按余弦相似度稳定排序。
+- Hybrid RRF 使用确定性 1.0、语义 0.9，并保留 pinned、importance、Persona 和稳定类别轻量加权；最后仍执行 topic 去重、8 条 / 2400 字符完整条目预算。
+- Provider 配置/认证/模型/限流/超时/响应维度或 pgvector 查询失败只记录安全诊断并回退确定性结果，聊天、自动记忆和无刷新流程不受影响。
+- 管理页只显示索引数量、待建立数量、模型和维度；不显示向量或相似度。
+
+启用语义召回时，Memory 整理文本和当前问题可能发送到配置的 Embedding Provider；向量只保存在当前项目数据库，不返回浏览器、不与其他用户共享。总开关关闭时不召回、不生成 query embedding、不自动提取。删除 Memory 会同步 Cascade 删除向量。
+
+本阶段不是外部文件 RAG：不向量化 Message，不抓取网页，不建立文件知识库。真实 Supabase migration、Embedding-3 回填和语义查询待项目所有者验收；Phase 6 未开始。

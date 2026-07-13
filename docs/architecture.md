@@ -12,13 +12,21 @@ Persona 头像使用独立 `ImageProvider`，不进入文本 `AiProvider`。GLM-
 
 聊天请求从启用且属于当前用户的候选中，以当前消息、近期用户消息、作用域、重要程度和更新时间执行确定性排序，并同时受条目数与字符数预算约束。选中的文本经过 XML 转义后作为“不可信用户保存信息”追加到服务端 system message；它不能覆盖安全规则、Persona 边界或当前请求。召回失败降级为无记忆聊天，浏览器 SSE 仅收到数量，不收到记忆内容或数据库标识。
 
-提取模型返回最多三项严格 JSON CREATE / UPDATE / IGNORE。服务端以 0.85 置信度、候选 ID 白名单、当前 Persona 映射、凭据检测、Zod 和 Serializable 事务执行最终决定；模型不能控制所有权、来源或启用状态。来源消息、助手消息、总开关和 superseded 状态在模型前及事务内检查。`lastUsedAt` 只在助手消息成功写为 COMPLETE 后更新。本阶段不引入 Embedding、向量库或 RAG。
+提取模型返回最多三项严格 JSON CREATE / UPDATE / IGNORE。服务端以 0.85 置信度、候选 ID 白名单、当前 Persona 映射、凭据检测、Zod 和 Serializable 事务执行最终决定；模型不能控制所有权、来源或启用状态。来源消息、助手消息、总开关和 superseded 状态在模型前及事务内检查。`lastUsedAt` 只在助手消息成功写为 COMPLETE 后更新。Phase 5A1 本身不引入 Embedding、向量库或 RAG。
 
 ## Phase 5A3-1 记忆治理
 
 Memory 以可选 `topicKey` 表示稳定主题，以最多 12 个 `keywords` 支持词汇桥接；`pinned` 由用户控制，`useCount` 与 `lastUsedAt` 只在成功注入并完成回复后原子更新。同一用户、scope 和 Persona 下，自动 CREATE 遇到同 topicKey 会转换为 UPDATE；历史重复不自动删除，召回时每个主题最多一条。
 
-召回仍为纯确定性算法：内容、关键词、topic 可读片段、当前消息与近期 USER 上下文共同评分，并加入 importance、pinned、Persona、更新时间、最近使用和封顶的对数 useCount 加权。每轮仍最多 8 条 / 2400 字符。没有 Embedding、向量数据库或 RAG。
+Phase 5A3-1 的基础召回是确定性算法：内容、关键词、topic 可读片段、当前消息与近期 USER 上下文共同评分，并加入 importance、pinned、Persona、更新时间、最近使用和封顶的对数 useCount 加权。每轮仍最多 8 条 / 2400 字符。
+
+## Phase 5A3-2 混合语义召回
+
+`lib/ai/embeddings` 提供通用 OpenAI-compatible 512 维 Embedding 接口。向量独立存放在 `memory_embeddings`，通过 `memory_id` 与 `user_id` 双重关系约束、Cascade 删除和 RLS 隔离；业务 `Memory` 不承载向量字段。当前每用户最多 300 条，采用按用户过滤的 pgvector 精确余弦检索，不建立 HNSW/IVFFlat。
+
+聊天先执行原确定性排序。`adaptive` 仅在有当前作用域向量且结果不足、缺少直接匹配、概览或显式记忆询问时生成一次 query embedding；`off` 完全禁用，`always` 用于测试。语义候选与确定性排名使用加权 Reciprocal Rank Fusion 合并，直接关键词匹配获得额外保护，之后再次执行 enabled、Persona、topic 去重和 8 条 / 2400 字符预算。
+
+Embedding 配置、Provider、响应维度或 pgvector 查询失败只记录脱敏阶段诊断，并返回确定性结果；不会重新调用文本模型、增加聊天计数、刷新页面或把向量/相似度交给浏览器。此阶段只向量化长期 Memory，不处理 Message、文件、网页或外部知识库，因此不是文件 RAG。Phase 6 未开始。
 
 新聊天在 `xl` 桌面断点使用固定右侧助手栏，窄屏使用无第三方依赖的可访问抽屉；两者共享同一选择组件。选择状态保留在现有 `ChatLayout`，通过 History API 更新 `/chat?personaId=`，不创建数据库记录、不清空 Composer 草稿。已有 Conversation 不渲染选择栏，服务端继续拥有 Persona 绑定的最终决定权。
 

@@ -50,6 +50,7 @@ model Profile {
   personas      Persona[]
   conversations Conversation[]
   memories      Memory[]
+  memoryEmbeddings MemoryEmbedding[]
   images        GeneratedImage[]
 
   @@map("profiles")
@@ -143,6 +144,7 @@ model Memory {
   persona            Persona?      @relation(fields: [personaId], references: [id], onDelete: Cascade)
   sourceConversation Conversation? @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
   sourceMessage      Message?      @relation("MemorySourceMessage", fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  embedding          MemoryEmbedding?
 
   @@index([userId, enabled, scope, importance, updatedAt(sort: Desc)])
   @@index([personaId, enabled, importance])
@@ -151,6 +153,23 @@ model Memory {
   @@index([userId, topicKey])
   @@index([personaId, topicKey])
   @@map("memories")
+}
+
+model MemoryEmbedding {
+  memoryId    String   @id @map("memory_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  model       String
+  dimensions  Int
+  contentHash String   @map("content_hash")
+  embedding   Unsupported("vector(512)")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  memory Memory  @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, model, dimensions])
+  @@map("memory_embeddings")
 }
 
 model GeneratedImage {

@@ -20,10 +20,11 @@ import {
 import { finalizeAssistantMessage } from "@/features/chat/persistence";
 import { createChatRequestSchema } from "@/features/chat/schemas";
 import { getMemoryRuntimeLimits } from "@/features/memory/constants";
-import { selectRelevantMemories } from "@/features/memory/selection";
+import { retrieveRelevantMemories } from "@/features/memory/semantic-retrieval";
 import { buildUserMemoryBlock } from "@/lib/ai/prompts/user-memory";
 import { scheduleMemoryExtraction } from "@/features/memory/after";
 import { extractAndPersistMemories } from "@/features/memory/extractor";
+import { syncMemoryEmbeddingsForSourceMessage } from "@/features/memory/embedding-lifecycle";
 import {
   createConversationTitle,
   encodeChatSse,
@@ -215,7 +216,7 @@ export async function POST(request: Request) {
   if (profile?.memoryEnabled ?? true) {
     try {
       const candidates = await prisma.memory.findMany({ where: { userId: user.id, enabled: true, OR: [{ scope: "GLOBAL" }, ...(runtimePersonaId ? [{ scope: "PERSONA" as const, personaId: runtimePersonaId }] : [])] }, select: { id: true, content: true, category: true, scope: true, personaId: true, importance: true, enabled: true, updatedAt: true, topicKey: true, keywords: true, pinned: true, useCount: true, lastUsedAt: true } });
-      selectedMemories = selectRelevantMemories({ currentMessage: parsed.data.content, recentUserMessages: context.filter((message) => message.role === "user").slice(-6).map((message) => message.content), personaId: runtimePersonaId, candidates, ...getMemoryRuntimeLimits() });
+      selectedMemories = await retrieveRelevantMemories({ requestId, userId: user.id, conversationId, currentMessage: parsed.data.content, recentUserMessages: context.filter((message) => message.role === "user").slice(-6).map((message) => message.content), personaId: runtimePersonaId, candidates, ...getMemoryRuntimeLimits() });
     } catch { console.warn("memory_load_failed", { userId: user.id, conversationId }); }
   }
   const systemContent = buildPersonaAssistantPrompt(runtimePersona) + buildUserMemoryBlock(selectedMemories);
@@ -260,16 +261,19 @@ export async function POST(request: Request) {
             .slice(0, -1)
             .filter((message): message is { role: "user" | "assistant"; content: string } => message.role !== "system")
             .slice(-8);
-          scheduleMemoryExtraction(after, () => extractAndPersistMemories({
-            userId: user.id,
-            conversationId,
-            sourceMessageId: userMessageId,
-            assistantMessageId,
-            currentUserMessage: parsed.data.content,
-            assistantResponse: fullContent,
-            recentTurns,
-            persona: runtimePersonaId && runtimePersona ? { id: runtimePersonaId, name: runtimePersona.name } : undefined,
-          }).then(() => undefined), { requestId, userId: user.id, conversationId, sourceMessageId: userMessageId });
+          scheduleMemoryExtraction(after, async () => {
+            await extractAndPersistMemories({
+              userId: user.id,
+              conversationId,
+              sourceMessageId: userMessageId,
+              assistantMessageId,
+              currentUserMessage: parsed.data.content,
+              assistantResponse: fullContent,
+              recentTurns,
+              persona: runtimePersonaId && runtimePersona ? { id: runtimePersonaId, name: runtimePersona.name } : undefined,
+            });
+            await syncMemoryEmbeddingsForSourceMessage(user.id, userMessageId);
+          }, { requestId, userId: user.id, conversationId, sourceMessageId: userMessageId });
         }
       } catch (error) {
         const stopped = error instanceof AiProviderError && error.code === "ABORTED";
