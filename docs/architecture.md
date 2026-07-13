@@ -156,3 +156,6 @@ Phase 6A1 的可信工具类型、白名单选项和输出契约只放入 system
 6. 提供环境变量示例，不创建或提交真实密钥。
 7. 归档旧版到 `legacy/streamlit`。
 8. 运行 lint、typecheck、build 并记录结果。
+# Phase 6A2 图片工具边界
+
+浏览器只上传文件或引用当前用户尚未过期的 ToolAsset。服务端依次执行净化、原子视觉限额/ToolRun 创建、private Storage、ToolAsset 绑定和一次视觉 Provider 调用；补偿路径删除孤立 Storage 对象。客户端从不接触 Service Role、永久 URL、原始 Storage 路径或模型供应商响应。

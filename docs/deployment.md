@@ -92,6 +92,17 @@ pnpm memory:embed:backfill -- --user=<uuid> --limit=300
 
 项目所有者已确认 `20260713190000_add_tool_runs`、最新版 RLS、真实 GLM-5.2 三工具、SSE/停止与迟到流保护、历史隐私、每日限额、Prompt 注入复验和 390/430/768/1440px 全部通过。聊天、人格、头像和长期记忆无回归；页面无全屏 loading 或整页刷新。工具不创建聊天记录、不读取或写入长期记忆、不绑定 Persona。仓库和文档不记录真实 Key、数据库凭据、用户测试正文或模型原始输出。Phase 6A2 与 Phase 7 未开始。
 
+## Phase 6A2 图片理解部署
+
+1. 部署 `20260713220000_add_tool_assets`，再执行最新版 `prisma/rls.sql`。
+2. 在 Supabase Storage 创建 private bucket（默认 `tool-assets`），不得设为 public；将名称写入服务端 `AI_TOOL_ASSET_BUCKET`。
+3. 配置 `AI_VISION_MODEL`。`AI_VISION_BASE_URL` / `AI_VISION_API_KEY` 可回退现有 AI 配置；`SUPABASE_SERVICE_ROLE_KEY` 只能存在于服务端。
+4. 可配置 `AI_DAILY_VISION_LIMIT=10`、`AI_TOOL_ASSET_RETENTION_DAYS=7`、视觉 token 与超时。
+5. 定时运行 `pnpm tool-assets:cleanup` 清理到期对象。日志只含资源/运行标识和计数，不含路径、signed URL、图片或问题。
+6. 回滚时先停止图片入口与清理任务；保留 migration 前滚历史。清理 Storage 后再通过新的补偿 migration 删除数据结构，禁止编辑已部署 migration。
+
+故障排查：503 先检查 private bucket、服务端 Service Role 和视觉模型配置；410 表示图片到期；429 表示视觉日限额。无视觉配置时生产构建、文本工具、聊天、人格和记忆仍应正常。
+
 1. 建立 Supabase 项目并记录区域。
 2. 配置 pooled `DATABASE_URL` 与迁移用 `DIRECT_URL`。
 3. 应用 Prisma migrations 和 RLS SQL。

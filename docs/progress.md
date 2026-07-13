@@ -253,3 +253,25 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 - 没有 Embedding 或 RAG；Phase 5A3 和 Phase 6 未开始。
 
 Phase 5A1 真实环境验收已全部通过。
+
+## Phase 6A2 完成状态
+
+项目所有者已完成真实环境验收，Phase 6A2 全部通过。
+
+- 从最新 `main` 的 Phase 6A1 工具框架扩展 `IMAGE_ANALYZE`，保留 ToolRun、SSE、停止生成、终态保护和工具历史语义。
+- 新增独立 migration `20260713220000_add_tool_assets`、`ToolAsset`、所有者关系、Cascade、到期时间与 RLS；不复用 `GeneratedImage`。
+- `/tools/image` 支持单张 PNG/JPEG/WebP 拖放/选择、预览、问题、模式、详细程度、语言、历史开关、流式结果、停止、复制与 TXT/Markdown 下载。
+- 上传在服务端执行 10 MB、4000 万像素、MIME/魔数/解码校验；使用 sharp 重编码并剥离元数据，Storage 路径使用 UUID。
+- 使用 private `tool-assets` bucket（可配置）、60 秒 signed URL、7 天默认保留和可重复清理脚本；关闭历史时终态清理资源。
+- 视觉 Provider、模型、超时、输出 token 和每日 10 次限额独立配置；Base URL/Key 可回退现有 AI 配置，模型必须显式设置。
+- 图片与问题均作为不可信数据；不读取 Persona/Memory，不创建 Conversation/Message，不执行图片中的 Prompt 注入。
+- [x] `20260713220000_add_tool_assets` migration、最新版 RLS 与 private `tool-assets` bucket 真实部署通过。
+- [x] JPEG、PNG、WebP 上传、净化、预览与真实视觉模型调用通过；三种模式、三档详细程度和中英文输出通过。
+- [x] SSE、停止、部分结果、CANCELLED 持久化与迟到流保护通过。
+- [x] 历史开启时缩略图、详情、复制、下载、再次分析和删除通过；历史关闭时正文与图片资源清理通过。
+- [x] 到期清理与“原图片已到期清理”状态通过；非法、损坏、伪装、超大和超像素图片均在模型调用前拦截。
+- [x] 跨用户读取/删除隔离与图片 Prompt 注入复验通过。
+- [x] ADMIN 不限次数且显示真实已用数量；普通 USER 显示真实剩余数量并在合法运行开始后扣减。
+- [x] 390px、430px、768px、1440px 响应式及文本工具、聊天、人格、头像、长期记忆回归通过。
+- [x] 未发现 API Key、Service Role Key、数据库密码、用户原图、Base64、signed URL、真实用户内容进入提交或日志。
+- 不包含 PDF/DOCX/PPTX/TXT、专业 OCR、网页、RAG、多图、视频、图片生成/编辑；Phase 6A3 和 Phase 7 未开始。

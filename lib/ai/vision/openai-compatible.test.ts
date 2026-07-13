@@ -1,0 +1,9 @@
+import { describe, expect, it, vi } from "vitest";
+import { createOpenAiCompatibleVisionProvider } from "@/lib/ai/vision/openai-compatible";
+
+const config = { provider: "openai-compatible" as const, baseUrl: "https://example.com/v1", apiKey: "secret", model: "vision", temperature: .2, maxOutputTokens: 100, requestTimeoutMs: 5000, dailyLimit: 10 };
+const stream = (body: string) => new Response(new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(body)); controller.close(); } }), { status: 200 });
+describe("OpenAI-compatible vision provider", () => {
+  it("sends one system+multimodal user request and streams output", async () => { const fetcher = vi.fn(async (_url, init) => { const body = JSON.parse(String(init?.body)); expect(body.messages).toHaveLength(2); expect(body.messages[1].role).toBe("user"); expect(body.messages[1].content[1].image_url.url).toMatch(/^data:image\/png;base64,/); return stream('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'); }); const provider = createOpenAiCompatibleVisionProvider(config, fetcher as typeof fetch); const chunks: string[] = []; for await (const chunk of provider.streamImageAnalysis({ system: "policy", question: "question", image: new Uint8Array([1,2]), mimeType: "image/png" })) chunks.push(chunk); expect(chunks.join("")).toBe("ok"); expect(fetcher).toHaveBeenCalledTimes(1); });
+  it.each([[400,"INVALID_REQUEST"],[401,"AUTHENTICATION"],[403,"AUTHENTICATION"],[404,"NOT_FOUND"],[429,"RATE_LIMITED"],[500,"UNAVAILABLE"]] as const)("maps %s", async (status, code) => { const provider = createOpenAiCompatibleVisionProvider(config, vi.fn(async () => new Response("", { status })) as typeof fetch); await expect(async () => { for await (const chunk of provider.streamImageAnalysis({ system: "s", question: "q", image: new Uint8Array([1]), mimeType: "image/png" })) { expect(chunk).toBe(""); } }).rejects.toMatchObject({ code }); });
+});

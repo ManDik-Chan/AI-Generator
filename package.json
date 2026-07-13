@@ -18,7 +18,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "memory:embed:backfill": "tsx scripts/backfill-memory-embeddings.ts"
+    "memory:embed:backfill": "tsx scripts/backfill-memory-embeddings.ts",
+    "tool-assets:cleanup": "tsx scripts/cleanup-tool-assets.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
@@ -35,6 +36,7 @@
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.3",
     "tailwind-merge": "2.6.0",
     "zod": "4.4.3"
   },

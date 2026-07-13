@@ -1,4 +1,5 @@
-export type ToolTypeValue = "SUMMARIZE" | "REWRITE" | "TRANSLATE";
+export type ToolTypeValue = "SUMMARIZE" | "REWRITE" | "TRANSLATE" | "IMAGE_ANALYZE";
+export type TextToolTypeValue = Exclude<ToolTypeValue, "IMAGE_ANALYZE">;
 export type ToolRunState = "idle" | "submitting" | "streaming" | "complete" | "stopped" | "error";
 
 export interface ToolRunListItem {
@@ -9,6 +10,7 @@ export interface ToolRunListItem {
   inputPreview?: string;
   outputPreview?: string;
   createdAt: string;
+  asset?: { id: string; mimeType: string; width: number; height: number; expired: boolean };
 }
 
 export interface ToolRunDetail extends ToolRunListItem {
