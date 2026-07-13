@@ -1,14 +1,16 @@
 # 重构进度
 
-## Phase 6B1 实施记录（待项目所有者真实视觉验收）
+## Phase 6B1 返工记录（待第二次真实视觉验收）
 
-- 建立浅色/深色完整语义 Token、排版层级、统一圆角/阴影/动效和 reduced-motion 基线。
-- 增加浅色、深色、跟随系统三态主题，使用本地持久化与 hydration 前初始化脚本降低首屏闪烁。
-- 扩展共享 Button/Badge，并新增表单、Surface、PageHeader、SectionHeader、EmptyState、StatusBanner、Skeleton、Dialog、Dropdown/Popover、Tooltip、SegmentedControl、Avatar、Divider、Toast。
-- 重构 DesktopSidebar、MobileNavigation、MobileHeader 与 AppShell 四种页面宽度，删除正式 UI 中的 Phase 宣传卡和无效导航入口。
-- 重做首页的信息层级与真实能力入口；重做登录、注册、账号、404、loading 和全局错误体验。
+- 项目所有者未通过第一次自由设计方向；上传的 Premium 高保真原型现为 Phase 6B 主要视觉基准。
+- 已按原型重映射纸张浅色、深炭深色、翡翠/藏蓝/暖金 Token，主按钮改用深墨色，并重调圆角、阴影、边框和 reduced-motion。
+- 已迁移原型双星品牌、272/230px 桌面 rail、68px 移动 header、悬浮五项 tabbar、真实资料区和分组导航。
+- 已迁移首页大型 Hero、AI Core、轨道、Aurora、能力标签、不对称 Quick Start、四张编号 Studio 卡和隐私说明。
+- Quick Start 只查询当前用户最新一条真实 Conversation，并展示真实标题、更新时间与 Persona；无记录时显示诚实空状态，不查询或伪造消息数。
+- 已统一登录、注册、账号、管理员外壳、404、loading 和 error 页面；认证和权限逻辑保持不变。
+- 原型中的 ManDik、假对话、假时间、假消息数、假 Persona、网页分析、自定义首页、隐私中心、分享和假快捷键均未迁移。
 - 未改变认证 Server Action、AI、SSE、聊天、人格、记忆、工具、Storage、限额、RLS 或数据库结构；未新增 migration。
-- Chat、Persona、Memory、Tools 的完整页面级重构留在 Phase 6B2/6B3；当前只获得共享基础样式提升。
+- Chat 三栏和 Persona 实时预览已确定为 Phase 6B2 设计基准；Memory、Tools、History、Account、Admin 的完整页面级深化留在 Phase 6B3。
 - Phase 6B2、Phase 6B3、Phase 6C 尚未开始。
 
 ## Phase 6A1 完成状态

@@ -13,8 +13,9 @@ const config: Config = {
         border: "hsl(var(--border))",
         "border-strong": "hsl(var(--border-strong))",
         background: "hsl(var(--background))",
+        "background-subtle": "hsl(var(--background-subtle))",
         foreground: "hsl(var(--foreground))",
-        surface: { DEFAULT: "hsl(var(--surface))", foreground: "hsl(var(--surface-foreground))", raised: "hsl(var(--surface-raised))", subtle: "hsl(var(--surface-subtle))" },
+        surface: { DEFAULT: "hsl(var(--surface))", foreground: "hsl(var(--surface-foreground))", raised: "hsl(var(--surface-raised))", subtle: "hsl(var(--surface-subtle))", muted: "hsl(var(--surface-muted))" },
         overlay: "hsl(var(--overlay))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
@@ -24,7 +25,7 @@ const config: Config = {
           "subtle-foreground": "hsl(var(--primary-subtle-foreground))",
         },
         secondary: { DEFAULT: "hsl(var(--secondary))", foreground: "hsl(var(--secondary-foreground))" },
-        accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))" },
+        accent: { DEFAULT: "hsl(var(--accent))", foreground: "hsl(var(--accent-foreground))", gold: "hsl(var(--accent-gold))" },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -41,9 +42,9 @@ const config: Config = {
         xl: "var(--radius-card)", "2xl": "var(--radius-overlay)",
       },
       boxShadow: {
-        soft: "0 14px 40px -24px hsl(var(--overlay) / .32)",
-        raised: "0 18px 50px -28px hsl(var(--overlay) / .42)",
-        overlay: "0 28px 90px -34px hsl(var(--overlay) / .62)",
+        soft: "0 10px 24px hsl(var(--overlay) / .06)",
+        raised: "0 22px 48px hsl(var(--overlay) / .10)",
+        overlay: "0 30px 80px hsl(var(--overlay) / .14)",
       },
       transitionDuration: { fast: "140ms", panel: "220ms" },
     },

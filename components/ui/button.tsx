@@ -5,16 +5,16 @@ import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 active:translate-y-px",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 active:translate-y-px",
   { variants: {
     variant: {
-      default: "border border-transparent bg-primary text-primary-foreground shadow-soft hover:bg-primary-hover",
-      secondary: "border border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/75",
-      outline: "border border-border-strong/65 bg-surface-raised text-foreground hover:border-primary/45 hover:bg-surface-subtle",
-      ghost: "border border-transparent text-muted-foreground hover:bg-surface-subtle hover:text-foreground",
+      default: "border border-transparent bg-foreground text-background shadow-[0_8px_22px_hsl(var(--overlay)/.14)] hover:-translate-y-0.5 hover:bg-foreground/92 hover:shadow-raised dark:bg-foreground dark:text-background",
+      secondary: "border border-transparent bg-surface-muted text-foreground hover:-translate-y-0.5 hover:bg-surface-subtle",
+      outline: "border border-border-strong/20 bg-surface/55 text-foreground backdrop-blur-sm hover:-translate-y-0.5 hover:border-foreground/45 hover:bg-surface-raised",
+      ghost: "border border-transparent text-muted-foreground hover:bg-surface-muted hover:text-foreground",
       destructive: "border border-transparent bg-destructive text-white hover:bg-destructive/90 dark:text-background",
     },
-    size: { default: "h-11 px-5", sm: "h-9 px-3.5 text-[.8125rem]", lg: "h-12 px-6", icon: "size-11", "icon-sm": "size-9" },
+    size: { default: "h-11 px-5", sm: "h-9 px-3.5 text-[.8125rem]", lg: "h-12 px-5", icon: "size-11", "icon-sm": "size-10" },
   }, defaultVariants: { variant: "default", size: "default" } },
 );
 

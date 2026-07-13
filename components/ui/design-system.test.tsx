@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import Link from "next/link";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -8,11 +9,20 @@ import { StatusBanner } from "@/components/ui/status-banner";
 
 describe("shared design primitives", () => {
   it("supports product button states", () => {
-    expect(buttonVariants({ variant: "default" })).toContain("bg-primary");
-    expect(buttonVariants({ variant: "secondary" })).toContain("bg-secondary");
+    expect(buttonVariants({ variant: "default" })).toContain("bg-foreground");
+    expect(buttonVariants({ variant: "secondary" })).toContain("bg-surface-muted");
     expect(buttonVariants({ variant: "destructive" })).toContain("bg-destructive");
     expect(buttonVariants({ size: "icon" })).toContain("size-11");
     expect(buttonVariants()).toContain("disabled:pointer-events-none");
+  });
+
+  it("maps the approved paper, ink and jade tokens", () => {
+    const css = readFileSync("app/globals.css", "utf8");
+    expect(css).toContain("--background: 42 31% 94%");
+    expect(css).toContain("--foreground: 213 21% 10%");
+    expect(css).toContain("--primary: 164 77% 30%");
+    expect(css).toContain("--background: 192 14% 7%");
+    expect(css).toContain("--primary: 162 54% 50%");
   });
 
   it("renders an asChild button as one static child", () => {

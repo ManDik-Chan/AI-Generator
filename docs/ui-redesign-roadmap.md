@@ -1,17 +1,27 @@
 # 全站 UI 重构路线图
 
+## 统一视觉基准
+
+Phase 6B 全阶段以项目所有者批准的 `AI-Generator Premium Rework` 高保真原型为主要视觉基准。生产代码使用真实路由、真实数据、Server/Client Component 边界和现有业务 API，不复制原型的 hash 路由、假数据、假按钮或 DOM 操作。
+
 ## Phase 6B1：设计基础、外壳、首页与认证
 
-本阶段建立语义 Token、排版、间距、圆角、阴影、动效、主题系统和共享 primitives；重构 DesktopSidebar、MobileNavigation、MobileHeader、AppShell、首页、登录、注册、账号、404、loading 和全局错误体验。业务 API、数据库、RLS、AI、聊天、人格、记忆与工具语义不变。
+本阶段按原型完成语义 Token、纸张/深炭主题、形状、阴影、动效、主题系统和共享 primitives；迁移桌面 rail、移动 header、悬浮 tabbar、首页 Hero/AI Core、Quick Start、Your Studio、隐私说明，以及登录、注册、账号、管理员外壳和公共状态页。
 
-已有业务页面会因 Button、Badge、Token 和 AppShell 获得基础视觉提升，但这不代表聊天、人格、记忆和工具页面已经完成最终页面级重构。
+首页只展示真实最近对话的标题、更新时间和 Persona 名称；没有记录时使用高质量空状态，不展示消息数、假时间、假 Persona 或假使用量。网页分析、自定义首页、分享、隐私中心和未实现快捷键均未迁移。
 
-## Phase 6B2：核心 AI 工作流
+Phase 6B1 第一次视觉验收未通过，当前已根据批准原型返工，等待项目所有者第二次真实视觉验收。
 
-计划对 Chat、Conversation history、Persona 列表/详情/编辑、长期记忆管理进行完整页面级信息架构、交互和响应式重构。必须继续保护 SSE、停止生成、编辑重提、人格绑定、记忆召回和权限隔离。
+## Phase 6B2：聊天与 Persona 核心工作流
 
-## Phase 6B3：工具与高级管理体验
+后续必须忠实迁移原型中的桌面三栏聊天、平板双栏、手机单栏、对话历史、助手 dock、Composer 和空对话视觉；同时迁移 Persona 分段编辑器、模式切换和实时预览。
 
-计划统一文本工具、图片理解、工具历史、资源状态、复杂 Dialog/Drawer 和管理页面。视觉改造不得改变限额、Storage、ToolRun、隐私开关或 Provider 契约。
+实施时必须保留 SSE、停止生成、编辑重提、上下文隔离、Persona 绑定、头像、归档恢复、真实表单字段和权限。原型中的假对话、假助手、分享按钮、跨对话上下文开关等未实现内容不得直接迁移。
 
-Phase 6B2、6B3 尚未开始。Phase 6C 图片生成也不在本轮范围。
+## Phase 6B3：记忆、工具、历史、账号与管理体验
+
+长期记忆、文本工具、图片理解、工具历史和复杂资源状态将使用同一视觉语言完成页面级重构。账号和管理员页面也会在真实功能扩展时继续深化，但不得虚构图表或管理数据。
+
+限额、ToolRun、Storage、历史隐私开关、Embedding、RLS 和 Provider 契约保持不变。
+
+Phase 6B2、Phase 6B3 与 Phase 6C 均未开始。

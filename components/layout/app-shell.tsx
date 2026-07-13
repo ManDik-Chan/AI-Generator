@@ -6,10 +6,50 @@ import {
   appShellWidthClasses,
   type AppShellVariant,
 } from "@/components/layout/layout-variants";
+import { getShellViewer } from "@/components/layout/shell-viewer-data";
+import type { ShellViewer } from "@/components/layout/shell-viewer";
 import { cn } from "@/lib/utils";
 
 export type { AppShellVariant } from "@/components/layout/layout-variants";
 
-export function AppShell({ children, variant = "standard", mobileTitle, mobileAction, className }: { children: ReactNode; variant?: AppShellVariant; mobileTitle?: string; mobileAction?: ReactNode; className?: string }) {
-  return <div className="min-h-screen md:grid md:grid-cols-[17rem_minmax(0,1fr)]"><DesktopSidebar /><div className="min-w-0"><MobileHeader action={mobileAction} title={mobileTitle} /><main className={cn("mx-auto w-full px-4 pb-28 pt-6 sm:px-6 md:px-8 md:pb-12 md:pt-9 xl:px-10", appShellWidthClasses[variant], variant === "full" && "p-0 md:p-0", className)}>{children}</main></div><MobileNavigation /></div>;
+export async function AppShell({
+  children,
+  variant = "standard",
+  mobileTitle,
+  mobileAction,
+  className,
+  viewer,
+}: {
+  children: ReactNode;
+  variant?: AppShellVariant;
+  mobileTitle?: string;
+  mobileAction?: ReactNode;
+  className?: string;
+  viewer?: ShellViewer;
+}) {
+  const resolvedViewer = viewer ?? (await getShellViewer());
+
+  return (
+    <div className="premium-shell relative z-[1] min-h-screen">
+      <DesktopSidebar viewer={resolvedViewer} />
+      <div className="min-w-0 min-[821px]:ml-[14.375rem] min-[1181px]:ml-[17rem]">
+        <MobileHeader
+          action={mobileAction}
+          title={mobileTitle}
+          viewer={resolvedViewer}
+        />
+        <main
+          className={cn(
+            "relative z-[1] mx-auto w-full px-3.5 pb-28 pt-4 min-[521px]:px-6 min-[821px]:px-8 min-[821px]:pb-16 min-[821px]:pt-[2.375rem]",
+            appShellWidthClasses[variant],
+            variant === "full" && "p-0 min-[821px]:p-0",
+            className,
+          )}
+        >
+          {children}
+        </main>
+      </div>
+      <MobileNavigation />
+    </div>
+  );
 }
