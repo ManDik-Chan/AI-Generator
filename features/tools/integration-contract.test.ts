@@ -6,6 +6,7 @@ const runner = readFileSync("features/tools/components/tool-runner.tsx", "utf8")
 const queries = readFileSync("features/tools/queries.ts", "utf8");
 describe("tool integration boundaries", () => {
   it("calls the shared provider once with system + user and disabled thinking", () => { expect(route.match(/provider\.streamText\(/g)).toHaveLength(1); expect(route).toContain('role: "system"'); expect(route).toContain('role: "user"'); expect(route).toContain('thinking: "disabled"'); });
+  it("buffers provider output through the defensive guard before SSE", () => { expect(route).toContain("outputGuard.push(text)"); expect(route).toContain('stage: unsafe ? "output_guard"'); expect(route).toContain('errorCode: unsafe ? "UNSAFE_OUTPUT"'); });
   it("does not create chat or memory records", () => { expect(route).not.toMatch(/prisma\.(conversation|message|memory)\./); expect(route).not.toContain("retrieveRelevantMemories"); });
   it("protects terminal state against late completion", () => expect(readFileSync("features/tools/usage.ts", "utf8")).toContain('status: "PENDING"'));
   it("keeps private runs out of ordinary history", () => expect(queries).toContain("retainContent: true"));

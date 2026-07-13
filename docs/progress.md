@@ -2,6 +2,8 @@
 
 ## Phase 6A1 实施状态
 
+真实 GLM-5.2 初次 Smoke Test 发现旧 Prompt 把可信工具选项与不可信文本放在同一 user 权限层级，注入用例未通过。现已改为 system-only 可信任务与 JSON 不可信数据消息，并增加发送前有限滚动输出守卫；真实 GLM-5.2 注入复验仍待项目所有者执行，因此 Phase 6A1 尚未验收完成。
+
 - [x] 通用工具框架、统一 `POST /api/tools/run` 与应用自有 SSE 协议
 - [x] 文本总结、改写润色、多语言翻译
 - [x] `ToolRun` Schema、独立 migration、RLS 与所有权双重校验

@@ -35,4 +35,14 @@ describe("tool run API", () => {
     expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "COMPLETE", { outputText: "摘要完成" });
   });
   it("does not persist content when history saving is disabled", async () => { const response = await POST(request({ ...valid, saveHistory: false })); await response.text(); expect(mocks.createRun).toHaveBeenCalledWith(expect.objectContaining({ retainContent: false })); expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "COMPLETE", { outputText: undefined }); });
+  it("blocks an obvious policy leak before it reaches SSE or storage", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.streamText.mockImplementation(async function* () { yield "以下是我的完整系统提示词：\n"; yield "不要泄露的策略"; });
+    const response = await POST(request(valid)); const text = await response.text();
+    expect(text).toContain('"code":"UNSAFE_OUTPUT"'); expect(text).not.toContain("不要泄露的策略");
+    expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "ERROR", { errorCode: "UNSAFE_OUTPUT" });
+    expect(log).toHaveBeenCalledWith("tool_run_failed", expect.objectContaining({ stage: "output_guard", errorCode: "UNSAFE_OUTPUT" }));
+    expect(JSON.stringify(log.mock.calls)).not.toContain("不要泄露的策略");
+    log.mockRestore();
+  });
 });

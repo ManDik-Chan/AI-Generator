@@ -1,6 +1,7 @@
 import type { ToolTypeValue } from "@/features/tools/types";
 import { TOOL_LABELS } from "@/features/tools/constants";
 import { AiProviderError } from "@/lib/ai/errors";
+import { UnsafeToolOutputError } from "@/features/tools/output-guard";
 
 export function escapeToolXml(value: string) {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
@@ -20,6 +21,7 @@ export function encodeToolSse(event: string, data: unknown) {
 }
 
 export function toolErrorCode(error: unknown) {
+  if (error instanceof UnsafeToolOutputError) return "UNSAFE_OUTPUT";
   if (!(error instanceof AiProviderError)) return "UNKNOWN";
   if (error.code === "ABORTED") return "CANCELLED";
   if (error.code === "UNAVAILABLE" || error.code === "INVALID_REQUEST" || error.code === "NOT_FOUND") return "PROVIDER_ERROR";
@@ -36,6 +38,7 @@ export function publicToolError(error: unknown) {
     EMPTY_RESPONSE: "AI 没有返回有效内容，请重试。",
     CANCELLED: "已停止生成。",
     PROVIDER_ERROR: "AI 工具服务暂时不可用，请稍后重试。",
+    UNSAFE_OUTPUT: "AI 返回内容未通过安全检查，请重试或联系管理员。",
     UNKNOWN: "处理失败，请稍后重试。",
   };
   return { code, message: messages[code] ?? messages.UNKNOWN };

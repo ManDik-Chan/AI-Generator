@@ -6,6 +6,7 @@ import { createPendingToolRun, DailyToolLimitError, finishToolRun } from "@/feat
 import { buildToolPrompt } from "@/features/tools/prompts";
 import { createToolRunTitle, encodeToolSse, publicToolError, toolErrorCode } from "@/features/tools/utils";
 import { TOOL_OUTPUT_MAX_CHARS } from "@/features/tools/constants";
+import { ToolOutputGuard, UnsafeToolOutputError } from "@/features/tools/output-guard";
 import { getAiConfigurationStatus } from "@/lib/ai/config";
 import { AiProviderError } from "@/lib/ai/errors";
 import { getToolAiProvider } from "@/lib/ai/registry";
@@ -60,6 +61,7 @@ export async function POST(request: Request) {
   if (request.signal.aborted) abortController.abort();
   const prompt = buildToolPrompt(parsed.data);
   let output = "";
+  const outputGuard = new ToolOutputGuard();
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -78,16 +80,21 @@ export async function POST(request: Request) {
         })) {
           if (output.length + text.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Tool output exceeded the safe storage limit.");
           output += text;
-          if (!send("delta", { text })) break;
+          const safeText = outputGuard.push(text);
+          if (safeText && !send("delta", { text: safeText })) break;
         }
+        const finalSafeText = outputGuard.flush();
+        if (finalSafeText) send("delta", { text: finalSafeText });
         const completed = await finishToolRun(userId, usage.runId, "COMPLETE", { outputText: parsed.data.saveHistory ? output : undefined });
         if (completed.count) send("done", { runId: usage.runId, status: "COMPLETE", saved: parsed.data.saveHistory });
       } catch (error) {
         const normalized = publicToolError(error);
+        if (error instanceof UnsafeToolOutputError) abortController.abort();
         const cancelled = abortController.signal.aborted || normalized.code === "CANCELLED";
-        await finishToolRun(userId, usage.runId, cancelled ? "CANCELLED" : "ERROR", { errorCode: cancelled ? "CANCELLED" : normalized.code }).catch(() => undefined);
-        console.error("tool_run_failed", { requestId, userId, runId: usage.runId, toolType: parsed.data.tool, stage: "provider_request", errorCode: toolErrorCode(error), status: error instanceof AiProviderError ? error.status : undefined, durationMs: Date.now() - startedAt });
-        send("error", { code: cancelled ? "CANCELLED" : normalized.code, message: cancelled ? "已停止生成。" : normalized.message });
+        const unsafe = error instanceof UnsafeToolOutputError;
+        await finishToolRun(userId, usage.runId, unsafe ? "ERROR" : cancelled ? "CANCELLED" : "ERROR", { errorCode: unsafe ? "UNSAFE_OUTPUT" : cancelled ? "CANCELLED" : normalized.code }).catch(() => undefined);
+        console.error("tool_run_failed", { requestId, userId, runId: usage.runId, toolType: parsed.data.tool, stage: unsafe ? "output_guard" : "provider_request", errorCode: unsafe ? "UNSAFE_OUTPUT" : toolErrorCode(error), status: error instanceof AiProviderError ? error.status : undefined, durationMs: Date.now() - startedAt });
+        send("error", { code: unsafe ? "UNSAFE_OUTPUT" : cancelled ? "CANCELLED" : normalized.code, message: unsafe ? "AI 返回内容未通过安全检查，请重试或联系管理员。" : cancelled ? "已停止生成。" : normalized.message });
       } finally {
         request.signal.removeEventListener("abort", abortFromRequest);
         try { controller.close(); } catch { /* disconnected clients are already closed */ }
