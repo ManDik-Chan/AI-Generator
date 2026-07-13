@@ -1,18 +1,7 @@
+import { AppShell } from "@/components/layout/app-shell";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Settings2 } from "lucide-react";
 import { requireAdmin } from "@/lib/auth/session";
-
 export const dynamic = "force-dynamic";
-
-export default async function AdminPage() {
-  const { profile } = await requireAdmin();
-
-  return (
-    <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:px-6">
-      <p className="text-sm font-medium text-primary">管理员</p>
-      <h1 className="mt-2 text-3xl font-semibold">系统管理</h1>
-      <p className="mt-3 text-muted-foreground">当前管理员：{profile.displayName ?? profile.email}</p>
-      <div className="mt-7 rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
-        模型配置、用户管理和系统设置将在后续管理功能中接入。
-      </div>
-    </main>
-  );
-}
+export default async function AdminPage() { const { profile } = await requireAdmin(); return <AppShell mobileTitle="系统管理" variant="reading"><PageHeader description={`当前管理员：${profile.displayName ?? profile.email}`} eyebrow="管理员" title="系统管理" /><EmptyState className="mt-8" description="模型配置、用户管理和系统设置将在对应功能准备好后显示。" icon={<Settings2 className="size-5" />} title="暂无可管理项目" /></AppShell>; }

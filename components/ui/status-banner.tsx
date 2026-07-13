@@ -1,0 +1,5 @@
+import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
+import type { HTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
+const styles = { info: [Info, "border-info/25 bg-info-subtle text-info-foreground"], success: [CheckCircle2, "border-success/25 bg-success-subtle text-success-foreground"], warning: [TriangleAlert, "border-warning/25 bg-warning-subtle text-warning-foreground"], error: [AlertCircle, "border-destructive/25 bg-destructive-subtle text-destructive-foreground"] } as const;
+export function StatusBanner({ variant = "info", title, children, className, ...props }: HTMLAttributes<HTMLDivElement> & { variant?: keyof typeof styles; title?: string }) { const [Icon, style] = styles[variant]; return <div className={cn("flex gap-3 rounded-card border p-3.5 text-sm", style, className)} role={variant === "error" ? "alert" : "status"} {...props}><Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" /><div className="min-w-0">{title ? <p className="font-semibold">{title}</p> : null}<div className={cn("leading-6", title && "mt-0.5")}>{children}</div></div></div>; }

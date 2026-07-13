@@ -159,3 +159,9 @@ Phase 6A1 的可信工具类型、白名单选项和输出契约只放入 system
 # Phase 6A2 图片工具边界
 
 浏览器只上传文件或引用当前用户尚未过期的 ToolAsset。服务端依次执行净化、原子视觉限额/ToolRun 创建、private Storage、ToolAsset 绑定和一次视觉 Provider 调用；补偿路径删除孤立 Storage 对象。客户端从不接触 Service Role、永久 URL、原始 Storage 路径或模型供应商响应。
+
+## Phase 6B1 展示层架构
+
+根布局在 hydration 前应用本地主题偏好，`ThemeProvider` 只管理客户端主题交互，不接触数据库。语义颜色、排版、圆角、阴影和动效集中在 `app/globals.css` 与 Tailwind 扩展中。
+
+`AppShell` 统一组合 DesktopSidebar、MobileHeader、MobileNavigation 和 reading/standard/wide/full 页面宽度。共享 UI primitives 保持无业务依赖；首页只读取已存在的登录用户显示名，认证仍复用原 Server Actions。Chat 保持独立沉浸布局，现有业务页面不被批量改成 Client Component。

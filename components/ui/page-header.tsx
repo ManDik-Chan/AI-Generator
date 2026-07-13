@@ -1,0 +1,7 @@
+import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+
+export function PageHeader({ eyebrow, title, description, back, primaryAction, secondaryAction, className }: { eyebrow?: ReactNode; title: ReactNode; description?: ReactNode; back?: ReactNode; primaryAction?: ReactNode; secondaryAction?: ReactNode; className?: string }) {
+  return <header className={cn("flex min-w-0 flex-col gap-5 sm:flex-row sm:items-end sm:justify-between", className)}><div className="min-w-0 max-w-3xl">{back ? <div className="mb-4">{back}</div> : null}{eyebrow ? <div className="mb-2 text-label text-primary">{eyebrow}</div> : null}<h1 className="text-page-title text-balance">{title}</h1>{description ? <div className="mt-3 max-w-2xl text-supporting">{description}</div> : null}</div>{primaryAction || secondaryAction ? <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">{secondaryAction}{primaryAction}</div> : null}</header>;
+}
+export function SectionHeader({ title, description, action, className, id }: { title: ReactNode; description?: ReactNode; action?: ReactNode; className?: string; id?: string }) { return <div className={cn("flex min-w-0 items-end justify-between gap-4", className)}><div className="min-w-0"><h2 className="text-section-title" id={id}>{title}</h2>{description ? <div className="mt-1 text-supporting">{description}</div> : null}</div>{action ? <div className="shrink-0">{action}</div> : null}</div>; }

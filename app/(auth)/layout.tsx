@@ -1,16 +1,9 @@
 import type { ReactNode } from "react";
-
+import { Brain, MessageSquareText, ShieldCheck } from "lucide-react";
 import { Brand } from "@/components/layout/brand";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
+const promises = [{ icon: MessageSquareText, text: "持续、私密的对话空间" }, { icon: Brain, text: "由你掌控的长期记忆" }, { icon: ShieldCheck, text: "聊天、人格与工具清晰隔离" }];
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  return (
-    <main className="grid min-h-screen place-items-center px-4 py-10">
-      <div className="w-full max-w-md">
-        <div className="mb-6 flex justify-center">
-          <Brand />
-        </div>
-        <section className="rounded-2xl border bg-card p-6 shadow-soft sm:p-8">{children}</section>
-      </div>
-    </main>
-  );
+  return <main className="grid min-h-screen lg:grid-cols-[minmax(0,.92fr)_minmax(32rem,1.08fr)]"><aside className="relative hidden overflow-hidden border-r bg-surface-subtle p-10 lg:flex lg:flex-col xl:p-14"><div aria-hidden="true" className="surface-grid absolute inset-0 opacity-45 [mask-image:linear-gradient(to_bottom_right,black,transparent_72%)]" /><Brand className="relative" /><div className="relative my-auto max-w-lg py-16"><p className="text-label text-primary">AI-Generator</p><h1 className="mt-4 text-[clamp(2.5rem,4vw,4.5rem)] font-semibold leading-[1.02] tracking-[-.05em]">一个安静、可信的私人 AI 工作空间。</h1><p className="mt-6 text-body text-muted-foreground">从对话到独立工具，每项能力都有明确边界。你的内容只属于你的账号。</p><ul className="mt-10 space-y-4">{promises.map((item) => <li className="flex items-center gap-3 text-sm" key={item.text}><span className="grid size-9 place-items-center rounded-control bg-surface-raised text-primary shadow-soft"><item.icon className="size-4" /></span>{item.text}</li>)}</ul></div><p className="relative text-caption">简单使用，也经得起长期使用。</p></aside><section className="relative flex min-h-screen flex-col bg-background"><div className="flex items-center justify-between px-5 py-5 sm:px-8 lg:justify-end"><Brand className="lg:hidden" /><ThemeToggle compact /></div><div className="flex flex-1 items-center justify-center px-4 pb-12 sm:px-8"><div className="w-full max-w-[28rem] rounded-display border bg-surface-raised p-5 shadow-raised sm:p-8">{children}</div></div></section></main>;
 }

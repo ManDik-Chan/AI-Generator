@@ -1,5 +1,16 @@
 # 重构进度
 
+## Phase 6B1 实施记录（待项目所有者真实视觉验收）
+
+- 建立浅色/深色完整语义 Token、排版层级、统一圆角/阴影/动效和 reduced-motion 基线。
+- 增加浅色、深色、跟随系统三态主题，使用本地持久化与 hydration 前初始化脚本降低首屏闪烁。
+- 扩展共享 Button/Badge，并新增表单、Surface、PageHeader、SectionHeader、EmptyState、StatusBanner、Skeleton、Dialog、Dropdown/Popover、Tooltip、SegmentedControl、Avatar、Divider、Toast。
+- 重构 DesktopSidebar、MobileNavigation、MobileHeader 与 AppShell 四种页面宽度，删除正式 UI 中的 Phase 宣传卡和无效导航入口。
+- 重做首页的信息层级与真实能力入口；重做登录、注册、账号、404、loading 和全局错误体验。
+- 未改变认证 Server Action、AI、SSE、聊天、人格、记忆、工具、Storage、限额、RLS 或数据库结构；未新增 migration。
+- Chat、Persona、Memory、Tools 的完整页面级重构留在 Phase 6B2/6B3；当前只获得共享基础样式提升。
+- Phase 6B2、Phase 6B3、Phase 6C 尚未开始。
+
 ## Phase 6A1 完成状态
 
 项目所有者已完成真实本地验收。`20260713190000_add_tool_runs` migration 与最新版 `prisma/rls.sql` 部署通过；真实 GLM-5.2 总结、改写、翻译，SSE、停止生成、CANCELLED 迟到保护、历史隐私开关、每日限额、导航和 390/430/768/1440px 响应式均通过。

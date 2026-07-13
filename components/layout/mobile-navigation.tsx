@@ -2,16 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleUserRound, Home, MessageCircle, PenLine, Wrench } from "lucide-react";
-import { navigationItemActive } from "@/components/layout/navigation";
-
-const navigation = [
-  { label: "首页", href: "/", icon: Home }, { label: "AI 助手", href: "/personas", icon: MessageCircle },
-  { label: "创作", href: "/create", icon: PenLine }, { label: "工具", href: "/tools", icon: Wrench },
-  { label: "我的", href: "/account", icon: CircleUserRound },
-];
+import { mobileNavigation, navigationItemActive } from "@/components/layout/navigation";
+import { cn } from "@/lib/utils";
 
 export function MobileNavigation() {
   const pathname = usePathname();
-  return <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border bg-card/90 px-1 pb-[max(.3rem,env(safe-area-inset-bottom))] pt-1 shadow-soft backdrop-blur-xl md:hidden" aria-label="移动端主导航">{navigation.map((item) => { const active = navigationItemActive(pathname, item.href); return <Link aria-current={active ? "page" : undefined} className={active ? "flex min-w-0 flex-col items-center gap-1 rounded-xl bg-muted px-1 py-2 text-[11px] font-medium text-foreground" : "flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] text-muted-foreground"} href={item.href} key={item.href}><item.icon className="size-5" aria-hidden="true" /><span className="max-w-full truncate">{item.label}</span></Link>; })}</nav>;
+  return <nav className="safe-bottom fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-border/80 bg-surface/95 px-2 pt-1.5 shadow-[0_-16px_40px_-34px_hsl(var(--overlay)/.5)] backdrop-blur-xl md:hidden" aria-label="移动端主导航">{mobileNavigation.map((item) => { const active = navigationItemActive(pathname, item.href); return <Link aria-current={active ? "page" : undefined} className={cn("relative flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-control px-1 text-[.6875rem] font-medium transition-colors duration-fast", active ? "text-primary" : "text-muted-foreground active:bg-surface-subtle")} href={item.href} key={item.href}><span className={cn("grid size-7 place-items-center rounded-lg", active && "bg-primary-subtle")}><item.icon className="size-[1.15rem]" aria-hidden="true" /></span><span className="max-w-full truncate">{item.label}</span></Link>; })}</nav>;
 }

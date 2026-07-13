@@ -1,69 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-
+import { useActionState, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/form-field";
+import { StatusBanner } from "@/components/ui/status-banner";
 import { initialAuthActionState, type AuthActionState } from "@/features/auth/types";
 
-interface AuthFormProps {
-  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>;
-  mode: "login" | "signup";
-}
-
+interface AuthFormProps { action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>; mode: "login" | "signup" }
 export function AuthForm({ action, mode }: AuthFormProps) {
-  const [state, formAction, pending] = useActionState(action, initialAuthActionState);
-  const isSignup = mode === "signup";
-
-  return (
-    <form action={formAction} className="mt-7 space-y-4">
-      {isSignup && (
-        <label className="block text-sm font-medium">
-          显示名称
-          <input
-            autoComplete="name"
-            className="mt-2 h-11 w-full rounded-xl border bg-background px-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-            maxLength={50}
-            name="displayName"
-            required
-          />
-        </label>
-      )}
-      <label className="block text-sm font-medium">
-        邮箱
-        <input
-          autoComplete="email"
-          className="mt-2 h-11 w-full rounded-xl border bg-background px-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          name="email"
-          required
-          type="email"
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        密码
-        <input
-          autoComplete={isSignup ? "new-password" : "current-password"}
-          className="mt-2 h-11 w-full rounded-xl border bg-background px-3 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-          minLength={8}
-          name="password"
-          required
-          type="password"
-        />
-      </label>
-      {state.error && (
-        <p className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300" role="alert">
-          {state.error}
-        </p>
-      )}
-      <Button className="w-full" disabled={pending} type="submit">
-        {pending ? "正在处理…" : isSignup ? "创建账号" : "登录"}
-      </Button>
-      <p className="text-center text-sm text-muted-foreground">
-        {isSignup ? "已经有账号？" : "还没有账号？"}{" "}
-        <Link className="font-medium text-primary hover:underline" href={isSignup ? "/login" : "/register"}>
-          {isSignup ? "去登录" : "注册"}
-        </Link>
-      </p>
-    </form>
-  );
+  const [state, formAction, pending] = useActionState(action, initialAuthActionState); const [showPassword, setShowPassword] = useState(false); const isSignup = mode === "signup";
+  return <form action={formAction} aria-describedby={state.error ? "auth-error" : undefined} className="mt-7 space-y-4">{isSignup ? <Field htmlFor="displayName" label="显示名称" required><Input autoComplete="name" id="displayName" maxLength={50} name="displayName" required /></Field> : null}<Field htmlFor="email" label="邮箱" required><Input autoComplete="email" id="email" name="email" required type="email" /></Field><Field help={isSignup ? "至少 8 个字符" : undefined} htmlFor="password" label="密码" required><div className="relative"><Input aria-describedby={state.error ? "auth-error" : undefined} autoComplete={isSignup ? "new-password" : "current-password"} className="pr-12" id="password" minLength={8} name="password" required type={showPassword ? "text" : "password"} /><button aria-label={showPassword ? "隐藏密码" : "显示密码"} aria-pressed={showPassword} className="absolute inset-y-1 right-1 grid w-10 place-items-center rounded-lg text-muted-foreground hover:bg-surface-subtle hover:text-foreground" onClick={() => setShowPassword((value) => !value)} type="button">{showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</button></div></Field>{state.error ? <StatusBanner id="auth-error" variant="error">{state.error}</StatusBanner> : null}<Button className="w-full" loading={pending} type="submit">{pending ? "正在处理" : isSignup ? "创建账号" : "登录"}</Button><p className="text-center text-sm text-muted-foreground">{isSignup ? "已经有账号？" : "还没有账号？"} <Link className="font-medium text-primary underline-offset-4 hover:underline" href={isSignup ? "/login" : "/register"}>{isSignup ? "去登录" : "注册"}</Link></p></form>;
 }
