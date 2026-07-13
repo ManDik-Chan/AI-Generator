@@ -1,8 +1,10 @@
 # 重构进度
 
-## Phase 6A1 实施状态
+## Phase 6A1 完成状态
 
-真实 GLM-5.2 初次 Smoke Test 发现旧 Prompt 把可信工具选项与不可信文本放在同一 user 权限层级，注入用例未通过。现已改为 system-only 可信任务与 JSON 不可信数据消息，并增加发送前有限滚动输出守卫；真实 GLM-5.2 注入复验仍待项目所有者执行，因此 Phase 6A1 尚未验收完成。
+项目所有者已完成真实本地验收。`20260713190000_add_tool_runs` migration 与最新版 `prisma/rls.sql` 部署通过；真实 GLM-5.2 总结、改写、翻译，SSE、停止生成、CANCELLED 迟到保护、历史隐私开关、每日限额、导航和 390/430/768/1440px 响应式均通过。
+
+Prompt 注入复验已通过：可信工具类型、白名单选项与输出契约全部位于 system，user 仅包含 JSON 序列化的不可信文本；攻击内容仍按当前总结、改写或翻译任务处理，不获得指令权限。有限滚动输出守卫只作为明显泄露兜底，普通安全主题文章不会被误拦截。
 
 - [x] 通用工具框架、统一 `POST /api/tools/run` 与应用自有 SSE 协议
 - [x] 文本总结、改写润色、多语言翻译
@@ -11,10 +13,10 @@
 - [x] UTC 每日工具次数限制与 ADMIN 策略
 - [x] `/tools`、三项工具页、历史页、桌面/移动导航 active 状态
 - [x] 自动测试、lint、typecheck、无密钥构建与 Prisma 校验
-- [ ] 项目所有者真实 Supabase migration / RLS 验收
-- [ ] 项目所有者真实 GLM-5.2 三工具与响应式 Smoke Test
+- [x] 项目所有者真实 Supabase migration / RLS 验收
+- [x] 项目所有者真实 GLM-5.2 三工具、Prompt 注入与响应式验收
 
-Phase 6A1 不包含文件上传、OCR、文件解析、网页抓取、搜索、文件/网页 RAG、Message 向量化、医疗/法律/旅行工具或图片生成。Phase 6A2 与 Phase 7 未开始。
+工具运行不会创建 Conversation/Message，不读取或写入长期记忆，也不绑定 Persona。Phase 6A1 不包含文件上传、OCR、文件解析、网页抓取、搜索、文件/网页 RAG、Message 向量化、医疗/法律/旅行工具或图片生成。Phase 6A2 与 Phase 7 未开始。
 
 ## Phase 5A3-2 完成状态
 

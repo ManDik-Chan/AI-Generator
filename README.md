@@ -1,6 +1,6 @@
 # AI-Generator V2
 
-> Phase 6A1 已实现通用文本工具框架与文本总结、改写润色、多语言翻译。工具复用现有 OpenAI-compatible Provider，通过独立 `ToolRun`、SSE、每日限额和历史隐私开关运行；不会创建 Conversation/Message，也不会读取或写入长期记忆。真实 Supabase migration 与 GLM-5.2 三工具联调待项目所有者验收，详见 `docs/tool-system.md`。
+> Phase 6A1 已完成真实验收：`ToolRun` migration/RLS、GLM-5.2 文本总结/改写/翻译、SSE 与停止、历史隐私、每日限额、Prompt 注入复验和 390/430/768/1440px 响应式均通过。可信工具选项只进入 system，user 仅承载 JSON 序列化的不可信文本，有限滚动输出守卫负责泄露兜底。工具不创建 Conversation/Message、不读取或写入长期记忆、不绑定 Persona；不包含文件上传、OCR 或 RAG。Phase 6A2 与 Phase 7 未开始。详见 `docs/tool-system.md`。
 
 > Phase 5A3-2 已完成真实验收：长期记忆采用确定性关键词、`topicKey` / `keywords`、512 维 Embedding 语义召回与 Hybrid RRF；未配置或运行失败时安全退回关键词召回。这不是外部文件 RAG。详见 `docs/memory-semantic-retrieval.md`。
 
