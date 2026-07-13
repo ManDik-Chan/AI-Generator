@@ -72,7 +72,7 @@ export async function POST(request: Request) {
   const prompt = buildImageAnalysisPrompt(parsed.data.options, parsed.data.question); let output = ""; const guard = new ToolOutputGuard();
   const stream = new ReadableStream<Uint8Array>({ async start(controller) {
     const send = (event: string, payload: unknown) => { try { controller.enqueue(encoder.encode(encodeToolSse(event, payload))); return true; } catch { abortController.abort(); return false; } };
-    send("start", { runId: usage.runId, tool: "IMAGE_ANALYZE", limit: usage.limit, used: usage.used, remaining: usage.remaining });
+    send("start", { runId: usage.runId, tool: "IMAGE_ANALYZE", limit: usage.limit, used: usage.used, remaining: usage.remaining, unlimited: usage.unlimited });
     try {
       for await (const delta of provider.streamImageAnalysis({ system: prompt.system, question: prompt.user, image: image.bytes, mimeType: image.mimeType, signal: abortController.signal })) {
         if (output.length + delta.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Vision output too large");

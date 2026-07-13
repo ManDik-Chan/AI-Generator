@@ -40,3 +40,7 @@
 ## 已知限制
 
 不支持文档、专业 OCR、多图、GIF/SVG/HEIC、视频、网页、文件/图片 RAG、图片生成或编辑。Phase 6A3 与 Phase 7 未开始。真实 Supabase 与视觉模型验收完成前，PR 保持 Draft。
+
+## 真实验收修复记录
+
+项目所有者首次真实验收发现 ADMIN 虽然按既有策略正确豁免视觉日限额，但页面仍显示“今日剩余 10 / 10”，没有表达真实已用次数。修复后 usage 与 `start` SSE 明确返回 `unlimited`：普通 USER 继续在合法 ToolRun 创建时立即扣减并显示剩余额度；ADMIN 不受阻止，显示“管理员不限次数 · 今日已使用 X 次”，其中 X 是当天真实 `IMAGE_ANALYZE` ToolRun 数量。非法图片仍在创建 ToolRun 前被拒绝，不计数。此修复未修改数据库结构或 migration，等待项目所有者复测，Phase 6A2 尚未标记完整真实验收通过。

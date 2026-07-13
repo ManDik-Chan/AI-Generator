@@ -45,9 +45,10 @@ export async function createPendingVisionToolRun(input: Omit<Parameters<typeof c
   return prisma.$transaction(async (transaction) => {
     const profile = await transaction.profile.findUnique({ where: { id: input.userId }, select: { role: true } });
     const used = await transaction.toolRun.count({ where: { userId: input.userId, type: "IMAGE_ANALYZE", createdAt: { gte: startOfUtcDay() } } });
-    if (!canBypassToolDailyLimit(profile?.role ?? "USER") && used >= input.dailyLimit) throw new DailyToolLimitError(input.dailyLimit, used);
+    const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
+    if (!unlimited && used >= input.dailyLimit) throw new DailyToolLimitError(input.dailyLimit, used);
     const run = await transaction.toolRun.create({ data: { userId: input.userId, type: "IMAGE_ANALYZE", title: input.retainContent ? input.title : null, inputText: input.retainContent ? input.inputText : null, options: input.options, retainContent: input.retainContent }, select: { id: true } });
-    return { runId: run.id, limit: input.dailyLimit, used: used + 1, remaining: canBypassToolDailyLimit(profile?.role ?? "USER") ? input.dailyLimit : Math.max(0, input.dailyLimit - used - 1) };
+    return { runId: run.id, limit: input.dailyLimit, used: used + 1, remaining: unlimited ? input.dailyLimit : Math.max(0, input.dailyLimit - used - 1), unlimited };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
@@ -56,7 +57,8 @@ export async function getVisionUsage(userId: string, dailyLimit: number) {
     prisma.profile.findUnique({ where: { id: userId }, select: { role: true } }),
     prisma.toolRun.count({ where: { userId, type: "IMAGE_ANALYZE", createdAt: { gte: startOfUtcDay() } } }),
   ]);
-  return { limit: dailyLimit, used, remaining: canBypassToolDailyLimit(profile?.role ?? "USER") ? dailyLimit : Math.max(0, dailyLimit - used) };
+  const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
+  return { limit: dailyLimit, used, remaining: unlimited ? dailyLimit : Math.max(0, dailyLimit - used), unlimited };
 }
 
 export async function finishToolRun(userId: string, runId: string, status: Exclude<ToolRunStatus, "PENDING">, data: { outputText?: string; errorCode?: string } = {}) {
