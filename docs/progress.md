@@ -1,13 +1,14 @@
 # 重构进度
 
-## Phase 5A1 完成状态
+## Phase 5A3-1 当前进度
 
 - [x] Phase 4A1：人格管理与人格聊天
 - [x] Phase 4A2：AI 人格草稿生成
 - [x] Phase 4A3：GLM-Image 人格头像、交互收尾与自动化验证
 - [x] Phase 4A3：项目所有者真实 GLM-Image / Supabase Storage 联调
 - [x] Phase 5A1：自动长期记忆、用户控制、安全召回与聊天注入（真实验收通过）
-- [ ] Phase 5A3：尚未开始
+- [ ] Phase 5A3-1：本 PR 实施
+- [ ] Phase 5A3-2：尚未开始
 
 Phase 4A3 新增独立图片 Provider、SSRF 安全下载、private Storage、`GeneratedImage` 候选、显式 Apply、头像私有读取以及 `20260712190000_add_persona_avatar_image` migration。所有 UI 继续只读取 `Persona.avatarUrl`。项目所有者已于 2026-07-13 完成真实 GLM-Image、Supabase Storage 与完整产品交互验收，Phase 4A3 已完成。
 
@@ -26,6 +27,10 @@ Phase 5A1 产品方向已调整为自然自动记忆：成功回答后通过 Nex
 最新真实日志确认 GLM-5.2 对记忆 system-only 请求返回 HTTP 400。提取与 JSON Repair 已改为 system policy + final user data；400 映射为 `INVALID_REQUEST`，安全提取并脱敏服务商 code/message，且不重试、不回退、不修复、不写 Memory。
 
 项目所有者已在真实 Supabase 执行 `20260713010000_add_memory_foundation`，并确认最新版 RLS 可重复执行。真实 GLM-5.2 system + user 自动记忆、明确记忆请求、PREVIOUS_CONTEXT、管理页控制和连续聊天无全屏 loading 均已通过。Phase 5A1 于 2026-07-13 完成。
+
+Phase 5A3-1 增加 topicKey、keywords、pinned、useCount、同主题 CREATE→UPDATE、确定性召回多样性、原子使用统计、默认 300 条容量和管理页治理 UI。旧 migration 不修改，不自动清理或删除 Memory；Embedding、向量数据库、RAG、Phase 5A3-2 和 Phase 6 均未开始。
+
+Phase 5A3-1 自动验证：47 个测试文件、271 项测试通过；真实 Supabase migration 与 GLM 召回尚待项目所有者验收。
 
 ## 当前状态
 

@@ -214,7 +214,7 @@ export async function POST(request: Request) {
   let selectedMemories: Array<{ id: string; content: string }> = [];
   if (profile?.memoryEnabled ?? true) {
     try {
-      const candidates = await prisma.memory.findMany({ where: { userId: user.id, enabled: true, OR: [{ scope: "GLOBAL" }, ...(runtimePersonaId ? [{ scope: "PERSONA" as const, personaId: runtimePersonaId }] : [])] }, select: { id: true, content: true, category: true, scope: true, personaId: true, importance: true, enabled: true, updatedAt: true } });
+      const candidates = await prisma.memory.findMany({ where: { userId: user.id, enabled: true, OR: [{ scope: "GLOBAL" }, ...(runtimePersonaId ? [{ scope: "PERSONA" as const, personaId: runtimePersonaId }] : [])] }, select: { id: true, content: true, category: true, scope: true, personaId: true, importance: true, enabled: true, updatedAt: true, topicKey: true, keywords: true, pinned: true, useCount: true, lastUsedAt: true } });
       selectedMemories = selectRelevantMemories({ currentMessage: parsed.data.content, recentUserMessages: context.filter((message) => message.role === "user").slice(-6).map((message) => message.content), personaId: runtimePersonaId, candidates, ...getMemoryRuntimeLimits() });
     } catch { console.warn("memory_load_failed", { userId: user.id, conversationId }); }
   }
@@ -253,7 +253,7 @@ export async function POST(request: Request) {
         }
 
         const finalized = await finalizeAssistantMessage(assistantMessageId, fullContent, "COMPLETE");
-        if (finalized && selectedMemories.length) { try { await prisma.memory.updateMany({ where: { userId: user.id, id: { in: selectedMemories.map((memory) => memory.id) } }, data: { lastUsedAt: new Date() } }); } catch { console.warn("memory_last_used_update_failed", { userId: user.id, conversationId, count: selectedMemories.length }); } }
+        if (finalized && selectedMemories.length) { try { await prisma.memory.updateMany({ where: { userId: user.id, id: { in: selectedMemories.map((memory) => memory.id) } }, data: { lastUsedAt: new Date(), useCount: { increment: 1 } } }); } catch { console.warn("memory_last_used_update_failed", { userId: user.id, conversationId, count: selectedMemories.length }); } }
         controller.enqueue(encoder.encode(encodeChatSse("done", { messageId: assistantMessageId })));
         if (finalized && (profile?.memoryEnabled ?? true)) {
           const recentTurns = context

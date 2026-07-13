@@ -93,3 +93,11 @@ data: {"message":"..."}
 ## 无 AI 配置
 
 应用仍可安装、lint、typecheck 与 build。聊天页面显示管理员配置提示，输入被禁用；聊天 API 返回友好 503，不创建对话或消息，也不会返回通用 500。
+
+## Phase 5A3-1 召回治理
+
+- Memory content、keywords 和 topicKey 可读片段参与确定性匹配，keyword 命中高于普通内容双字词命中。
+- pinned、importance、Persona、updatedAt、lastUsedAt 和封顶的对数 useCount 提供稳定加权，但不能绕过 enabled、scope 或预算。
+- “你记得我什么”等概览意图可选择置顶、高重要性、最近更新或最近使用的记忆。
+- 同一非空 topicKey 每轮最多注入一条；topicKey 为空时按规范化内容抑制重复。
+- 助手成功 COMPLETE 后，仅对实际注入项原子增加 useCount 并更新 lastUsedAt；停止和 ERROR 不更新。

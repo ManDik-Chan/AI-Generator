@@ -21,7 +21,7 @@ describe("automatic memory extraction protocol", () => {
   });
 
   it("accepts at most three strict operations", () => {
-    const result = parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "CREATE", content: "用户偏好先给结论", category: "preference", scope: "GLOBAL", importance: 4, confidence: 0.93, reasonCode: "preference" }] }));
+    const result = parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "CREATE", content: "用户偏好先给结论", category: "preference", scope: "GLOBAL", importance: 4, topicKey: "preference.answer_style", keywords: ["回答风格", "先给结论"], confidence: 0.93, reasonCode: "preference" }] }));
     expect(result.operations[0]?.action).toBe("CREATE");
     expect(() => parseMemoryExtractionOutput(JSON.stringify({ operations: Array.from({ length: 4 }, () => ({ action: "IGNORE", confidence: 1, reasonCode: "temporary" })) }))).toThrow();
     expect(parseMemoryExtractionOutput('```json\n{"operations":[]}\n```').operations).toEqual([]);

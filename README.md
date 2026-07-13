@@ -1,6 +1,6 @@
 # AI-Generator V2
 
-> Phase 5A1：AI 在成功回答后通过非阻塞后台任务整理长期记忆，用户可在 `/memories` 查看、修改、停用或删除。召回仍使用确定性预算算法。详见 `docs/memory-system.md`。
+> Phase 5A3-1：长期记忆新增主题、关键词、置顶、使用统计、同主题冲突治理和每用户容量限制；召回继续使用确定性算法，不使用 Embedding 或 RAG。详见 `docs/memory-system.md`。
 
 面向亲朋好友使用的私人 AI 助手平台。V2 使用 Next.js 15、TypeScript 与 Tailwind CSS 重构，目标是简单、稳定、美观和易维护。
 

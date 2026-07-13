@@ -14,6 +14,12 @@ Persona 头像使用独立 `ImageProvider`，不进入文本 `AiProvider`。GLM-
 
 提取模型返回最多三项严格 JSON CREATE / UPDATE / IGNORE。服务端以 0.85 置信度、候选 ID 白名单、当前 Persona 映射、凭据检测、Zod 和 Serializable 事务执行最终决定；模型不能控制所有权、来源或启用状态。来源消息、助手消息、总开关和 superseded 状态在模型前及事务内检查。`lastUsedAt` 只在助手消息成功写为 COMPLETE 后更新。本阶段不引入 Embedding、向量库或 RAG。
 
+## Phase 5A3-1 记忆治理
+
+Memory 以可选 `topicKey` 表示稳定主题，以最多 12 个 `keywords` 支持词汇桥接；`pinned` 由用户控制，`useCount` 与 `lastUsedAt` 只在成功注入并完成回复后原子更新。同一用户、scope 和 Persona 下，自动 CREATE 遇到同 topicKey 会转换为 UPDATE；历史重复不自动删除，召回时每个主题最多一条。
+
+召回仍为纯确定性算法：内容、关键词、topic 可读片段、当前消息与近期 USER 上下文共同评分，并加入 importance、pinned、Persona、更新时间、最近使用和封顶的对数 useCount 加权。每轮仍最多 8 条 / 2400 字符。没有 Embedding、向量数据库或 RAG。
+
 新聊天在 `xl` 桌面断点使用固定右侧助手栏，窄屏使用无第三方依赖的可访问抽屉；两者共享同一选择组件。选择状态保留在现有 `ChatLayout`，通过 History API 更新 `/chat?personaId=`，不创建数据库记录、不清空 Composer 草稿。已有 Conversation 不渲染选择栏，服务端继续拥有 Persona 绑定的最终决定权。
 
 ## 1. 现状审计

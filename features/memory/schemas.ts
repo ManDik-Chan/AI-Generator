@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { MEMORY_CATEGORIES, MEMORY_LIMITS } from "@/features/memory/constants";
+import { MEMORY_GOVERNANCE_LIMITS } from "@/features/memory/constants";
+import { containsHighConfidenceCredential } from "@/features/memory/security";
+
+export const memoryTopicKeySchema = z.string().trim().min(1).max(MEMORY_GOVERNANCE_LIMITS.topicKey).regex(/^[a-z0-9._-]+$/).optional();
+export const memoryKeywordsSchema = z.array(z.string().trim().min(1).max(MEMORY_GOVERNANCE_LIMITS.keyword)).max(MEMORY_GOVERNANCE_LIMITS.keywords).transform((values) => [...new Set(values)]).refine((values) => !values.some(containsHighConfidenceCredential), "关键词不能包含凭据。");
 
 export const memoryIdSchema = z.uuid("记忆 ID 格式无效。");
 export const memoryContentSchema = z.string().transform((value) => value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim()).pipe(z.string().min(2, "记忆内容至少需要 2 个字符。").max(MEMORY_LIMITS.content, "记忆内容不能超过 500 个字符。"));

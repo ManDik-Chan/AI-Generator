@@ -132,6 +132,10 @@ model Memory {
   sourceMessageId      String?      @map("source_message_id") @db.Uuid
   enabled              Boolean      @default(true)
   lastUsedAt           DateTime?    @map("last_used_at") @db.Timestamptz(6)
+  topicKey             String?      @map("topic_key")
+  keywords             String[]     @default([])
+  pinned               Boolean      @default(false)
+  useCount             Int          @default(0) @map("use_count")
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -143,6 +147,9 @@ model Memory {
   @@index([userId, enabled, scope, importance, updatedAt(sort: Desc)])
   @@index([personaId, enabled, importance])
   @@index([sourceMessageId])
+  @@index([userId, pinned, enabled, importance])
+  @@index([userId, topicKey])
+  @@index([personaId, topicKey])
   @@map("memories")
 }
 
