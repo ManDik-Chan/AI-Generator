@@ -9,6 +9,7 @@ alter table public.memories enable row level security;
 alter table public.memory_embeddings enable row level security;
 alter table public.generated_images enable row level security;
 alter table public.tool_runs enable row level security;
+alter table public.tool_assets enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
@@ -64,6 +65,25 @@ create policy "tool_runs_update_own" on public.tool_runs
   for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists "tool_runs_delete_own" on public.tool_runs;
 create policy "tool_runs_delete_own" on public.tool_runs
+  for delete using (user_id = auth.uid());
+
+drop policy if exists "tool_assets_select_own" on public.tool_assets;
+create policy "tool_assets_select_own" on public.tool_assets
+  for select using (user_id = auth.uid());
+drop policy if exists "tool_assets_insert_own_run" on public.tool_assets;
+create policy "tool_assets_insert_own_run" on public.tool_assets
+  for insert with check (
+    user_id = auth.uid()
+    and exists (select 1 from public.tool_runs r where r.id = tool_run_id and r.user_id = auth.uid())
+  );
+drop policy if exists "tool_assets_update_own_run" on public.tool_assets;
+create policy "tool_assets_update_own_run" on public.tool_assets
+  for update using (user_id = auth.uid()) with check (
+    user_id = auth.uid()
+    and exists (select 1 from public.tool_runs r where r.id = tool_run_id and r.user_id = auth.uid())
+  );
+drop policy if exists "tool_assets_delete_own" on public.tool_assets;
+create policy "tool_assets_delete_own" on public.tool_assets
   for delete using (user_id = auth.uid());
 
 drop policy if exists "messages_via_conversation" on public.messages;

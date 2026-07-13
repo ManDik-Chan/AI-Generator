@@ -41,6 +41,11 @@ enum ToolType {
   SUMMARIZE
   REWRITE
   TRANSLATE
+  IMAGE_ANALYZE
+}
+
+enum ToolAssetKind {
+  IMAGE
 }
 
 enum ToolRunStatus {
@@ -66,6 +71,7 @@ model Profile {
   memoryEmbeddings MemoryEmbedding[]
   images        GeneratedImage[]
   toolRuns      ToolRun[]
+  toolAssets    ToolAsset[]
 
   @@map("profiles")
 }
@@ -85,11 +91,35 @@ model ToolRun {
   updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets ToolAsset[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, type, createdAt(sort: Desc)])
   @@index([userId, status, createdAt(sort: Desc)])
   @@map("tool_runs")
+}
+
+model ToolAsset {
+  id          String        @id @default(uuid()) @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  toolRunId   String        @map("tool_run_id") @db.Uuid
+  kind        ToolAssetKind @default(IMAGE)
+  storagePath String        @map("storage_path")
+  mimeType    String        @map("mime_type") @db.VarChar(100)
+  sizeBytes   Int           @map("size_bytes")
+  width       Int
+  height      Int
+  sha256      String        @db.VarChar(64)
+  expiresAt   DateTime      @map("expires_at") @db.Timestamptz(6)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user    Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolRun ToolRun @relation(fields: [toolRunId], references: [id], onDelete: Cascade)
+
+  @@unique([toolRunId])
+  @@index([userId, expiresAt])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("tool_assets")
 }
 
 model Persona {

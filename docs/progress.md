@@ -253,3 +253,15 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 - 没有 Embedding 或 RAG；Phase 5A3 和 Phase 6 未开始。
 
 Phase 5A1 真实环境验收已全部通过。
+
+## Phase 6A2 实施记录（待真实验收）
+
+- 从最新 `main` 的 Phase 6A1 工具框架扩展 `IMAGE_ANALYZE`，保留 ToolRun、SSE、停止生成、终态保护和工具历史语义。
+- 新增独立 migration `20260713220000_add_tool_assets`、`ToolAsset`、所有者关系、Cascade、到期时间与 RLS；不复用 `GeneratedImage`。
+- `/tools/image` 支持单张 PNG/JPEG/WebP 拖放/选择、预览、问题、模式、详细程度、语言、历史开关、流式结果、停止、复制与 TXT/Markdown 下载。
+- 上传在服务端执行 10 MB、4000 万像素、MIME/魔数/解码校验；使用 sharp 重编码并剥离元数据，Storage 路径使用 UUID。
+- 使用 private `tool-assets` bucket（可配置）、60 秒 signed URL、7 天默认保留和可重复清理脚本；关闭历史时终态清理资源。
+- 视觉 Provider、模型、超时、输出 token 和每日 10 次限额独立配置；Base URL/Key 可回退现有 AI 配置，模型必须显式设置。
+- 图片与问题均作为不可信数据；不读取 Persona/Memory，不创建 Conversation/Message，不执行图片中的 Prompt 注入。
+- 自动测试、无 Key 构建和响应式静态检查执行中；真实 Supabase migration/bucket、视觉模型、390/430/768/1440px 与图片 Prompt 注入尚待项目所有者验收。
+- 不包含 PDF/DOCX/PPTX/TXT、专业 OCR、网页、RAG、多图、视频、图片生成/编辑；Phase 6A3 和 Phase 7 未开始。

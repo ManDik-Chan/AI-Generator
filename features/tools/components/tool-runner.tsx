@@ -5,7 +5,7 @@ import { Check, Copy, Download, Square, WandSparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_LABELS, TOOL_INPUT_MAX_CHARS, TOOL_LABELS } from "@/features/tools/constants";
-import type { ToolRunState, ToolTypeValue } from "@/features/tools/types";
+import type { TextToolTypeValue, ToolRunState } from "@/features/tools/types";
 import { readSseEvents } from "@/lib/ai/read-sse";
 
 const defaults = {
@@ -14,7 +14,7 @@ const defaults = {
   TRANSLATE: { sourceLanguage: "auto", targetLanguage: "en", tone: "original", preserveMarkdown: true, preserveProperNouns: true, showOriginal: false },
 } as const;
 
-interface Props { tool: ToolTypeValue; aiConfigured: boolean }
+interface Props { tool: TextToolTypeValue; aiConfigured: boolean }
 
 function SelectField({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: React.ReactNode }) {
   return <label className="grid gap-1.5 text-sm"><span className="font-medium">{label}</span><select className="h-11 min-w-0 rounded-xl border bg-background px-3" onChange={(event) => onChange(event.target.value)} value={value}>{children}</select></label>;

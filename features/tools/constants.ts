@@ -6,12 +6,14 @@ export const TOOL_LABELS = {
   SUMMARIZE: "文本总结",
   REWRITE: "改写润色",
   TRANSLATE: "多语言翻译",
+  IMAGE_ANALYZE: "图片分析",
 } as const;
 
 export const TOOL_PATHS = {
   SUMMARIZE: "/tools/summarize",
   REWRITE: "/tools/rewrite",
   TRANSLATE: "/tools/translate",
+  IMAGE_ANALYZE: "/tools/image",
 } as const;
 
 export const LANGUAGE_LABELS = {

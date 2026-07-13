@@ -39,5 +39,5 @@ export const toolRunRequestSchema = z.discriminatedUnion("tool", [
 ]);
 
 export const toolRunIdSchema = z.string().uuid();
-export const toolHistoryFilterSchema = z.enum(["ALL", "SUMMARIZE", "REWRITE", "TRANSLATE"]);
+export const toolHistoryFilterSchema = z.enum(["ALL", "SUMMARIZE", "REWRITE", "TRANSLATE", "IMAGE_ANALYZE"]);
 export type ToolRunInput = z.infer<typeof toolRunRequestSchema>;

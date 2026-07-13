@@ -6,7 +6,7 @@ vi.mock("@/lib/database/prisma", () => ({ prisma: {
   toolRun: { updateMany: mocks.updateMany },
 } }));
 
-import { createPendingToolRun, DailyToolLimitError, finishToolRun } from "@/features/tools/usage";
+import { createPendingToolRun, createPendingVisionToolRun, DailyToolLimitError, finishToolRun } from "@/features/tools/usage";
 
 const input = { userId: "user", tool: "SUMMARIZE" as const, title: "title", inputText: "input", options: {}, retainContent: true, dailyLimit: 30 };
 describe("tool usage and terminal state", () => {
@@ -16,4 +16,6 @@ describe("tool usage and terminal state", () => {
   it("keeps the existing ADMIN bypass policy", async () => { mocks.profile.mockResolvedValue({ role: "ADMIN" }); mocks.count.mockResolvedValue(99); await expect(createPendingToolRun(input)).resolves.toMatchObject({ runId: "run" }); });
   it("does not retain text when privacy saving is disabled", async () => { await createPendingToolRun({ ...input, retainContent: false }); expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ title: null, inputText: null, retainContent: false }) })); });
   it("only allows a PENDING run to transition to a terminal state", async () => { await finishToolRun("user", "run", "COMPLETE", { outputText: "done" }); expect(mocks.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "run", userId: "user", status: "PENDING" } })); });
+  it("counts vision runs independently and creates IMAGE_ANALYZE atomically", async () => { const result = await createPendingVisionToolRun({ ...input, dailyLimit: 10 }); expect(result).toMatchObject({ used: 3, remaining: 7 }); expect(mocks.count).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ type: "IMAGE_ANALYZE" }) })); expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ type: "IMAGE_ANALYZE" }) })); });
+  it("blocks concurrent-safe vision creation at its own limit", async () => { mocks.count.mockResolvedValue(10); await expect(createPendingVisionToolRun({ ...input, dailyLimit: 10 })).rejects.toBeInstanceOf(DailyToolLimitError); expect(mocks.create).not.toHaveBeenCalled(); });
 });
