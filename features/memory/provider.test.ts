@@ -50,6 +50,12 @@ describe("memory provider retry policy", () => {
     }
   });
 
+  it("does not retry or fall back for HTTP 400 INVALID_REQUEST", async () => {
+    const { provider, models } = providerFrom([{ error: new AiProviderError("INVALID_REQUEST", "bad request", 400, { providerErrorCode: "bad_parameter", providerMessage: "messages invalid" }) }]);
+    await expect(requestMemoryModelText({ provider, request, fallbackModel: "shared-model" })).rejects.toMatchObject({ code: "INVALID_REQUEST", status: 400 });
+    expect(models).toEqual(["memory-model"]);
+  });
+
   it("keeps partial text from INVALID_RESPONSE for JSON parsing", async () => {
     const { provider } = providerFrom([{ chunks: ["{\"operations\":[]}"], error: new AiProviderError("INVALID_RESPONSE", "missing terminal") }]);
     await expect(requestMemoryModelText({ provider, request, fallbackModel: "shared-model" })).resolves.toMatchObject({ text: "{\"operations\":[]}" });

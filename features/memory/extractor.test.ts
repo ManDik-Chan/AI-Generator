@@ -59,6 +59,7 @@ describe("automatic memory persistence", () => {
     eligible();
     mocks.collect.mockResolvedValue(JSON.stringify({ operations: [{ action: "CREATE", content: "用户偏好先给结论，再解释过程", category: "preference", scope: "GLOBAL", importance: 4, confidence: 0.95, reasonCode: "preference" }] }));
     await expect(extractAndPersistMemories(input)).resolves.toEqual({ created: 1, updated: 0 });
+    expect(mocks.collect).toHaveBeenCalledWith(expect.objectContaining({ request: expect.objectContaining({ messages: [expect.objectContaining({ role: "system" }), expect.objectContaining({ role: "user" })] }) }));
     expect(mocks.memoryCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: "user-a", origin: "AUTO_EXTRACTED", enabled: true, sourceConversationId: "conversation-a", sourceMessageId: input.sourceMessageId }) });
   });
 
@@ -156,6 +157,7 @@ describe("automatic memory persistence", () => {
     mocks.collect.mockResolvedValueOnce("not json").mockResolvedValueOnce(JSON.stringify({ operations: [] }));
     await extractAndPersistMemories(input);
     expect(mocks.collect).toHaveBeenCalledTimes(2);
+    expect(mocks.collect.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ request: expect.objectContaining({ messages: [expect.objectContaining({ role: "system" }), expect.objectContaining({ role: "user" })] }) }));
 
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.messageFindMany.mockResolvedValue([]);

@@ -35,6 +35,8 @@ AI_MEMORY_REQUEST_TIMEOUT_MS=90000
 
 后台诊断区分 eligibility、load_context、provider_request、provider_response、parse、repair_request、validate 和 persist。AiProviderError 日志保留 code 与 HTTP status，但不记录错误正文、用户消息、Memory、Prompt、模型输出、Key、Cookie 或 URL query。专用 memory model 404 时仅回退主模型一次；429 最多等待 2 秒重试一次；认证和超时不重试。若流在 INVALID_RESPONSE 前已有文本，继续进入 JSON 解析；完全空响应安全失败。
 
+HTTP 400 单独映射为 `INVALID_REQUEST`，不会回退、重试、进入 JSON Repair 或写入 Memory。Provider 只从常见 JSON error 结构提取服务商 code 和最多 200 字符的脱敏 message；浏览器仍只得到通用中文错误，不接收服务商正文。
+
 输出为最多三项严格 JSON operation：
 
 - CREATE：没有对应候选的稳定事实；
@@ -50,6 +52,8 @@ AI_MEMORY_REQUEST_TIMEOUT_MS=90000
 基础助手 Prompt 明确平台支持长期记忆：用户要求“记住”时不会再错误声称没有能力，也不会在后台写入完成前保证成功；若当前对话找不到明确事实，则询问用户具体需要记住什么。
 
 Prompt 用 `<current_user_message>`、`<assistant_response context_only="true">`、`<existing_memories>` 等 XML 数据边界，并转义所有特殊字符。用户内容不能改变严格 JSON 协议。
+
+为兼容 GLM-5.2 等 OpenAI-compatible 服务，提取请求固定包含两条消息：system 只承载判断政策、安全边界和 JSON Schema，最后一条 user 承载转义后的 `<current_user_message>`、`<grounded_user_context>`、context-only assistant 和候选记忆。JSON Repair 同样使用 system 修复政策 + 最后一条 user `<invalid_output>`，不再发送 system-only 请求。
 
 ## 幂等、事务与所有权
 

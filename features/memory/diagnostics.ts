@@ -23,6 +23,8 @@ export function safeMemoryFailureDetails(error: unknown) {
     explicitIntent: failure?.explicitIntent,
     providerCode: provider?.code,
     providerStatus: provider?.status,
+    providerErrorCode: provider?.diagnostics?.providerErrorCode,
+    providerMessage: provider?.diagnostics?.providerMessage,
     configuredModel: failure?.configuredModel,
     ...(!provider ? { errorCode: original instanceof Error ? original.name : "UNKNOWN" } : {}),
   };

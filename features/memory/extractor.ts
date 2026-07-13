@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { AiProviderError } from "@/lib/ai/errors";
 import type { AiStreamRequest } from "@/lib/ai/types";
 import { getMemoryAiProvider } from "@/lib/ai/registry";
-import { buildMemoryExtractorPrompt, buildMemoryJsonRepairPrompt } from "@/lib/ai/prompts/memory-extractor";
+import { buildMemoryExtractorMessages, buildMemoryJsonRepairMessages } from "@/lib/ai/prompts/memory-extractor";
 import { prisma } from "@/lib/database/prisma";
 import {
   MEMORY_EXTRACTION_CONFIDENCE,
@@ -99,9 +99,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
   const { config, fallbackModel, provider } = getMemoryAiProvider();
   configuredModel = config.model;
   const providerRequest: AiStreamRequest = {
-    messages: [{
-      role: "system",
-      content: buildMemoryExtractorPrompt({
+    messages: buildMemoryExtractorMessages({
         currentUserMessage: input.currentUserMessage,
         assistantResponse: input.assistantResponse,
         recentTurns: input.recentTurns.slice(-8),
@@ -111,7 +109,6 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
         persona: eligibility.conversation.personaId && input.persona?.id === eligibility.conversation.personaId ? input.persona : undefined,
         existingMemories: candidates,
       }),
-    }],
     model: config.model,
     temperature: config.temperature,
     maxOutputTokens: config.maxOutputTokens,
@@ -125,7 +122,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     parsed = parseMemoryExtractionOutput(output);
   } catch {
     stage = "repair_request";
-    const repaired = await requestMemoryModelText({ provider, fallbackModel: initialResponse.modelUsed, allowProviderRetry: false, request: { messages: [{ role: "system", content: buildMemoryJsonRepairPrompt(output) }], model: initialResponse.modelUsed, temperature: 0, maxOutputTokens: config.maxOutputTokens } });
+    const repaired = await requestMemoryModelText({ provider, fallbackModel: initialResponse.modelUsed, allowProviderRetry: false, request: { messages: buildMemoryJsonRepairMessages(output), model: initialResponse.modelUsed, temperature: 0, maxOutputTokens: config.maxOutputTokens } });
     stage = "parse";
     parsed = parseMemoryExtractionOutput(repaired.text);
   }

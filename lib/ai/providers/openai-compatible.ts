@@ -119,6 +119,36 @@ export async function* parseOpenAiCompatibleSse(
   }
 }
 
+export function sanitizeProviderErrorMessage(value: string, secrets: string[] = []) {
+  let safe = value;
+  for (const secret of secrets.filter(Boolean)) safe = safe.split(secret).join("[REDACTED]");
+  safe = safe
+    .replace(/Bearer\s+[A-Za-z0-9._~+\/-]+/gi, "Bearer [REDACTED]")
+    .replace(/(Authorization|Cookie)\s*[:=]\s*[^,;\n]+/gi, "$1: [REDACTED]")
+    .replace(/(https?:\/\/[^\s?]+)\?[^\s]+/gi, "$1?[REDACTED]")
+    .replace(/(api[_ -]?key|token|secret)\s*[:=]\s*["']?[^\s,"']+/gi, "$1=[REDACTED]")
+    .replace(/<(?:current_user_message|grounded_user_context|assistant_response|existing_memories)[^>]*>[\s\S]*?<\/(?:current_user_message|grounded_user_context|assistant_response|existing_memories)>/gi, "[PROMPT_REDACTED]")
+    .replace(/[A-Za-z0-9_-]{40,}/g, "[REDACTED]")
+    .replace(/\s+/g, " ")
+    .trim();
+  return safe.slice(0, 200);
+}
+
+async function invalidRequestError(response: Response, apiKey: string) {
+  let providerErrorCode: string | undefined;
+  let providerMessage: string | undefined;
+  try {
+    const raw = await response.text();
+    const parsed = JSON.parse(raw) as { error?: { code?: unknown; message?: unknown }; code?: unknown; message?: unknown };
+    const detail = parsed.error ?? parsed;
+    if (typeof detail.code === "string" || typeof detail.code === "number") providerErrorCode = sanitizeProviderErrorMessage(String(detail.code), [apiKey]).slice(0, 100);
+    if (typeof detail.message === "string") providerMessage = sanitizeProviderErrorMessage(detail.message, [apiKey]);
+  } catch {
+    // A non-JSON provider response is intentionally not retained.
+  }
+  return new AiProviderError("INVALID_REQUEST", "Provider rejected the request.", response.status, { providerErrorCode, providerMessage });
+}
+
 function errorForStatus(status: number) {
   if (status === 401 || status === 403) return new AiProviderError("AUTHENTICATION", "Provider authentication failed.", status);
   if (status === 404) return new AiProviderError("NOT_FOUND", "Provider endpoint or model was not found.", status);
@@ -163,7 +193,7 @@ export function createOpenAiCompatibleProvider(
         });
 
         if (!response.ok) {
-          throw errorForStatus(response.status);
+          throw response.status === 400 ? await invalidRequestError(response, config.apiKey) : errorForStatus(response.status);
         }
         if (!response.body) {
           throw new AiProviderError("INVALID_RESPONSE", "Provider response did not contain a stream.");

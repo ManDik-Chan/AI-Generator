@@ -26,10 +26,10 @@ describe("Next after memory scheduling", () => {
   it("logs the real provider code and status without prompt or credentials", async () => {
     let callback: (() => Promise<void>) | undefined;
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const failure = new MemoryExtractionFailure("provider_request", new AiProviderError("AUTHENTICATION", "Bearer secret-key prompt-body", 401), "PREVIOUS_CONTEXT", "memory-model");
+    const failure = new MemoryExtractionFailure("provider_request", new AiProviderError("INVALID_REQUEST", "Bearer secret-key prompt-body", 400, { providerErrorCode: "bad_messages", providerMessage: "messages invalid" }), "PREVIOUS_CONTEXT", "memory-model");
     scheduleMemoryExtraction((scheduled) => { callback = scheduled; }, async () => { throw failure; }, { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m" });
     await callback?.();
-    expect(warning).toHaveBeenCalledWith("memory_extraction_failed", { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m", stage: "provider_request", explicitIntent: "PREVIOUS_CONTEXT", providerCode: "AUTHENTICATION", providerStatus: 401, configuredModel: "memory-model" });
+    expect(warning).toHaveBeenCalledWith("memory_extraction_failed", { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m", stage: "provider_request", explicitIntent: "PREVIOUS_CONTEXT", providerCode: "INVALID_REQUEST", providerStatus: 400, providerErrorCode: "bad_messages", providerMessage: "messages invalid", configuredModel: "memory-model" });
     const logged = JSON.stringify(warning.mock.calls);
     expect(logged).not.toContain("secret-key");
     expect(logged).not.toContain("prompt-body");

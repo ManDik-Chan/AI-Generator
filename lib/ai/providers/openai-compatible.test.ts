@@ -74,4 +74,22 @@ describe("OpenAI-compatible SSE parsing", () => {
     await expect(collect(provider.streamText({ messages: [], model: config.model, temperature: 0.7, maxOutputTokens: 10 })))
       .rejects.toEqual(expect.objectContaining<Partial<AiProviderError>>({ code: "RATE_LIMITED", status: 429 }));
   });
+
+  it("maps HTTP 400 to a sanitized INVALID_REQUEST diagnostic", async () => {
+    const provider = createOpenAiCompatibleProvider(config, {
+      fetchImplementation: async () => new Response(JSON.stringify({ error: { code: "1214", message: `Authorization: Bearer ${config.apiKey}; invalid messages https://api.example.com/path?token=secret <current_user_message>private prompt</current_user_message> ${"x".repeat(300)}` } }), { status: 400 }),
+    });
+    let failure: AiProviderError;
+    try {
+      await collect(provider.streamText({ messages: [{ role: "system", content: "policy" }, { role: "user", content: "input" }], model: config.model, temperature: 0.1, maxOutputTokens: 10 }));
+      throw new Error("Expected provider request to fail.");
+    } catch (error) {
+      failure = error as AiProviderError;
+    }
+    expect(failure).toMatchObject({ code: "INVALID_REQUEST", status: 400, diagnostics: { providerErrorCode: "1214" } });
+    expect(failure.diagnostics?.providerMessage?.length).toBeLessThanOrEqual(200);
+    expect(failure.diagnostics?.providerMessage).not.toContain(config.apiKey);
+    expect(failure.diagnostics?.providerMessage).not.toContain("private prompt");
+    expect(failure.diagnostics?.providerMessage).not.toContain("?token=secret");
+  });
 });
