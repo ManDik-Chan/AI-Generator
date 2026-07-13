@@ -37,6 +37,19 @@ enum MemoryOrigin {
   AUTO_EXTRACTED
 }
 
+enum ToolType {
+  SUMMARIZE
+  REWRITE
+  TRANSLATE
+}
+
+enum ToolRunStatus {
+  PENDING
+  COMPLETE
+  ERROR
+  CANCELLED
+}
+
 model Profile {
   id          String   @id @db.Uuid
   email       String   @unique
@@ -52,8 +65,31 @@ model Profile {
   memories      Memory[]
   memoryEmbeddings MemoryEmbedding[]
   images        GeneratedImage[]
+  toolRuns      ToolRun[]
 
   @@map("profiles")
+}
+
+model ToolRun {
+  id            String        @id @default(uuid()) @db.Uuid
+  userId        String        @map("user_id") @db.Uuid
+  type          ToolType
+  status        ToolRunStatus @default(PENDING)
+  title         String?       @db.VarChar(100)
+  inputText     String?       @map("input_text") @db.Text
+  outputText    String?       @map("output_text") @db.Text
+  options       Json
+  retainContent Boolean       @default(true) @map("retain_content")
+  errorCode     String?       @map("error_code") @db.VarChar(100)
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, type, createdAt(sort: Desc)])
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@map("tool_runs")
 }
 
 model Persona {

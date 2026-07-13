@@ -1,4 +1,4 @@
-import { getMemoryGenerationConfig, getPersonaGenerationConfig, requireAiProviderConfig } from "@/lib/ai/config";
+import { getMemoryGenerationConfig, getPersonaGenerationConfig, getToolGenerationConfig, requireAiProviderConfig } from "@/lib/ai/config";
 import { createOpenAiCompatibleProvider } from "@/lib/ai/providers/openai-compatible";
 
 let memoryConfigLogged = false;
@@ -23,4 +23,13 @@ export function getMemoryAiProvider() {
     console.info("Memory AI config", { model: generation.model, timeoutMs: generation.requestTimeoutMs, usesFallbackModel });
   }
   return { config: generation, fallbackModel: base.model, usesFallbackModel, provider: createOpenAiCompatibleProvider({ ...base, requestTimeoutMs: generation.requestTimeoutMs }) };
+}
+
+export function getToolAiProvider() {
+  const base = requireAiProviderConfig();
+  const generation = getToolGenerationConfig();
+  return {
+    config: generation,
+    provider: createOpenAiCompatibleProvider({ ...base, requestTimeoutMs: generation.requestTimeoutMs }),
+  };
 }

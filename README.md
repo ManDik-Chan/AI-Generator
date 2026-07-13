@@ -1,5 +1,7 @@
 # AI-Generator V2
 
+> Phase 6A1 已实现通用文本工具框架与文本总结、改写润色、多语言翻译。工具复用现有 OpenAI-compatible Provider，通过独立 `ToolRun`、SSE、每日限额和历史隐私开关运行；不会创建 Conversation/Message，也不会读取或写入长期记忆。真实 Supabase migration 与 GLM-5.2 三工具联调待项目所有者验收，详见 `docs/tool-system.md`。
+
 > Phase 5A3-2 已完成真实验收：长期记忆采用确定性关键词、`topicKey` / `keywords`、512 维 Embedding 语义召回与 Hybrid RRF；未配置或运行失败时安全退回关键词召回。这不是外部文件 RAG。详见 `docs/memory-semantic-retrieval.md`。
 
 面向亲朋好友使用的私人 AI 助手平台。V2 使用 Next.js 15、TypeScript 与 Tailwind CSS 重构，目标是简单、稳定、美观和易维护。

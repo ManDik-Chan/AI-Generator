@@ -1,5 +1,19 @@
 # 重构进度
 
+## Phase 6A1 实施状态
+
+- [x] 通用工具框架、统一 `POST /api/tools/run` 与应用自有 SSE 协议
+- [x] 文本总结、改写润色、多语言翻译
+- [x] `ToolRun` Schema、独立 migration、RLS 与所有权双重校验
+- [x] 停止生成、迟到流保护、PENDING 恢复、历史与隐私开关
+- [x] UTC 每日工具次数限制与 ADMIN 策略
+- [x] `/tools`、三项工具页、历史页、桌面/移动导航 active 状态
+- [x] 自动测试、lint、typecheck、无密钥构建与 Prisma 校验
+- [ ] 项目所有者真实 Supabase migration / RLS 验收
+- [ ] 项目所有者真实 GLM-5.2 三工具与响应式 Smoke Test
+
+Phase 6A1 不包含文件上传、OCR、文件解析、网页抓取、搜索、文件/网页 RAG、Message 向量化、医疗/法律/旅行工具或图片生成。Phase 6A2 与 Phase 7 未开始。
+
 ## Phase 5A3-2 完成状态
 
 - [x] Phase 4A1：人格管理与人格聊天
