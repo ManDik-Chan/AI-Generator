@@ -57,7 +57,9 @@ describe("memory governance contract", () => {
     const manager = readFileSync("features/memory/components/memory-manager.tsx", "utf8");
     expect(actions).toContain("setMemoryPinnedAction");
     expect(actions).toContain("where: { id, userId: user.id }");
-    expect(manager).toContain("已使用 {memories.length} / {maxTotal} 条记忆");
+    expect(manager).toContain("CAPACITY");
+    expect(manager).toContain("{memories.length}");
+    expect(manager).toContain("{maxTotal}");
     expect(manager).toContain("同主题可能重复");
     expect(manager).not.toContain("{memory.topicKey}</");
   });

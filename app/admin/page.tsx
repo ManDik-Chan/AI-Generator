@@ -1,18 +1,34 @@
+import { Settings2 } from "lucide-react";
+import { AppShell } from "@/components/layout/app-shell";
+import type { ShellViewer } from "@/components/layout/shell-viewer";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireAdmin } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const { profile } = await requireAdmin();
+  const { user, profile } = await requireAdmin();
+  const viewer: ShellViewer = {
+    avatarUrl: profile.avatarUrl ?? undefined,
+    displayName: profile.displayName ?? undefined,
+    email: profile.email ?? user.email ?? undefined,
+    role: profile.role,
+  };
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-4 py-10 sm:px-6">
-      <p className="text-sm font-medium text-primary">管理员</p>
-      <h1 className="mt-2 text-3xl font-semibold">系统管理</h1>
-      <p className="mt-3 text-muted-foreground">当前管理员：{profile.displayName ?? profile.email}</p>
-      <div className="mt-7 rounded-2xl border bg-card p-6 text-sm text-muted-foreground">
-        模型配置、用户管理和系统设置将在后续管理功能中接入。
-      </div>
-    </main>
+    <AppShell mobileTitle="系统管理" variant="reading" viewer={viewer}>
+      <PageHeader
+        description="这里只展示已经实现并经过服务端管理员权限校验的管理能力。"
+        eyebrow="ADMINISTRATION"
+        title="系统管理"
+      />
+      <EmptyState
+        className="mt-8"
+        description="当前没有需要展示的管理项目；不会使用虚构图表或模拟数据填充页面。"
+        icon={<Settings2 className="size-5" />}
+        title="暂无可管理项目"
+      />
+    </AppShell>
   );
 }

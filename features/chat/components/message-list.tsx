@@ -35,14 +35,14 @@ export function MessageList(props: MessageListProps) {
 
   return (
     <div
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      className="premium-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
       onScroll={(event) => {
         const element = event.currentTarget;
         shouldFollowRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
       }}
       ref={containerRef}
     >
-      <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-[52rem] space-y-8 px-3 pb-8 pt-6 sm:px-7 sm:py-9 lg:px-9">
         {messages.length ? messages.map((message) => {
           const lastUserId = [...messages].reverse().find((item) => item.role === "user")?.id;
           return <MessageItem
@@ -60,11 +60,14 @@ export function MessageList(props: MessageListProps) {
             persona={props.persona}
           />;
         }) : (
-          <div className="grid min-h-[45vh] place-items-center text-center">
-            <div>
-              {props.persona ? <AssistantAvatar className="mx-auto size-16 rounded-2xl" persona={props.persona} /> : <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><MessageSquareText className="size-6" /></span>}
-              <h2 className="mt-4 text-xl font-semibold">{props.persona ? `与 ${props.persona.name} 开始对话` : "开始一段新对话"}</h2>
-              <p className="mt-2 max-w-sm whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{props.persona?.greeting || (props.persona ? props.persona.description || "发送第一条消息开始对话。" : "向默认 AI 助手提问。它会使用 Markdown 清晰回答，并保留本次对话历史。")}</p>
+          <div className="grid min-h-[55vh] place-items-center py-10 text-center">
+            <div className="relative max-w-lg">
+              <div className="premium-aurora absolute left-1/2 top-8 -z-10 h-44 w-44 -translate-x-1/2 rounded-full bg-primary/14 blur-3xl" />
+              {props.persona ? <AssistantAvatar className="mx-auto size-20 rounded-[1.65rem] shadow-raised" persona={props.persona} /> : <span className="premium-icon-tile mx-auto size-20 rounded-[1.65rem] shadow-raised"><MessageSquareText className="size-7" /></span>}
+              <p className="premium-kicker mt-6">NEW CONVERSATION</p>
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] sm:text-3xl">{props.persona ? `与 ${props.persona.name} 开始对话` : "今天想一起完成什么？"}</h2>
+              <p className="mx-auto mt-3 max-w-md whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{props.persona?.greeting || (props.persona ? props.persona.description || "发送第一条消息开始对话。" : "默认助手已准备好。提出问题、梳理想法，或从一个尚未成形的灵感开始。")}</p>
+              <div className="mx-auto mt-6 h-px w-20 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             </div>
           </div>
         )}

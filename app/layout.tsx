@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import { themeInitializationScript } from "@/lib/theme";
 
 export const metadata: Metadata = {
   title: {
@@ -14,15 +16,16 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#13161b" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f1ea" },
+    { media: "(prefers-color-scheme: dark)", color: "#101415" },
   ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN">
-      <body>{children}</body>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} /></head>
+      <body><ThemeProvider>{children}</ThemeProvider></body>
     </html>
   );
 }

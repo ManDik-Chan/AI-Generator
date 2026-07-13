@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { House, MessageSquare, Plus, Trash2 } from "lucide-react";
+import { House, MessageSquare, Plus, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { deleteConversationAction } from "@/features/chat/actions";
@@ -18,29 +18,34 @@ export function ConversationList({ conversations, activeId, onNavigate }: { conv
 
   return (
     <div className="flex h-full flex-col">
-      <div className="space-y-2 p-3">
-        <Button asChild className="w-full justify-start" variant="outline">
-          <Link href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate}><House className="size-4" />{CHAT_HOME_NAVIGATION.label}</Link>
-        </Button>
-        <Button asChild className="w-full justify-start">
+      <div className="border-b border-border/10 p-4">
+        <Link className="mb-4 flex items-center gap-3 rounded-control px-1 py-1" href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate}>
+          <span className="premium-icon-tile size-10"><Sparkles className="size-4" /></span>
+          <span><span className="block text-sm font-bold">AI-Generator</span><span className="block text-[.625rem] font-semibold uppercase tracking-[.14em] text-muted-foreground">Conversation Studio</span></span>
+        </Link>
+        <Button asChild className="w-full justify-start" size="lg">
           <Link href="/chat" onClick={onNavigate}><Plus className="size-4" />新建对话</Link>
         </Button>
+        <Button asChild className="mt-2 w-full justify-start" variant="ghost">
+          <Link href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate}><House className="size-4" />{CHAT_HOME_NAVIGATION.label}</Link>
+        </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-        {error && <p className="mx-1 mb-2 rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-600">{error}</p>}
+      <div className="premium-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4">
+        <p className="premium-kicker mb-2 px-2">RECENT</p>
+        {error && <p className="mx-1 mb-2 rounded-control bg-destructive-subtle px-3 py-2 text-xs text-destructive-foreground">{error}</p>}
         {conversations.length ? (
           <nav aria-label="对话历史" className="space-y-1">
             {conversations.map((conversation) => (
-              <div className={conversation.id === activeId ? "group flex items-center rounded-xl bg-muted" : "group flex items-center rounded-xl hover:bg-muted/70"} key={conversation.id}>
-                <Link className="flex min-w-0 flex-1 items-center gap-2 px-3 py-2.5 text-sm" href={`/chat/${conversation.id}`} onClick={onNavigate}>
-                  <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+              <div className={conversation.id === activeId ? "group flex items-center rounded-control border border-primary/14 bg-primary-subtle text-primary-subtle-foreground shadow-sm" : "group flex items-center rounded-control border border-transparent text-muted-foreground hover:border-border/10 hover:bg-surface/60 hover:text-foreground"} key={conversation.id}>
+                <Link aria-current={conversation.id === activeId ? "page" : undefined} className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-sm" href={`/chat/${conversation.id}`} onClick={onNavigate}>
+                  <MessageSquare className={conversation.id === activeId ? "size-4 shrink-0 text-primary" : "size-4 shrink-0"} />
                   <span className="truncate">{conversation.title}</span>
                 </Link>
-                <button aria-label={`删除 ${conversation.title}`} className="mr-1 rounded-lg p-2 text-muted-foreground opacity-70 hover:bg-background hover:text-red-600 sm:opacity-0 sm:group-hover:opacity-100" onClick={() => setDeleting(conversation)} type="button"><Trash2 className="size-3.5" /></button>
+                <button aria-label={`删除 ${conversation.title}`} className="mr-1 grid size-10 place-items-center rounded-control text-muted-foreground opacity-70 hover:bg-surface-raised hover:text-destructive sm:opacity-0 sm:focus-visible:opacity-100 sm:group-hover:opacity-100" onClick={() => setDeleting(conversation)} type="button"><Trash2 className="size-3.5" /></button>
               </div>
             ))}
           </nav>
-        ) : <p className="px-3 py-8 text-center text-sm text-muted-foreground">还没有历史对话</p>}
+        ) : <div className="premium-subpanel px-4 py-8 text-center"><MessageSquare className="mx-auto size-5 text-primary" /><p className="mt-3 text-sm font-medium">还没有历史对话</p><p className="mt-1 text-xs leading-5 text-muted-foreground">第一段真实对话会出现在这里。</p></div>}
       </div>
       {deleting && (
         <DeleteConversationDialog

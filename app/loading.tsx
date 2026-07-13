@@ -1,7 +1,2 @@
-export default function Loading() {
-  return (
-    <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground">
-      正在准备你的 AI 空间…
-    </div>
-  );
-}
+import { PageSkeleton } from "@/components/ui/skeleton";
+export default function Loading() { return <main className="mx-auto min-h-screen w-full max-w-5xl px-4 py-8 sm:px-6 md:px-8"><PageSkeleton /></main>; }

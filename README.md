@@ -1,5 +1,7 @@
 # AI-Generator V2
 
+> Phase 6B1 已按项目所有者批准的 Premium 高保真原型扩展为全产品 UI 迁移：纸张/深炭主题、翡翠强调、双星品牌、响应式应用外壳，以及首页、认证、聊天、人格、长期记忆、文本工具、图片分析、工具历史、账号和管理页面均已统一。所有页面只展示真实数据或诚实空状态；原型中的假数据和未实现功能没有进入生产。此次仅调整界面与交互呈现，不改变业务语义、API、Provider、数据库结构、RLS 或 migration，当前等待项目所有者第三轮真实视觉验收。详见 `docs/design-system.md`、`docs/ui-redesign-roadmap.md` 与 `docs/full-product-ui-redesign.md`。
+
 > Phase 6A2 已完成项目所有者真实验收：单图图片理解、私有 `ToolAsset`、服务端安全净化、private Storage、独立视觉限额、OpenAI-compatible 多模态 Provider、SSE/停止/历史/到期清理、图片 Prompt 注入隔离和响应式均已通过。当前仍不包含 PDF/DOCX、专业 OCR、RAG、多图、视频、图片生成或编辑；Phase 6A3 与 Phase 7 尚未开始。详见 `docs/image-understanding-tool.md`。
 
 > Phase 5A3-2 已完成真实验收：长期记忆采用确定性关键词、`topicKey` / `keywords`、512 维 Embedding 语义召回与 Hybrid RRF；未配置或运行失败时安全退回关键词召回。这不是外部文件 RAG。详见 `docs/memory-semantic-retrieval.md`。
@@ -35,7 +37,7 @@ Phase 5A1 在助手成功完成回复后使用一次低成本 OpenAI-compatible 
 
 Phase 5A3-2 使用通用 OpenAI-compatible Embedding Provider 和独立 `MemoryEmbedding` 表，为 Memory 内容建立固定 512 维索引。默认 `adaptive` 模式只在关键词结果不足、无直接匹配或出现记忆意图时生成一次 query embedding，再以稳定 RRF 融合确定性与语义排名。没有配置 Key、pgvector 不可用或 Provider 失败时聊天继续使用原确定性召回。当前不包含文件、网页、Message 向量化或外部知识库 RAG。
 
-真实 Supabase migration/vector extension、Embedding-3 回填、不同表达语义召回、Memory 更新后向量重建、隔离、Cascade 和安全降级均已通过项目所有者验收。没有自动删除或自动批量合并，Phase 6 未开始。
+真实 Supabase migration/vector extension、Embedding-3 回填、不同表达语义召回、Memory 更新后向量重建、隔离、Cascade 和安全降级均已通过项目所有者验收。没有自动删除或自动批量合并。
 
 新增 Persona migration 后，项目所有者需在真实数据库执行：
 

@@ -2,16 +2,51 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleUserRound, Home, MessageCircle, PenLine, Wrench } from "lucide-react";
-import { navigationItemActive } from "@/components/layout/navigation";
+import { Plus } from "lucide-react";
+import {
+  mobileNavigation,
+  navigationItemActive,
+} from "@/components/layout/navigation";
+import { cn } from "@/lib/utils";
 
-const navigation = [
-  { label: "首页", href: "/", icon: Home }, { label: "AI 助手", href: "/personas", icon: MessageCircle },
-  { label: "创作", href: "/create", icon: PenLine }, { label: "工具", href: "/tools", icon: Wrench },
-  { label: "我的", href: "/account", icon: CircleUserRound },
-];
+function MobileItem({ item, pathname }: { item: (typeof mobileNavigation)[number]; pathname: string }) {
+  const active = navigationItemActive(pathname, item.href);
+  return (
+    <Link
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-control px-1 text-[.625rem] font-medium transition-colors duration-panel",
+        active ? "text-primary" : "text-muted-foreground active:bg-surface-muted",
+      )}
+      href={item.href}
+    >
+      <item.icon aria-hidden="true" className="size-[1.05rem]" />
+      <span className="max-w-full truncate">{item.label}</span>
+    </Link>
+  );
+}
 
 export function MobileNavigation() {
   const pathname = usePathname();
-  return <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-2xl border bg-card/90 px-1 pb-[max(.3rem,env(safe-area-inset-bottom))] pt-1 shadow-soft backdrop-blur-xl md:hidden" aria-label="移动端主导航">{navigation.map((item) => { const active = navigationItemActive(pathname, item.href); return <Link aria-current={active ? "page" : undefined} className={active ? "flex min-w-0 flex-col items-center gap-1 rounded-xl bg-muted px-1 py-2 text-[11px] font-medium text-foreground" : "flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] text-muted-foreground"} href={item.href} key={item.href}><item.icon className="size-5" aria-hidden="true" /><span className="max-w-full truncate">{item.label}</span></Link>; })}</nav>;
+  const [home, chat, personas, tools] = mobileNavigation;
+
+  return (
+    <nav
+      aria-label="移动端主导航"
+      data-mobile-navigation
+      className="fixed inset-x-2.5 bottom-[max(.625rem,env(safe-area-inset-bottom))] z-50 grid h-[4.125rem] grid-cols-[1fr_1fr_4rem_1fr_1fr] items-center rounded-[1.375rem] border border-border/12 bg-surface-raised/90 px-2 py-1 shadow-[0_20px_60px_hsl(var(--overlay)/.20)] backdrop-blur-2xl min-[821px]:hidden"
+    >
+      <MobileItem item={home} pathname={pathname} />
+      <MobileItem item={chat} pathname={pathname} />
+      <Link
+        aria-label="新建对话"
+        className="grid size-[3.125rem] place-items-center justify-self-center rounded-[1.125rem] bg-foreground text-background shadow-[0_10px_25px_hsl(var(--overlay)/.25)] transition-transform active:scale-95"
+        href="/chat"
+      >
+        <Plus aria-hidden="true" className="size-6" />
+      </Link>
+      <MobileItem item={personas} pathname={pathname} />
+      <MobileItem item={tools} pathname={pathname} />
+    </nav>
+  );
 }
