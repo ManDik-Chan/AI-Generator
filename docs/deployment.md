@@ -74,6 +74,12 @@ pnpm memory:embed:backfill -- --user=<uuid> --limit=300
 
 必须显式提供 `--all` 或 `--user`。默认批次 16，最大 32；有效 hash/model/dimensions 会跳过，可中断后续跑。脚本只打印 scanned/skipped/generated/failed，不打印 Memory、向量或 Key。Provider 限流时停止，不无限重试。
 
+### Phase 5A3-2 真实部署验收
+
+项目所有者已确认 `20260713150000_add_memory_embeddings`、Supabase vector extension、`memory_embeddings` 和 Embedding-3 512 维均部署通过；现有 Memory 回填结果为 scanned 1、generated 1、failed 0。不同表达语义召回、Hybrid RRF、Memory 更新后向量重建、Cascade、隔离与错误配置安全降级均通过。
+
+390px、430px、1440px 管理页和聊天无刷新验收通过。人格头像曾因本地 `SUPABASE_SERVICE_ROLE_KEY` 为空返回 503，恢复本地服务端配置后正常，确认不是本阶段代码回归。文档和仓库不记录该变量的真实值。
+
 ## Vercel 流程
 
 1. 建立 Supabase 项目并记录区域。

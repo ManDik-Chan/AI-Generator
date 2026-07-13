@@ -61,3 +61,20 @@ pnpm memory:embed:backfill -- --user=<uuid> --limit=300
 启用时，Memory 整理文本和当前问题可能发送到配置的 Embedding Provider。向量只保存在当前项目数据库，不返回浏览器、不与其他用户共享。总开关关闭时不召回、不生成查询向量、不自动提取。用户仍可查看、编辑、停用和删除原 Memory。
 
 本阶段只处理长期 Memory，不实现文件/网页 RAG、Message 向量化、外部知识库、自动删除或历史重复自动合并。Phase 6 未开始。
+
+## 真实验收状态
+
+项目所有者已于 2026-07-13 完成真实本地验收：
+
+- Supabase migration `20260713150000_add_memory_embeddings` 与 vector extension：通过。
+- `memory_embeddings` 表、Embedding-3 固定 512 维：通过。
+- 现有 Memory 回填：scanned 1、generated 1、failed 0，通过。
+- 不同表达语义召回：通过；“中央处理单元”召回 CPU，“设备核心硬件”召回完整配置，“负责图形运算的部件”召回显卡。
+- 确定性关键词、`topicKey` / `keywords` 与 Hybrid RRF 混合排序：通过，无退化。
+- 自动 CREATE、同主题 UPDATE、Memory 内容变化后的 contentHash 与向量重建：通过。
+- 用户和 Persona 隔离、Memory 删除 Cascade、配置错误安全降级：通过。
+- 390px、430px、1440px 管理页面：通过。
+- 聊天流式输出、History API 浅更新、无整页刷新和无全屏 loading：通过。
+- 未提交 `.env`、API Key、Service Role Key、数据库密码、向量或用户隐私数据。
+
+Phase 5A3-2 已完成。这仍不是文件或网页 RAG，没有 Message 全文向量化、自动删除或自动批量合并；Phase 6 未开始。

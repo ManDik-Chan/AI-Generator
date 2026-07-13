@@ -139,4 +139,10 @@ Phase 5A3-1 已完成。
 
 启用语义召回时，Memory 整理文本和当前问题可能发送到配置的 Embedding Provider；向量只保存在当前项目数据库，不返回浏览器、不与其他用户共享。总开关关闭时不召回、不生成 query embedding、不自动提取。删除 Memory 会同步 Cascade 删除向量。
 
-本阶段不是外部文件 RAG：不向量化 Message，不抓取网页，不建立文件知识库。真实 Supabase migration、Embedding-3 回填和语义查询待项目所有者验收；Phase 6 未开始。
+本阶段不是外部文件 RAG：不向量化 Message，不抓取网页，不建立文件知识库，也不自动删除或批量合并历史记忆。
+
+## Phase 5A3-2 真实验收
+
+项目所有者已于 2026-07-13 确认 Supabase migration/vector extension、Embedding-3 512 维回填、不同表达语义召回、确定性 + `topicKey` / `keywords` + Hybrid RRF、Memory 更新后向量重建、contentHash、用户/Persona 隔离、Cascade 删除和配置失败安全降级全部通过。回填结果为 scanned 1、generated 1、failed 0。
+
+“中央处理单元”“设备核心硬件”“负责图形运算的部件”等表达分别成功召回 CPU、完整电脑配置和显卡。390px、430px、1440px 页面与聊天流式、浅 URL、无整页刷新/全屏 loading 均通过。Phase 5A3-2 已完成；没有文件/网页 RAG 或 Message 全文向量化，Phase 6 未开始。
