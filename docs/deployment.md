@@ -82,6 +82,16 @@ pnpm memory:embed:backfill -- --user=<uuid> --limit=300
 
 ## Vercel 流程
 
+## Phase 6A1 工具部署
+
+1. 部署独立 migration `20260713190000_add_tool_runs`，它创建 `ToolType`、`ToolRunStatus`、`tool_runs`、长度/隐私约束、索引、Profile Cascade 与 RLS。
+2. 再次执行最新版 `prisma/rls.sql`；所有 tool_runs policy 均先 `drop policy if exists`，脚本可重复执行。
+3. 可选配置 `AI_TOOL_MODEL`、`AI_TOOL_TEMPERATURE`、`AI_TOOL_MAX_OUTPUT_TOKENS`、`AI_TOOL_REQUEST_TIMEOUT_MS` 与 `AI_DAILY_TOOL_LIMIT`。模型为空时回退 `AI_MODEL`，Base URL 与 Key 复用现有服务端 AI 配置。
+4. 未配置 AI Key 时 `/tools` 仍能构建和打开，提交返回友好 503。工具不要求真实 pgvector 连接。
+5. PENDING 超过 15 分钟会在用户打开工具历史时安全恢复为 ERROR/TIMEOUT，避免永久 PENDING。每日次数按 UTC 日期统计所有终态和 PENDING；输入校验失败不计数。
+
+项目所有者已确认 `20260713190000_add_tool_runs`、最新版 RLS、真实 GLM-5.2 三工具、SSE/停止与迟到流保护、历史隐私、每日限额、Prompt 注入复验和 390/430/768/1440px 全部通过。聊天、人格、头像和长期记忆无回归；页面无全屏 loading 或整页刷新。工具不创建聊天记录、不读取或写入长期记忆、不绑定 Persona。仓库和文档不记录真实 Key、数据库凭据、用户测试正文或模型原始输出。Phase 6A2 与 Phase 7 未开始。
+
 1. 建立 Supabase 项目并记录区域。
 2. 配置 pooled `DATABASE_URL` 与迁移用 `DIRECT_URL`。
 3. 应用 Prisma migrations 和 RLS SQL。

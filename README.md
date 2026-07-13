@@ -1,5 +1,7 @@
 # AI-Generator V2
 
+> Phase 6A1 已完成真实验收：`ToolRun` migration/RLS、GLM-5.2 文本总结/改写/翻译、SSE 与停止、历史隐私、每日限额、Prompt 注入复验和 390/430/768/1440px 响应式均通过。可信工具选项只进入 system，user 仅承载 JSON 序列化的不可信文本，有限滚动输出守卫负责泄露兜底。工具不创建 Conversation/Message、不读取或写入长期记忆、不绑定 Persona；不包含文件上传、OCR 或 RAG。Phase 6A2 与 Phase 7 未开始。详见 `docs/tool-system.md`。
+
 > Phase 5A3-2 已完成真实验收：长期记忆采用确定性关键词、`topicKey` / `keywords`、512 维 Embedding 语义召回与 Hybrid RRF；未配置或运行失败时安全退回关键词召回。这不是外部文件 RAG。详见 `docs/memory-semantic-retrieval.md`。
 
 面向亲朋好友使用的私人 AI 助手平台。V2 使用 Next.js 15、TypeScript 与 Tailwind CSS 重构，目标是简单、稳定、美观和易维护。

@@ -8,6 +8,7 @@ alter table public.messages enable row level security;
 alter table public.memories enable row level security;
 alter table public.memory_embeddings enable row level security;
 alter table public.generated_images enable row level security;
+alter table public.tool_runs enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
@@ -51,6 +52,19 @@ create policy "memory_embeddings_delete_own" on public.memory_embeddings
 drop policy if exists "generated_images_own_all" on public.generated_images;
 create policy "generated_images_own_all" on public.generated_images
   for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "tool_runs_select_own" on public.tool_runs;
+create policy "tool_runs_select_own" on public.tool_runs
+  for select using (user_id = auth.uid());
+drop policy if exists "tool_runs_insert_own" on public.tool_runs;
+create policy "tool_runs_insert_own" on public.tool_runs
+  for insert with check (user_id = auth.uid());
+drop policy if exists "tool_runs_update_own" on public.tool_runs;
+create policy "tool_runs_update_own" on public.tool_runs
+  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "tool_runs_delete_own" on public.tool_runs;
+create policy "tool_runs_delete_own" on public.tool_runs
+  for delete using (user_id = auth.uid());
 
 drop policy if exists "messages_via_conversation" on public.messages;
 create policy "messages_via_conversation" on public.messages

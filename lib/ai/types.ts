@@ -32,6 +32,14 @@ export interface MemoryGenerationConfig {
   requestTimeoutMs: number;
 }
 
+export interface ToolGenerationConfig {
+  model: string;
+  temperature: number;
+  maxOutputTokens: number;
+  requestTimeoutMs: number;
+  dailyLimit: number;
+}
+
 export interface AiProviderConfig {
   provider: "openai-compatible";
   baseUrl: string;
