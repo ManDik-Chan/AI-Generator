@@ -36,7 +36,7 @@ MEMORY_MAX_CHARS=2400
 AI_MEMORY_MODEL=
 AI_MEMORY_TEMPERATURE=0.1
 AI_MEMORY_MAX_OUTPUT_TOKENS=1000
-AI_MEMORY_REQUEST_TIMEOUT_MS=45000
+AI_MEMORY_REQUEST_TIMEOUT_MS=90000
 AUTH_SECRET=
 ```
 
@@ -45,6 +45,8 @@ Supabase URL 与 anon key 可在客户端使用；service role、数据库连接
 AI 环境变量必须分别配置到 Vercel Preview 与 Production，禁止写入仓库。未配置 AI 时构建仍会成功，聊天页显示配置提示，`POST /api/chat` 返回友好 503，不泄露内部配置。
 
 Phase 5A1 使用已部署的 `20260713010000_add_memory_foundation`，本次自动提取调整没有新增 migration。`prisma/rls.sql` 已在每个 policy 前执行 `drop policy if exists`，可以安全重复运行。`AI_MEMORY_MODEL` 为空时回退 `AI_MODEL`；其余变量限制后台提取的低温度、输出和超时。上线前应连续执行两次 RLS，并用两个用户验证跨用户资源均被拒绝。
+
+开发环境首次使用自动记忆时只输出模型名、90 秒超时和是否回退主模型，不输出 Key 或 Base URL。专用模型返回 NOT_FOUND 时可回退 `AI_MODEL` 一次；RATE_LIMITED 最多等待 2 秒重试一次；AUTHENTICATION 与 TIMEOUT 不重试。后台失败日志只包含安全阶段、请求/用户/对话/来源 ID、Provider code/status 和配置模型。
 
 ## Vercel 流程
 

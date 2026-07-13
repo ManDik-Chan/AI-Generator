@@ -18,8 +18,9 @@ export function scheduleMemoryExtraction(
     } catch (error) {
       console.warn("memory_extraction_failed", {
         ...context,
-        errorCode: error instanceof Error ? error.name : "UNKNOWN",
+        ...safeMemoryFailureDetails(error),
       });
     }
   });
 }
+import { safeMemoryFailureDetails } from "@/features/memory/diagnostics";

@@ -37,7 +37,7 @@ export function getMemoryGenerationConfig(env: Environment = process.env): Memor
     model: env.AI_MEMORY_MODEL?.trim() || base.model,
     temperature: numberFromEnvironment(env.AI_MEMORY_TEMPERATURE, 0.1, 0, 1),
     maxOutputTokens: numberFromEnvironment(env.AI_MEMORY_MAX_OUTPUT_TOKENS, 1000, 100, 4000),
-    requestTimeoutMs: numberFromEnvironment(env.AI_MEMORY_REQUEST_TIMEOUT_MS, 45_000, 1_000, 120_000),
+    requestTimeoutMs: numberFromEnvironment(env.AI_MEMORY_REQUEST_TIMEOUT_MS, 90_000, 1_000, 180_000),
   };
 }
 

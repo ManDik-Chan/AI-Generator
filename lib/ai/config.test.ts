@@ -29,7 +29,7 @@ describe("AI configuration", () => {
 
   it("uses low-cost memory defaults and an optional model override", () => {
     const base = { AI_BASE_URL: "https://example.com/v1", AI_API_KEY: "secret", AI_MODEL: "shared" };
-    expect(getMemoryGenerationConfig(base)).toMatchObject({ model: "shared", temperature: 0.1, maxOutputTokens: 1000, requestTimeoutMs: 45000 });
+    expect(getMemoryGenerationConfig(base)).toMatchObject({ model: "shared", temperature: 0.1, maxOutputTokens: 1000, requestTimeoutMs: 90000 });
     expect(getMemoryGenerationConfig({ ...base, AI_MEMORY_MODEL: "memory-model", AI_MEMORY_MAX_OUTPUT_TOKENS: "700" })).toMatchObject({ model: "memory-model", maxOutputTokens: 700 });
   });
 });

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
-import { collectGeneratedText } from "@/lib/ai/collect-text";
+import { AiProviderError } from "@/lib/ai/errors";
+import type { AiStreamRequest } from "@/lib/ai/types";
 import { getMemoryAiProvider } from "@/lib/ai/registry";
 import { buildMemoryExtractorPrompt, buildMemoryJsonRepairPrompt } from "@/lib/ai/prompts/memory-extractor";
 import { prisma } from "@/lib/database/prisma";
@@ -12,6 +13,8 @@ import {
   shouldRunMemoryExtraction,
 } from "@/features/memory/extraction";
 import { containsHighConfidenceCredential, normalizeMemoryContent } from "@/features/memory/security";
+import { MemoryExtractionFailure, type MemoryExtractionStage } from "@/features/memory/diagnostics";
+import { requestMemoryModelText } from "@/features/memory/provider";
 
 interface ExtractMemoryInput {
   userId: string;
@@ -25,7 +28,11 @@ interface ExtractMemoryInput {
 }
 
 export async function extractAndPersistMemories(input: ExtractMemoryInput) {
-  if (!shouldRunMemoryExtraction(input.currentUserMessage)) return { created: 0, updated: 0 };
+  const explicitIntent = detectExplicitMemoryIntent(input.currentUserMessage);
+  let stage: MemoryExtractionStage = "eligibility";
+  let configuredModel: string | undefined;
+  try {
+    if (!shouldRunMemoryExtraction(input.currentUserMessage)) return { created: 0, updated: 0 };
 
   const eligibility = await prisma.message.findFirst({
     where: {
@@ -53,7 +60,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
   });
   if (alreadyProcessed) return { created: 0, updated: 0 };
 
-  const explicitIntent = detectExplicitMemoryIntent(input.currentUserMessage);
+  stage = "load_context";
   let priorUserMessages: string[] = [];
   let supportingAssistantMessages: string[] = [];
   if (explicitIntent) {
@@ -88,8 +95,10 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     select: { id: true, content: true, category: true, scope: true, importance: true, updatedAt: true },
   });
   const candidates = selectExtractionCandidates([input.currentUserMessage, ...priorUserMessages].join("\n"), rows);
-  const { config, provider } = getMemoryAiProvider();
-  const output = await collectGeneratedText(provider, {
+  stage = "provider_request";
+  const { config, fallbackModel, provider } = getMemoryAiProvider();
+  configuredModel = config.model;
+  const providerRequest: AiStreamRequest = {
     messages: [{
       role: "system",
       content: buildMemoryExtractorPrompt({
@@ -106,21 +115,24 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     model: config.model,
     temperature: config.temperature,
     maxOutputTokens: config.maxOutputTokens,
-  });
+  };
+  const initialResponse = await requestMemoryModelText({ provider, request: providerRequest, fallbackModel });
+  stage = "provider_response";
+  const output = initialResponse.text;
   let parsed;
   try {
+    stage = "parse";
     parsed = parseMemoryExtractionOutput(output);
   } catch {
-    const repairedOutput = await collectGeneratedText(provider, {
-      messages: [{ role: "system", content: buildMemoryJsonRepairPrompt(output) }],
-      model: config.model,
-      temperature: 0,
-      maxOutputTokens: config.maxOutputTokens,
-    });
-    parsed = parseMemoryExtractionOutput(repairedOutput);
+    stage = "repair_request";
+    const repaired = await requestMemoryModelText({ provider, fallbackModel: initialResponse.modelUsed, allowProviderRetry: false, request: { messages: [{ role: "system", content: buildMemoryJsonRepairPrompt(output) }], model: initialResponse.modelUsed, temperature: 0, maxOutputTokens: config.maxOutputTokens } });
+    stage = "parse";
+    parsed = parseMemoryExtractionOutput(repaired.text);
   }
+  stage = "validate";
   const candidateIds = new Set(candidates.map((memory) => memory.id));
 
+  stage = "persist";
   return prisma.$transaction(async (transaction) => {
     const sourceStillActive = await transaction.message.findFirst({
       where: { id: input.sourceMessageId, conversationId: input.conversationId, role: "USER", status: "COMPLETE", supersededAt: null, conversation: { userId: input.userId, user: { memoryEnabled: true } } },
@@ -157,4 +169,8 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     }
     return { created, updated };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  } catch (error) {
+    const resolvedStage = stage === "provider_request" && error instanceof AiProviderError && ["INVALID_RESPONSE", "EMPTY_RESPONSE"].includes(error.code) ? "provider_response" : stage;
+    throw new MemoryExtractionFailure(resolvedStage, error, explicitIntent, configuredModel);
+  }
 }

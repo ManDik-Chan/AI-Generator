@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { scheduleMemoryExtraction } from "@/features/memory/after";
+import { MemoryExtractionFailure } from "@/features/memory/diagnostics";
+import { AiProviderError } from "@/lib/ai/errors";
 
 describe("Next after memory scheduling", () => {
   it("registers without awaiting the extraction task", async () => {
@@ -16,8 +18,21 @@ describe("Next after memory scheduling", () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     scheduleMemoryExtraction((scheduled) => { callback = scheduled; }, async () => { throw new Error("secret body"); }, { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m" });
     await callback?.();
-    expect(warning).toHaveBeenCalledWith("memory_extraction_failed", { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m", errorCode: "Error" });
+    expect(warning).toHaveBeenCalledWith("memory_extraction_failed", expect.objectContaining({ requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m", stage: "persist", errorCode: "Error" }));
     expect(JSON.stringify(warning.mock.calls)).not.toContain("secret body");
+    warning.mockRestore();
+  });
+
+  it("logs the real provider code and status without prompt or credentials", async () => {
+    let callback: (() => Promise<void>) | undefined;
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const failure = new MemoryExtractionFailure("provider_request", new AiProviderError("AUTHENTICATION", "Bearer secret-key prompt-body", 401), "PREVIOUS_CONTEXT", "memory-model");
+    scheduleMemoryExtraction((scheduled) => { callback = scheduled; }, async () => { throw failure; }, { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m" });
+    await callback?.();
+    expect(warning).toHaveBeenCalledWith("memory_extraction_failed", { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m", stage: "provider_request", explicitIntent: "PREVIOUS_CONTEXT", providerCode: "AUTHENTICATION", providerStatus: 401, configuredModel: "memory-model" });
+    const logged = JSON.stringify(warning.mock.calls);
+    expect(logged).not.toContain("secret-key");
+    expect(logged).not.toContain("prompt-body");
     warning.mockRestore();
   });
 });

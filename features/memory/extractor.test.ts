@@ -12,8 +12,9 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/ai/collect-text", () => ({ collectGeneratedText: mocks.collect }));
+vi.mock("@/features/memory/provider", () => ({ requestMemoryModelText: async (input: unknown) => ({ text: await mocks.collect(input), modelUsed: "memory-model" }) }));
 vi.mock("@/lib/ai/registry", () => ({
-  getMemoryAiProvider: () => ({ config: { model: "memory-model", temperature: 0.1, maxOutputTokens: 1000 }, provider: {} }),
+  getMemoryAiProvider: () => ({ config: { model: "memory-model", temperature: 0.1, maxOutputTokens: 1000 }, fallbackModel: "shared-model", provider: {} }),
 }));
 vi.mock("@/lib/database/prisma", () => ({
   prisma: {
@@ -24,6 +25,7 @@ vi.mock("@/lib/database/prisma", () => ({
 }));
 
 import { extractAndPersistMemories } from "@/features/memory/extractor";
+import { AiProviderError } from "@/lib/ai/errors";
 
 const input = {
   userId: "user-a",
@@ -104,6 +106,19 @@ describe("automatic memory persistence", () => {
     mocks.messageFindFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: input.assistantMessageId });
     await expect(extractAndPersistMemories(input)).resolves.toEqual({ created: 0, updated: 0 });
     expect(mocks.collect).not.toHaveBeenCalled();
+  });
+
+  it("wraps provider failures with the exact stage and configured model without persisting", async () => {
+    eligible();
+    mocks.collect.mockRejectedValue(new AiProviderError("AUTHENTICATION", "secret provider body", 401));
+    await expect(extractAndPersistMemories(input)).rejects.toMatchObject({
+      stage: "provider_request",
+      explicitIntent: undefined,
+      configuredModel: "memory-model",
+      originalError: expect.objectContaining({ code: "AUTHENTICATION", status: 401 }),
+    });
+    expect(mocks.memoryCreate).not.toHaveBeenCalled();
+    expect(mocks.memoryUpdateMany).not.toHaveBeenCalled();
   });
 
   it("loads earlier USER messages for an explicit previous-context request and creates one consolidated configuration", async () => {

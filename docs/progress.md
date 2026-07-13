@@ -21,6 +21,8 @@ Phase 5A1 产品方向已调整为自然自动记忆：成功回答后通过 Nex
 
 真实验收发现明确“记住我的电脑配置”无法利用更早 USER 内容，且模型 JSON 包装会导致解析失败。现已增加显式记忆意图分类、同对话最多 15 条历史 USER 扩展上下文、USER 事实可追溯检查、主题合并/UPDATE 指令、JSON 包装兼容与最多一次修复请求；基础助手也不再否认长期记忆能力。
 
+随后真实联调定位到后台错误诊断只记录 `AiProviderError` 类名。现已增加八阶段安全诊断、真实 Provider code/status、开发环境脱敏配置提示，以及 NOT_FOUND 主模型回退、RATE_LIMITED 单次延迟重试、90 秒默认超时和部分 INVALID_RESPONSE 文本继续解析。
+
 项目所有者已在真实 Supabase 执行 `20260713010000_add_memory_foundation`。本次没有修改该 migration，也没有新增 migration；真实 GLM-5.2 自动记忆与连续聊天无闪屏仍待验收。
 
 ## 当前状态
@@ -194,7 +196,7 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 
 - 记忆输入、凭据拦截、自动提取、非阻塞 after、关系所有权、作用域隔离、确定性召回、预算、Prompt 转义和聊天无导航刷新均有自动测试。
 - `pnpm install`：通过，依赖已是最新状态。
-- `pnpm test`：45 个测试文件、251 项测试通过。
+- `pnpm test`：46 个测试文件、258 项测试通过。
 - `pnpm lint`：通过，0 warnings。
 - `pnpm typecheck`：通过。
 - `pnpm build`：通过，`/memories` 按需动态渲染。

@@ -18,6 +18,8 @@ describe("runtime persona assistant prompt", () => {
     expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("当前平台支持长期记忆");
     expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("我会尝试将这些信息整理到长期记忆中");
     expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("不要在后台保存完成前保证已经保存成功");
+    expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("你可以稍后在‘AI 记住的内容’页面查看");
+    expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).toContain("不得回复“已经保存到记忆”“已加入长期记忆”或“我已经记住了”");
     expect(DEFAULT_ASSISTANT_SYSTEM_PROMPT).not.toContain("不声称具备联网搜索、读取文件、访问网页、长期记忆");
   });
 });

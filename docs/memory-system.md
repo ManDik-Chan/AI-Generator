@@ -26,12 +26,14 @@
 AI_MEMORY_MODEL=
 AI_MEMORY_TEMPERATURE=0.1
 AI_MEMORY_MAX_OUTPUT_TOKENS=1000
-AI_MEMORY_REQUEST_TIMEOUT_MS=45000
+AI_MEMORY_REQUEST_TIMEOUT_MS=90000
 ```
 
 模型为空时回退 `AI_MODEL`。输入仅包含当前 USER、当前 ASSISTANT（只用于语境）、最近最多四个完整轮次、当前 Persona 身份和最多 20 条当前用户候选记忆。候选只公开 id、content、category、scope。
 
 模型输出优先按纯 JSON 解析，也兼容 `json`/普通代码块及前后少量说明中的首个完整 JSON 对象，之后始终通过同一 Zod Schema。首次解析失败时只允许一次低温度 JSON 修复请求；不因其他错误重试，修复失败由 `after` 安全记录且不影响聊天。
+
+后台诊断区分 eligibility、load_context、provider_request、provider_response、parse、repair_request、validate 和 persist。AiProviderError 日志保留 code 与 HTTP status，但不记录错误正文、用户消息、Memory、Prompt、模型输出、Key、Cookie 或 URL query。专用 memory model 404 时仅回退主模型一次；429 最多等待 2 秒重试一次；认证和超时不重试。若流在 INVALID_RESPONSE 前已有文本，继续进入 JSON 解析；完全空响应安全失败。
 
 输出为最多三项严格 JSON operation：
 
