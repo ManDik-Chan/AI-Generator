@@ -2,7 +2,7 @@
 
 ## 功能边界
 
-Phase 3 建立默认助手聊天基础；Phase 4A 增加可选 Persona 绑定；Phase 5A1 在成功回答后自动整理长期记忆。不包含任意历史消息编辑、对话分支、向量检索、文件、图片、搜索、语音、重新生成或模型选择 UI。
+Phase 3 建立默认助手聊天基础；Phase 4A 增加可选 Persona 绑定；Phase 5A1 在成功回答后自动整理长期记忆；Phase 5A3-2 为长期 Memory 增加可选混合语义召回。不包含任意历史消息编辑、对话分支、文件/网页 RAG、搜索、语音、重新生成或模型选择 UI。
 
 ## 请求与持久化流程
 
@@ -68,11 +68,12 @@ data: {"message":"..."}
 ## 长期记忆注入
 
 - 只有用户总开关开启时，聊天才查询当前用户启用的 GLOBAL 记忆和当前 Conversation Persona 对应的 PERSONA 记忆。
-- 召回为本地确定性排序，默认最多 8 条、总内容最多 2,400 字符；没有 Embedding、向量数据库或额外 AI 请求。
+- 召回先执行本地确定性排序；可选语义层按 `off` / `adaptive` / `always` 决定是否调用一次 Embedding，并用 Hybrid RRF 融合结果。最终仍最多 8 条、总内容最多 2,400 字符。
 - 记忆按不可信数据进行 XML 转义并放入服务端 system message，不能作为系统指令执行，也不能覆盖当前用户消息与 Persona 安全边界。
 - 召回异常会记录不含记忆内容的结构化警告并继续无记忆聊天。
 - `memory` SSE 仅返回使用条数；助手消息可显示“已参考 N 条长期记忆”，但浏览器不会收到记忆 ID、类别、重要程度或原始召回列表。
 - 只有 Provider 正常完成且助手消息持久化为 COMPLETE 后才更新所选记忆的 `lastUsedAt`。
+- Embedding 或 pgvector 失败自动退回确定性结果；不影响文本模型、消息次数、SSE 完成、浅 URL 或页面状态。相似度和向量不进入 Prompt，也不返回浏览器。
 - `done` 发出后通过 Next.js `after` 安排单次自动提取；停止、Provider ERROR、superseded 消息或总开关关闭时不安排。
 - 新对话收到 `conversationId` 后使用 `window.history.replaceState` 浅更新 URL；每轮结束不调用 App Router refresh/replace，不重新挂载 ChatLayout。
 
@@ -99,5 +100,13 @@ data: {"message":"..."}
 - Memory content、keywords 和 topicKey 可读片段参与确定性匹配，keyword 命中高于普通内容双字词命中。
 - pinned、importance、Persona、updatedAt、lastUsedAt 和封顶的对数 useCount 提供稳定加权，但不能绕过 enabled、scope 或预算。
 - “你记得我什么”等概览意图可选择置顶、高重要性、最近更新或最近使用的记忆。
+
+## Phase 5A3-2 混合语义召回
+
+- 默认 `adaptive`：确定性结果少于 2 条、最高结果无当前词项直接匹配，或出现概览/“之前我说过”等记忆意图时才尝试语义召回；问候、感谢、继续等不调用。
+- 每轮最多生成一次 query embedding；`off` 完全不调用，`always` 主要用于测试。
+- pgvector 查询显式过滤当前 user、enabled、GLOBAL/当前 Persona、模型、512 维、阈值与候选上限。
+- 语义候选不能压过可信的关键词直匹配；融合后再次执行 Persona 隔离、topic 去重和内容预算。
+- 总记忆开关关闭时不查询 Memory、不生成 query embedding，也不自动提取。
 - 同一非空 topicKey 每轮最多注入一条；topicKey 为空时按规范化内容抑制重复。
 - 助手成功 COMPLETE 后，仅对实际注入项原子增加 useCount 并更新 lastUsedAt；停止和 ERROR 不更新。

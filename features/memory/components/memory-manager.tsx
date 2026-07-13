@@ -24,6 +24,7 @@ interface MemoryManagerProps {
   initialPersonaId?: string;
   maxTotal: number;
   referenceNow: string;
+  semanticIndex: { configured: boolean; indexed: number; pending: number; model: string; dimensions: number };
 }
 
 export function MemoryManager({
@@ -33,6 +34,7 @@ export function MemoryManager({
   initialPersonaId,
   maxTotal,
   referenceNow,
+  semanticIndex,
 }: MemoryManagerProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MemoryView>();
@@ -117,10 +119,14 @@ export function MemoryManager({
         <select aria-label="排序记忆" className="h-10 rounded-xl border bg-background px-3 text-sm" onChange={(event) => setSort(event.target.value)} value={sort}><option value="updated">最近更新</option><option value="used">最常使用</option><option value="importance">重要程度</option><option value="lastUsed">最近使用</option></select>
         <details className="relative ml-auto">
           <summary className="cursor-pointer rounded-xl border px-3 py-2 text-sm">更多操作</summary>
-          <div className="absolute right-0 z-10 mt-2 w-48 rounded-xl border bg-card p-2 shadow-lg">
+          <div className="absolute right-0 z-10 mt-2 w-64 rounded-xl border bg-card p-2 shadow-lg">
             <Button className="w-full justify-start" onClick={() => { setEditing(undefined); setFormOpen(true); }} variant="ghost">
               <Plus className="size-4" />手动添加记忆
             </Button>
+            <div className="mt-2 border-t px-2 pt-3 text-xs text-muted-foreground">
+              <p className="font-medium text-foreground">语义索引状态</p>
+              {semanticIndex.configured ? <><p className="mt-1">已建立索引：{semanticIndex.indexed}</p><p>待建立索引：{semanticIndex.pending}</p><p className="mt-1 break-all">当前模型：{semanticIndex.model}</p><p>当前维度：{semanticIndex.dimensions}</p></> : <p className="mt-1">当前使用关键词召回</p>}
+            </div>
           </div>
         </details>
       </div>
