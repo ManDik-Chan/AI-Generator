@@ -8,12 +8,19 @@ export type AiErrorCode =
   | "UNAVAILABLE"
   | "INVALID_RESPONSE"
   | "EMPTY_RESPONSE"
+  | "REASONING_ONLY_RESPONSE"
   | "INVALID_REQUEST"
   | "UNKNOWN";
 
 export interface AiProviderDiagnostics {
   providerErrorCode?: string;
   providerMessage?: string;
+  reasoningChunkCount?: number;
+  reasoningCharCount?: number;
+  contentChunkCount?: number;
+  contentCharCount?: number;
+  finishReason?: string;
+  terminalEventReceived?: boolean;
 }
 
 export class AiProviderError extends Error {
@@ -46,6 +53,7 @@ export function toPublicAiError(error: unknown): string {
       return "AI 响应超时，请稍后重试。";
     case "INVALID_RESPONSE":
     case "EMPTY_RESPONSE":
+    case "REASONING_ONLY_RESPONSE":
       return "AI 返回了无效内容，请重新尝试。";
     case "INVALID_REQUEST":
       return "AI 请求格式暂时不兼容，请联系管理员检查配置。";

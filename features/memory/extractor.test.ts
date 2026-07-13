@@ -61,7 +61,7 @@ describe("automatic memory persistence", () => {
     eligible();
     mocks.collect.mockResolvedValue(JSON.stringify({ operations: [{ action: "CREATE", content: "用户偏好先给结论，再解释过程", category: "preference", scope: "GLOBAL", importance: 4, topicKey: "preference.answer_style", keywords: ["回答风格", "先给结论"], confidence: 0.95, reasonCode: "preference" }] }));
     await expect(extractAndPersistMemories(input)).resolves.toEqual({ created: 1, updated: 0 });
-    expect(mocks.collect).toHaveBeenCalledWith(expect.objectContaining({ request: expect.objectContaining({ messages: [expect.objectContaining({ role: "system" }), expect.objectContaining({ role: "user" })] }) }));
+    expect(mocks.collect).toHaveBeenCalledWith(expect.objectContaining({ request: expect.objectContaining({ messages: [expect.objectContaining({ role: "system" }), expect.objectContaining({ role: "user" })], thinking: "disabled" }) }));
     expect(mocks.memoryCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: "user-a", origin: "AUTO_EXTRACTED", enabled: true, sourceConversationId: "conversation-a", sourceMessageId: input.sourceMessageId }) });
   });
 
@@ -175,7 +175,7 @@ describe("automatic memory persistence", () => {
     mocks.collect.mockResolvedValueOnce("not json").mockResolvedValueOnce(JSON.stringify({ operations: [] }));
     await extractAndPersistMemories(input);
     expect(mocks.collect).toHaveBeenCalledTimes(2);
-    expect(mocks.collect.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ request: expect.objectContaining({ messages: [expect.objectContaining({ role: "system" }), expect.objectContaining({ role: "user" })] }) }));
+    expect(mocks.collect.mock.calls[1]?.[0]).toEqual(expect.objectContaining({ request: expect.objectContaining({ messages: [expect.objectContaining({ role: "system" }), expect.objectContaining({ role: "user" })], thinking: "disabled", temperature: 0 }) }));
 
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.messageFindMany.mockResolvedValue([]);
@@ -190,10 +190,11 @@ describe("automatic memory persistence", () => {
     const candidateId = "66666666-6666-4666-8666-666666666666";
     eligible();
     mocks.messageFindMany.mockResolvedValue([{ role: "USER", content: "我的电脑原来是 RTX 5070 Ti、i5-12600K 和 2K 240Hz。" }]);
-    mocks.memoryFindMany.mockReset().mockResolvedValueOnce([{ id: candidateId, content: "用户的电脑配置为：RTX 5070 Ti 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。", category: "profile", scope: "GLOBAL", importance: 4, updatedAt: new Date() }]).mockResolvedValueOnce([]);
-    mocks.collect.mockResolvedValue(JSON.stringify({ operations: [{ action: "UPDATE", existingMemoryId: candidateId, content: "用户的电脑配置为：RTX 5080 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。", category: "profile", scope: "GLOBAL", importance: 4, confidence: 0.99, reasonCode: "stable_fact" }] }));
+    mocks.memoryFindMany.mockReset().mockResolvedValueOnce([{ id: candidateId, content: "用户的电脑配置为：RTX 5070 Ti 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。", category: "profile", scope: "GLOBAL", importance: 4, topicKey: "profile.computer_configuration", keywords: ["RTX 5070 Ti", "i5-12600K", "2K 240Hz"], updatedAt: new Date() }]).mockResolvedValueOnce([]);
+    mocks.collect.mockResolvedValue(JSON.stringify({ operations: [{ action: "UPDATE", existingMemoryId: candidateId, content: "用户的电脑配置为：RTX 5080 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。", category: "profile", scope: "GLOBAL", importance: 4, topicKey: "profile.computer_configuration", keywords: ["RTX 5080", "i5-12600K", "2K 240Hz"], confidence: 0.99, reasonCode: "stable_fact" }] }));
     await extractAndPersistMemories({ ...input, currentUserMessage: "我的显卡换成 RTX 5080 了，记住一下。" });
     expect(mocks.memoryCreate).not.toHaveBeenCalled();
-    expect(mocks.memoryUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: candidateId, userId: "user-a" }, data: expect.objectContaining({ content: expect.stringContaining("RTX 5080"), sourceMessageId: input.sourceMessageId }) }));
+    expect(mocks.memoryUpdateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: candidateId, userId: "user-a" }, data: expect.objectContaining({ content: "用户的电脑配置为：RTX 5080 显卡、Intel Core i5-12600K 处理器、2K 240Hz 显示器。", topicKey: "profile.computer_configuration", keywords: ["RTX 5080", "i5-12600K", "2K 240Hz"], sourceMessageId: input.sourceMessageId }) }));
+    expect(mocks.memoryUpdateMany.mock.calls[0]?.[0]?.data.content).not.toContain("RTX 5070 Ti");
   });
 });

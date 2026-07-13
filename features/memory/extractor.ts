@@ -113,6 +113,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     model: config.model,
     temperature: config.temperature,
     maxOutputTokens: config.maxOutputTokens,
+    thinking: "disabled",
   };
   const initialResponse = await requestMemoryModelText({ provider, request: providerRequest, fallbackModel });
   stage = "provider_response";
@@ -123,7 +124,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     parsed = parseMemoryExtractionOutput(output);
   } catch {
     stage = "repair_request";
-    const repaired = await requestMemoryModelText({ provider, fallbackModel: initialResponse.modelUsed, allowProviderRetry: false, request: { messages: buildMemoryJsonRepairMessages(output), model: initialResponse.modelUsed, temperature: 0, maxOutputTokens: config.maxOutputTokens } });
+    const repaired = await requestMemoryModelText({ provider, fallbackModel: initialResponse.modelUsed, allowProviderRetry: false, request: { messages: buildMemoryJsonRepairMessages(output), model: initialResponse.modelUsed, temperature: 0, maxOutputTokens: config.maxOutputTokens, thinking: "disabled" } });
     stage = "parse";
     parsed = parseMemoryExtractionOutput(repaired.text);
   }
@@ -180,7 +181,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     return { created, updated };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
-    const resolvedStage = stage === "provider_request" && error instanceof AiProviderError && ["INVALID_RESPONSE", "EMPTY_RESPONSE"].includes(error.code) ? "provider_response" : stage;
+    const resolvedStage = stage === "provider_request" && error instanceof AiProviderError && ["INVALID_RESPONSE", "EMPTY_RESPONSE", "REASONING_ONLY_RESPONSE"].includes(error.code) ? "provider_response" : stage;
     throw new MemoryExtractionFailure(resolvedStage, error, explicitIntent, configuredModel);
   }
 }

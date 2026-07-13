@@ -62,6 +62,35 @@ describe("OpenAI-compatible SSE parsing", () => {
     await expect(collect(parseOpenAiCompatibleSse(stream))).resolves.toEqual(["ok"]);
   });
 
+  it("returns only final content when reasoning and content are both present", async () => {
+    const stream = sseStream([
+      'data: {"choices":[{"delta":{"reasoning_content":"private reasoning"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"final"},"finish_reason":"stop"}]}\n\n',
+    ]);
+    await expect(collect(parseOpenAiCompatibleSse(stream))).resolves.toEqual(["final"]);
+  });
+
+  it("distinguishes reasoning-only and fully empty terminal responses", async () => {
+    const reasoningOnly = sseStream([
+      'data: {"choices":[{"delta":{"reasoning_content":"private reasoning"}}]}\n\n',
+      'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n',
+    ]);
+    await expect(collect(parseOpenAiCompatibleSse(reasoningOnly))).rejects.toMatchObject({
+      code: "REASONING_ONLY_RESPONSE",
+      diagnostics: {
+        reasoningChunkCount: 1,
+        reasoningCharCount: 17,
+        contentChunkCount: 0,
+        contentCharCount: 0,
+        finishReason: "length",
+        terminalEventReceived: true,
+      },
+    });
+
+    const empty = sseStream(['data: {"choices":[{"delta":{},"finish_reason":"stop"}]}\n\n']);
+    await expect(collect(parseOpenAiCompatibleSse(empty))).rejects.toMatchObject({ code: "EMPTY_RESPONSE" });
+  });
+
   it("rejects a stream that ends before DONE or finish_reason", async () => {
     const stream = sseStream(['data: {"choices":[{"delta":{"content":"partial"}}]}\n\n']);
     await expect(collect(parseOpenAiCompatibleSse(stream))).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
@@ -91,5 +120,23 @@ describe("OpenAI-compatible SSE parsing", () => {
     expect(failure.diagnostics?.providerMessage).not.toContain(config.apiKey);
     expect(failure.diagnostics?.providerMessage).not.toContain("private prompt");
     expect(failure.diagnostics?.providerMessage).not.toContain("?token=secret");
+  });
+
+  it("sends thinking only when the caller explicitly configures it", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    const provider = createOpenAiCompatibleProvider(config, {
+      fetchImplementation: async (_url, init) => {
+        bodies.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+        return new Response('data: {"choices":[{"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\n', {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        });
+      },
+    });
+    const baseRequest = { messages: [{ role: "user" as const, content: "hello" }], model: config.model, temperature: 0.7, maxOutputTokens: 10 };
+    await collect(provider.streamText(baseRequest));
+    await collect(provider.streamText({ ...baseRequest, thinking: "disabled" }));
+    expect(bodies[0]).not.toHaveProperty("thinking");
+    expect(bodies[1]).toMatchObject({ thinking: { type: "disabled" } });
   });
 });

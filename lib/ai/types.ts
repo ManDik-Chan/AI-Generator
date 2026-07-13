@@ -10,6 +10,7 @@ export interface AiStreamRequest {
   model: string;
   temperature: number;
   maxOutputTokens: number;
+  thinking?: "enabled" | "disabled";
   signal?: AbortSignal;
 }
 
