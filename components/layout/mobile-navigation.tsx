@@ -6,7 +6,7 @@ const navigation = [
   { label: "AI助手", href: "/personas", icon: MessageCircle },
   { label: "创作", href: "/create", icon: PenLine },
   { label: "工具", href: "/tools", icon: Wrench },
-  { label: "我的", href: "/settings", icon: CircleUserRound },
+  { label: "我的", href: "/account", icon: CircleUserRound },
 ];
 
 export function MobileNavigation() {

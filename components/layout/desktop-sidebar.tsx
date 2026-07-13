@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, Home, MessageSquareText, Settings, Shapes, Wrench } from "lucide-react";
+import { Bot, Brain, Home, MessageSquareText, Settings, Shapes, Wrench } from "lucide-react";
 
 import { Brand } from "@/components/layout/brand";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ const navigation = [
   { label: "首页", href: "/", icon: Home, active: true },
   { label: "聊天", href: "/chat", icon: MessageSquareText },
   { label: "人格", href: "/personas", icon: Shapes },
+  { label: "记忆", href: "/memories", icon: Brain },
   { label: "工具", href: "/tools", icon: Wrench },
   { label: "设置", href: "/settings", icon: Settings },
 ];

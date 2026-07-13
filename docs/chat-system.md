@@ -2,7 +2,7 @@
 
 ## 功能边界
 
-Phase 3 建立默认助手聊天基础；Phase 4A 在不改变 SSE、停止生成和编辑重提语义的前提下，为新对话增加可选 Persona 绑定。不包含任意历史消息编辑、对话分支、记忆、文件、图片、搜索、语音、重新生成或模型选择 UI。
+Phase 3 建立默认助手聊天基础；Phase 4A 增加可选 Persona 绑定；Phase 5A1 在成功回答后自动整理长期记忆。不包含任意历史消息编辑、对话分支、向量检索、文件、图片、搜索、语音、重新生成或模型选择 UI。
 
 ## 请求与持久化流程
 
@@ -50,6 +50,9 @@ data: {"conversationId":"...","updatedAt":"2026-07-12T12:00:00.000Z"}
 event: turn
 data: {"conversationId":"...","userMessageId":"...","assistantMessageId":"...","editedMessageId":"..."}
 
+event: memory
+data: {"count":2}
+
 event: delta
 data: {"text":"..."}
 
@@ -61,6 +64,17 @@ data: {"message":"..."}
 ```
 
 浏览器不解析 GLM/OpenAI 原始响应。
+
+## 长期记忆注入
+
+- 只有用户总开关开启时，聊天才查询当前用户启用的 GLOBAL 记忆和当前 Conversation Persona 对应的 PERSONA 记忆。
+- 召回为本地确定性排序，默认最多 8 条、总内容最多 2,400 字符；没有 Embedding、向量数据库或额外 AI 请求。
+- 记忆按不可信数据进行 XML 转义并放入服务端 system message，不能作为系统指令执行，也不能覆盖当前用户消息与 Persona 安全边界。
+- 召回异常会记录不含记忆内容的结构化警告并继续无记忆聊天。
+- `memory` SSE 仅返回使用条数；助手消息可显示“已参考 N 条长期记忆”，但浏览器不会收到记忆 ID、类别、重要程度或原始召回列表。
+- 只有 Provider 正常完成且助手消息持久化为 COMPLETE 后才更新所选记忆的 `lastUsedAt`。
+- `done` 发出后通过 Next.js `after` 安排单次自动提取；停止、Provider ERROR、superseded 消息或总开关关闭时不安排。
+- 新对话收到 `conversationId` 后使用 `window.history.replaceState` 浅更新 URL；每轮结束不调用 App Router refresh/replace，不重新挂载 ChatLayout。
 
 ## Markdown 安全
 

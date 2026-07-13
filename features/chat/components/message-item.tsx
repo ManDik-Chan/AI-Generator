@@ -71,6 +71,7 @@ export function MessageItem(props: MessageItemProps) {
         {!isUser && message.status === "error" && (
           <p className="mt-3 flex items-center gap-1.5 text-xs text-red-600 dark:text-red-300"><AlertCircle className="size-3.5" />本次生成未正常完成</p>
         )}
+        {!isUser && message.memoryCount ? <p className="mt-3 text-xs text-muted-foreground">已参考 {message.memoryCount} 条长期记忆</p> : null}
       </div>
       {isUser && <div className="mt-1 flex shrink-0 flex-col items-center gap-1">
         <span className="grid size-8 place-items-center rounded-xl border bg-card"><UserRound className="size-4" /></span>

@@ -26,12 +26,24 @@ enum MessageStatus {
   ERROR
 }
 
+enum MemoryScope {
+  GLOBAL
+  PERSONA
+}
+
+enum MemoryOrigin {
+  MANUAL
+  CHAT_MESSAGE
+  AUTO_EXTRACTED
+}
+
 model Profile {
   id          String   @id @db.Uuid
   email       String   @unique
   displayName String?  @map("display_name")
   avatarUrl   String?  @map("avatar_url")
   role        Role     @default(USER)
+  memoryEnabled Boolean @default(true) @map("memory_enabled")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -63,6 +75,7 @@ model Persona {
 
   user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations Conversation[]
+  memories      Memory[]
   avatarImage   GeneratedImage? @relation("PersonaAvatarImage", fields: [avatarImageId], references: [id], onDelete: SetNull)
 
   @@index([userId, updatedAt(sort: Desc)])
@@ -99,6 +112,7 @@ model Message {
   supersededAt   DateTime?     @map("superseded_at") @db.Timestamptz(6)
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMemories Memory[] @relation("MemorySourceMessage")
 
   @@index([conversationId, createdAt])
   @@index([conversationId, supersededAt, createdAt])
@@ -106,20 +120,29 @@ model Message {
 }
 
 model Memory {
-  id                   String   @id @default(uuid()) @db.Uuid
-  userId               String   @map("user_id") @db.Uuid
+  id                   String       @id @default(uuid()) @db.Uuid
+  userId               String       @map("user_id") @db.Uuid
+  personaId            String?      @map("persona_id") @db.Uuid
   content              String
   category             String
-  importance           Int      @default(3)
+  scope                MemoryScope  @default(GLOBAL)
+  origin               MemoryOrigin @default(MANUAL)
+  importance           Int          @default(3)
   sourceConversationId String?  @map("source_conversation_id") @db.Uuid
-  enabled              Boolean  @default(true)
-  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  sourceMessageId      String?      @map("source_message_id") @db.Uuid
+  enabled              Boolean      @default(true)
+  lastUsedAt           DateTime?    @map("last_used_at") @db.Timestamptz(6)
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user               Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona            Persona?      @relation(fields: [personaId], references: [id], onDelete: Cascade)
   sourceConversation Conversation? @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
+  sourceMessage      Message?      @relation("MemorySourceMessage", fields: [sourceMessageId], references: [id], onDelete: SetNull)
 
-  @@index([userId, enabled, importance])
+  @@index([userId, enabled, scope, importance, updatedAt(sort: Desc)])
+  @@index([personaId, enabled, importance])
+  @@index([sourceMessageId])
   @@map("memories")
 }
 

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { Prisma } from "@prisma/client";
 
@@ -19,6 +19,11 @@ import {
 } from "@/features/chat/edit";
 import { finalizeAssistantMessage } from "@/features/chat/persistence";
 import { createChatRequestSchema } from "@/features/chat/schemas";
+import { getMemoryRuntimeLimits } from "@/features/memory/constants";
+import { selectRelevantMemories } from "@/features/memory/selection";
+import { buildUserMemoryBlock } from "@/lib/ai/prompts/user-memory";
+import { scheduleMemoryExtraction } from "@/features/memory/after";
+import { extractAndPersistMemories } from "@/features/memory/extractor";
 import {
   createConversationTitle,
   encodeChatSse,
@@ -36,6 +41,7 @@ function errorResponse(message: string, status: number) {
 }
 
 export async function POST(request: Request) {
+  const requestId = request.headers.get("x-request-id")?.slice(0, 100) || crypto.randomUUID();
   let user: User | null;
   try {
     const supabase = await createSupabaseServerClient();
@@ -65,7 +71,7 @@ export async function POST(request: Request) {
     return errorResponse("AI 服务尚未配置，请联系管理员。", 503);
   }
 
-  const profile = await prisma.profile.findUnique({ where: { id: user.id }, select: { role: true } });
+  const profile = await prisma.profile.findUnique({ where: { id: user.id }, select: { role: true, memoryEnabled: true } });
   const dailyCount = await prisma.message.count({
     where: {
       role: "USER",
@@ -80,6 +86,7 @@ export async function POST(request: Request) {
 
   let conversationId = parsed.data.conversationId;
   let runtimePersona: RuntimePersonaPrompt | null = null;
+  let runtimePersonaId: string | undefined;
   if (conversationId) {
     const ownedConversation = await prisma.conversation.findFirst({
       where: ownedConversationWhere(user.id, conversationId),
@@ -90,6 +97,7 @@ export async function POST(request: Request) {
     const unavailableMessage = personaConversationUnavailableMessage(ownedConversation.persona?.archivedAt);
     if (unavailableMessage) return errorResponse(unavailableMessage, 409);
     runtimePersona = ownedConversation.persona;
+    runtimePersonaId = ownedConversation.personaId ?? undefined;
   } else {
     if (parsed.data.personaId) {
       const persona = await prisma.persona.findFirst({
@@ -98,6 +106,7 @@ export async function POST(request: Request) {
       });
       if (!persona) return errorResponse("人格不存在、已删除或无权访问。", 404);
       runtimePersona = persona;
+      runtimePersonaId = persona.id;
     }
     const conversation = await prisma.conversation.create({
       data: {
@@ -202,6 +211,14 @@ export async function POST(request: Request) {
     return errorResponse("对话上下文读取失败，请稍后重试。", 500);
   }
   const context = buildCompleteTurnContext(recentMessages, userMessageId);
+  let selectedMemories: Array<{ id: string; content: string }> = [];
+  if (profile?.memoryEnabled ?? true) {
+    try {
+      const candidates = await prisma.memory.findMany({ where: { userId: user.id, enabled: true, OR: [{ scope: "GLOBAL" }, ...(runtimePersonaId ? [{ scope: "PERSONA" as const, personaId: runtimePersonaId }] : [])] }, select: { id: true, content: true, category: true, scope: true, personaId: true, importance: true, enabled: true, updatedAt: true } });
+      selectedMemories = selectRelevantMemories({ currentMessage: parsed.data.content, recentUserMessages: context.filter((message) => message.role === "user").slice(-6).map((message) => message.content), personaId: runtimePersonaId, candidates, ...getMemoryRuntimeLimits() });
+    } catch { console.warn("memory_load_failed", { userId: user.id, conversationId }); }
+  }
+  const systemContent = buildPersonaAssistantPrompt(runtimePersona) + buildUserMemoryBlock(selectedMemories);
   const { config, provider } = getAiProvider();
   const abortController = new AbortController();
   const abortFromRequest = () => abortController.abort();
@@ -221,10 +238,11 @@ export async function POST(request: Request) {
         assistantMessageId,
         ...(editedMessageId ? { editedMessageId } : {}),
       })));
+      if (selectedMemories.length) controller.enqueue(encoder.encode(encodeChatSse("memory", { count: selectedMemories.length })));
 
       try {
         for await (const text of provider.streamText({
-          messages: [{ role: "system", content: buildPersonaAssistantPrompt(runtimePersona) }, ...context],
+          messages: [{ role: "system", content: systemContent }, ...context],
           model: config.model,
           temperature: config.temperature,
           maxOutputTokens: config.maxOutputTokens,
@@ -234,8 +252,25 @@ export async function POST(request: Request) {
           controller.enqueue(encoder.encode(encodeChatSse("delta", { text })));
         }
 
-        await finalizeAssistantMessage(assistantMessageId, fullContent, "COMPLETE");
+        const finalized = await finalizeAssistantMessage(assistantMessageId, fullContent, "COMPLETE");
+        if (finalized && selectedMemories.length) { try { await prisma.memory.updateMany({ where: { userId: user.id, id: { in: selectedMemories.map((memory) => memory.id) } }, data: { lastUsedAt: new Date() } }); } catch { console.warn("memory_last_used_update_failed", { userId: user.id, conversationId, count: selectedMemories.length }); } }
         controller.enqueue(encoder.encode(encodeChatSse("done", { messageId: assistantMessageId })));
+        if (finalized && (profile?.memoryEnabled ?? true)) {
+          const recentTurns = context
+            .slice(0, -1)
+            .filter((message): message is { role: "user" | "assistant"; content: string } => message.role !== "system")
+            .slice(-8);
+          scheduleMemoryExtraction(after, () => extractAndPersistMemories({
+            userId: user.id,
+            conversationId,
+            sourceMessageId: userMessageId,
+            assistantMessageId,
+            currentUserMessage: parsed.data.content,
+            assistantResponse: fullContent,
+            recentTurns,
+            persona: runtimePersonaId && runtimePersona ? { id: runtimePersonaId, name: runtimePersona.name } : undefined,
+          }).then(() => undefined), { requestId, userId: user.id, conversationId, sourceMessageId: userMessageId });
+        }
       } catch (error) {
         const stopped = error instanceof AiProviderError && error.code === "ABORTED";
         await finalizeAssistantMessage(

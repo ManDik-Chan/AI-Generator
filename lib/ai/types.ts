@@ -24,6 +24,13 @@ export interface PersonaGenerationConfig {
   requestTimeoutMs: number;
 }
 
+export interface MemoryGenerationConfig {
+  model: string;
+  temperature: number;
+  maxOutputTokens: number;
+  requestTimeoutMs: number;
+}
+
 export interface AiProviderConfig {
   provider: "openai-compatible";
   baseUrl: string;
