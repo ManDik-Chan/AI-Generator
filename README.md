@@ -1,6 +1,6 @@
 # AI-Generator V2
 
-> Phase 6A2 已进入 Draft 验收：在 Phase 6A1 文本工具框架上增加单图图片理解、私有 `ToolAsset`、安全解码重编码、独立视觉限额和 OpenAI-compatible 多模态 Provider。当前不包含 PDF/DOCX/OCR/RAG、多图、图片生成或编辑；真实 Supabase 与视觉模型联调仍待项目所有者完成。详见 `docs/image-understanding-tool.md`。
+> Phase 6A2 已完成项目所有者真实验收：单图图片理解、私有 `ToolAsset`、服务端安全净化、private Storage、独立视觉限额、OpenAI-compatible 多模态 Provider、SSE/停止/历史/到期清理、图片 Prompt 注入隔离和响应式均已通过。当前仍不包含 PDF/DOCX、专业 OCR、RAG、多图、视频、图片生成或编辑；Phase 6A3 与 Phase 7 尚未开始。详见 `docs/image-understanding-tool.md`。
 
 > Phase 5A3-2 已完成真实验收：长期记忆采用确定性关键词、`topicKey` / `keywords`、512 维 Embedding 语义召回与 Hybrid RRF；未配置或运行失败时安全退回关键词召回。这不是外部文件 RAG。详见 `docs/memory-semantic-retrieval.md`。
 
