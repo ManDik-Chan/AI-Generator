@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { PageHeader } from "@/components/ui/page-header";
 import { MemoryManager } from "@/features/memory/components/memory-manager";
 import { getMemoryPageData } from "@/features/memory/queries";
 import { personaIdSchema } from "@/features/persona/schemas";
@@ -14,16 +15,14 @@ export default async function MemoriesPage({ searchParams }: { searchParams: Pro
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <p className="text-sm font-medium text-primary">可控记忆</p>
-        <h1 className="mt-1 text-2xl font-semibold">AI 记住的内容</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          AI 会在对话中自动整理可能长期有用的信息。你可以随时修改、停用或删除。
-        </p>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">语义召回可帮助 AI 理解不同表达方式下的相同含义。</p>
-        <p className="mt-2 max-w-3xl text-xs leading-5 text-muted-foreground">启用语义召回时，记忆的整理文本和当前问题可能发送到配置的 Embedding Provider；向量只保存在当前项目数据库中，不返回浏览器，也不与其他用户共享。删除记忆会同步删除对应向量。</p>
-      </div>
+      <PageHeader
+        description={<><p>AI 会在对话中自动整理可能长期有用的信息；你始终可以查看、修改、停用或删除。</p><p className="mt-2 text-xs">启用语义召回时，整理文本和当前问题可能发送到配置的 Embedding Provider；向量只保存在当前项目数据库中，不返回浏览器，也不与其他用户共享。</p></>}
+        eyebrow="TRUSTED MEMORY"
+        title="AI 记忆库"
+      />
+      <div className="mt-8">
       <MemoryManager initialPersonaId={initialPersonaId} {...data} />
+      </div>
     </AppShell>
   );
 }

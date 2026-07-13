@@ -8,7 +8,8 @@ describe("new-chat assistant selector layout", () => {
   it("removes the old top horizontal selector and mounts the right panel only for a new conversation", () => {
     expect(layout).not.toContain('import { PersonaSelector }');
     expect(layout).toContain("!activeConversationId && <AssistantSelectorPanel");
-    expect(panel).toContain("hidden w-72 shrink-0");
+    expect(panel).toContain("hidden w-[19rem] shrink-0");
+    expect(panel).toContain("bg-background-subtle/82");
     expect(panel).toContain("overflow-y-auto");
   });
 

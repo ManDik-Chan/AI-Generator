@@ -1,6 +1,6 @@
 # 重构进度
 
-## Phase 6B1 返工记录（待第二次真实视觉验收）
+## Phase 6B1 全产品 UI 迁移（待第三次真实视觉验收）
 
 - 项目所有者未通过第一次自由设计方向；上传的 Premium 高保真原型现为 Phase 6B 主要视觉基准。
 - 已按原型重映射纸张浅色、深炭深色、翡翠/藏蓝/暖金 Token，主按钮改用深墨色，并重调圆角、阴影、边框和 reduced-motion。
@@ -8,10 +8,16 @@
 - 已迁移首页大型 Hero、AI Core、轨道、Aurora、能力标签、不对称 Quick Start、四张编号 Studio 卡和隐私说明。
 - Quick Start 只查询当前用户最新一条真实 Conversation，并展示真实标题、更新时间与 Persona；无记录时显示诚实空状态，不查询或伪造消息数。
 - 已统一登录、注册、账号、管理员外壳、404、loading 和 error 页面；认证和权限逻辑保持不变。
+- 第二次视觉验收取消原先的阶段范围限制；已在同一分支和 PR 中完成 Chat、Persona、Memory、Tools、图片分析与工具历史的页面级 Premium 迁移。
+- Chat 已迁移为响应式历史 rail、消息画布和助手 dock，保留 SSE、停止生成、编辑重提、临时 ID、上下文隔离和错误终态语义。
+- Persona 已迁移列表、创建、详情、编辑、实时预览、AI 草稿、AI 头像、回收站与恢复；所有展示继续只读取真实 Persona 数据。
+- Memory 已迁移真实容量、启用/置顶/语义状态、搜索筛选和治理操作；不展示内部 topicKey，不制造使用量或索引状态。
+- Tools 已迁移文本工作台、图片分析、隐私保留、额度、流式终态和历史；只展示已实现能力与真实 ToolRun/ToolAsset 状态。
+- 已在 390、430、520、768、820、1024、1180、1440、1920px 检查 Chat、Persona、Memory、文本工具、图片工具和历史，无水平溢出；浅色、深色、跟随系统及 reduced-motion 约束保持有效。
 - 原型中的 ManDik、假对话、假时间、假消息数、假 Persona、网页分析、自定义首页、隐私中心、分享和假快捷键均未迁移。
 - 未改变认证 Server Action、AI、SSE、聊天、人格、记忆、工具、Storage、限额、RLS 或数据库结构；未新增 migration。
-- Chat 三栏和 Persona 实时预览已确定为 Phase 6B2 设计基准；Memory、Tools、History、Account、Admin 的完整页面级深化留在 Phase 6B3。
-- Phase 6B2、Phase 6B3、Phase 6C 尚未开始。
+- 没有修改 API、Provider、Prisma Schema、RLS、migration 或数据库结构；没有开始 Phase 6C。
+- 当前等待项目所有者第三次真实视觉验收。
 
 ## Phase 6A1 完成状态
 

@@ -195,27 +195,27 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   }
 
   return (
-    <div className="flex h-[100dvh] max-w-[100vw] overflow-hidden bg-background">
-      <aside className="hidden w-72 shrink-0 border-r bg-card/70 md:block"><ConversationList activeId={activeConversationId} conversations={conversations} /></aside>
+    <div className="surface-grid flex h-[100dvh] max-w-[100vw] overflow-hidden bg-background" data-chat-shell>
+      <aside className="hidden w-[17.5rem] shrink-0 border-r border-border/10 bg-background-subtle/82 backdrop-blur-xl md:block"><ConversationList activeId={activeConversationId} conversations={conversations} /></aside>
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/45 md:hidden" onClick={() => setDrawerOpen(false)}>
-          <aside className="h-full w-[min(85vw,20rem)] border-r bg-card" onClick={(event) => event.stopPropagation()}>
-            <div className="flex h-14 items-center justify-between border-b px-4"><span className="font-semibold">对话历史</span><button aria-label="关闭历史" onClick={() => setDrawerOpen(false)} type="button"><X className="size-5" /></button></div>
+        <div className="fixed inset-0 z-50 bg-overlay/55 backdrop-blur-sm md:hidden" onClick={() => setDrawerOpen(false)}>
+          <aside className="flex h-full w-[min(88vw,21rem)] flex-col border-r border-border/10 bg-background-subtle shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex h-[4.25rem] items-center justify-between border-b border-border/10 px-4"><div><span className="premium-kicker">CONVERSATIONS</span><p className="text-sm font-semibold">对话历史</p></div><button aria-label="关闭历史" className="grid size-11 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground" onClick={() => setDrawerOpen(false)} type="button"><X className="size-5" /></button></div>
             <ConversationList activeId={activeConversationId} conversations={conversations} onNavigate={() => setDrawerOpen(false)} />
           </aside>
         </div>
       )}
-      <section className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-1.5 border-b bg-card/75 px-2 backdrop-blur sm:gap-2 sm:px-3 md:gap-3 md:px-5">
-          <button aria-label="打开对话历史" className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
-          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted md:hidden" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
+      <section className="flex min-w-0 flex-1 flex-col bg-background/72">
+        <header className="flex h-[4.25rem] shrink-0 items-center gap-1.5 border-b border-border/10 bg-surface/72 px-2.5 backdrop-blur-xl sm:gap-2 sm:px-4 md:gap-3 md:px-6">
+          <button aria-label="打开对话历史" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
+          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
           <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || activePersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || activePersona)!.name} src={(conversation?.persona || activePersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>
-          <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold">{activeTitle ?? activePersona?.name ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">{conversation?.persona ? `${conversation.persona.description || "AI 人格助手"}${conversation.persona.archived ? " · 已在回收站" : ""}` : activePersona?.description || (activePersona ? "AI 人格助手" : "默认 AI 助手")}</p></div>
-          {!activeConversationId && <button aria-label="选择助手" className="grid size-9 shrink-0 place-items-center rounded-lg hover:bg-muted xl:hidden" onClick={() => setAssistantDrawerOpen(true)} title="选择助手" type="button"><Bot className="size-5" /></button>}
-          {generating && <span className="hidden shrink-0 text-xs text-primary sm:inline">正在生成…</span>}
+          <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold tracking-[-.01em]">{activeTitle ?? activePersona?.name ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">{conversation?.persona ? `${conversation.persona.description || "AI 人格助手"}${conversation.persona.archived ? " · 已在回收站" : ""}` : activePersona?.description || (activePersona ? "AI 人格助手" : "默认 AI 助手")}</p></div>
+          {!activeConversationId && <button aria-label="选择助手" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground xl:hidden" onClick={() => setAssistantDrawerOpen(true)} title="选择助手" type="button"><Bot className="size-5" /></button>}
+          {generating && <span className="premium-chip hidden shrink-0 border-primary/15 bg-primary-subtle text-primary-subtle-foreground sm:inline-flex"><span className="size-1.5 animate-pulse rounded-full bg-primary" />正在生成</span>}
         </header>
-        {!aiConfigured && <div className="border-b border-amber-500/25 bg-amber-500/10 px-4 py-2 text-center text-sm text-amber-800 dark:text-amber-200">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
-        {error && <div className="border-b border-red-500/20 bg-red-500/10 px-4 py-2 text-center text-sm text-red-700 dark:text-red-300">{error}</div>}
+        {!aiConfigured && <div className="border-b border-warning/16 bg-warning-subtle/72 px-4 py-2.5 text-center text-sm text-warning-foreground">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
+        {error && <div className="border-b border-destructive/16 bg-destructive-subtle/76 px-4 py-2.5 text-center text-sm text-destructive-foreground" role="alert">{error}</div>}
         {conversation?.persona?.archived && <DeletedPersonaNotice personaId={conversation.persona.id} />}
         <div className="flex min-h-0 min-w-0 flex-1"><main className="flex min-w-0 flex-1 flex-col"><MessageList
           editDisabled={generating}

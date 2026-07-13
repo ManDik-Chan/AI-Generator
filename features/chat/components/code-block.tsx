@@ -15,8 +15,8 @@ function highlightedCode(code: string): ReactNode[] {
     let className = "";
     if (/^(\/\/|#)/.test(token)) className = "text-emerald-600 dark:text-emerald-400";
     else if (/^["'`]/.test(token)) className = "text-amber-700 dark:text-amber-300";
-    else if (/^\d/.test(token)) className = "text-violet-600 dark:text-violet-300";
-    else if (KEYWORDS.has(token)) className = "font-semibold text-sky-700 dark:text-sky-300";
+    else if (/^\d/.test(token)) className = "text-amber-400";
+    else if (KEYWORDS.has(token)) className = "font-semibold text-emerald-300";
     return className ? <span className={className} key={`${index}-${token}`}>{token}</span> : token;
   });
 }
@@ -35,15 +35,15 @@ export function CodeBlock({ code, language }: { code: string; language?: string 
   }
 
   return (
-    <div className="my-4 max-w-full overflow-hidden rounded-xl border bg-slate-950 text-slate-100">
-      <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-xs text-slate-400">
+    <div className="my-5 max-w-full overflow-hidden rounded-control border border-white/10 bg-[#101716] text-[#eff7f3] shadow-[0_18px_45px_rgba(8,16,14,.22)]">
+      <div className="flex items-center justify-between border-b border-white/10 bg-white/[.025] px-4 py-2.5 text-[.6875rem] font-semibold uppercase tracking-[.12em] text-white/45">
         <span>{language || "text"}</span>
-        <button className="inline-flex items-center gap-1 rounded-md px-2 py-1 hover:bg-white/10 hover:text-white" onClick={copyCode} type="button">
+        <button aria-label="复制代码" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 py-1 normal-case tracking-normal hover:bg-white/10 hover:text-white" onClick={copyCode} type="button">
           {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
           {copied ? "已复制" : "复制"}
         </button>
       </div>
-      <pre className="max-w-full overflow-x-auto p-4 text-sm leading-6">
+      <pre className="premium-scrollbar max-w-full overflow-x-auto p-4 text-[.8125rem] leading-6 sm:p-5 sm:text-sm">
         <code>{highlightedCode(code)}</code>
       </pre>
     </div>

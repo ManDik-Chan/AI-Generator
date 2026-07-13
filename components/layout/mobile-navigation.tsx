@@ -33,6 +33,7 @@ export function MobileNavigation() {
   return (
     <nav
       aria-label="移动端主导航"
+      data-mobile-navigation
       className="fixed inset-x-2.5 bottom-[max(.625rem,env(safe-area-inset-bottom))] z-50 grid h-[4.125rem] grid-cols-[1fr_1fr_4rem_1fr_1fr] items-center rounded-[1.375rem] border border-border/12 bg-surface-raised/90 px-2 py-1 shadow-[0_20px_60px_hsl(var(--overlay)/.20)] backdrop-blur-2xl min-[821px]:hidden"
     >
       <MobileItem item={home} pathname={pathname} />

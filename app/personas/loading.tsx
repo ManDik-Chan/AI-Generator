@@ -1,1 +1,2 @@
-export default function PersonasLoading() { return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">正在加载人格…</div>; }
+import { PageSkeleton } from "@/components/ui/skeleton";
+export default function PersonasLoading() { return <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 md:px-8"><PageSkeleton /></main>; }

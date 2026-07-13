@@ -10,15 +10,17 @@ export async function getMemoryPageData(userId: string) {
   const [profile, memories, personas] = await Promise.all([prisma.profile.findUnique({ where: { id: userId }, select: { memoryEnabled: true } }), getMemories(userId), prisma.persona.findMany({ where: { userId, archivedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } })]);
   const embedding = getEmbeddingConfigurationStatus();
   let indexed = 0;
+  let indexedIds: string[] = [];
   if (embedding.configured) {
     try {
       const records = new Map((await getMemoryEmbeddingMetadataForUser(userId)).map((record) => [record.memoryId, record]));
-      indexed = memories.filter((memory) => {
+      indexedIds = memories.filter((memory) => {
         if (!memory.enabled) return false;
         const record = records.get(memory.id);
         const hash = computeMemoryEmbeddingHash(buildMemoryEmbeddingText(memory));
         return record?.model === embedding.model && record.dimensions === MEMORY_EMBEDDING_DIMENSIONS && record.contentHash === hash;
-      }).length;
+      }).map((memory) => memory.id);
+      indexed = indexedIds.length;
     } catch (error) {
       console.warn("memory_embedding_status_failed", { userId, errorCode: error instanceof Error ? error.name : "UNKNOWN" });
     }
@@ -30,6 +32,6 @@ export async function getMemoryPageData(userId: string) {
     personas,
     maxTotal: getMemoryMaxTotal(),
     referenceNow: new Date().toISOString(),
-    semanticIndex: { configured: embedding.configured, indexed, pending: Math.max(0, enabledCount - indexed), model: embedding.model, dimensions: MEMORY_EMBEDDING_DIMENSIONS },
+    semanticIndex: { configured: embedding.configured, indexed, pending: Math.max(0, enabledCount - indexed), indexedIds, model: embedding.model, dimensions: MEMORY_EMBEDDING_DIMENSIONS },
   };
 }

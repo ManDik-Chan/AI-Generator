@@ -1,3 +1,10 @@
 "use client";
+
+import Link from "next/link";
+import { RotateCcw, UserRoundCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
-export default function PersonasError({ reset }: { error: Error; reset(): void }) { return <div className="grid min-h-screen place-items-center p-6 text-center"><div><h2 className="text-xl font-semibold">人格暂时无法加载</h2><p className="mt-2 text-sm text-muted-foreground">请检查网络后重试。</p><Button className="mt-4" onClick={reset}>重试</Button></div></div>; }
+import { EmptyState } from "@/components/ui/empty-state";
+
+export default function PersonasError({ reset }: { error: Error; reset(): void }) {
+  return <main className="surface-grid grid min-h-screen place-items-center bg-background p-5"><EmptyState action={<div className="flex flex-wrap justify-center gap-2"><Button onClick={reset}><RotateCcw className="size-4" />重试</Button><Button asChild variant="outline"><Link href="/">返回首页</Link></Button></div>} className="w-full max-w-xl" description="请检查网络后重试，已保存的人格不会因此改变。" icon={<UserRoundCog className="size-6" />} title="人格工作室暂时无法加载" /></main>;
+}

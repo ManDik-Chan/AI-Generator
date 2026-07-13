@@ -8,6 +8,6 @@ export const surfaceVariants = cva("min-w-0 rounded-card border", { variants: { 
   emphasis: "border-primary/18 bg-gradient-to-br from-primary-subtle to-surface-raised",
   subtle: "border-transparent bg-surface-muted/76",
   status: "border-border-strong/18 bg-surface/72 backdrop-blur-sm",
-  empty: "border-dashed border-border-strong/24 bg-surface/42",
+  empty: "surface-grid border-border-strong/12 bg-surface/55",
 } }, defaultVariants: { variant: "default" } });
 export function Surface({ className, variant, ...props }: HTMLAttributes<HTMLDivElement> & VariantProps<typeof surfaceVariants>) { return <div className={cn(surfaceVariants({ variant }), className)} {...props} />; }

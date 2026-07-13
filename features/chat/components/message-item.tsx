@@ -36,14 +36,14 @@ export function MessageItem(props: MessageItemProps) {
   }, [props.editing]);
 
   return (
-    <article className={isUser ? "flex justify-end gap-3" : "flex justify-start gap-3"}>
+    <article className={isUser ? "group flex justify-end gap-2.5 sm:gap-3" : "group flex justify-start gap-2.5 sm:gap-4"}>
       {!isUser && <AssistantAvatar className="mt-1" persona={resolveMessageAssistantPersona(message.role, props.persona)} />}
-      <div className={isUser ? "max-w-[85%] rounded-2xl rounded-tr-md bg-primary px-4 py-3 text-primary-foreground sm:max-w-[75%]" : "min-w-0 max-w-[calc(100%_-_2.75rem)] flex-1 rounded-2xl border bg-card px-4 py-3 sm:px-5"}>
+      <div className={isUser ? "max-w-[88%] rounded-[1.35rem] rounded-tr-[.4rem] bg-foreground px-4 py-3.5 text-background shadow-soft sm:max-w-[76%] sm:px-5" : "min-w-0 max-w-[calc(100%_-_2.75rem)] flex-1 border-l border-primary/18 pl-4 pr-1 py-1 sm:max-w-[calc(100%_-_3.5rem)] sm:pl-5"}>
         {isUser && props.editing ? (
           <div className="space-y-2">
             <textarea
               aria-label="编辑消息"
-              className="min-h-24 w-full resize-y rounded-lg border border-primary-foreground/30 bg-primary-foreground/10 p-2 text-sm outline-none"
+              className="min-h-24 w-full resize-y rounded-control border border-background/25 bg-background/10 p-3 text-sm outline-none focus:border-background/50"
               maxLength={props.maxInputChars}
               onChange={(event) => props.onEditChange(event.target.value)}
               onKeyDown={(event) => {
@@ -69,15 +69,15 @@ export function MessageItem(props: MessageItemProps) {
           <div className="flex items-center gap-1.5 py-2 text-sm text-muted-foreground"><span className="size-1.5 animate-pulse rounded-full bg-current" /><span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:150ms]" /><span className="size-1.5 animate-pulse rounded-full bg-current [animation-delay:300ms]" /></div>
         )}
         {!isUser && message.status === "error" && (
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-red-600 dark:text-red-300"><AlertCircle className="size-3.5" />本次生成未正常完成</p>
+          <p className="mt-4 flex items-center gap-1.5 rounded-control bg-destructive-subtle px-3 py-2 text-xs text-destructive-foreground"><AlertCircle className="size-3.5" />本次生成未正常完成</p>
         )}
-        {!isUser && message.memoryCount ? <p className="mt-3 text-xs text-muted-foreground">已参考 {message.memoryCount} 条长期记忆</p> : null}
+        {!isUser && message.memoryCount ? <p className="premium-chip mt-4 border-primary/12 bg-primary-subtle/70 text-primary-subtle-foreground">已参考 {message.memoryCount} 条长期记忆</p> : null}
       </div>
       {isUser && <div className="mt-1 flex shrink-0 flex-col items-center gap-1">
-        <span className="grid size-8 place-items-center rounded-xl border bg-card"><UserRound className="size-4" /></span>
+        <span className="grid size-9 place-items-center rounded-control border border-border/12 bg-surface-raised shadow-sm"><UserRound className="size-4" /></span>
         {props.canEdit && !props.editing && <button
           aria-label={props.editDisabled ? "停止生成并编辑此消息" : "编辑最后一条消息"}
-          className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:p-1.5"
+          className="grid size-10 place-items-center rounded-control text-muted-foreground opacity-80 hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 sm:size-8 sm:opacity-0 sm:group-hover:opacity-100"
           onClick={props.onBeginEdit}
           title={props.editDisabled ? "停止并编辑" : "编辑"}
           type="button"
