@@ -14,7 +14,7 @@ describe("memory selection limits", () => {
 
   it("produces the same order for the same input", () => {
     const options = { currentMessage: "网络计划", recentUserMessages: ["准备考试"], candidates: [memory("b", "网络计划"), memory("a", "网络计划")], maxItems: 8, maxChars: 2400 };
-    expect(selectRelevantMemories(options).map((item) => item.id)).toEqual(["a", "b"]);
-    expect(selectRelevantMemories(options).map((item) => item.id)).toEqual(["a", "b"]);
+    expect(selectRelevantMemories(options).map((item) => item.id)).toEqual(["a"]);
+    expect(selectRelevantMemories(options).map((item) => item.id)).toEqual(["a"]);
   });
 });

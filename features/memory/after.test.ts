@@ -35,4 +35,29 @@ describe("Next after memory scheduling", () => {
     expect(logged).not.toContain("prompt-body");
     warning.mockRestore();
   });
+
+  it("logs reasoning-only counts without logging reasoning text", async () => {
+    let callback: (() => Promise<void>) | undefined;
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const failure = new MemoryExtractionFailure("provider_response", new AiProviderError("REASONING_ONLY_RESPONSE", "must-not-be-logged", undefined, {
+      reasoningChunkCount: 2,
+      reasoningCharCount: 128,
+      contentChunkCount: 0,
+      contentCharCount: 0,
+      finishReason: "length",
+      terminalEventReceived: true,
+    }), "INLINE_FACT", "glm-model");
+    scheduleMemoryExtraction((scheduled) => { callback = scheduled; }, async () => { throw failure; }, { requestId: "r", userId: "u", conversationId: "c", sourceMessageId: "m" });
+    await callback?.();
+    expect(warning).toHaveBeenCalledWith("memory_extraction_failed", expect.objectContaining({
+      stage: "provider_response",
+      providerCode: "REASONING_ONLY_RESPONSE",
+      reasoningChunkCount: 2,
+      reasoningCharCount: 128,
+      contentCharCount: 0,
+      finishReason: "length",
+    }));
+    expect(JSON.stringify(warning.mock.calls)).not.toContain("must-not-be-logged");
+    warning.mockRestore();
+  });
 });

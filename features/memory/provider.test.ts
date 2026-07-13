@@ -7,9 +7,11 @@ const request = { messages: [{ role: "system" as const, content: "prompt" }], mo
 
 function providerFrom(attempts: Array<{ chunks?: string[]; error?: AiProviderError }>) {
   const models: string[] = [];
+  const requests: Parameters<AiProvider["streamText"]>[0][] = [];
   const provider: AiProvider = {
     streamText(input) {
       models.push(input.model);
+      requests.push(input);
       const attempt = attempts.shift() ?? {};
       return (async function* () {
         for (const chunk of attempt.chunks ?? []) yield chunk;
@@ -17,7 +19,7 @@ function providerFrom(attempts: Array<{ chunks?: string[]; error?: AiProviderErr
       })();
     },
   };
-  return { provider, models };
+  return { provider, models, requests };
 }
 
 describe("memory provider retry policy", () => {
@@ -59,5 +61,24 @@ describe("memory provider retry policy", () => {
   it("keeps partial text from INVALID_RESPONSE for JSON parsing", async () => {
     const { provider } = providerFrom([{ chunks: ["{\"operations\":[]}"], error: new AiProviderError("INVALID_RESPONSE", "missing terminal") }]);
     await expect(requestMemoryModelText({ provider, request, fallbackModel: "shared-model" })).resolves.toMatchObject({ text: "{\"operations\":[]}" });
+  });
+
+  it("retries an empty response once with thinking disabled and temperature zero", async () => {
+    const { provider, requests } = providerFrom([
+      { error: new AiProviderError("REASONING_ONLY_RESPONSE", "reasoning only", undefined, { reasoningCharCount: 120, contentCharCount: 0 }) },
+      { chunks: ["{\"operations\":[]}"] },
+    ]);
+    await expect(requestMemoryModelText({ provider, request, fallbackModel: "shared-model" })).resolves.toMatchObject({ text: "{\"operations\":[]}", modelUsed: "memory-model" });
+    expect(requests).toHaveLength(2);
+    expect(requests[1]).toMatchObject({ model: "memory-model", thinking: "disabled", temperature: 0, messages: request.messages });
+  });
+
+  it("stops after one empty-response fallback", async () => {
+    const { provider, requests } = providerFrom([
+      { error: new AiProviderError("EMPTY_RESPONSE", "empty") },
+      { error: new AiProviderError("REASONING_ONLY_RESPONSE", "reasoning only") },
+    ]);
+    await expect(requestMemoryModelText({ provider, request, fallbackModel: "shared-model" })).rejects.toMatchObject({ code: "REASONING_ONLY_RESPONSE" });
+    expect(requests).toHaveLength(2);
   });
 });

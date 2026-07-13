@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { Brain, Pencil, Plus, Trash2 } from "lucide-react";
+import { Brain, Pencil, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   deleteMemoryAction,
   setMemoryEnabledAction,
   setMemoryMasterEnabledAction,
+  setMemoryPinnedAction,
 } from "@/features/memory/actions";
 import {
   MEMORY_CATEGORIES,
@@ -21,6 +22,8 @@ interface MemoryManagerProps {
   personas: Array<{ id: string; name: string }>;
   memoryEnabled: boolean;
   initialPersonaId?: string;
+  maxTotal: number;
+  referenceNow: string;
 }
 
 export function MemoryManager({
@@ -28,26 +31,36 @@ export function MemoryManager({
   personas,
   memoryEnabled,
   initialPersonaId,
+  maxTotal,
+  referenceNow,
 }: MemoryManagerProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MemoryView>();
   const [deleting, setDeleting] = useState<MemoryView>();
   const [filter, setFilter] = useState(initialPersonaId ? `persona:${initialPersonaId}` : "all");
+  const [sort, setSort] = useState("updated");
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string>();
+  const duplicateTopics = useMemo(() => { const counts = new Map<string, number>(); for (const memory of memories) if (memory.topicKey) { const key = `${memory.scope}:${memory.personaId ?? "global"}:${memory.topicKey}`; counts.set(key, (counts.get(key) ?? 0) + 1); } return counts; }, [memories]);
   const shown = useMemo(
-    () =>
-      memories.filter(
+    () => {
+      const cutoff = new Date(referenceNow).getTime() - 90 * 86_400_000;
+      return memories.filter(
         (memory) =>
           filter === "all" ||
           (filter === "global" && memory.scope === "GLOBAL") ||
           (filter === "persona" && memory.scope === "PERSONA") ||
           (filter === "enabled" && memory.enabled) ||
           (filter === "disabled" && !memory.enabled) ||
+          (filter === "pinned" && memory.pinned) ||
+          (filter === "never" && memory.useCount === 0) ||
+          (filter === "stale" && new Date(memory.lastUsedAt ?? memory.createdAt).getTime() < cutoff) ||
+          (filter === "duplicates" && Boolean(memory.topicKey) && (duplicateTopics.get(`${memory.scope}:${memory.personaId ?? "global"}:${memory.topicKey}`) ?? 0) > 1) ||
           filter === `category:${memory.category}` ||
           filter === `persona:${memory.personaId}`,
-      ),
-    [memories, filter],
+      ).sort((a, b) => Number(b.pinned) - Number(a.pinned) || (sort === "used" ? b.useCount - a.useCount || a.id.localeCompare(b.id) : sort === "importance" ? b.importance - a.importance || a.id.localeCompare(b.id) : sort === "lastUsed" ? new Date(b.lastUsedAt ?? 0).getTime() - new Date(a.lastUsedAt ?? 0).getTime() || a.id.localeCompare(b.id) : new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() || a.id.localeCompare(b.id)));
+    },
+    [memories, filter, sort, duplicateTopics, referenceNow],
   );
 
   return (
@@ -55,6 +68,7 @@ export function MemoryManager({
       {message && (
         <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-700">{message}</p>
       )}
+      <div className={memories.length >= maxTotal ? "rounded-xl bg-red-500/10 p-3 text-sm text-red-700" : memories.length >= maxTotal * 0.8 ? "rounded-xl bg-amber-500/10 p-3 text-sm text-amber-800" : "rounded-xl bg-muted p-3 text-sm text-muted-foreground"}>已使用 {memories.length} / {maxTotal} 条记忆{memories.length >= maxTotal ? "，自动记忆只能更新已有内容。" : memories.length >= maxTotal * 0.8 ? "，容量接近上限。" : ""}</div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-card p-4">
         <div>
           <p className="font-medium">允许 AI 使用和更新记忆</p>
@@ -85,6 +99,10 @@ export function MemoryManager({
           <option value="persona">Persona 专属</option>
           <option value="enabled">已启用</option>
           <option value="disabled">已停用</option>
+          <option value="pinned">已置顶</option>
+          <option value="never">从未使用</option>
+          <option value="stale">长期未使用</option>
+          <option value="duplicates">同主题可能重复</option>
           {MEMORY_CATEGORIES.map((category) => (
             <option key={category} value={`category:${category}`}>
               {MEMORY_CATEGORY_LABELS[category]}
@@ -96,6 +114,7 @@ export function MemoryManager({
             </option>
           ))}
         </select>
+        <select aria-label="排序记忆" className="h-10 rounded-xl border bg-background px-3 text-sm" onChange={(event) => setSort(event.target.value)} value={sort}><option value="updated">最近更新</option><option value="used">最常使用</option><option value="importance">重要程度</option><option value="lastUsed">最近使用</option></select>
         <details className="relative ml-auto">
           <summary className="cursor-pointer rounded-xl border px-3 py-2 text-sm">更多操作</summary>
           <div className="absolute right-0 z-10 mt-2 w-48 rounded-xl border bg-card p-2 shadow-lg">
@@ -121,10 +140,13 @@ export function MemoryManager({
                     </span>
                     <span>{memory.scope === "GLOBAL" ? "全局" : memory.personaName || "Persona"}</span>
                     <span>重要程度 {memory.importance}</span>
+                    {memory.pinned && <span>已置顶</span>}
+                    <span>使用 {memory.useCount} 次</span>
                     <span>{memory.enabled ? "已启用" : "已停用"}</span>
                     <span>{memory.origin === "MANUAL" ? "手动添加" : "从对话中记住"}</span>
                     <span>更新于 {memory.updatedAt.slice(0, 10)}</span>
                     <span>最近使用 {memory.lastUsedAt ? memory.lastUsedAt.slice(0, 10) : "尚未使用"}</span>
+                    {memory.topicKey && (duplicateTopics.get(`${memory.scope}:${memory.personaId ?? "global"}:${memory.topicKey}`) ?? 0) > 1 && <span className="text-amber-700">同主题可能重复</span>}
                   </div>
                   {memory.sourceConversationId ? (
                     <Link
@@ -139,6 +161,7 @@ export function MemoryManager({
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
+                <Button disabled={pending} onClick={() => startTransition(async () => { const result = await setMemoryPinnedAction(memory.id, !memory.pinned); setMessage(result.message); })} size="sm" variant="ghost">{memory.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}{memory.pinned ? "取消置顶" : "置顶"}</Button>
                 <Button
                   onClick={() => {
                     setEditing(memory);

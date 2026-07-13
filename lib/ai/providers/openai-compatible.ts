@@ -85,6 +85,11 @@ export async function* parseOpenAiCompatibleSse(
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
   let terminalEventReceived = false;
+  let reasoningChunkCount = 0;
+  let reasoningCharCount = 0;
+  let contentChunkCount = 0;
+  let contentCharCount = 0;
+  let finishReason: string | undefined;
 
   for await (const event of parseSseDataStream(stream, signal)) {
     if (event.done) {
@@ -107,15 +112,38 @@ export async function* parseOpenAiCompatibleSse(
     const choice = payload?.choices?.[0];
     if (choice?.finish_reason != null) {
       terminalEventReceived = true;
+      finishReason = String(choice.finish_reason);
     }
 
+    if (typeof choice?.delta?.reasoning_content === "string" && choice.delta.reasoning_content) {
+      reasoningChunkCount += 1;
+      reasoningCharCount += choice.delta.reasoning_content.length;
+    }
     if (typeof choice?.delta?.content === "string" && choice.delta.content) {
+      contentChunkCount += 1;
+      contentCharCount += choice.delta.content.length;
       yield choice.delta.content;
     }
   }
 
   if (!terminalEventReceived) {
     throw new AiProviderError("INVALID_RESPONSE", "Provider stream ended before a terminal event.");
+  }
+  const diagnostics = {
+    reasoningChunkCount,
+    reasoningCharCount,
+    contentChunkCount,
+    contentCharCount,
+    finishReason,
+    terminalEventReceived,
+  };
+  if (contentCharCount === 0) {
+    throw new AiProviderError(
+      reasoningCharCount > 0 ? "REASONING_ONLY_RESPONSE" : "EMPTY_RESPONSE",
+      reasoningCharCount > 0 ? "Provider returned reasoning without final text." : "Provider returned no text.",
+      undefined,
+      diagnostics,
+    );
   }
 }
 
@@ -188,6 +216,7 @@ export function createOpenAiCompatibleProvider(
             temperature: request.temperature,
             max_tokens: request.maxOutputTokens,
             stream: true,
+            ...(request.thinking ? { thinking: { type: request.thinking } } : {}),
           }),
           signal: controller.signal,
         });

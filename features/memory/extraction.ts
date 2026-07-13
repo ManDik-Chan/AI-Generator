@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MEMORY_CATEGORIES } from "@/features/memory/constants";
-import { memoryContentSchema } from "@/features/memory/schemas";
+import { memoryContentSchema, memoryKeywordsSchema, memoryTopicKeySchema } from "@/features/memory/schemas";
 import { memoryTerms } from "@/features/memory/selection";
 import { extractFirstJsonObject } from "@/features/persona/generation";
 
@@ -21,6 +21,8 @@ const operationSchema = z.object({
   importance: z.coerce.number().int().min(1).max(5).optional(),
   confidence: z.number().min(0).max(1),
   reasonCode: reasonCodeSchema,
+  topicKey: memoryTopicKeySchema,
+  keywords: memoryKeywordsSchema.default([]),
 }).strip().superRefine((value, context) => {
   if (value.action !== "IGNORE" && (!value.content || !value.category || !value.scope || !value.importance)) {
     context.addIssue({ code: "custom", message: "CREATE/UPDATE 缺少必要字段。" });
@@ -31,6 +33,7 @@ const operationSchema = z.object({
   if (value.action === "CREATE" && value.existingMemoryId) {
     context.addIssue({ code: "custom", path: ["existingMemoryId"], message: "CREATE 不应提供记忆 ID。" });
   }
+  if (value.action === "CREATE" && !value.topicKey) context.addIssue({ code: "custom", path: ["topicKey"], message: "CREATE 缺少主题。" });
 });
 
 export const memoryExtractionSchema = z.object({
@@ -84,6 +87,11 @@ export interface ExtractionCandidate {
   scope: "GLOBAL" | "PERSONA";
   importance: number;
   updatedAt: Date | string;
+  topicKey?: string | null;
+  keywords?: string[];
+  pinned?: boolean;
+  useCount?: number;
+  lastUsedAt?: Date | string | null;
 }
 
 export function selectExtractionCandidates(message: string, candidates: ExtractionCandidate[]) {

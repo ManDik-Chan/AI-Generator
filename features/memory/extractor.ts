@@ -13,6 +13,7 @@ import {
   shouldRunMemoryExtraction,
 } from "@/features/memory/extraction";
 import { containsHighConfidenceCredential, normalizeMemoryContent } from "@/features/memory/security";
+import { getMemoryMaxTotal } from "@/features/memory/constants";
 import { MemoryExtractionFailure, type MemoryExtractionStage } from "@/features/memory/diagnostics";
 import { requestMemoryModelText } from "@/features/memory/provider";
 
@@ -92,7 +93,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     },
     orderBy: [{ updatedAt: "desc" }, { importance: "desc" }],
     take: 100,
-    select: { id: true, content: true, category: true, scope: true, importance: true, updatedAt: true },
+    select: { id: true, content: true, category: true, scope: true, importance: true, updatedAt: true, topicKey: true, keywords: true, pinned: true, useCount: true, lastUsedAt: true },
   });
   const candidates = selectExtractionCandidates([input.currentUserMessage, ...priorUserMessages].join("\n"), rows);
   stage = "provider_request";
@@ -112,6 +113,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     model: config.model,
     temperature: config.temperature,
     maxOutputTokens: config.maxOutputTokens,
+    thinking: "disabled",
   };
   const initialResponse = await requestMemoryModelText({ provider, request: providerRequest, fallbackModel });
   stage = "provider_response";
@@ -122,7 +124,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     parsed = parseMemoryExtractionOutput(output);
   } catch {
     stage = "repair_request";
-    const repaired = await requestMemoryModelText({ provider, fallbackModel: initialResponse.modelUsed, allowProviderRetry: false, request: { messages: buildMemoryJsonRepairMessages(output), model: initialResponse.modelUsed, temperature: 0, maxOutputTokens: config.maxOutputTokens } });
+    const repaired = await requestMemoryModelText({ provider, fallbackModel: initialResponse.modelUsed, allowProviderRetry: false, request: { messages: buildMemoryJsonRepairMessages(output), model: initialResponse.modelUsed, temperature: 0, maxOutputTokens: config.maxOutputTokens, thinking: "disabled" } });
     stage = "parse";
     parsed = parseMemoryExtractionOutput(repaired.text);
   }
@@ -142,7 +144,7 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
     let created = 0;
     let updated = 0;
     for (const operation of parsed.operations) {
-      if (operation.action === "IGNORE" || operation.confidence < MEMORY_EXTRACTION_CONFIDENCE || !operation.content || !operation.category || !operation.scope || !operation.importance) continue;
+      if (operation.action === "IGNORE" || ["temporary", "uncertain", "sensitive"].includes(operation.reasonCode) || operation.confidence < MEMORY_EXTRACTION_CONFIDENCE || !operation.content || !operation.category || !operation.scope || !operation.importance) continue;
       if (containsHighConfidenceCredential(operation.content)) continue;
       if (explicitIntent) {
         const userEvidence = explicitIntent === "INLINE_FACT" ? [...priorUserMessages, input.currentUserMessage] : priorUserMessages;
@@ -156,18 +158,30 @@ export async function extractAndPersistMemories(input: ExtractMemoryInput) {
 
       if (operation.action === "CREATE") {
         if (duplicate) continue;
-        await transaction.memory.create({ data: { userId: input.userId, content: operation.content, category: operation.category, scope: operation.scope, personaId, importance: operation.importance, enabled: true, origin: "AUTO_EXTRACTED", sourceConversationId: input.conversationId, sourceMessageId: input.sourceMessageId } });
+        const sameTopic = operation.topicKey ? await transaction.memory.findFirst({ where: { userId: input.userId, scope: operation.scope, personaId, topicKey: operation.topicKey }, orderBy: [{ enabled: "desc" }, { updatedAt: "desc" }, { id: "asc" }], select: { id: true } }) : null;
+        if (sameTopic) {
+          const result = await transaction.memory.updateMany({ where: { id: sameTopic.id, userId: input.userId }, data: { content: operation.content, category: operation.category, importance: operation.importance, keywords: operation.keywords, origin: "AUTO_EXTRACTED", sourceConversationId: input.conversationId, sourceMessageId: input.sourceMessageId } });
+          updated += result.count;
+          continue;
+        }
+        const limit = getMemoryMaxTotal();
+        const total = await transaction.memory.count({ where: { userId: input.userId } });
+        if (total >= limit) { console.warn("memory_capacity_reached", { userId: input.userId, conversationId: input.conversationId, sourceMessageId: input.sourceMessageId, limit }); continue; }
+        await transaction.memory.create({ data: { userId: input.userId, content: operation.content, category: operation.category, scope: operation.scope, personaId, importance: operation.importance, topicKey: operation.topicKey!, keywords: operation.keywords, enabled: true, origin: "AUTO_EXTRACTED", sourceConversationId: input.conversationId, sourceMessageId: input.sourceMessageId } });
         created += 1;
       } else if (operation.action === "UPDATE" && operation.existingMemoryId && candidateIds.has(operation.existingMemoryId)) {
-        if (duplicate && duplicate.id !== operation.existingMemoryId) continue;
-        const result = await transaction.memory.updateMany({ where: { id: operation.existingMemoryId, userId: input.userId }, data: { content: operation.content, category: operation.category, scope: operation.scope, personaId, importance: operation.importance, origin: "AUTO_EXTRACTED", sourceConversationId: input.conversationId, sourceMessageId: input.sourceMessageId } });
+        if (duplicate) continue;
+        const candidate = candidates.find((memory) => memory.id === operation.existingMemoryId);
+        const targetTopic = operation.topicKey ?? candidate?.topicKey ?? null;
+        const topicTarget = targetTopic ? await transaction.memory.findFirst({ where: { userId: input.userId, scope: operation.scope, personaId, topicKey: targetTopic }, orderBy: [{ enabled: "desc" }, { updatedAt: "desc" }, { id: "asc" }], select: { id: true } }) : null;
+        const result = await transaction.memory.updateMany({ where: { id: topicTarget?.id ?? operation.existingMemoryId, userId: input.userId }, data: { content: operation.content, category: operation.category, scope: operation.scope, personaId, importance: operation.importance, topicKey: targetTopic, keywords: operation.keywords.length ? operation.keywords : candidate?.keywords ?? [], origin: "AUTO_EXTRACTED", sourceConversationId: input.conversationId, sourceMessageId: input.sourceMessageId } });
         updated += result.count;
       }
     }
     return { created, updated };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   } catch (error) {
-    const resolvedStage = stage === "provider_request" && error instanceof AiProviderError && ["INVALID_RESPONSE", "EMPTY_RESPONSE"].includes(error.code) ? "provider_response" : stage;
+    const resolvedStage = stage === "provider_request" && error instanceof AiProviderError && ["INVALID_RESPONSE", "EMPTY_RESPONSE", "REASONING_ONLY_RESPONSE"].includes(error.code) ? "provider_response" : stage;
     throw new MemoryExtractionFailure(resolvedStage, error, explicitIntent, configuredModel);
   }
 }

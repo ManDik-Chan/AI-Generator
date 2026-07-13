@@ -20,12 +20,12 @@ export function buildMemoryExtractorPolicy() {
 
 若 explicit_memory_intent 存在，用户明确要求记忆。PREVIOUS_CONTEXT 表示事实应从 grounded_user_context 中寻找；INLINE_FACT 表示当前消息含事实，也可用 grounded_user_context 补全同一主题。事实必须能追溯到 USER 消息；assistant 内容只能帮助理解指代，绝不能独立成为事实来源。用户确认 assistant 总结时，只有总结中的每项事实都能在更早 USER 消息中找到才可保存。电脑配置等同一主题必须合并为一条完整 Memory，不拆成多个零碎条目。已有同主题 Memory 且用户更新其中一项时，使用 UPDATE 保留其他有 USER 来源的信息，不同时创建冲突 Memory。找不到可追溯事实则 IGNORE。
 
-输出结构：{"operations":[{"action":"CREATE | UPDATE | IGNORE","existingMemoryId":"仅 UPDATE","content":"2-500 字符的独立用户事实","category":"profile | preference | goal | constraint | relationship | project | other","scope":"GLOBAL | PERSONA","importance":1,"confidence":0.0,"reasonCode":"stable_fact | preference | long_term_goal | project | constraint | relationship | temporary | uncertain | sensitive"}]}`;
+输出结构：{"operations":[{"action":"CREATE | UPDATE | IGNORE","existingMemoryId":"仅 UPDATE","content":"2-500 字符的独立用户事实","category":"profile | preference | goal | constraint | relationship | project | other","scope":"GLOBAL | PERSONA","importance":1,"topicKey":"profile.computer_configuration","keywords":["电脑配置","CPU"],"confidence":0.0,"reasonCode":"stable_fact | preference | long_term_goal | project | constraint | relationship | temporary | uncertain | sensitive"}]}。CREATE 必须提供稳定 topicKey 和 3-8 个只描述内容的关键词；UPDATE 应保留或更新主题与关键词。`;
 }
 
 export function buildMemoryExtractorInput(input: MemoryExtractorPromptInput) {
   const existing = input.existingMemories.map((memory) =>
-    `  <memory id="${escapeMemoryXml(memory.id)}" category="${escapeMemoryXml(memory.category)}" scope="${memory.scope}">${escapeMemoryXml(memory.content)}</memory>`).join("\n");
+    `  <memory id="${escapeMemoryXml(memory.id)}" category="${escapeMemoryXml(memory.category)}" scope="${memory.scope}"${memory.topicKey ? ` topic="${escapeMemoryXml(memory.topicKey)}"` : ""}>${escapeMemoryXml(memory.content)}</memory>`).join("\n");
   const recentUsers = input.recentTurns.filter((message) => message.role === "user").map((message) =>
     `  <user_message>${escapeMemoryXml(message.content)}</user_message>`).join("\n");
   const recentAssistants = input.recentTurns.filter((message) => message.role === "assistant").map((message) =>

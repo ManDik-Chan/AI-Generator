@@ -25,6 +25,12 @@ export function safeMemoryFailureDetails(error: unknown) {
     providerStatus: provider?.status,
     providerErrorCode: provider?.diagnostics?.providerErrorCode,
     providerMessage: provider?.diagnostics?.providerMessage,
+    ...(provider?.diagnostics?.reasoningChunkCount != null ? { reasoningChunkCount: provider.diagnostics.reasoningChunkCount } : {}),
+    ...(provider?.diagnostics?.reasoningCharCount != null ? { reasoningCharCount: provider.diagnostics.reasoningCharCount } : {}),
+    ...(provider?.diagnostics?.contentChunkCount != null ? { contentChunkCount: provider.diagnostics.contentChunkCount } : {}),
+    ...(provider?.diagnostics?.contentCharCount != null ? { contentCharCount: provider.diagnostics.contentCharCount } : {}),
+    ...(provider?.diagnostics?.finishReason != null ? { finishReason: provider.diagnostics.finishReason } : {}),
+    ...(provider?.diagnostics?.terminalEventReceived != null ? { terminalEventReceived: provider.diagnostics.terminalEventReceived } : {}),
     configuredModel: failure?.configuredModel,
     ...(!provider ? { errorCode: original instanceof Error ? original.name : "UNKNOWN" } : {}),
   };

@@ -21,6 +21,10 @@ async function collectMemoryProviderText(provider: AiProvider, request: AiStream
   return text.trim();
 }
 
+function isEmptyProviderResponse(error: unknown) {
+  return error instanceof AiProviderError && ["EMPTY_RESPONSE", "REASONING_ONLY_RESPONSE"].includes(error.code);
+}
+
 export async function requestMemoryModelText({
   provider,
   request,
@@ -28,7 +32,19 @@ export async function requestMemoryModelText({
   allowProviderRetry = true,
   sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
 }: MemoryProviderRequest) {
-  const attempt = (model: string) => collectMemoryProviderText(provider, { ...request, model });
+  let emptyResponseRetried = false;
+  const rawAttempt = (model: string, overrides?: Partial<AiStreamRequest>) => collectMemoryProviderText(provider, { ...request, ...overrides, model });
+  const attempt = async (model: string) => {
+    try {
+      return await rawAttempt(model);
+    } catch (error) {
+      if (!emptyResponseRetried && isEmptyProviderResponse(error)) {
+        emptyResponseRetried = true;
+        return rawAttempt(model, { thinking: "disabled", temperature: 0 });
+      }
+      throw error;
+    }
+  };
   try {
     return { text: await attempt(request.model), modelUsed: request.model };
   } catch (error) {
