@@ -7,6 +7,7 @@ export const TOOL_LABELS = {
   REWRITE: "改写润色",
   TRANSLATE: "多语言翻译",
   IMAGE_ANALYZE: "图片分析",
+  IMAGE_GENERATE: "AI 图片创作",
 } as const;
 
 export const TOOL_PATHS = {
@@ -14,6 +15,7 @@ export const TOOL_PATHS = {
   REWRITE: "/tools/rewrite",
   TRANSLATE: "/tools/translate",
   IMAGE_ANALYZE: "/tools/image",
+  IMAGE_GENERATE: "/tools/image-generate",
 } as const;
 
 export const LANGUAGE_LABELS = {

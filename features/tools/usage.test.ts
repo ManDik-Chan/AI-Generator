@@ -7,7 +7,7 @@ vi.mock("@/lib/database/prisma", () => ({ prisma: {
   toolRun: { count: mocks.count, updateMany: mocks.updateMany },
 } }));
 
-import { createPendingToolRun, createPendingVisionToolRun, DailyToolLimitError, finishToolRun, getVisionUsage } from "@/features/tools/usage";
+import { createPendingImageGenerationToolRun, createPendingToolRun, createPendingVisionToolRun, DailyToolLimitError, finishToolRun, getImageGenerationUsage, getVisionUsage } from "@/features/tools/usage";
 
 const input = { userId: "user", tool: "SUMMARIZE" as const, title: "title", inputText: "input", options: {}, retainContent: true, dailyLimit: 30 };
 describe("tool usage and terminal state", () => {
@@ -22,4 +22,7 @@ describe("tool usage and terminal state", () => {
   it("blocks concurrent-safe vision creation at its own limit", async () => { mocks.count.mockResolvedValue(10); await expect(createPendingVisionToolRun({ ...input, dailyLimit: 10 })).rejects.toBeInstanceOf(DailyToolLimitError); expect(mocks.create).not.toHaveBeenCalled(); });
   it("does not block admins and returns their real incremented usage", async () => { mocks.profile.mockResolvedValue({ role: "ADMIN" }); mocks.count.mockResolvedValue(12); await expect(createPendingVisionToolRun({ ...input, dailyLimit: 10 })).resolves.toMatchObject({ used: 13, unlimited: true }); expect(mocks.create).toHaveBeenCalledOnce(); });
   it("reports the admin's actual daily usage with unlimited=true", async () => { mocks.profile.mockResolvedValue({ role: "ADMIN" }); mocks.count.mockResolvedValue(12); await expect(getVisionUsage("user", 10)).resolves.toEqual({ limit: 10, used: 12, remaining: 10, unlimited: true }); });
+  it("counts image generation independently and stores only the server options", async () => { mocks.count.mockResolvedValue(0); await expect(createPendingImageGenerationToolRun({ userId: "user", title: "image", inputText: "safe prompt", options: { style: "AUTO", size: "1280x1280" }, dailyLimit: 5 })).resolves.toMatchObject({ used: 1, remaining: 4, unlimited: false }); expect(mocks.count).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ type: "IMAGE_GENERATE" }) })); expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ type: "IMAGE_GENERATE", retainContent: true }) })); });
+  it("blocks regular image generation at its independent limit", async () => { mocks.count.mockResolvedValue(5); await expect(createPendingImageGenerationToolRun({ userId: "user", title: "image", inputText: "safe prompt", options: {}, dailyLimit: 5 })).rejects.toBeInstanceOf(DailyToolLimitError); expect(mocks.create).not.toHaveBeenCalled(); });
+  it("keeps image generation unlimited for admins while reporting actual usage", async () => { mocks.profile.mockResolvedValue({ role: "ADMIN" }); mocks.count.mockResolvedValue(8); await expect(createPendingImageGenerationToolRun({ userId: "user", title: "image", inputText: "safe prompt", options: {}, dailyLimit: 5 })).resolves.toMatchObject({ used: 9, remaining: 5, unlimited: true }); await expect(getImageGenerationUsage("user", 5)).resolves.toEqual({ limit: 5, used: 8, remaining: 5, unlimited: true }); });
 });

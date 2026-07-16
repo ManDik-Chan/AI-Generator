@@ -42,6 +42,12 @@ enum ToolType {
   REWRITE
   TRANSLATE
   IMAGE_ANALYZE
+  IMAGE_GENERATE
+}
+
+enum GeneratedImageKind {
+  PERSONA_AVATAR
+  TOOL_GENERATION
 }
 
 enum ToolAssetKind {
@@ -92,7 +98,9 @@ model ToolRun {
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
   assets ToolAsset[]
+  generatedImage GeneratedImage?
 
+  @@unique([id, userId])
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, type, createdAt(sort: Desc)])
   @@index([userId, status, createdAt(sort: Desc)])
@@ -239,20 +247,28 @@ model MemoryEmbedding {
 }
 
 model GeneratedImage {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  prompt      String
-  provider    String
-  model       String
-  storagePath String   @map("storage_path")
-  width       Int?
-  height      Int?
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @map("user_id") @db.Uuid
+  kind          GeneratedImageKind @default(PERSONA_AVATAR)
+  prompt        String
+  provider      String
+  model         String
+  storagePath   String             @map("storage_path")
+  storageBucket String             @default("persona-avatars") @map("storage_bucket") @db.VarChar(100)
+  mimeType      String?            @map("mime_type") @db.VarChar(100)
+  sizeBytes     Int?               @map("size_bytes")
+  width         Int?
+  height        Int?
+  toolRunId     String?            @unique @map("tool_run_id") @db.Uuid
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
   personaAvatar Persona? @relation("PersonaAvatarImage")
+  toolRun ToolRun? @relation(fields: [toolRunId, userId], references: [id, userId], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, kind, createdAt(sort: Desc)])
+  @@unique([toolRunId, userId])
   @@map("generated_images")
 }
 

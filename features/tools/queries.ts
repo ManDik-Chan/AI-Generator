@@ -14,7 +14,7 @@ export async function getToolHistory(userId: string, page = 1, type?: ToolType) 
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (safePage - 1) * TOOL_HISTORY_PAGE_SIZE,
       take: TOOL_HISTORY_PAGE_SIZE,
-      select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } } },
+      select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } } },
     }),
     prisma.toolRun.count({ where }),
   ]);
@@ -27,6 +27,7 @@ export async function getToolHistory(userId: string, page = 1, type?: ToolType) 
     outputPreview: previewText(row.outputText),
     createdAt: row.createdAt.toISOString(),
     asset: row.assets[0] ? { id: row.assets[0].id, mimeType: row.assets[0].mimeType, width: row.assets[0].width, height: row.assets[0].height, expired: row.assets[0].expiresAt <= new Date() } : undefined,
+    generatedImage: row.generatedImage ?? undefined,
   }));
   return { items, page: safePage, pages: Math.max(1, Math.ceil(total / TOOL_HISTORY_PAGE_SIZE)), total };
 }
@@ -34,7 +35,7 @@ export async function getToolHistory(userId: string, page = 1, type?: ToolType) 
 export async function getToolRunDetail(userId: string, runId: string): Promise<ToolRunDetail | null> {
   const row = await prisma.toolRun.findFirst({
     where: { id: runId, userId, retainContent: true },
-    select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, options: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } } },
+    select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, options: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } } },
   });
   if (!row?.inputText) return null;
   return {
@@ -47,6 +48,7 @@ export async function getToolRunDetail(userId: string, runId: string): Promise<T
     options: row.options as Record<string, unknown>,
     createdAt: row.createdAt.toISOString(),
     asset: row.assets[0] ? { id: row.assets[0].id, mimeType: row.assets[0].mimeType, width: row.assets[0].width, height: row.assets[0].height, expired: row.assets[0].expiresAt <= new Date() } : undefined,
+    generatedImage: row.generatedImage ?? undefined,
   };
 }
 

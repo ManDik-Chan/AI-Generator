@@ -1,5 +1,7 @@
 # AI-Generator V2
 
+> Phase 6A3 通用 AI 图片生成工作台已进入 Draft 验收：新增单图文生图、服务端风格白名单、真实阶段进度、停止与迟到流保护、独立每日限额、private `generated-images`、私有预览/下载/历史/删除，以及与 Persona 头像隔离的 `GeneratedImageKind`。自动验证完成后仍需项目所有者部署 migration、RLS、private bucket 并进行真实 GLM-Image 与响应式验收；当前不包含图片编辑、多图、视频、OCR 或 RAG。详见 `docs/image-generation-tool.md`。
+
 > Phase 6B1 已按项目所有者批准的 Premium 高保真原型扩展为全产品 UI 迁移：纸张/深炭主题、翡翠强调、双星品牌、响应式应用外壳，以及首页、认证、聊天、人格、长期记忆、文本工具、图片分析、工具历史、账号和管理页面均已统一。所有页面只展示真实数据或诚实空状态；原型中的假数据和未实现功能没有进入生产。此次仅调整界面与交互呈现，不改变业务语义、API、Provider、数据库结构、RLS 或 migration，当前等待项目所有者第三轮真实视觉验收。详见 `docs/design-system.md`、`docs/ui-redesign-roadmap.md` 与 `docs/full-product-ui-redesign.md`。
 
 > Phase 6A2 已完成项目所有者真实验收：单图图片理解、私有 `ToolAsset`、服务端安全净化、private Storage、独立视觉限额、OpenAI-compatible 多模态 Provider、SSE/停止/历史/到期清理、图片 Prompt 注入隔离和响应式均已通过。当前仍不包含 PDF/DOCX、专业 OCR、RAG、多图、视频、图片生成或编辑；Phase 6A3 与 Phase 7 尚未开始。详见 `docs/image-understanding-tool.md`。

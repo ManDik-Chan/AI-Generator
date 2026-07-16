@@ -61,6 +61,75 @@ export async function getVisionUsage(userId: string, dailyLimit: number) {
   return { limit: dailyLimit, used, remaining: unlimited ? dailyLimit : Math.max(0, dailyLimit - used), unlimited };
 }
 
+export async function createPendingImageGenerationToolRun(input: {
+  userId: string;
+  title: string;
+  inputText: string;
+  options: Prisma.InputJsonValue;
+  dailyLimit: number;
+}) {
+  return prisma.$transaction(async (transaction) => {
+    const profile = await transaction.profile.findUnique({
+      where: { id: input.userId },
+      select: { role: true },
+    });
+    const used = await transaction.toolRun.count({
+      where: {
+        userId: input.userId,
+        type: "IMAGE_GENERATE",
+        createdAt: { gte: startOfUtcDay() },
+      },
+    });
+    const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
+    if (!unlimited && used >= input.dailyLimit) {
+      throw new DailyToolLimitError(input.dailyLimit, used);
+    }
+    const run = await transaction.toolRun.create({
+      data: {
+        userId: input.userId,
+        type: "IMAGE_GENERATE",
+        title: input.title,
+        inputText: input.inputText,
+        options: input.options,
+        retainContent: true,
+      },
+      select: { id: true },
+    });
+    return {
+      runId: run.id,
+      limit: input.dailyLimit,
+      used: used + 1,
+      remaining: unlimited
+        ? input.dailyLimit
+        : Math.max(0, input.dailyLimit - used - 1),
+      unlimited,
+    };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+export async function getImageGenerationUsage(
+  userId: string,
+  dailyLimit: number,
+) {
+  const [profile, used] = await Promise.all([
+    prisma.profile.findUnique({ where: { id: userId }, select: { role: true } }),
+    prisma.toolRun.count({
+      where: {
+        userId,
+        type: "IMAGE_GENERATE",
+        createdAt: { gte: startOfUtcDay() },
+      },
+    }),
+  ]);
+  const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
+  return {
+    limit: dailyLimit,
+    used,
+    remaining: unlimited ? dailyLimit : Math.max(0, dailyLimit - used),
+    unlimited,
+  };
+}
+
 export async function finishToolRun(userId: string, runId: string, status: Exclude<ToolRunStatus, "PENDING">, data: { outputText?: string; errorCode?: string } = {}) {
   return prisma.toolRun.updateMany({
     where: { id: runId, userId, status: "PENDING" },

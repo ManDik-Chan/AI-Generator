@@ -1,5 +1,21 @@
 # 重构进度
 
+## Phase 6A3 通用 AI 图片生成工作台（Draft 验收中）
+
+- [x] `/tools/image-generate` 单图生成工作台、服务端风格白名单与明确点击调用
+- [x] `IMAGE_GENERATE` ToolRun、独立 Serializable 每日限额与 ADMIN 真实用量显示
+- [x] `GeneratedImageKind`、同用户 ToolRun 一对一绑定与独立 migration
+- [x] private `generated-images` Storage、随机路径、私有预览/下载与删除补偿
+- [x] 复用 ImageProvider、GLM-Image、SSRF 安全下载与魔数校验
+- [x] run/progress/done/cancelled/error SSE、真实阶段和迟到终态保护
+- [x] 私有分页画廊、再次创作、下载、删除与通用工具历史
+- [x] Prompt 不可信数据边界，不读取 Persona/Memory，不创建 Conversation/Message
+- [x] 自动测试、lint、typecheck、无密钥构建和 Prisma 校验
+- [ ] 项目所有者真实 Supabase migration / RLS / private bucket 验收
+- [ ] 项目所有者真实 GLM-Image、停止、隔离与 390/430/768/1440px 验收
+
+本阶段不包含图片编辑、局部重绘、多图、视频、专业 OCR、文件/网页/图片 RAG 或公开分享。Phase 7 未开始。
+
 ## Phase 6B1 全产品 UI 迁移（待第三次真实视觉验收）
 
 - 项目所有者未通过第一次自由设计方向；上传的 Premium 高保真原型现为 Phase 6B 主要视觉基准。

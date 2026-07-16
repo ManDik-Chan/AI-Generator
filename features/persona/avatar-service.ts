@@ -37,7 +37,7 @@ export async function generatePersonaAvatarCandidate(userId: string, personaId: 
   await uploadPersonaAvatar(storagePath, downloaded.bytes, downloaded.mimeType);
   try {
     onProgress?.("saving");
-    await prisma.generatedImage.create({ data: { id: generatedImageId, userId, prompt, provider: result.provider, model: result.model, storagePath, width: result.width, height: result.height } });
+    await prisma.generatedImage.create({ data: { id: generatedImageId, userId, kind: "PERSONA_AVATAR", prompt, provider: result.provider, model: result.model, storagePath, storageBucket: config.bucket, mimeType: downloaded.mimeType, sizeBytes: downloaded.bytes.byteLength, width: result.width, height: result.height } });
   } catch {
     try { await removePersonaAvatar(storagePath); } catch { /* best-effort rollback */ }
     throw new ImageProviderError("STORAGE", "Generated image record could not be saved");
@@ -50,7 +50,7 @@ export async function applyPersonaAvatar(userId: string, personaId: string, gene
   const cleanPrompt = prompt.trim();
   const result = await prisma.$transaction(async (tx) => {
     const persona = await tx.persona.findFirst({ where: { id: personaId, userId }, select: { id: true, avatarImageId: true } });
-    const image = await tx.generatedImage.findFirst({ where: { id: generatedImageId, userId }, select: { id: true } });
+    const image = await tx.generatedImage.findFirst({ where: { id: generatedImageId, userId, kind: "PERSONA_AVATAR" }, select: { id: true } });
     if (!persona || !image) return null;
     await tx.persona.update({ where: { id: persona.id }, data: { avatarPrompt: cleanPrompt, avatarImageId: image.id, avatarUrl: `/api/personas/${persona.id}/avatar?v=${image.id}` } });
     return { oldImageId: persona.avatarImageId };
@@ -62,7 +62,7 @@ export async function applyPersonaAvatar(userId: string, personaId: string, gene
 }
 
 export async function deleteGeneratedAvatar(userId: string, generatedImageId: string) {
-  const image = await prisma.generatedImage.findFirst({ where: { id: generatedImageId, userId }, select: { id: true, storagePath: true, personaAvatar: { select: { id: true } } } });
+  const image = await prisma.generatedImage.findFirst({ where: { id: generatedImageId, userId, kind: "PERSONA_AVATAR" }, select: { id: true, storagePath: true, personaAvatar: { select: { id: true } } } });
   if (!image) return "not-found" as const;
   if (image.personaAvatar) return "in-use" as const;
   await removePersonaAvatar(image.storagePath);
