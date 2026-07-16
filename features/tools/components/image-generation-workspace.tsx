@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Download, ImageIcon, LoaderCircle, RotateCcw, Sparkles, Square, Trash2 } from "lucide-react";
+import { Copy, Download, ImageIcon, ImageOff, LoaderCircle, RotateCcw, Sparkles, Square, Trash2 } from "lucide-react";
 
 import { GenerationProgress, type GenerationStage } from "@/components/ai/generation-progress";
 import { useElapsedTime } from "@/components/ai/use-elapsed-time";
@@ -12,6 +12,7 @@ import { ConfirmDialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatVisionUsage } from "@/features/tools/image/usage-display";
 import { IMAGE_GENERATION_PROMPT_MAX_CHARS, IMAGE_GENERATION_STYLES, type ImageGenerationStyle } from "@/features/tools/image-generation/constants";
+import { consumeImageGenerationDraft } from "@/features/tools/image-generation/draft";
 import type { GeneratedToolImageDto, ImageGenerationUsageDto } from "@/features/tools/image-generation/types";
 import { readSseEvents } from "@/lib/ai/read-sse";
 
@@ -34,6 +35,7 @@ const progressStages: GenerationStage[] = [
 export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, initialHistory, initialPage, initialPages }: Props) {
   const controllerRef = useRef<AbortController | undefined>(undefined);
   const requestVersionRef = useRef(0);
+  const userHasEditedRef = useRef(false);
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState<ImageGenerationStyle>("AUTO");
   const [usage, setUsage] = useState(initialUsage);
@@ -45,9 +47,16 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
   const [deleteTarget, setDeleteTarget] = useState<GeneratedToolImageDto>();
   const elapsed = useElapsedTime(state === "running");
 
-  useEffect(() => () => {
-    requestVersionRef.current += 1;
-    controllerRef.current?.abort();
+  useEffect(() => {
+    const draft = consumeImageGenerationDraft(sessionStorage);
+    if (draft && !userHasEditedRef.current) {
+      setPrompt(draft.prompt);
+      setStyle(draft.style);
+    }
+    return () => {
+      requestVersionRef.current += 1;
+      controllerRef.current?.abort();
+    };
   }, []);
 
   async function generate() {
@@ -108,8 +117,8 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
   async function removeImage(image: GeneratedToolImageDto) {
     const response = await fetch(`/api/generated-images/${image.id}`, { method: "DELETE" });
     if (!response.ok) {
-      const body = await response.json().catch(() => null) as { message?: string } | null;
-      setError(body?.message || "删除图片失败，请稍后重试。");
+      const body = await response.json().catch(() => null) as { message?: string; error?: string } | null;
+      setError(body?.message || body?.error || "删除图片失败，请稍后重试。");
       return;
     }
     setHistory((items) => items.filter((item) => item.id !== image.id));
@@ -129,12 +138,12 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
         </div>
         <label className="mt-5 grid gap-2">
           <span className="text-sm font-medium">图片描述</span>
-          <textarea className="premium-field min-h-36 resize-y p-3 leading-6" disabled={active || !configured} maxLength={IMAGE_GENERATION_PROMPT_MAX_CHARS} onChange={(event) => setPrompt(event.target.value)} placeholder="例如：雨后的未来城市街道，霓虹灯倒映在路面，电影感广角构图" value={prompt} />
+          <textarea className="premium-field min-h-36 resize-y p-3 leading-6" disabled={active || !configured} maxLength={IMAGE_GENERATION_PROMPT_MAX_CHARS} onChange={(event) => { userHasEditedRef.current = true; setPrompt(event.target.value); }} placeholder="例如：雨后的未来城市街道，霓虹灯倒映在路面，电影感广角构图" value={prompt} />
           <span className="text-right text-xs text-muted-foreground">{prompt.length} / {IMAGE_GENERATION_PROMPT_MAX_CHARS}</span>
         </label>
         <label className="mt-4 grid gap-2">
           <span className="text-sm font-medium">创作风格</span>
-          <select className="premium-field h-11 min-w-0 px-3" disabled={active || !configured} onChange={(event) => setStyle(event.target.value as ImageGenerationStyle)} value={style}>
+          <select className="premium-field h-11 min-w-0 px-3" disabled={active || !configured} onChange={(event) => { userHasEditedRef.current = true; setStyle(event.target.value as ImageGenerationStyle); }} value={style}>
             {Object.entries(IMAGE_GENERATION_STYLES).map(([value, option]) => <option key={value} value={value}>{option.label}</option>)}
           </select>
         </label>
@@ -149,13 +158,13 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
       </section>
 
       <section className="premium-panel-strong min-w-0 p-4 sm:p-6">
-        {active ? <GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={stop} stages={progressStages} title="正在创作并安全保存图片" /> : current ? <GeneratedImagePanel image={current} onDelete={() => setDeleteTarget(current)} onReuse={() => { setPrompt(current.prompt); setStyle(current.style); }} /> : <div className="grid min-h-[28rem] place-items-center rounded-overlay border border-dashed border-border/20 bg-surface-muted/55 p-6 text-center"><div><span className="premium-icon-tile mx-auto size-16 rounded-[1.3rem]"><ImageIcon className="size-7" /></span><h2 className="mt-4 text-section-title">生成结果将在这里显示</h2><p className="mx-auto mt-2 max-w-sm text-supporting">输入描述不会自动产生费用；只有点击“开始生成”后才会创建一次图片运行。</p></div></div>}
+        {active ? <GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={stop} stages={progressStages} title="正在创作并安全保存图片" /> : current ? <GeneratedImagePanel image={current} onDelete={() => setDeleteTarget(current)} onError={setError} onReuse={() => { userHasEditedRef.current = true; setPrompt(current.prompt); setStyle(current.style); }} /> : <div className="grid min-h-[28rem] place-items-center rounded-overlay border border-dashed border-border/20 bg-surface-muted/55 p-6 text-center"><div><span className="premium-icon-tile mx-auto size-16 rounded-[1.3rem]"><ImageIcon className="size-7" /></span><h2 className="mt-4 text-section-title">生成结果将在这里显示</h2><p className="mx-auto mt-2 max-w-sm text-supporting">输入描述不会自动产生费用；只有点击“开始生成”后才会创建一次图片运行。</p></div></div>}
       </section>
     </div>
 
     <section className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="premium-kicker">PRIVATE GALLERY</p><h2 className="mt-1 text-section-title">我的生成图片</h2><p className="mt-1 text-supporting">预览与下载都通过登录态鉴权，不保存公开 URL 或 signed URL。</p></div><Button asChild variant="outline"><Link href="/tools/history?type=IMAGE_GENERATE">查看运行历史</Link></Button></div>
-      {history.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{history.map((image) => <GeneratedImageCard image={image} key={image.id} onDelete={() => setDeleteTarget(image)} onReuse={() => { setPrompt(image.prompt); setStyle(image.style); window.scrollTo({ top: 0, behavior: "smooth" }); }} />)}</div> : <EmptyState description="完成第一张图片后，它会显示在当前用户的私有画廊中。" icon={<ImageIcon className="size-6" />} title="还没有生成图片" />}
+      {history.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{history.map((image) => <GeneratedImageCard image={image} key={image.id} onDelete={() => setDeleteTarget(image)} onError={setError} onReuse={() => { userHasEditedRef.current = true; setPrompt(image.prompt); setStyle(image.style); window.scrollTo({ top: 0, behavior: "smooth" }); }} />)}</div> : <EmptyState description="完成第一张图片后，它会显示在当前用户的私有画廊中。" icon={<ImageIcon className="size-6" />} title="还没有生成图片" />}
       <div className="flex items-center justify-between gap-3"><Button asChild className={initialPage <= 1 ? "pointer-events-none opacity-50" : ""} variant="outline"><Link href={`/tools/image-generate?page=${Math.max(1, initialPage - 1)}`}>上一页</Link></Button><span className="premium-chip">第 {initialPage} / {initialPages} 页</span><Button asChild className={initialPage >= initialPages ? "pointer-events-none opacity-50" : ""} variant="outline"><Link href={`/tools/image-generate?page=${Math.min(initialPages, initialPage + 1)}`}>下一页</Link></Button></div>
     </section>
 
@@ -163,15 +172,43 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
   </div>;
 }
 
-function GeneratedImagePanel({ image, onDelete, onReuse }: { image: GeneratedToolImageDto; onDelete(): void; onReuse(): void }) {
-  return <div><div className="relative mx-auto aspect-square max-h-[36rem] overflow-hidden rounded-overlay bg-surface-muted"><Image alt={image.prompt} className="object-contain" fill priority src={image.previewUrl} unoptimized /></div><div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><p className="premium-kicker">LATEST RESULT</p><p className="mt-1 break-words text-sm leading-6">{image.prompt}</p></div><ImageActions image={image} onDelete={onDelete} onReuse={onReuse} /></div></div>;
+function imageSizeLabel(image: GeneratedToolImageDto) {
+  return image.width && image.height ? `${image.width} × ${image.height}` : "尺寸未知";
 }
 
-function GeneratedImageCard({ image, onDelete, onReuse }: { image: GeneratedToolImageDto; onDelete(): void; onReuse(): void }) {
-  const [loading, setLoading] = useState(true);
-  return <article className="premium-panel min-w-0 overflow-hidden p-3"><div className="relative aspect-square overflow-hidden rounded-control bg-surface-muted">{loading && <span className="absolute inset-0 grid place-items-center"><LoaderCircle className="size-6 animate-spin text-primary motion-reduce:animate-none" /></span>}<Image alt={image.prompt} className="object-cover" fill onLoad={() => setLoading(false)} src={image.previewUrl} unoptimized /></div><p className="mt-3 line-clamp-2 break-words text-sm leading-5">{image.prompt}</p><p className="mt-1 text-xs text-muted-foreground">{IMAGE_GENERATION_STYLES[image.style].label} · {new Date(image.createdAt).toLocaleString("zh-CN")}</p><div className="mt-3"><ImageActions image={image} onDelete={onDelete} onReuse={onReuse} /></div></article>;
+function imageMetadata(image: GeneratedToolImageDto) {
+  return `${IMAGE_GENERATION_STYLES[image.style].label} · ${imageSizeLabel(image)} · ${new Date(image.createdAt).toLocaleString("zh-CN")}`;
 }
 
-function ImageActions({ image, onDelete, onReuse }: { image: GeneratedToolImageDto; onDelete(): void; onReuse(): void }) {
-  return <div className="flex flex-wrap gap-2"><Button onClick={onReuse} size="sm" variant="outline"><RotateCcw className="size-3.5" />再次创作</Button><Button asChild size="sm" variant="ghost"><a download href={image.downloadUrl}><Download className="size-3.5" />下载</a></Button><Button aria-label="删除图片" className="text-destructive-foreground" onClick={onDelete} size="icon-sm" variant="ghost"><Trash2 className="size-3.5" /></Button></div>;
+function GeneratedImagePanel({ image, onDelete, onError, onReuse }: { image: GeneratedToolImageDto; onDelete(): void; onError(message: string): void; onReuse(): void }) {
+  return <div><GeneratedImagePreview image={image} priority variant="contain" /><div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div className="min-w-0"><p className="premium-kicker">LATEST RESULT</p><p className="mt-1 break-words text-sm leading-6">{image.prompt}</p><p className="mt-2 text-xs leading-5 text-muted-foreground">{imageMetadata(image)}</p><p className="mt-1 text-xs text-muted-foreground">私有图片 · 仅当前账号可预览与下载</p></div><ImageActions image={image} onDelete={onDelete} onError={onError} onReuse={onReuse} /></div></div>;
+}
+
+function GeneratedImageCard({ image, onDelete, onError, onReuse }: { image: GeneratedToolImageDto; onDelete(): void; onError(message: string): void; onReuse(): void }) {
+  return <article className="premium-panel min-w-0 overflow-hidden p-3"><GeneratedImagePreview image={image} variant="cover" /><p className="mt-3 line-clamp-2 break-words text-sm leading-5">{image.prompt}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{imageMetadata(image)}</p><div className="mt-3"><ImageActions image={image} onDelete={onDelete} onError={onError} onReuse={onReuse} /></div></article>;
+}
+
+function GeneratedImagePreview({ image, priority = false, variant }: { image: GeneratedToolImageDto; priority?: boolean; variant: "contain" | "cover" }) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  return <div className={`relative mx-auto aspect-square overflow-hidden bg-surface-muted ${variant === "contain" ? "max-h-[36rem] rounded-overlay" : "rounded-control"}`}>
+    {status === "loading" && <span className="absolute inset-0 grid place-items-center"><LoaderCircle className="size-6 animate-spin text-primary motion-reduce:animate-none" /></span>}
+    {status === "error" ? <span className="absolute inset-0 grid place-items-center p-4 text-center text-muted-foreground"><span><ImageOff className="mx-auto size-7" /><span className="mt-2 block text-xs">图片暂时无法加载</span></span></span> : <Image alt={image.prompt} className={variant === "contain" ? "object-contain" : "object-cover"} fill onError={() => setStatus("error")} onLoad={() => setStatus("loaded")} priority={priority} src={image.previewUrl} unoptimized />}
+  </div>;
+}
+
+function ImageActions({ image, onDelete, onError, onReuse }: { image: GeneratedToolImageDto; onDelete(): void; onError(message: string): void; onReuse(): void }) {
+  const [copied, setCopied] = useState(false);
+  const feedbackTimerRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(feedbackTimerRef.current), []);
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(image.prompt);
+      setCopied(true);
+      window.clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      onError("复制描述失败，请手动选择描述文字。");
+    }
+  }
+  return <div className="flex flex-wrap gap-2"><Button onClick={onReuse} size="sm" variant="outline"><RotateCcw className="size-3.5" />再次创作</Button><Button onClick={() => void copyPrompt()} size="sm" variant="ghost"><Copy className="size-3.5" />{copied ? "描述已复制" : "复制描述"}</Button><Button asChild size="sm" variant="ghost"><a download href={image.downloadUrl}><Download className="size-3.5" />下载</a></Button><Button aria-label="删除图片" className="text-destructive-foreground" onClick={onDelete} size="icon-sm" variant="ghost"><Trash2 className="size-3.5" /></Button></div>;
 }

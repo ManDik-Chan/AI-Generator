@@ -52,35 +52,13 @@ create policy "memory_embeddings_delete_own" on public.memory_embeddings
   for delete using (user_id = auth.uid());
 drop policy if exists "generated_images_own_all" on public.generated_images;
 drop policy if exists "generated_images_select_own" on public.generated_images;
+drop policy if exists "generated_images_insert_own_run" on public.generated_images;
+drop policy if exists "generated_images_update_own_run" on public.generated_images;
+drop policy if exists "generated_images_delete_own" on public.generated_images;
+drop policy if exists "generated_images_insert_own" on public.generated_images;
+drop policy if exists "generated_images_update_own" on public.generated_images;
 create policy "generated_images_select_own" on public.generated_images
   for select using (user_id = auth.uid());
-drop policy if exists "generated_images_insert_own_run" on public.generated_images;
-create policy "generated_images_insert_own_run" on public.generated_images
-  for insert with check (
-    user_id = auth.uid()
-    and (
-      tool_run_id is null
-      or exists (
-        select 1 from public.tool_runs r
-        where r.id = tool_run_id and r.user_id = auth.uid()
-      )
-    )
-  );
-drop policy if exists "generated_images_update_own_run" on public.generated_images;
-create policy "generated_images_update_own_run" on public.generated_images
-  for update using (user_id = auth.uid()) with check (
-    user_id = auth.uid()
-    and (
-      tool_run_id is null
-      or exists (
-        select 1 from public.tool_runs r
-        where r.id = tool_run_id and r.user_id = auth.uid()
-      )
-    )
-  );
-drop policy if exists "generated_images_delete_own" on public.generated_images;
-create policy "generated_images_delete_own" on public.generated_images
-  for delete using (user_id = auth.uid());
 
 drop policy if exists "tool_runs_select_own" on public.tool_runs;
 create policy "tool_runs_select_own" on public.tool_runs

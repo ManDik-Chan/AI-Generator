@@ -171,3 +171,5 @@ Phase 6A1 的可信工具类型、白名单选项和输出契约只放入 system
 图片生成复用 Phase 4A3 的 provider-agnostic `ImageProvider` 与安全远程下载器，但使用独立 `IMAGE_GENERATE` ToolRun、独立每日额度和 private `generated-images` bucket。`GeneratedImageKind` 将 Persona 候选头像与工具生成结果显式隔离；工具图片必须通过复合所有权关系绑定同一用户的 ToolRun。每次运行只调用一次图片模型并生成一张，终态只能从 PENDING 写入一次。
 
 用户描述经 XML 转义后放入明确的不可信数据边界，风格与尺寸由服务端白名单和配置决定。工具不读取 Persona 或 Memory，不创建 Conversation/Message，也不把图片或 Prompt 写入其他业务域。私有读取每次验证所有权并生成短时 signed URL；URL 不持久化或写日志。详见 `image-generation-tool.md`。
+
+Service Role Storage 的信任边界独立于数据库行所有权：Bucket 必须由服务端根据 `GeneratedImageKind` 推导，数据库 Bucket 仅用于一致性校验；Path 必须通过当前用户前缀、固定段数、扩展名和路径穿越检查。`generated_images` 对 authenticated 连接仅开放 select-own，所有写入与删除均为 server-only。这样即使一条数据库记录被异常篡改，也不能让应用替任意 private Bucket 签名或删除对象。

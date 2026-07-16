@@ -10,6 +10,8 @@
 - [x] run/progress/done/cancelled/error SSE、真实阶段和迟到终态保护
 - [x] 私有分页画廊、再次创作、下载、删除与通用工具历史
 - [x] Prompt 不可信数据边界，不读取 Persona/Memory，不创建 Conversation/Message
+- [x] Service Role Bucket/Path 可信目标解析、GeneratedImage server-only 写 RLS
+- [x] 结果元数据、复制原始描述、加载失败状态与历史再次创作回填
 - [x] 自动测试、lint、typecheck、无密钥构建和 Prisma 校验
 - [ ] 项目所有者真实 Supabase migration / RLS / private bucket 验收
 - [ ] 项目所有者真实 GLM-Image、停止、隔离与 390/430/768/1440px 验收

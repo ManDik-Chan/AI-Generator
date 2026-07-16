@@ -22,6 +22,10 @@
 - `GET /api/generated-images/:id` 每次验证所有权，再生成短时 signed URL 并重定向；下载使用同一认证入口。
 - 删除会清理 Storage 对象和对应 ToolRun；保存失败执行 Storage 补偿清理。
 
+Service Role Storage 操作不信任数据库元数据。共享 server-only 解析器先按 `kind` 从服务端配置推导唯一可信 Bucket，再验证数据库 Bucket 完全一致；Path 必须使用当前 `userId` 作为第一段、符合 Persona 三段或工具两段格式，并拒绝前导 `/`、`..`、反斜杠、空字节、百分号编码和非 PNG/JPEG/WebP 扩展名。签名和删除函数只接收验证后的可信 Target，不再接收任意 bucket/path 字符串。伪造记录返回安全的 404，不签名、不删除，也不记录完整 Path。
+
+`generated_images` 的 authenticated RLS 只保留 select-own。浏览器不能直接 INSERT、UPDATE 或 DELETE；创建、应用与删除全部经过 trusted server Prisma/Route Handler，以保持数据库、Storage、Persona kind 和 ToolRun 所有权一致。复合外键继续约束 ToolRun 与 GeneratedImage 的 `userId`。
+
 ## Provider、安全下载与 Prompt 边界
 
 业务层复用 provider-agnostic `ImageProvider`、Registry、GLM-Image OpenAI-compatible 实现和 Phase 4A3 安全下载器。下载器保持 HTTPS、DNS/保留地址、重定向、15 MB、Content-Type、PNG/JPEG/WebP 魔数和 MIME mismatch 检查，不放宽 SSRF 防护。
@@ -51,7 +55,7 @@ SUPABASE_GENERATED_IMAGE_BUCKET=generated-images
 
 1. 部署 migration，重复执行最新版 RLS，并创建 private bucket。
 2. 普通用户生成一张图片，确认准备、生成、下载、校验、上传、保存阶段，且只有一条 ToolRun 与一条工具 GeneratedImage。
-3. 验证预览、下载、再次创作、分页历史和删除；跨用户读取/删除必须失败。
+3. 验证预览、下载、复制原始描述、再次创作、分页历史和删除；跨用户读取/删除及伪造 Bucket/Path 必须失败。
 4. 生成中停止，确认 ToolRun 为 CANCELLED、无图片记录和 Storage 残留，迟到流不能改为 COMPLETE。
 5. 验证普通用户默认 5 次限额；ADMIN 不受阻止且显示真实已使用次数。
 6. 使用包含伪造 system/developer、密钥索取和越权命令的描述，确认只作为图片描述数据处理，日志与响应不泄露配置。

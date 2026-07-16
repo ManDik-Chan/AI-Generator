@@ -10,6 +10,7 @@ const rls = readFileSync("prisma/rls.sql", "utf8");
 const route = readFileSync("app/api/tools/image-generate/route.ts", "utf8");
 const workspace = readFileSync("features/tools/components/image-generation-workspace.tsx", "utf8");
 const generatedImageRoute = readFileSync("app/api/generated-images/[generatedImageId]/route.ts", "utf8");
+const toolHistory = readFileSync("features/tools/components/tool-history.tsx", "utf8");
 
 describe("Phase 6A3 image generation contracts", () => {
   it("adds an independent migration and tool/image kinds", () => {
@@ -20,10 +21,13 @@ describe("Phase 6A3 image generation contracts", () => {
     expect(migration).toContain("generated_images_tool_run_id_user_id_key");
   });
 
-  it("binds generated images to the same owned ToolRun in RLS", () => {
-    expect(rls).toContain("generated_images_insert_own");
-    expect(rls).toContain("r.id = tool_run_id");
-    expect(rls).toContain("r.user_id = auth.uid()");
+  it("keeps GeneratedImage writes server-only while retaining select-own RLS", () => {
+    const generatedPolicies = rls.slice(rls.indexOf('drop policy if exists "generated_images_own_all"'), rls.indexOf('drop policy if exists "tool_runs_select_own"'));
+    expect(generatedPolicies).toContain('create policy "generated_images_select_own"');
+    expect(generatedPolicies).toContain("for select using (user_id = auth.uid())");
+    expect(generatedPolicies).not.toContain('create policy "generated_images_insert');
+    expect(generatedPolicies).not.toContain('create policy "generated_images_update');
+    expect(generatedPolicies).not.toContain('create policy "generated_images_delete');
   });
 
   it("strictly validates a prompt and server whitelist style", () => {
@@ -53,6 +57,19 @@ describe("Phase 6A3 image generation contracts", () => {
     expect(workspace).toContain("downloadUrl");
     expect(workspace).toContain('method: "DELETE"');
     expect(workspace).not.toContain("router.refresh");
+  });
+
+  it("shows real result metadata, copies only the DTO prompt and handles image errors", () => {
+    expect(workspace).toContain("IMAGE_GENERATION_STYLES[image.style].label");
+    expect(workspace).toContain("image.width && image.height");
+    expect(workspace).toContain("image.createdAt");
+    expect(workspace).toContain("navigator.clipboard.writeText(image.prompt)");
+    expect(workspace).toContain('onError={() => setStatus("error")}');
+    expect(workspace).toContain("图片暂时无法加载");
+  });
+
+  it("labels image generation history as again-create", () => {
+    expect(toolHistory).toContain('item.type === "IMAGE_GENERATE" ? "再次创作"');
   });
 
   it("authorizes private image reads and never returns a persistent signed URL", () => {

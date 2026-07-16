@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { resolvePersonaAvatarPrompt } from "@/features/persona/avatar-prompt";
 import { buildPersonaAvatarStoragePath, removePersonaAvatar, uploadPersonaAvatar } from "@/features/persona/avatar-storage";
+import { resolveGeneratedImageStorageTarget } from "@/features/generated-images/storage-target";
 import { requireImageConfig } from "@/lib/ai/image/config";
 import { downloadRemoteImageSafely } from "@/lib/ai/image/download";
 import { ImageProviderError } from "@/lib/ai/image/errors";
@@ -34,12 +35,12 @@ export async function generatePersonaAvatarCandidate(userId: string, personaId: 
   const generatedImageId = randomUUID();
   const storagePath = buildPersonaAvatarStoragePath(userId, personaId, generatedImageId, downloaded.extension);
   onProgress?.("uploading");
-  await uploadPersonaAvatar(storagePath, downloaded.bytes, downloaded.mimeType);
+  const storageTarget = await uploadPersonaAvatar(userId, storagePath, downloaded.bytes, downloaded.mimeType);
   try {
     onProgress?.("saving");
-    await prisma.generatedImage.create({ data: { id: generatedImageId, userId, kind: "PERSONA_AVATAR", prompt, provider: result.provider, model: result.model, storagePath, storageBucket: config.bucket, mimeType: downloaded.mimeType, sizeBytes: downloaded.bytes.byteLength, width: result.width, height: result.height } });
+    await prisma.generatedImage.create({ data: { id: generatedImageId, userId, kind: "PERSONA_AVATAR", prompt, provider: result.provider, model: result.model, storagePath: storageTarget.path, storageBucket: storageTarget.bucket, mimeType: downloaded.mimeType, sizeBytes: downloaded.bytes.byteLength, width: result.width, height: result.height } });
   } catch {
-    try { await removePersonaAvatar(storagePath); } catch { /* best-effort rollback */ }
+    try { await removePersonaAvatar(storageTarget); } catch { /* best-effort rollback */ }
     throw new ImageProviderError("STORAGE", "Generated image record could not be saved");
   }
   return { generatedImageId, previewUrl: `/api/generated-images/${generatedImageId}`, prompt, width: result.width, height: result.height };
@@ -62,10 +63,12 @@ export async function applyPersonaAvatar(userId: string, personaId: string, gene
 }
 
 export async function deleteGeneratedAvatar(userId: string, generatedImageId: string) {
-  const image = await prisma.generatedImage.findFirst({ where: { id: generatedImageId, userId, kind: "PERSONA_AVATAR" }, select: { id: true, storagePath: true, personaAvatar: { select: { id: true } } } });
+  const image = await prisma.generatedImage.findFirst({ where: { id: generatedImageId, userId, kind: "PERSONA_AVATAR" }, select: { id: true, kind: true, storageBucket: true, storagePath: true, personaAvatar: { select: { id: true } } } });
   if (!image) return "not-found" as const;
   if (image.personaAvatar) return "in-use" as const;
-  await removePersonaAvatar(image.storagePath);
+  const target = resolveGeneratedImageStorageTarget({ userId, kind: image.kind, storedBucket: image.storageBucket, storedPath: image.storagePath });
+  if (!target) return "not-found" as const;
+  await removePersonaAvatar(target);
   await prisma.generatedImage.deleteMany({ where: { id: image.id, userId } });
   return "deleted" as const;
 }

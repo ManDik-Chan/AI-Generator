@@ -124,10 +124,10 @@ pnpm memory:embed:backfill -- --user=<uuid> --limit=300
 ## Phase 6A3 图片生成部署
 
 1. 部署独立 migration `20260716190000_add_image_generation_tool`，不得修改任何旧 migration。
-2. 重新执行最新版 `prisma/rls.sql`，确认工具 GeneratedImage 只能绑定当前用户自己的 ToolRun。
+2. 重新执行最新版 `prisma/rls.sql`，确认 authenticated 对 GeneratedImage 只有 select-own，INSERT/UPDATE/DELETE 必须走 trusted server；复合外键继续保证工具图片绑定同一用户 ToolRun。
 3. 在 Supabase Storage 创建 private bucket（默认 `generated-images`），配置 `SUPABASE_GENERATED_IMAGE_BUCKET`；不得设为 public。
 4. 配置现有 `AI_IMAGE_*` 服务端变量，并按需设置 `AI_DAILY_IMAGE_GENERATION_LIMIT=5`。图片 Base URL/Key、Service Role Key 均不得使用 `NEXT_PUBLIC_`。
-5. 真实验收预览、下载、删除、停止补偿、跨用户隔离、额度、Prompt 注入和 390/430/768/1440px。日志不得包含 Prompt、远程临时 URL、Storage path、signed URL、密钥或图片字节。
+5. 真实验收预览、下载、删除、停止补偿、跨用户隔离、Bucket/Path 防篡改、额度、Prompt 注入和 390/430/768/1440px。日志不得包含 Prompt、远程临时 URL、Storage path、signed URL、密钥或图片字节。
 
 没有真实图片 Key、bucket 或数据库连接时，生产构建仍应通过，聊天、Persona、Memory、文本工具和图片分析保持可用。回滚应用前先停止新图片运行；如需回滚数据库，应先清理 TOOL_GENERATION 对象与记录，并由项目所有者评估 enum/列回退，禁止直接修改已部署 migration。
 
