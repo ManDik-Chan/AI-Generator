@@ -12,14 +12,15 @@ describe("Phase 6B2.1 performance and scrolling contracts", () => {
     expect(dialog).not.toContain("window.scrollTo");
   });
 
-  it("limits VisualViewport layout writes to mobile resize events", () => {
-    const hook = read("features/mobile/use-visual-viewport.ts");
+  it("limits VisualViewport layout writes to the mobile Chat shell", () => {
+    const hook = read("features/chat/use-chat-visual-viewport.ts");
     expect(hook).toContain('MOBILE_LAYOUT_QUERY = "(max-width: 820px)"');
-    expect(hook).toContain("handleViewportResize");
-    expect(hook).toContain("handleViewportScroll");
-    expect(hook).toContain("schedule(false)");
+    expect(hook).toContain('viewport?.addEventListener("resize", schedule)');
+    expect(hook).toContain('viewport?.addEventListener("scroll", schedule)');
     expect(hook).toContain("Math.abs(current - next) < 1");
     expect(hook).toContain("document.activeElement");
+    expect(hook).toContain('shell.style.removeProperty("--keyboard-inset")');
+    expect(hook).not.toContain("document.documentElement.style");
     expect(hook).not.toContain("useState");
   });
 

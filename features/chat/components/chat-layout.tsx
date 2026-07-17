@@ -17,6 +17,7 @@ import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
 import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 import { requestDurableCancellation } from "@/features/generation/cancel-client";
+import { useChatVisualViewport } from "@/features/chat/use-chat-visual-viewport";
 
 interface ChatLayoutProps {
   conversations: ConversationSummary[];
@@ -55,6 +56,7 @@ async function readChatEvents(response: Response, onEvent: (event: ChatStreamEve
 }
 
 export function ChatLayout({ conversations, conversation, aiConfigured, maxInputChars, personas = [], selectedPersona }: ChatLayoutProps) {
+  const shellRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessageView[]>(conversation?.messages ?? []);
   const [draft, setDraft] = useState("");
   const [generating, setGenerating] = useState(false);
@@ -72,6 +74,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
   const pendingStopEditRef = useRef(false);
   const pendingCancelRef = useRef(false);
+  useChatVisualViewport(shellRef);
   const recover = useCallback((snapshot: { id: string; status: string; content: string }) => {
     const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
     setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
@@ -244,11 +247,11 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   }
 
   return (
-    <div className="surface-grid app-viewport flex w-full overflow-hidden bg-background" data-chat-shell>
+    <div className="surface-grid app-viewport flex w-full overflow-hidden bg-background" data-chat-shell ref={shellRef}>
       <aside className="hidden w-[17.5rem] shrink-0 border-r border-border/10 bg-background-subtle/82 backdrop-blur-xl md:block"><ConversationList activeId={activeConversationId} conversations={conversations} /></aside>
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 overflow-hidden bg-overlay/55 backdrop-blur-sm md:hidden" onClick={() => setDrawerOpen(false)}>
-          <aside className="flex h-[var(--visual-viewport-height)] w-[min(88vw,21rem)] max-w-[calc(100vw-var(--safe-area-right)-.5rem)] flex-col border-r border-border/10 bg-background-subtle pb-[var(--safe-area-bottom)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+        <div className="absolute inset-0 z-50 overflow-hidden bg-overlay/55 backdrop-blur-sm md:hidden" onClick={() => setDrawerOpen(false)}>
+          <aside className="flex h-full w-[min(88vw,21rem)] max-w-[calc(100vw-var(--safe-area-right)-.5rem)] flex-col border-r border-border/10 bg-background-subtle pb-[var(--safe-area-bottom)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex min-h-[calc(var(--mobile-header-height)+var(--safe-area-top))] items-center justify-between border-b border-border/10 px-4 pb-2 pt-[max(.5rem,var(--safe-area-top))]"><div><span className="premium-kicker">CONVERSATIONS</span><p className="text-sm font-semibold">对话历史</p></div><button aria-label="关闭历史" className="grid size-11 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground" onClick={() => setDrawerOpen(false)} type="button"><X className="size-5" /></button></div>
             <ConversationList activeId={activeConversationId} conversations={conversations} onNavigate={() => setDrawerOpen(false)} />
           </aside>

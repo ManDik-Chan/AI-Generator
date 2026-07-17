@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, MessageSquareText } from "lucide-react";
 
 import { MessageItem } from "@/features/chat/components/message-item";
 import { AssistantAvatar } from "@/features/chat/components/assistant-avatar";
 import type { ChatMessageView } from "@/features/chat/types";
 import type { PersonaChatIdentity } from "@/features/persona/types";
+import {
+  CHAT_VIEWPORT_CHANGE_EVENT,
+  getPreservedChatScrollTop,
+  isChatScrollerNearBottom,
+} from "@/features/chat/viewport";
 
 interface MessageListProps {
   messages: ChatMessageView[];
@@ -24,20 +29,44 @@ interface MessageListProps {
 export function MessageList(props: MessageListProps) {
   const { messages } = props;
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const shouldFollowRef = useRef(true);
+  const readingTopRef = useRef(0);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
+  const preserveScrollPosition = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const nextTop = getPreservedChatScrollTop({
+      previousScrollTop: readingTopRef.current,
+      nextScrollHeight: container.scrollHeight,
+      nextClientHeight: container.clientHeight,
+      shouldFollow: shouldFollowRef.current,
+    });
+    if (Math.abs(container.scrollTop - nextTop) >= 1) container.scrollTop = nextTop;
+    readingTopRef.current = nextTop;
+    setShowScrollToBottom(!shouldFollowRef.current && container.scrollHeight > container.clientHeight);
+  }, []);
+
+  useLayoutEffect(() => {
+    preserveScrollPosition();
+  }, [messages, preserveScrollPosition]);
+
   useEffect(() => {
-    if (shouldFollowRef.current) {
-      const container = containerRef.current;
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-        setShowScrollToBottom(false);
-      }
-    } else if (messages.length) {
-      setShowScrollToBottom(true);
-    }
-  }, [messages]);
+    const container = containerRef.current;
+    const content = contentRef.current;
+    const shell = container?.closest<HTMLElement>("[data-chat-shell]");
+    if (!container || !content || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(preserveScrollPosition);
+    observer.observe(container);
+    observer.observe(content);
+    shell?.addEventListener(CHAT_VIEWPORT_CHANGE_EVENT, preserveScrollPosition);
+    preserveScrollPosition();
+    return () => {
+      observer.disconnect();
+      shell?.removeEventListener(CHAT_VIEWPORT_CHANGE_EVENT, preserveScrollPosition);
+    };
+  }, [preserveScrollPosition]);
 
   const lastUserId = [...messages].reverse().find((item) => item.role === "user")?.id;
 
@@ -48,13 +77,14 @@ export function MessageList(props: MessageListProps) {
       data-chat-message-scroll
       onScroll={(event) => {
         const element = event.currentTarget;
-        const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
+        const nearBottom = isChatScrollerNearBottom(element.scrollHeight, element.scrollTop, element.clientHeight);
         shouldFollowRef.current = nearBottom;
+        readingTopRef.current = element.scrollTop;
         setShowScrollToBottom(!nearBottom);
       }}
       ref={containerRef}
     >
-      <div className="mx-auto w-full max-w-[52rem] space-y-8 px-3 pb-8 pt-6 sm:px-7 sm:py-9 lg:px-9">
+      <div className="mx-auto w-full max-w-[52rem] space-y-8 px-3 pb-8 pt-6 sm:px-7 sm:py-9 lg:px-9" ref={contentRef}>
         {messages.length ? messages.map((message) => {
           return <MessageItem
             canEdit={message.id === lastUserId}
@@ -84,7 +114,7 @@ export function MessageList(props: MessageListProps) {
         )}
       </div>
     </div>
-    {showScrollToBottom ? <button aria-label="回到底部" className="absolute bottom-3 left-1/2 z-10 grid size-11 -translate-x-1/2 place-items-center rounded-full border border-border/14 bg-surface-raised text-foreground shadow-overlay transition-transform hover:-translate-y-0.5 motion-reduce:transform-none" onClick={() => { const container = containerRef.current; if (container) { container.scrollTo({ top: container.scrollHeight, behavior: "smooth" }); shouldFollowRef.current = true; setShowScrollToBottom(false); } }} type="button"><ArrowDown className="size-4" /></button> : null}
+    {showScrollToBottom ? <button aria-label="回到底部" className="absolute bottom-3 left-1/2 z-10 grid size-11 -translate-x-1/2 place-items-center rounded-full border border-border/14 bg-surface-raised text-foreground shadow-overlay transition-transform hover:-translate-y-0.5 motion-reduce:transform-none" onClick={() => { const container = containerRef.current; if (container) { shouldFollowRef.current = true; readingTopRef.current = Math.max(0, container.scrollHeight - container.clientHeight); container.scrollTo({ top: container.scrollHeight, behavior: "smooth" }); setShowScrollToBottom(false); } }} type="button"><ArrowDown className="size-4" /></button> : null}
     </div>
   );
 }
