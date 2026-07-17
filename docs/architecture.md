@@ -173,3 +173,11 @@ Phase 6A1 的可信工具类型、白名单选项和输出契约只放入 system
 用户描述经 XML 转义后放入明确的不可信数据边界，风格与尺寸由服务端白名单和配置决定。工具不读取 Persona 或 Memory，不创建 Conversation/Message，也不把图片或 Prompt 写入其他业务域。私有读取每次验证所有权并生成短时 signed URL；URL 不持久化或写日志。详见 `image-generation-tool.md`。
 
 Service Role Storage 的信任边界独立于数据库行所有权：Bucket 必须由服务端根据 `GeneratedImageKind` 推导，数据库 Bucket 仅用于一致性校验；Path 必须通过当前用户前缀、固定段数、扩展名和路径穿越检查。`generated_images` 对 authenticated 连接仅开放 select-own，所有写入与删除均为 server-only。这样即使一条数据库记录被异常篡改，也不能让应用替任意 private Bucket 签名或删除对象。
+
+## Phase 7A1 多 Agent 头脑风暴边界
+
+头脑风暴继续属于 `features/tools`，不创建 Conversation/Message，不读取 Persona/Memory，也不调用搜索、文件或其他工具。客户端只能提交问题和历史开关；四个 Worker 身份、模型回退、温度、Token、并发与最多五次调用全部由服务端控制。
+
+一次请求在 Serializable 事务中创建一个 BRAINSTORM ToolRun 和四个 BrainstormWorker。Worker 通过 `(toolRunId, userId)` 复合外键绑定同一所有者，角色与位置唯一；RLS 仅允许 authenticated select-own，写入由 trusted server 完成。四个 Provider 调用在受控并发中各执行一次，少于两个成功时不调用协调器；协调器最多执行一次，读取的 Worker 输出仍视为不可信中间数据。
+
+后台生命周期复用 Phase 6A3 的 `registerGenerationTask` / Vercel `waitUntil`、`SseObserver`、durable cancellation 和 `useGenerationRecovery`。传输断开只移除 SSE observer，显式 cancel 才将 ToolRun 与 PENDING Worker 原子改为 CANCELLED。恢复接口只查询同一个 runId 的持久化状态，不重启 Worker、不重复扣费。关闭历史时正文只在 15 分钟恢复窗口存在，并由幂等清理函数清除；非敏感计数元数据可以保留。

@@ -1,5 +1,7 @@
-export type ToolTypeValue = "SUMMARIZE" | "REWRITE" | "TRANSLATE" | "IMAGE_ANALYZE" | "IMAGE_GENERATE";
-export type TextToolTypeValue = Exclude<ToolTypeValue, "IMAGE_ANALYZE" | "IMAGE_GENERATE">;
+import type { BrainstormWorkerDto } from "@/features/tools/brainstorm/types";
+
+export type ToolTypeValue = "SUMMARIZE" | "REWRITE" | "TRANSLATE" | "IMAGE_ANALYZE" | "IMAGE_GENERATE" | "BRAINSTORM";
+export type TextToolTypeValue = Exclude<ToolTypeValue, "IMAGE_ANALYZE" | "IMAGE_GENERATE" | "BRAINSTORM">;
 export type ToolRunState = "idle" | "submitting" | "streaming" | "complete" | "stopped" | "error";
 
 export interface ToolRunListItem {
@@ -18,6 +20,7 @@ export interface ToolRunDetail extends ToolRunListItem {
   inputText: string;
   outputText?: string;
   options: Record<string, unknown>;
+  brainstormWorkers?: BrainstormWorkerDto[];
 }
 
 export type ToolSseEvent =

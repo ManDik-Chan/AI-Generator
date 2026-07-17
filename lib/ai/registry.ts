@@ -1,4 +1,4 @@
-import { getMemoryGenerationConfig, getPersonaGenerationConfig, getToolGenerationConfig, requireAiProviderConfig } from "@/lib/ai/config";
+import { getBrainstormGenerationConfig, getMemoryGenerationConfig, getPersonaGenerationConfig, getToolGenerationConfig, requireAiProviderConfig, requireBrainstormProviderConfig } from "@/lib/ai/config";
 import { createOpenAiCompatibleProvider } from "@/lib/ai/providers/openai-compatible";
 
 let memoryConfigLogged = false;
@@ -31,5 +31,13 @@ export function getToolAiProvider() {
   return {
     config: generation,
     provider: createOpenAiCompatibleProvider({ ...base, requestTimeoutMs: generation.requestTimeoutMs }),
+  };
+}
+
+export function getBrainstormAiProvider() {
+  const providerConfig = requireBrainstormProviderConfig();
+  return {
+    config: getBrainstormGenerationConfig(),
+    provider: createOpenAiCompatibleProvider(providerConfig),
   };
 }

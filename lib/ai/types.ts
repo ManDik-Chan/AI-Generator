@@ -40,6 +40,19 @@ export interface ToolGenerationConfig {
   dailyLimit: number;
 }
 
+export interface BrainstormGenerationConfig {
+  workerModel: string;
+  synthesisModel: string;
+  temperature: number;
+  workerMaxOutputTokens: number;
+  synthesisMaxOutputTokens: number;
+  requestTimeoutMs: number;
+  dailyLimit: number;
+  maxConcurrency: number;
+  workerModelSource: "brainstorm" | "tool" | "base";
+  synthesisModelSource: "synthesis" | "brainstorm" | "tool" | "base";
+}
+
 export interface AiProviderConfig {
   provider: "openai-compatible";
   baseUrl: string;

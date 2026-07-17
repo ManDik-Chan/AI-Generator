@@ -56,6 +56,21 @@ enum ToolType {
   TRANSLATE
   IMAGE_ANALYZE
   IMAGE_GENERATE
+  BRAINSTORM
+}
+
+enum BrainstormWorkerRole {
+  ANALYST
+  CREATIVE
+  CRITIC
+  PLANNER
+}
+
+enum BrainstormWorkerStatus {
+  PENDING
+  COMPLETE
+  ERROR
+  CANCELLED
 }
 
 enum GeneratedImageKind {
@@ -92,6 +107,7 @@ model Profile {
   toolRuns         ToolRun[]
   toolAssets       ToolAsset[]
   generationRuns   GenerationRun[]
+  brainstormWorkers BrainstormWorker[]
 
   @@map("profiles")
 }
@@ -114,12 +130,37 @@ model ToolRun {
   user           Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
   assets         ToolAsset[]
   generatedImage GeneratedImage?
+  brainstormWorkers BrainstormWorker[]
 
   @@unique([id, userId])
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, type, createdAt(sort: Desc)])
   @@index([userId, status, createdAt(sort: Desc)])
   @@map("tool_runs")
+}
+
+model BrainstormWorker {
+  id          String                 @id @default(uuid()) @db.Uuid
+  toolRunId   String                 @map("tool_run_id") @db.Uuid
+  userId      String                 @map("user_id") @db.Uuid
+  role        BrainstormWorkerRole
+  position    Int
+  status      BrainstormWorkerStatus @default(PENDING)
+  outputText  String?                @map("output_text") @db.Text
+  errorCode   String?                @map("error_code") @db.VarChar(100)
+  startedAt   DateTime?              @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime?              @map("completed_at") @db.Timestamptz(6)
+  createdAt   DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  toolRun ToolRun @relation(fields: [toolRunId, userId], references: [id, userId], onDelete: Cascade)
+  user    Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([toolRunId, role])
+  @@unique([toolRunId, position])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([toolRunId, status])
+  @@map("brainstorm_workers")
 }
 
 model GenerationRun {
