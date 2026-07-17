@@ -6,6 +6,7 @@ import { logImageSafetyDiagnostic, toPublicImageError } from "@/lib/ai/image/err
 import { createGenerationRun, finishGenerationRun, isGenerationRunPending } from "@/features/generation/runs";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -23,9 +24,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ per
   const observer = new SseObserver(event);
   observer.send("run", { runId: run.id });
   const generation = (async () => {
+    const cancellation = await createDurableCancellationController({ isPending: () => isGenerationRunPending(user.id, run.id), taskType: "PERSONA_AVATAR", taskId: run.id });
     try {
-      if (!await isGenerationRunPending(user.id, run.id)) return;
-      const candidate = await generatePersonaAvatarCandidate(user.id, personaId, parsed.data.prompt, undefined, (stage) => observer.send("progress", { stage, ...labels[stage] }));
+      if (cancellation.signal.aborted) { observer.send("cancelled", { runId: run.id }); return; }
+      const candidate = await generatePersonaAvatarCandidate(user.id, personaId, parsed.data.prompt, cancellation.signal, (stage) => observer.send("progress", { stage, ...labels[stage] }));
       if (!candidate) {
         await finishGenerationRun(user.id, run.id, "ERROR", { errorCode: "NOT_FOUND" });
         observer.send("error", { message: "人格不存在。" });
@@ -42,6 +44,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ per
       logImageSafetyDiagnostic(error);
       const failed = await finishGenerationRun(user.id, run.id, "ERROR", { errorCode: "IMAGE_PROVIDER" }).catch(() => ({ count: 0 }));
       observer.send(failed.count ? "error" : "cancelled", failed.count ? { message: toPublicImageError(error) } : { runId: run.id });
+    } finally {
+      cancellation.dispose();
     }
   })();
   const task = registerGenerationTask(generation, { taskType: "PERSONA_AVATAR", taskId: run.id, userId: user.id });

@@ -13,6 +13,7 @@ import { getToolAiProvider } from "@/lib/ai/registry";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -66,14 +67,20 @@ export async function POST(request: Request) {
     let persistedLength = 0;
     let lastPersistedAt = Date.now();
     const outputGuard = new ToolOutputGuard();
+    const cancellation = await createDurableCancellationController({
+      isPending: () => isToolRunPending(userId, usage.runId),
+      taskType: parsed.data.tool,
+      taskId: usage.runId,
+    });
     try {
-      if (!await isToolRunPending(userId, usage.runId)) return;
+      if (cancellation.signal.aborted) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
       for await (const text of provider.streamText({
         messages: [{ role: "system", content: prompt.system }, { role: "user", content: prompt.user }],
         model: config.model,
         temperature: config.temperature,
         maxOutputTokens: config.maxOutputTokens,
         thinking: "disabled",
+        signal: cancellation.signal,
       })) {
         if (output.length + text.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Tool output exceeded the safe storage limit.");
         output += text;
@@ -98,6 +105,8 @@ export async function POST(request: Request) {
       if (!failed.count) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
       console.error("tool_run_failed", { requestId, userId, runId: usage.runId, toolType: parsed.data.tool, stage: unsafe ? "output_guard" : "provider_request", errorCode: unsafe ? "UNSAFE_OUTPUT" : toolErrorCode(error), status: error instanceof AiProviderError ? error.status : undefined, durationMs: Date.now() - startedAt });
       observer.send("error", { code: unsafe ? "UNSAFE_OUTPUT" : normalized.code, message: unsafe ? "AI 返回内容未通过安全检查，请重试或联系管理员。" : normalized.message });
+    } finally {
+      cancellation.dispose();
     }
   })();
   const task = registerGenerationTask(generation, { taskType: parsed.data.tool, taskId: usage.runId, userId });

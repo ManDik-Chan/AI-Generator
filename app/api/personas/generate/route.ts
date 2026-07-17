@@ -11,6 +11,7 @@ import { generatePersonaDraftWithRepair } from "@/features/persona/generate-draf
 import { createGenerationRun, finishGenerationRun, isGenerationRunPending } from "@/features/generation/runs";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -32,13 +33,14 @@ export async function POST(request: Request) {
   observer.send("run", { runId: run.id });
   const generation = (async () => {
       const progress = (stage: string, label: string, detail?: string) => observer.send("progress", { stage, label, ...(detail ? { detail } : {}) });
+      const cancellation = await createDurableCancellationController({ isPending: () => isGenerationRunPending(userId, run.id), taskType: "PERSONA_DRAFT", taskId: run.id });
       try {
-        if (!await isGenerationRunPending(userId, run.id)) return;
+        if (cancellation.signal.aborted) { observer.send("cancelled", { runId: run.id }); return; }
         progress("preparing", "正在整理人格需求");
         const { config, provider } = getPersonaAiProvider();
         progress("generating", "AI 正在生成人格设定", "正在生成身份、性格、表达方式和开场白");
         const draft = await generatePersonaDraftWithRepair(async (repair) => collectGeneratedText(provider, {
-          model: config.model, temperature: config.temperature, maxOutputTokens: config.maxOutputTokens,
+          model: config.model, temperature: config.temperature, maxOutputTokens: config.maxOutputTokens, signal: cancellation.signal,
           messages: repair ? [{ role: "system", content: buildPersonaGeneratorPrompt(PERSONA_AVATAR_PRESETS) }, { role: "user", content: buildPersonaRepairPrompt(repair.error, repair.raw) }] : [{ role: "system", content: buildPersonaGeneratorPrompt(PERSONA_AVATAR_PRESETS) }, { role: "user", content: wrapPersonaRequest(parsed.data.description) }],
         }), (stage) => stage === "repairing" ? progress("repairing", "正在修复 AI 返回格式") : progress("validating", "正在检查人格结构", "校验字段、头像建议和输出格式"));
         progress("drafting", "正在准备可编辑草稿");
@@ -50,6 +52,8 @@ export async function POST(request: Request) {
         const message = error instanceof AiProviderError ? toPublicAiError(error) : error instanceof Error ? error.message : "AI 返回的人格格式不完整，请重新生成。";
         const failed = await finishGenerationRun(userId, run.id, "ERROR", { errorCode: error instanceof AiProviderError ? error.code : "INVALID_DRAFT" }).catch(() => ({ count: 0 }));
         observer.send(failed.count ? "error" : "cancelled", failed.count ? { message } : { runId: run.id });
+      } finally {
+        cancellation.dispose();
       }
   })();
   const task = registerGenerationTask(generation, { taskType: "PERSONA_DRAFT", taskId: run.id, userId });

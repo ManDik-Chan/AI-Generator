@@ -21,6 +21,9 @@ export function buildFinalAvatarPrompt(prompt: string) {
 }
 
 export type PersonaAvatarGenerationStage = "preparing" | "generating" | "downloading" | "validating" | "uploading" | "saving";
+function assertNotAborted(signal?: AbortSignal) {
+  if (signal?.aborted) throw new ImageProviderError("ABORTED", "Avatar generation was cancelled");
+}
 export async function generatePersonaAvatarCandidate(userId: string, personaId: string, suppliedPrompt?: string, signal?: AbortSignal, onProgress?: (stage: PersonaAvatarGenerationStage) => void) {
   onProgress?.("preparing");
   const persona = await prisma.persona.findFirst({ where: { id: personaId, userId }, select: { id: true, name: true, avatarPrompt: true, identity: true, personality: true, speakingStyle: true, expertise: true } });
@@ -28,19 +31,25 @@ export async function generatePersonaAvatarCandidate(userId: string, personaId: 
   const prompt = resolvePersonaAvatarPrompt({ name: persona.name, personality: persona.personality, identity: persona.identity ?? undefined, speakingStyle: persona.speakingStyle ?? undefined, expertise: persona.expertise ?? undefined, avatarPrompt: suppliedPrompt ?? persona.avatarPrompt ?? undefined });
   const finalPrompt = buildFinalAvatarPrompt(prompt);
   const config = requireImageConfig();
+  assertNotAborted(signal);
   onProgress?.("generating");
   const result = await getImageProvider().generateImage({ prompt: finalPrompt, size: config.size, signal });
+  assertNotAborted(signal);
   onProgress?.("downloading");
   const downloaded = await downloadRemoteImageSafely(result.remoteUrl, { signal, onProgress: () => onProgress?.("validating") });
+  assertNotAborted(signal);
   const generatedImageId = randomUUID();
   const storagePath = buildPersonaAvatarStoragePath(userId, personaId, generatedImageId, downloaded.extension);
   onProgress?.("uploading");
+  assertNotAborted(signal);
   const storageTarget = await uploadPersonaAvatar(userId, storagePath, downloaded.bytes, downloaded.mimeType);
   try {
+    assertNotAborted(signal);
     onProgress?.("saving");
     await prisma.generatedImage.create({ data: { id: generatedImageId, userId, kind: "PERSONA_AVATAR", prompt, provider: result.provider, model: result.model, storagePath: storageTarget.path, storageBucket: storageTarget.bucket, mimeType: downloaded.mimeType, sizeBytes: downloaded.bytes.byteLength, width: result.width, height: result.height } });
-  } catch {
+  } catch (error) {
     try { await removePersonaAvatar(storageTarget); } catch { /* best-effort rollback */ }
+    if (error instanceof ImageProviderError) throw error;
     throw new ImageProviderError("STORAGE", "Generated image record could not be saved");
   }
   return { generatedImageId, previewUrl: `/api/generated-images/${generatedImageId}`, prompt, width: result.width, height: result.height };

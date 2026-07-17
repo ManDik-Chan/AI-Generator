@@ -16,6 +16,7 @@ import { consumeImageGenerationDraft } from "@/features/tools/image-generation/d
 import type { GeneratedToolImageDto, ImageGenerationUsageDto } from "@/features/tools/image-generation/types";
 import { readSseEvents } from "@/lib/ai/read-sse";
 import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
+import { requestDurableCancellation } from "@/features/generation/cancel-client";
 
 type RunState = "idle" | "running" | "complete" | "cancelled" | "error";
 interface Props { configured: boolean; imageSize: string; initialUsage: ImageGenerationUsageDto; initialHistory: GeneratedToolImageDto[]; initialPage: number; initialPages: number }
@@ -36,6 +37,7 @@ const progressStages: GenerationStage[] = [
 export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, initialHistory, initialPage, initialPages }: Props) {
   const controllerRef = useRef<AbortController | undefined>(undefined);
   const requestVersionRef = useRef(0);
+  const pendingCancelRef = useRef(false);
   const userHasEditedRef = useRef(false);
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState<ImageGenerationStyle>("AUTO");
@@ -46,18 +48,36 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
   const [activeStage, setActiveStage] = useState("preparing");
   const [error, setError] = useState("");
   const [runId, setRunId] = useState<string>();
+  const [cancelling, setCancelling] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<GeneratedToolImageDto>();
   const elapsed = useElapsedTime(state === "running");
-  const recover = useCallback((snapshot: { status: string; generatedImage?: { id: string; width: number; height: number } }) => {
+  const recover = useCallback((snapshot: { status: string; generatedImage?: GeneratedToolImageDto }) => {
     if (snapshot.status === "PENDING") setState("running");
     if (snapshot.status === "CANCELLED") { setState("cancelled"); setError("图片生成已停止，没有保存半成品。"); }
     if (snapshot.status === "ERROR") { setState("error"); setError("图片生成失败，请稍后重试。"); }
     if (snapshot.status === "COMPLETE" && snapshot.generatedImage) {
-      const image: GeneratedToolImageDto = { ...snapshot.generatedImage, prompt, style, previewUrl: `/api/generated-images/${snapshot.generatedImage.id}`, downloadUrl: `/api/generated-images/${snapshot.generatedImage.id}?download=1`, createdAt: new Date().toISOString() };
+      const image = snapshot.generatedImage;
       setCurrent(image); setHistory((items) => [image, ...items.filter((item) => item.id !== image.id)]); setState("complete"); setError("");
     }
-  }, [prompt, style]);
+  }, []);
   useGenerationRecovery({ storageKey: "ai-tool-run:IMAGE_GENERATE", runId, onRunId: setRunId, statusUrl: "/api/tools/runs/", statusSuffix: "?recovery=1", onSnapshot: recover });
+
+  async function confirmStop(id: string) {
+    setCancelling(true);
+    try {
+      const status = await requestDurableCancellation(`/api/tools/runs/${id}/cancel`);
+      if (status === "CANCELLED") {
+        pendingCancelRef.current = false; requestVersionRef.current += 1; controllerRef.current?.abort(); controllerRef.current = undefined; setState("cancelled"); setError("图片生成已停止，没有保存半成品。");
+      } else {
+        const response = await fetch(`/api/tools/runs/${id}?recovery=1`, { cache: "no-store" });
+        if (!response.ok) throw new Error("停止请求未确认，任务可能仍在后台处理。");
+        recover(await response.json() as { status: string; generatedImage?: GeneratedToolImageDto });
+      }
+    } catch (reason) {
+      setState("running");
+      setError(reason instanceof Error ? reason.message : "停止请求未确认，任务可能仍在后台处理。");
+    } finally { setCancelling(false); }
+  }
 
   useEffect(() => {
     const draft = consumeImageGenerationDraft(sessionStorage);
@@ -77,6 +97,8 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
     const version = ++requestVersionRef.current;
     const controller = new AbortController();
     controllerRef.current = controller;
+    pendingCancelRef.current = false;
+    setCancelling(false);
     setState("running");
     setActiveStage("preparing");
     setError("");
@@ -91,7 +113,7 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
       });
       await readSseEvents(response, (event, raw) => {
         if (version !== requestVersionRef.current) return;
-        if (event === "run") { setRunId((raw as RunEvent).runId); setUsage((raw as RunEvent).usage); }
+        if (event === "run") { const data = raw as RunEvent; setRunId(data.runId); setUsage(data.usage); if (pendingCancelRef.current) void confirmStop(data.runId); }
         if (event === "progress") setActiveStage((raw as ProgressEvent).stage);
         if (event === "done") {
           terminal = true;
@@ -118,13 +140,9 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
   }
 
   async function stop() {
-    if (state !== "running") return;
-    if (runId) await fetch(`/api/tools/runs/${runId}/cancel`, { method: "POST", keepalive: true }).catch(() => undefined);
-    requestVersionRef.current += 1;
-      controllerRef.current?.abort();
-    controllerRef.current = undefined;
-    setState("cancelled");
-    setError("图片生成已停止，没有保存半成品。");
+    if (state !== "running" || cancelling) return;
+    if (!runId) { pendingCancelRef.current = true; setCancelling(true); return; }
+    await confirmStop(runId);
   }
 
   async function removeImage(image: GeneratedToolImageDto) {
@@ -140,7 +158,7 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
   }
 
   const active = state === "running";
-  const status = state === "complete" ? "生成完成" : state === "cancelled" ? "已停止" : state === "error" ? "生成失败" : active ? "正在生成" : "等待创作";
+  const status = cancelling ? "正在请求停止" : state === "complete" ? "生成完成" : state === "cancelled" ? "已停止" : state === "error" ? "生成失败" : active ? "正在生成" : "等待创作";
 
   return <div className="space-y-8">
     <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,.82fr)_minmax(24rem,1.18fr)]">
@@ -165,13 +183,13 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
         </div>
         {error && <p className="mt-4 rounded-control bg-destructive-subtle p-3 text-sm text-destructive-foreground" role="alert">{error}</p>}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/10 pt-4">
-          {active ? <Button onClick={stop} variant="outline"><Square className="size-4 fill-current" />停止生成</Button> : <Button disabled={!configured || !prompt.trim()} onClick={() => void generate()}><Sparkles className="size-4" />开始生成</Button>}
+          {active ? <Button disabled={cancelling} onClick={() => void stop()} variant="outline"><Square className="size-4 fill-current" />{cancelling ? "正在请求停止" : "停止生成"}</Button> : <Button disabled={!configured || !prompt.trim()} onClick={() => void generate()}><Sparkles className="size-4" />开始生成</Button>}
           <span className="premium-chip">{status}</span>
         </div>
       </section>
 
       <section className="premium-panel-strong min-w-0 p-4 sm:p-6">
-        {active ? <GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={stop} stages={progressStages} title="正在创作并安全保存图片" /> : current ? <GeneratedImagePanel image={current} onDelete={() => setDeleteTarget(current)} onError={setError} onReuse={() => { userHasEditedRef.current = true; setPrompt(current.prompt); setStyle(current.style); }} /> : <div className="grid min-h-[28rem] place-items-center rounded-overlay border border-dashed border-border/20 bg-surface-muted/55 p-6 text-center"><div><span className="premium-icon-tile mx-auto size-16 rounded-[1.3rem]"><ImageIcon className="size-7" /></span><h2 className="mt-4 text-section-title">生成结果将在这里显示</h2><p className="mx-auto mt-2 max-w-sm text-supporting">输入描述不会自动产生费用；只有点击“开始生成”后才会创建一次图片运行。</p></div></div>}
+        {active ? <GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={() => void stop()} stages={progressStages} title={cancelling ? "正在请求停止" : "正在创作并安全保存图片"} /> : current ? <GeneratedImagePanel image={current} onDelete={() => setDeleteTarget(current)} onError={setError} onReuse={() => { userHasEditedRef.current = true; setPrompt(current.prompt); setStyle(current.style); }} /> : <div className="grid min-h-[28rem] place-items-center rounded-overlay border border-dashed border-border/20 bg-surface-muted/55 p-6 text-center"><div><span className="premium-icon-tile mx-auto size-16 rounded-[1.3rem]"><ImageIcon className="size-7" /></span><h2 className="mt-4 text-section-title">生成结果将在这里显示</h2><p className="mx-auto mt-2 max-w-sm text-supporting">输入描述不会自动产生费用；只有点击“开始生成”后才会创建一次图片运行。</p></div></div>}
       </section>
     </div>
 

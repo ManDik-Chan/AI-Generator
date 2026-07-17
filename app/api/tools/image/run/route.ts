@@ -17,6 +17,7 @@ import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -74,9 +75,10 @@ export async function POST(request: Request) {
   observer.send("start", { runId: usage.runId, tool: "IMAGE_ANALYZE", limit: usage.limit, used: usage.used, remaining: usage.remaining, unlimited: usage.unlimited });
   const generation = (async () => {
     let output = ""; let persistedLength = 0; let lastPersistedAt = Date.now(); const guard = new ToolOutputGuard();
+    const cancellation = await createDurableCancellationController({ isPending: () => isToolRunPending(userId, usage.runId), taskType: "IMAGE_ANALYZE", taskId: usage.runId });
     try {
-      if (!await isToolRunPending(userId, usage.runId)) return;
-      for await (const delta of provider.streamImageAnalysis({ system: prompt.system, question: prompt.user, image: image.bytes, mimeType: image.mimeType })) {
+      if (cancellation.signal.aborted) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
+      for await (const delta of provider.streamImageAnalysis({ system: prompt.system, question: prompt.user, image: image.bytes, mimeType: image.mimeType, signal: cancellation.signal })) {
         if (output.length + delta.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Vision output too large");
         output += delta; const safe = guard.push(delta); if (safe) observer.send("delta", { text: safe });
         if (Date.now() - lastPersistedAt >= 750 || output.length - persistedLength >= 1024) {
@@ -95,6 +97,8 @@ export async function POST(request: Request) {
       const failed = await finishRecoverableToolRun(userId, usage.runId, "ERROR", { outputText: output, errorCode: normalized.code }).catch(() => ({ count: 0 }));
       if (!parsed.data.saveHistory) await cleanupToolRunAssets(userId, usage.runId);
       observer.send(failed.count ? "error" : "cancelled", failed.count ? { code: normalized.code, message: normalized.message } : { runId: usage.runId, status: "CANCELLED" });
+    } finally {
+      cancellation.dispose();
     }
   })();
   const task = registerGenerationTask(generation, { taskType: "IMAGE_ANALYZE", taskId: usage.runId, userId });

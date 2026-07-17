@@ -5,6 +5,28 @@ import type { ToolRunDetail, ToolRunListItem } from "@/features/tools/types";
 import { previewText } from "@/features/tools/utils";
 import { prisma } from "@/lib/database/prisma";
 import { cleanupExpiredToolRunRecovery } from "@/features/tools/usage";
+import { imageGenerationHistoryOptionsSchema } from "@/features/tools/image-generation/schemas";
+import type { GeneratedToolImageDto } from "@/features/tools/image-generation/types";
+
+export function resolveRecoveryGeneratedImage(
+  type: ToolType,
+  options: unknown,
+  image: { id: string; prompt: string; width: number | null; height: number | null; createdAt: Date } | null,
+): GeneratedToolImageDto | undefined {
+  if (type !== "IMAGE_GENERATE" || !image) return undefined;
+  const parsed = imageGenerationHistoryOptionsSchema.safeParse(options);
+  const style = parsed.success ? parsed.data.style : "AUTO";
+  return {
+    id: image.id,
+    prompt: image.prompt,
+    style,
+    width: image.width,
+    height: image.height,
+    createdAt: image.createdAt.toISOString(),
+    previewUrl: `/api/generated-images/${image.id}`,
+    downloadUrl: `/api/generated-images/${image.id}?download=1`,
+  };
+}
 
 export async function getToolHistory(userId: string, page = 1, type?: ToolType) {
   const safePage = Math.max(1, Math.floor(page));
@@ -76,7 +98,8 @@ export async function getToolRunRecovery(userId: string, runId: string) {
       errorCode: true,
       recoveryExpiresAt: true,
       updatedAt: true,
-      generatedImage: { select: { id: true, width: true, height: true } },
+      options: true,
+      generatedImage: { select: { id: true, prompt: true, width: true, height: true, createdAt: true } },
     },
   });
   if (!row) return null;
@@ -87,7 +110,7 @@ export async function getToolRunRecovery(userId: string, runId: string) {
     status: row.status,
     outputText: canReadOutput ? row.outputText ?? "" : "",
     errorCode: row.errorCode ?? undefined,
-    generatedImage: row.generatedImage ?? undefined,
+    generatedImage: resolveRecoveryGeneratedImage(row.type, row.options, row.generatedImage),
     updatedAt: row.updatedAt.toISOString(),
   };
 }

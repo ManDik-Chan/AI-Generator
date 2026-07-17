@@ -75,6 +75,30 @@ describe("durable generation recovery contract", () => {
     expect(source).not.toContain('method: "POST"');
   });
 
+  it("passes the durable cancellation signal to every long-running provider", () => {
+    for (const path of ["app/api/chat/route.ts", "app/api/tools/run/route.ts", "app/api/tools/image/run/route.ts", "app/api/tools/image-generate/route.ts", "app/api/personas/generate/route.ts", "app/api/personas/[personaId]/avatar/generate/route.ts"]) {
+      const source = read(path);
+      expect(source).toContain("createDurableCancellationController");
+      expect(source).toContain("cancellation.signal");
+      expect(source).toContain("cancellation.dispose()");
+    }
+  });
+
+  it("queues explicit cancel intent until a durable id arrives", () => {
+    for (const path of ["features/chat/components/chat-layout.tsx", "features/tools/components/tool-runner.tsx", "features/tools/components/image-analyzer.tsx", "features/tools/components/image-generation-workspace.tsx", "features/persona/components/ai-persona-generator.tsx", "features/persona/components/ai-avatar-dialog.tsx"]) {
+      const source = read(path);
+      expect(source).toContain("pendingCancelRef");
+      expect(source).toContain("正在请求停止");
+      expect(source).toContain("requestDurableCancellation");
+    }
+  });
+
+  it("does not call cancel APIs from recovery visibility or unmount effects", () => {
+    const recovery = read("features/generation/use-generation-recovery.ts");
+    expect(recovery).not.toContain("/cancel");
+    expect(recovery).not.toContain('method: "POST"');
+  });
+
   it("configures long routes for Node.js and a bounded duration", () => {
     for (const path of ["app/api/chat/route.ts", "app/api/tools/run/route.ts", "app/api/tools/image/run/route.ts", "app/api/tools/image-generate/route.ts", "app/api/personas/generate/route.ts", "app/api/personas/[personaId]/avatar/generate/route.ts"]) {
       const source = read(path);

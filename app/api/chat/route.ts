@@ -33,6 +33,7 @@ import {
 } from "@/features/chat/utils";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -238,13 +239,15 @@ export async function POST(request: Request) {
       let fullContent = "";
       let persistedLength = 0;
       let lastPersistedAt = Date.now();
+      const cancellation = await createDurableCancellationController({ isPending: () => isAssistantMessagePending(assistantMessageId), taskType: "CHAT", taskId: assistantMessageId });
       try {
-        if (!await isAssistantMessagePending(assistantMessageId)) return;
+        if (cancellation.signal.aborted) { observer.send("cancelled", { messageId: assistantMessageId }); return; }
         for await (const text of provider.streamText({
           messages: [{ role: "system", content: systemContent }, ...context],
           model: config.model,
           temperature: config.temperature,
           maxOutputTokens: config.maxOutputTokens,
+          signal: cancellation.signal,
         })) {
           fullContent += text;
           observer.send("delta", { text });
@@ -294,6 +297,8 @@ export async function POST(request: Request) {
         } else {
           observer.send("cancelled", { messageId: assistantMessageId });
         }
+      } finally {
+        cancellation.dispose();
       }
   })();
   const task = registerGenerationTask(generation, { taskType: "CHAT", taskId: assistantMessageId, userId: user.id });

@@ -12,6 +12,7 @@ import {
   createPendingImageGenerationToolRun,
   DailyToolLimitError,
   finishToolRun,
+  isToolRunPending,
 } from "@/features/tools/usage";
 import { encodeToolSse } from "@/features/tools/utils";
 import {
@@ -25,6 +26,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -115,12 +117,15 @@ export async function POST(request: Request) {
         },
   });
   const generation = (async () => {
+      const cancellation = await createDurableCancellationController({ isPending: () => isToolRunPending(userId, usage.runId), taskType: "IMAGE_GENERATE", taskId: usage.runId });
       try {
+        if (cancellation.signal.aborted) { observer.send("cancelled", { runId: usage.runId }); return; }
         const image = await generateToolImage({
           userId,
           runId: usage.runId,
           prompt: parsed.data.prompt,
           style: parsed.data.style,
+          signal: cancellation.signal,
           onProgress: (stage) => observer.send("progress", { stage, ...stageLabels[stage] }),
         });
         observer.send("done", {
@@ -147,6 +152,8 @@ export async function POST(request: Request) {
           code: cancelled ? "ABORTED" : normalized.code,
           message: cancelled ? "图片生成已停止，没有保存半成品。" : normalized.message,
         });
+      } finally {
+        cancellation.dispose();
       }
   })();
   const task = registerGenerationTask(generation, { taskType: "IMAGE_GENERATE", taskId: usage.runId, userId });

@@ -29,7 +29,8 @@ describe("full product premium UI contract", () => {
 
   it("preserves accessible composer send, stop, edit and keyboard behavior", () => {
     expect(composer).toContain('aria-label="发送消息"');
-    expect(composer).toContain('aria-label="停止生成"');
+    expect(composer).toContain('props.stopping ? "正在请求停止" : "停止生成"');
+    expect(composer).toContain("disabled={props.stopping}");
     expect(composer).toContain("!event.shiftKey");
     expect(message).toContain('aria-label={props.editDisabled ? "停止生成并编辑此消息"');
     expect(message).toContain('aria-label="提交编辑"');
