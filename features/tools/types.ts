@@ -8,6 +8,7 @@ export interface ToolRunListItem {
   id: string;
   type: ToolTypeValue;
   status: "PENDING" | "COMPLETE" | "ERROR" | "CANCELLED";
+  errorCode?: string;
   title?: string;
   inputPreview?: string;
   outputPreview?: string;
