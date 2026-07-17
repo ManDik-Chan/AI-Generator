@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { MessageSquareText } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowDown, MessageSquareText } from "lucide-react";
 
 import { MessageItem } from "@/features/chat/components/message-item";
 import { AssistantAvatar } from "@/features/chat/components/assistant-avatar";
@@ -25,26 +25,37 @@ export function MessageList(props: MessageListProps) {
   const { messages } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const shouldFollowRef = useRef(true);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   useEffect(() => {
     if (shouldFollowRef.current) {
       const container = containerRef.current;
-      if (container) container.scrollTop = container.scrollHeight;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+        setShowScrollToBottom(false);
+      }
+    } else if (messages.length) {
+      setShowScrollToBottom(true);
     }
   }, [messages]);
 
+  const lastUserId = [...messages].reverse().find((item) => item.role === "user")?.id;
+
   return (
+    <div className="relative min-h-0 flex-1">
     <div
-      className="premium-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain"
+      className="premium-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain"
+      data-chat-message-scroll
       onScroll={(event) => {
         const element = event.currentTarget;
-        shouldFollowRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
+        const nearBottom = element.scrollHeight - element.scrollTop - element.clientHeight < 120;
+        shouldFollowRef.current = nearBottom;
+        setShowScrollToBottom(!nearBottom);
       }}
       ref={containerRef}
     >
       <div className="mx-auto w-full max-w-[52rem] space-y-8 px-3 pb-8 pt-6 sm:px-7 sm:py-9 lg:px-9">
         {messages.length ? messages.map((message) => {
-          const lastUserId = [...messages].reverse().find((item) => item.role === "user")?.id;
           return <MessageItem
             canEdit={message.id === lastUserId}
             editDisabled={props.editDisabled}
@@ -72,6 +83,8 @@ export function MessageList(props: MessageListProps) {
           </div>
         )}
       </div>
+    </div>
+    {showScrollToBottom ? <button aria-label="回到底部" className="absolute bottom-3 left-1/2 z-10 grid size-11 -translate-x-1/2 place-items-center rounded-full border border-border/14 bg-surface-raised text-foreground shadow-overlay transition-transform hover:-translate-y-0.5 motion-reduce:transform-none" onClick={() => { const container = containerRef.current; if (container) { container.scrollTo({ top: container.scrollHeight, behavior: "smooth" }); shouldFollowRef.current = true; setShowScrollToBottom(false); } }} type="button"><ArrowDown className="size-4" /></button> : null}
     </div>
   );
 }

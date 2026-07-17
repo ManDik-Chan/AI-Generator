@@ -15,7 +15,7 @@ function MobileItem({ item, pathname }: { item: (typeof mobileNavigation)[number
     <Link
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-control px-1 text-[.625rem] font-medium transition-colors duration-panel",
+        "flex min-h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-control px-0.5 text-[clamp(.5625rem,2.6vw,.625rem)] font-medium leading-none transition-colors duration-panel",
         active ? "text-primary" : "text-muted-foreground active:bg-surface-muted",
       )}
       href={item.href}
@@ -34,13 +34,13 @@ export function MobileNavigation() {
     <nav
       aria-label="移动端主导航"
       data-mobile-navigation
-      className="fixed inset-x-2.5 bottom-[max(.625rem,env(safe-area-inset-bottom))] z-50 grid h-[4.125rem] grid-cols-[1fr_1fr_4rem_1fr_1fr] items-center rounded-[1.375rem] border border-border/12 bg-surface-raised/90 px-2 py-1 shadow-[0_20px_60px_hsl(var(--overlay)/.20)] backdrop-blur-2xl min-[821px]:hidden"
+      className="fixed bottom-[max(.5rem,var(--safe-area-bottom))] left-[max(.5rem,var(--safe-area-left))] right-[max(.5rem,var(--safe-area-right))] z-50 grid min-h-[var(--mobile-nav-height)] grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3.5rem_minmax(0,1fr)_minmax(0,1fr)] items-center rounded-[1.375rem] border border-border/12 bg-surface-raised/90 px-1.5 py-1 shadow-[0_20px_60px_hsl(var(--overlay)/.20)] backdrop-blur-2xl min-[360px]:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_4rem_minmax(0,1fr)_minmax(0,1fr)] min-[821px]:hidden"
     >
       <MobileItem item={home} pathname={pathname} />
       <MobileItem item={chat} pathname={pathname} />
       <Link
         aria-label="新建对话"
-        className="grid size-[3.125rem] place-items-center justify-self-center rounded-[1.125rem] bg-foreground text-background shadow-[0_10px_25px_hsl(var(--overlay)/.25)] transition-transform active:scale-95"
+        className="grid size-11 place-items-center justify-self-center rounded-[1.125rem] bg-foreground text-background shadow-[0_10px_25px_hsl(var(--overlay)/.25)] transition-transform active:scale-95 min-[360px]:size-[3.125rem]"
         href="/chat"
       >
         <Plus aria-hidden="true" className="size-6" />

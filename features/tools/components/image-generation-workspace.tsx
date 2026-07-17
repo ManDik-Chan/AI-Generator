@@ -182,7 +182,7 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
           <span>每次点击只生成 1 张</span><span>服务端尺寸：{imageSize}</span><span>结果保存在私有空间</span><span>描述不会获得系统指令权限</span>
         </div>
         {error && <p className="mt-4 rounded-control bg-destructive-subtle p-3 text-sm text-destructive-foreground" role="alert">{error}</p>}
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/10 pt-4">
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/10 pt-4 max-[359px]:[&>button]:w-full">
           {active ? <Button disabled={cancelling} onClick={() => void stop()} variant="outline"><Square className="size-4 fill-current" />{cancelling ? "正在请求停止" : "停止生成"}</Button> : <Button disabled={!configured || !prompt.trim()} onClick={() => void generate()}><Sparkles className="size-4" />开始生成</Button>}
           <span className="premium-chip">{status}</span>
         </div>

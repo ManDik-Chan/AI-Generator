@@ -42,7 +42,7 @@ describe("approved premium application shell", () => {
     );
     expect(mobile).toContain('aria-label="新建对话"');
     expect(mobile).toContain('href="/chat"');
-    expect(mobile).toContain("grid-cols-[1fr_1fr_4rem_1fr_1fr]");
+    expect(mobile).toContain("grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3.5rem_minmax(0,1fr)_minmax(0,1fr)]");
   });
 
   it("switches to the mobile shell through 820px and supports 390px structure", () => {
@@ -84,8 +84,8 @@ describe("approved premium application shell", () => {
       "utf8",
     );
     expect(css).toContain("prefers-reduced-motion: reduce");
-    expect(css).toContain("env(safe-area-inset-bottom)");
-    expect(mobile).toContain("env(safe-area-inset-bottom)");
+    expect(css).toContain("env(safe-area-inset-bottom, 0px)");
+    expect(mobile).toContain("var(--safe-area-bottom)");
   });
 
   it("opens the desktop profile menu upward without changing its role links", () => {

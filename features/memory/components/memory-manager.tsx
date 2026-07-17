@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Brain, Database, Pencil, Pin, PinOff, Plus, Search, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBanner } from "@/components/ui/status-banner";
 import { deleteMemoryAction, setMemoryEnabledAction, setMemoryMasterEnabledAction, setMemoryPinnedAction } from "@/features/memory/actions";
@@ -110,6 +111,6 @@ export function MemoryManager({ memories, personas, memoryEnabled, initialPerson
     })}</div> : <EmptyState description={memories.length ? "调整搜索、筛选或排序条件后再试。" : "在聊天中自然交流，值得长期保留的信息会安全地出现在这里。"} icon={<Brain className="size-6" />} title={memories.length ? "没有符合条件的记忆" : "AI 还没有记住长期信息"} />}
 
     <MemoryFormDialog initial={editing} onOpenChange={setFormOpen} onSaved={setMessage} open={formOpen} personas={personas} />
-    {deleting && <div aria-labelledby="delete-memory-title" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center bg-overlay/55 p-4 backdrop-blur-sm" role="dialog"><div className="premium-panel-strong w-full max-w-md p-5 sm:p-6"><h2 className="text-lg font-semibold" id="delete-memory-title">删除这条记忆？</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">只会删除长期记忆及对应语义向量，不会删除对话、消息或 Persona。</p><div className="mt-5 flex justify-end gap-2"><Button onClick={() => setDeleting(undefined)} variant="outline">取消</Button><Button className="bg-destructive text-white hover:bg-destructive/90" disabled={pending} onClick={() => startTransition(async () => { const result = await deleteMemoryAction(deleting.id); setMessage(result.message); setDeleting(undefined); })}>删除记忆</Button></div></div></div>}
+    <Dialog description="只会删除长期记忆及对应语义向量，不会删除对话、消息或 Persona。" footer={<><Button onClick={() => setDeleting(undefined)} variant="outline">取消</Button><Button className="bg-destructive text-white hover:bg-destructive/90" disabled={pending} onClick={() => deleting && startTransition(async () => { const result = await deleteMemoryAction(deleting.id); setMessage(result.message); setDeleting(undefined); })}>删除记忆</Button></>} onOpenChange={(open) => { if (!open && !pending) setDeleting(undefined); }} open={Boolean(deleting)} title="删除这条记忆？"><p className="text-sm text-muted-foreground">删除后无法恢复，请确认是否继续。</p></Dialog>
   </div>;
 }

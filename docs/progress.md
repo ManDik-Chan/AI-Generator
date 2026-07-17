@@ -1,5 +1,23 @@
 # 重构进度
 
+## Phase 6B2 — 全站移动端体验（Draft）
+
+实施时间：2026-07-17
+
+- [x] 建立 `svh` / `dvh` / VisualViewport 统一高度与 Safe Area token。
+- [x] AppShell 改为 viewport、Header、单一 Main scroll region 和移动导航三层结构。
+- [x] Chat 消息区成为唯一滚动区，增加回到底部、Composer 自动增长、键盘可视高度和安全区适配。
+- [x] 移动导航保持五项，320px 可收缩，包含 Home Indicator 留白，并在软键盘打开时隐藏。
+- [x] 手机表单字段计算字号至少 16px；未禁用浏览器缩放或系统字体放大。
+- [x] Dialog 在手机使用 Bottom Sheet 与内部滚动；Dropdown 使用 Portal、12px collision padding 和上下自动翻转。
+- [x] Markdown、代码、表格、媒体、长邮箱、长标题与操作组增加组件级防溢出约束。
+- [x] 文本工具、图片分析、图片生成、头脑风暴、人格、记忆、账号和公共状态共享移动布局契约。
+- [x] 增加 Chromium Desktop、Chromium Mobile、WebKit iPhone 13 Playwright 配置与 `expectNoHorizontalOverflow` 公共断言。
+- [ ] 项目所有者 iPhone Safari、Android Chrome、微信内置浏览器和 PWA 真实设备验收。
+- [ ] 真实登录态的完整 Chat/Tools/Persona/Memory/Account/Admin Playwright 流程需由项目所有者提供本地 storage state 后执行。
+
+本阶段没有修改 Prisma Schema、migration、RLS、Auth、API、Provider、Prompt、每日限额或 Storage。Phase 7A2 Vibe Coding 尚未开始。
+
 ## Phase 7A1 多 Agent 头脑风暴（Draft）
 
 - [x] `/tools/brainstorm` Premium 工作台与工具中心/历史入口

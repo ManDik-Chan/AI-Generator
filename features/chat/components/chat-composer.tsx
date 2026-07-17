@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Send, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,16 +19,41 @@ interface ChatComposerProps {
 
 export function ChatComposer(props: ChatComposerProps) {
   const composingRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const disabled = Boolean(props.disabledReason);
   const canSend = props.value.trim().length > 0 && !disabled && !props.generating;
 
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    const maxHeight = Number.parseFloat(window.getComputedStyle(textarea).maxHeight) || 160;
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [props.value]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") return;
+    const root = document.documentElement;
+    const update = () => root.style.setProperty("--composer-height", `${Math.ceil(container.getBoundingClientRect().height)}px`);
+    const observer = new ResizeObserver(update);
+    observer.observe(container);
+    update();
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--composer-height");
+    };
+  }, []);
+
   return (
-    <div className="shrink-0 bg-gradient-to-t from-background via-background/96 to-transparent px-2.5 pb-[max(.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pt-4">
+    <div className="safe-inline shrink-0 bg-gradient-to-t from-background via-background/96 to-transparent pb-[max(.75rem,var(--safe-area-bottom))] pt-3 sm:px-6 sm:pt-4" data-chat-composer ref={containerRef}>
       <div className="mx-auto max-w-[52rem]">
         <div className="premium-panel-strong flex items-end gap-2 rounded-[1.35rem] p-2.5 focus-within:border-primary/45 focus-within:shadow-raised sm:p-3">
           <textarea
             aria-label="消息内容"
-            className="premium-scrollbar max-h-40 min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-sm leading-6 outline-none placeholder:text-muted-foreground"
+            className="premium-scrollbar max-h-[min(10rem,35dvh)] min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base leading-6 outline-none placeholder:text-muted-foreground sm:text-sm"
             disabled={disabled}
             maxLength={props.maxInputChars}
             onChange={(event) => props.onChange(event.target.value)}
@@ -40,8 +65,10 @@ export function ChatComposer(props: ChatComposerProps) {
                 if (canSend) props.onSend();
               }
             }}
+            onFocus={(event) => window.requestAnimationFrame(() => event.currentTarget.scrollIntoView({ block: "nearest" }))}
             placeholder={getComposerPlaceholder(props.disabledReason)}
             rows={1}
+            ref={textareaRef}
             value={props.value}
           />
           {props.generating ? (

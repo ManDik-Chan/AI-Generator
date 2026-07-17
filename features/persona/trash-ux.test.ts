@@ -6,8 +6,8 @@ describe("persona trash product language and safeguards", () => {
   const trash = readFileSync(new URL("../../app/personas/trash/page.tsx", import.meta.url), "utf8");
   const route = readFileSync(new URL("../../app/api/chat/route.ts", import.meta.url), "utf8");
 
-  it("uses a non-native confirmation dialog with the requested explanation", () => {
-    expect(menu).toContain('role="dialog"'); expect(menu).not.toContain("window.confirm");
+  it("uses the shared responsive confirmation dialog with the requested explanation", () => {
+    expect(menu).toContain("<Dialog"); expect(menu).not.toContain("window.confirm");
     expect(menu).toContain("已有聊天记录不会被删除"); expect(menu).toContain("移至回收站");
   });
 

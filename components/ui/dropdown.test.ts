@@ -4,6 +4,7 @@ import {
   DEFAULT_DROPDOWN_PLACEMENT,
   dropdownPlacementClasses,
 } from "@/components/ui/dropdown-placement";
+import { DROPDOWN_COLLISION_PADDING, resolveDropdownPosition } from "@/components/ui/dropdown-position";
 
 describe("Dropdown placement", () => {
   it("defaults existing callers to bottom-end", () => {
@@ -53,10 +54,27 @@ describe("Dropdown placement", () => {
   it("keeps the panel inside the viewport and scrolls long content", () => {
     const dropdown = readFileSync("components/ui/dropdown.tsx", "utf8");
 
-    expect(dropdown).toContain("max-h-[calc(100dvh-2rem)]");
-    expect(dropdown).toContain("max-w-[calc(100vw-2rem)]");
+    expect(dropdown).toContain("max-h-[calc(100dvh-1.5rem)]");
+    expect(dropdown).toContain("max-w-[calc(100vw-1.5rem)]");
     expect(dropdown).toContain("overflow-y-auto");
     expect(dropdown).toContain("overflow-x-hidden");
-    expect(dropdown).toContain("z-50");
+    expect(dropdown).toContain("z-[70]");
+    expect(dropdown).toContain("createPortal");
+    expect(DROPDOWN_COLLISION_PADDING).toBe(12);
+  });
+
+  it("flips upward and clamps end-aligned menus inside a narrow viewport", () => {
+    const position = resolveDropdownPosition({
+      trigger: { top: 700, right: 315, bottom: 744, left: 260, width: 55, height: 44 },
+      menu: { top: 0, right: 220, bottom: 260, left: 0, width: 220, height: 260 },
+      viewportWidth: 320,
+      viewportHeight: 760,
+      placement: "bottom-end",
+    });
+
+    expect(position.placement).toBe("top-end");
+    expect(Number(position.left)).toBeGreaterThanOrEqual(12);
+    expect(Number(position.top)).toBeGreaterThanOrEqual(12);
+    expect(Number(position.maxWidth)).toBeLessThanOrEqual(296);
   });
 });

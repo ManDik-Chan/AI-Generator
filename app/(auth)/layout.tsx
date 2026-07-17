@@ -11,7 +11,7 @@ const promises = [
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <main className="relative grid min-h-screen overflow-hidden bg-background lg:grid-cols-[minmax(0,1.04fr)_minmax(30rem,.96fr)]">
+    <main className="relative grid min-h-[var(--app-height)] overflow-x-clip bg-background lg:grid-cols-[minmax(0,1.04fr)_minmax(30rem,.96fr)]">
       <div aria-hidden="true" className="paper-dots pointer-events-none fixed inset-0 opacity-25 [mask-image:linear-gradient(to_bottom,black,transparent_70%)]" />
       <aside className="relative hidden overflow-hidden border-r border-border/10 bg-surface/52 p-10 backdrop-blur-sm lg:flex lg:flex-col xl:p-14">
         <div aria-hidden="true" className="surface-grid absolute inset-0 opacity-30 [mask-image:radial-gradient(circle_at_68%_45%,black,transparent_60%)]" />
@@ -53,7 +53,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         <p className="relative z-10 text-caption">简单使用，也经得起长期使用。</p>
       </aside>
 
-      <section className="relative z-10 flex min-h-screen flex-col">
+      <section className="relative z-10 flex min-h-[var(--app-height)] flex-col">
         <div className="flex min-h-[4.25rem] items-center justify-between px-4 py-3 sm:px-8 lg:justify-end">
           <Brand className="lg:hidden" />
           <ThemeToggle compact className="border border-border/12 bg-surface/72" />
