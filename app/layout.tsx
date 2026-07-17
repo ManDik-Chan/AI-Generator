@@ -4,7 +4,6 @@ import { Suspense } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { NavigationFeedback } from "@/components/layout/navigation-feedback";
-import { MobileViewportSync } from "@/features/mobile/mobile-viewport-sync";
 import { themeInitializationScript } from "@/lib/theme";
 
 export const metadata: Metadata = {
@@ -23,8 +22,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f4f1ea" },
-    { media: "(prefers-color-scheme: dark)", color: "#101415" },
+    { media: "(prefers-color-scheme: light)", color: "#eef1f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#07090f" },
   ],
 };
 
@@ -32,7 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} /></head>
-      <body><MobileViewportSync /><Suspense fallback={null}><NavigationFeedback /></Suspense><ThemeProvider>{children}</ThemeProvider></body>
+      <body><Suspense fallback={null}><NavigationFeedback /></Suspense><ThemeProvider>{children}</ThemeProvider></body>
     </html>
   );
 }

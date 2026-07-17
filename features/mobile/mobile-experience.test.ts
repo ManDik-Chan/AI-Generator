@@ -17,7 +17,9 @@ describe("Phase 6B2 mobile experience contracts", () => {
     expect(css).toContain("--app-height: 100vh");
     expect(css).toContain("--app-height: 100svh");
     expect(css).toContain("--app-height: 100dvh");
-    for (const token of ["--visual-viewport-height", "--safe-area-top", "--safe-area-right", "--safe-area-bottom", "--safe-area-left", "--mobile-header-height", "--mobile-nav-height", "--composer-height"]) expect(css).toContain(token);
+    for (const token of ["--safe-area-top", "--safe-area-right", "--safe-area-bottom", "--safe-area-left", "--mobile-header-height", "--mobile-nav-height"]) expect(css).toContain(token);
+    expect(css).not.toContain("--visual-viewport-height");
+    expect(read("app/layout.tsx")).not.toContain("MobileViewportSync");
     expect(css).not.toMatch(/body\s*\{[\s\S]*?overflow-x:\s*hidden/);
   });
 

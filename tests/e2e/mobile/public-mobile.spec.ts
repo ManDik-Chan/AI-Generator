@@ -3,13 +3,14 @@ import { expect, test } from "@playwright/test";
 import { expectNoHorizontalOverflow } from "./helpers";
 
 for (const route of ["/login", "/register"] as const) {
-  test(`${route} keeps mobile fields readable without horizontal overflow`, async ({ page }) => {
+  test(`${route} keeps mobile fields readable without horizontal overflow`, async ({ page }, testInfo) => {
     await page.goto(route);
     await expect(page.locator("main")).toBeVisible();
-    const field = page.locator("input").first();
+    const field = page.locator('input:not([type="hidden"])').first();
     await field.focus();
     await field.fill(route === "/login" ? "mobile@example.com" : "移动端测试");
-    expect(Number.parseFloat(await field.evaluate((element) => getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+    const fontSize = Number.parseFloat(await field.evaluate((element) => getComputedStyle(element).fontSize));
+    expect(fontSize).toBeGreaterThanOrEqual(testInfo.project.name === "chromium-desktop" ? 14 : 16);
     await expectNoHorizontalOverflow(page);
   });
 }

@@ -24,13 +24,19 @@ describe("approved premium application shell", () => {
 
     expect(navigationGroups.map((group) => group.label)).toEqual([
       "工作空间",
-      "效率工具",
+      "创作实验室",
+      "系统",
     ]);
     expect(hrefs).toContain("/chat");
     expect(hrefs).toContain("/personas");
     expect(hrefs).toContain("/memories");
     expect(hrefs).toContain("/tools");
     expect(hrefs).toContain("/tools/image");
+    expect(hrefs).toContain("/tools/image-generate");
+    expect(hrefs).toContain("/tools/brainstorm");
+    expect(hrefs).toContain("/tools/history");
+    expect(hrefs).toContain("/account");
+    expect(hrefs).toContain("/admin");
     expect(hrefs).not.toContain("/create");
     expect(hrefs).not.toContain("/settings");
   });

@@ -79,7 +79,7 @@ describe("full product premium UI contract", () => {
   });
 
   it("uses the approved light and dark premium tokens across all surfaces", () => {
-    for (const token of ["42 31% 94%", "213 21% 10%", "164 77% 30%", "192 14% 7%", "162 54% 50%", "--radius-card: 1.375rem", "--radius-display: 2.125rem"]) {
+    for (const token of ["225 33% 95%", "228 29% 9%", "248 84% 69%", "225 36% 4%", "248 91% 74%", "--radius-card: 1.125rem", "--radius-display: 1.625rem"]) {
       expect(globals).toContain(token);
     }
     expect(globals).toContain("prefers-reduced-motion");
