@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { Bot, House, Menu, Sparkles, X } from "lucide-react";
 
@@ -15,6 +15,7 @@ import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
+import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 
 interface ChatLayoutProps {
   conversations: ConversationSummary[];
@@ -61,12 +62,27 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   const [assistantDrawerOpen, setAssistantDrawerOpen] = useState(false);
   const [activePersona, setActivePersona] = useState(selectedPersona);
   const [controller, setController] = useState<AbortController>();
+  const [assistantMessageId, setAssistantMessageId] = useState<string>();
   const [editingMessage, setEditingMessage] = useState<ChatMessageView>();
   const [editValue, setEditValue] = useState("");
   const [activeConversationId, setActiveConversationId] = useState(conversation?.id);
   const [activeTitle, setActiveTitle] = useState(conversation?.title);
   const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
   const pendingStopEditRef = useRef(false);
+  const recover = useCallback((snapshot: { id: string; status: string; content: string }) => {
+    const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
+    setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
+    if (snapshot.status === "PENDING") { setGenerating(true); setError("任务正在后台继续生成。"); }
+    else { setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
+  }, []);
+  useGenerationRecovery({ storageKey: "chat-generation", runId: assistantMessageId, onRunId: setAssistantMessageId, statusUrl: "/api/chat/messages/", statusSuffix: "/status", onSnapshot: recover });
+
+  async function stopGeneration(messageId = assistantMessageId) {
+    if (messageId) await fetch(`/api/chat/messages/${messageId}/cancel`, { method: "POST", keepalive: true }).catch(() => undefined);
+    controller?.abort();
+    setGenerating(false);
+    setMessages((current) => current.map((message) => message.id === messageId ? { ...message, status: "cancelled" } : message));
+  }
 
   function selectAssistant(persona?: PersonaChatIdentity) {
     setActivePersona(persona);
@@ -93,7 +109,6 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
     let assistantId = `assistant-${crypto.randomUUID()}`;
     const now = new Date().toISOString();
     let assistantContent = "";
-    const previousMessages = messages;
     const editIndex = messageToEdit ? messages.findIndex((message) => message.id === messageToEdit.id) : -1;
     if (messageToEdit && editIndex < 0) return;
     if (messageToEdit) {
@@ -113,6 +128,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       { id: assistantId, role: "assistant", content: "", status: "pending", createdAt: now, temporary: true },
     ]);
 
+    let detached = false;
+    let terminal = false;
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -127,23 +144,18 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           activeConversationRef.current = { id: streamEvent.data.conversationId, updatedAt: streamEvent.data.updatedAt };
           setActiveConversationId(streamEvent.data.conversationId);
           if (firstConfirmation) window.history.replaceState(window.history.state, "", `/chat/${streamEvent.data.conversationId}`);
-          queueMicrotask(() => {
-            if (pendingStopEditRef.current) {
-              pendingStopEditRef.current = false;
-              requestController.abort();
-            }
-          });
         }
         if (streamEvent.event === "turn") {
           const temporaryUserId = userId;
           const temporaryAssistantId = assistantId;
           userId = streamEvent.data.userMessageId;
           assistantId = streamEvent.data.assistantMessageId;
+          setAssistantMessageId(assistantId);
           setMessages((current) => confirmOptimisticTurn(current, temporaryUserId, temporaryAssistantId, userId, assistantId));
           setEditingMessage((current) => current?.id === temporaryUserId ? { ...current, id: userId, temporary: false } : current);
           if (pendingStopEditRef.current) {
             pendingStopEditRef.current = false;
-            requestController.abort();
+            void stopGeneration(assistantId).then(() => requestController.abort());
           }
         }
         if (streamEvent.event === "delta") {
@@ -152,30 +164,38 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         }
         if (streamEvent.event === "memory") setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, memoryCount: streamEvent.data.count } : message));
         if (streamEvent.event === "done") {
+          terminal = true;
           setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, id: streamEvent.data.messageId, status: "complete" } : message));
         }
+        if (streamEvent.event === "cancelled") {
+          terminal = true;
+          setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
+        }
         if (streamEvent.event === "error") {
+          terminal = true;
           setError(streamEvent.data.message);
           setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "error" } : message));
         }
       });
 
-    } catch (caughtError) {
+      if (!terminal && !requestController.signal.aborted) {
+        detached = true;
+        setGenerating(true);
+        setError("连接暂时中断，任务仍在后台处理。");
+        return;
+      }
+
+    } catch {
       if (requestController.signal.aborted) {
-        setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: assistantContent ? "complete" : "error" } : message));
+        setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
       } else {
-        if (messageToEdit) {
-          setMessages(previousMessages);
-          setEditingMessage(messageToEdit);
-          setEditValue(content);
-        } else {
-          setDraft(content);
-          setMessages(previousMessages);
-        }
-        setError(caughtError instanceof Error ? caughtError.message : "消息发送失败，请稍后重试。");
+        detached = true;
+        setGenerating(true);
+        setError("连接暂时中断，任务仍在后台处理。");
+        return;
       }
     } finally {
-      setGenerating(false);
+      if (!detached) setGenerating(false);
       setController(undefined);
       pendingStopEditRef.current = false;
     }
@@ -189,7 +209,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       if (message.temporary && !activeConversationRef.current.updatedAt) {
         pendingStopEditRef.current = true;
       } else {
-        controller?.abort();
+        void stopGeneration();
       }
     }
   }
@@ -235,7 +255,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           maxInputChars={maxInputChars}
           onChange={setDraft}
           onSend={() => void sendMessage()}
-          onStop={() => controller?.abort()}
+          onStop={() => void stopGeneration()}
           value={draft}
         />
         </main>{!activeConversationId && <AssistantSelectorPanel onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}</div>

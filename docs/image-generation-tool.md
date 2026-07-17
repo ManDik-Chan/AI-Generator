@@ -10,6 +10,16 @@
 
 页面提供真实阶段进度、已用时间、停止生成、私有预览、下载、再次创作、分页画廊与删除。停止后不保存半成品；服务端只允许 `PENDING` 运行写为 `COMPLETE`，迟到结果不能覆盖 `CANCELLED`。页面不使用 `router.refresh()` 或全屏 loading。
 
+## 后台生成与恢复
+
+SSE 现在只作为可选观察通道：`request.signal` 中断、`ReadableStream.cancel()` 与 `enqueue` 失败只会将 transport 标记为 detached，不会再中止 Provider 或写入 `CANCELLED`。已经开始的 Promise 会立即注册到 `@vercel/functions` 的 `waitUntil()`；Chat、文本工具、图片分析、图片生成和 Persona 生成均以 PostgreSQL 中的 Message、ToolRun 或 GenerationRun 作为业务真相。
+
+显式停止通过所有者校验的 cancel API 原子执行 `PENDING → CANCELLED`。前端仅保存非敏感 runId/messageId，并在 mount、`pageshow`、重新可见和 focus 时查询已有状态；恢复不会新建任务、再次调用 Provider或重复扣费。文本和 Chat 输出按 750ms/合理字符阈值节流持久化。关闭工具历史时，恢复正文只保留 15 分钟并由可重复执行的清理函数清除，不会进入普通历史。
+
+新增独立 migration `20260717120000_add_generation_recovery`，为 Chat 增加 `CANCELLED`、为 ToolRun 增加短期恢复到期时间，并为 Persona 草稿/头像增加有 24 小时到期时间的 `GenerationRun`。该 migration 与最新版 RLS 仍待项目所有者手动部署；本次没有执行真实 migration 或 RLS。
+
+后台执行仍受 Provider timeout 与 Vercel Function 最大执行时间限制；当前 Node.js Route 的 `maxDuration` 为 300 秒，不承诺无限后台运行。
+
 ## 数据与私有资源
 
 - 新 migration：`20260716190000_add_image_generation_tool`。

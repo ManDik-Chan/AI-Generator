@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Copy, Download, ImageIcon, ImageOff, LoaderCircle, RotateCcw, Sparkles, Square, Trash2 } from "lucide-react";
 
 import { GenerationProgress, type GenerationStage } from "@/components/ai/generation-progress";
@@ -15,6 +15,7 @@ import { IMAGE_GENERATION_PROMPT_MAX_CHARS, IMAGE_GENERATION_STYLES, type ImageG
 import { consumeImageGenerationDraft } from "@/features/tools/image-generation/draft";
 import type { GeneratedToolImageDto, ImageGenerationUsageDto } from "@/features/tools/image-generation/types";
 import { readSseEvents } from "@/lib/ai/read-sse";
+import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 
 type RunState = "idle" | "running" | "complete" | "cancelled" | "error";
 interface Props { configured: boolean; imageSize: string; initialUsage: ImageGenerationUsageDto; initialHistory: GeneratedToolImageDto[]; initialPage: number; initialPages: number }
@@ -44,8 +45,19 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
   const [state, setState] = useState<RunState>("idle");
   const [activeStage, setActiveStage] = useState("preparing");
   const [error, setError] = useState("");
+  const [runId, setRunId] = useState<string>();
   const [deleteTarget, setDeleteTarget] = useState<GeneratedToolImageDto>();
   const elapsed = useElapsedTime(state === "running");
+  const recover = useCallback((snapshot: { status: string; generatedImage?: { id: string; width: number; height: number } }) => {
+    if (snapshot.status === "PENDING") setState("running");
+    if (snapshot.status === "CANCELLED") { setState("cancelled"); setError("图片生成已停止，没有保存半成品。"); }
+    if (snapshot.status === "ERROR") { setState("error"); setError("图片生成失败，请稍后重试。"); }
+    if (snapshot.status === "COMPLETE" && snapshot.generatedImage) {
+      const image: GeneratedToolImageDto = { ...snapshot.generatedImage, prompt, style, previewUrl: `/api/generated-images/${snapshot.generatedImage.id}`, downloadUrl: `/api/generated-images/${snapshot.generatedImage.id}?download=1`, createdAt: new Date().toISOString() };
+      setCurrent(image); setHistory((items) => [image, ...items.filter((item) => item.id !== image.id)]); setState("complete"); setError("");
+    }
+  }, [prompt, style]);
+  useGenerationRecovery({ storageKey: "ai-tool-run:IMAGE_GENERATE", runId, onRunId: setRunId, statusUrl: "/api/tools/runs/", statusSuffix: "?recovery=1", onSnapshot: recover });
 
   useEffect(() => {
     const draft = consumeImageGenerationDraft(sessionStorage);
@@ -79,7 +91,7 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
       });
       await readSseEvents(response, (event, raw) => {
         if (version !== requestVersionRef.current) return;
-        if (event === "run") setUsage((raw as RunEvent).usage);
+        if (event === "run") { setRunId((raw as RunEvent).runId); setUsage((raw as RunEvent).usage); }
         if (event === "progress") setActiveStage((raw as ProgressEvent).stage);
         if (event === "done") {
           terminal = true;
@@ -93,22 +105,23 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
         if (event === "error") { terminal = true; setState("error"); setError((raw as ErrorEvent).message || "图片生成失败，请稍后重试。"); }
       });
       if (!terminal && version === requestVersionRef.current) {
-        setState("error");
-        setError("图片生成连接提前结束，请重试。");
+        setState("running");
+        setError("连接暂时中断，任务仍在后台处理。");
       }
-    } catch (caught) {
+    } catch {
       if (version !== requestVersionRef.current) return;
       if (controller.signal.aborted) { setState("cancelled"); setError("图片生成已停止，没有保存半成品。"); }
-      else { setState("error"); setError(caught instanceof Error ? caught.message : "图片生成失败，请稍后重试。"); }
+      else { setState("running"); setError("连接暂时中断，任务仍在后台处理。"); }
     } finally {
       if (version === requestVersionRef.current) controllerRef.current = undefined;
     }
   }
 
-  function stop() {
+  async function stop() {
     if (state !== "running") return;
+    if (runId) await fetch(`/api/tools/runs/${runId}/cancel`, { method: "POST", keepalive: true }).catch(() => undefined);
     requestVersionRef.current += 1;
-    controllerRef.current?.abort();
+      controllerRef.current?.abort();
     controllerRef.current = undefined;
     setState("cancelled");
     setError("图片生成已停止，没有保存半成品。");

@@ -1,7 +1,7 @@
 export interface EditableMessage {
   id: string;
   role: "USER" | "ASSISTANT" | "SYSTEM" | "TOOL";
-  status: "PENDING" | "COMPLETE" | "ERROR";
+  status: "PENDING" | "COMPLETE" | "ERROR" | "CANCELLED";
   content: string;
   supersededAt: Date | null;
 }

@@ -135,9 +135,50 @@ export async function finishToolRun(userId: string, runId: string, status: Exclu
     where: { id: runId, userId, status: "PENDING" },
     data: {
       status,
-      outputText: status === "COMPLETE" ? data.outputText : undefined,
+      outputText: data.outputText,
       errorCode: data.errorCode?.slice(0, 100),
     },
+  });
+}
+
+const RECOVERY_TTL_MS = 15 * 60_000;
+
+export async function persistToolRunPartial(userId: string, runId: string, outputText: string) {
+  const run = await prisma.toolRun.findFirst({ where: { id: runId, userId }, select: { retainContent: true } });
+  if (!run) return { count: 0 };
+  return prisma.toolRun.updateMany({
+    where: { id: runId, userId, status: "PENDING" },
+    data: { outputText, recoveryExpiresAt: run.retainContent ? null : new Date(Date.now() + RECOVERY_TTL_MS) },
+  });
+}
+
+export async function finishRecoverableToolRun(
+  userId: string,
+  runId: string,
+  status: Exclude<ToolRunStatus, "PENDING">,
+  data: { outputText?: string; errorCode?: string } = {},
+) {
+  const run = await prisma.toolRun.findFirst({ where: { id: runId, userId }, select: { retainContent: true } });
+  if (!run) return { count: 0 };
+  return prisma.toolRun.updateMany({
+    where: { id: runId, userId, status: "PENDING" },
+    data: {
+      status,
+      outputText: data.outputText,
+      errorCode: data.errorCode?.slice(0, 100),
+      recoveryExpiresAt: run.retainContent ? null : new Date(Date.now() + RECOVERY_TTL_MS),
+    },
+  });
+}
+
+export async function isToolRunPending(userId: string, runId: string) {
+  return Boolean(await prisma.toolRun.findFirst({ where: { id: runId, userId, status: "PENDING" }, select: { id: true } }));
+}
+
+export async function cleanupExpiredToolRunRecovery(now = new Date()) {
+  return prisma.toolRun.updateMany({
+    where: { retainContent: false, recoveryExpiresAt: { lte: now } },
+    data: { outputText: null, recoveryExpiresAt: null },
   });
 }
 

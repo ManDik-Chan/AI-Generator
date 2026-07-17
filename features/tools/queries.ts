@@ -4,6 +4,7 @@ import { TOOL_HISTORY_PAGE_SIZE } from "@/features/tools/constants";
 import type { ToolRunDetail, ToolRunListItem } from "@/features/tools/types";
 import { previewText } from "@/features/tools/utils";
 import { prisma } from "@/lib/database/prisma";
+import { cleanupExpiredToolRunRecovery } from "@/features/tools/usage";
 
 export async function getToolHistory(userId: string, page = 1, type?: ToolType) {
   const safePage = Math.max(1, Math.floor(page));
@@ -59,4 +60,34 @@ export async function getRecentToolRuns(userId: string) {
     take: 3,
     select: { id: true, type: true, title: true, createdAt: true },
   });
+}
+
+export async function getToolRunRecovery(userId: string, runId: string) {
+  const now = new Date();
+  await cleanupExpiredToolRunRecovery(now).catch(() => undefined);
+  const row = await prisma.toolRun.findFirst({
+    where: { id: runId, userId },
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      retainContent: true,
+      outputText: true,
+      errorCode: true,
+      recoveryExpiresAt: true,
+      updatedAt: true,
+      generatedImage: { select: { id: true, width: true, height: true } },
+    },
+  });
+  if (!row) return null;
+  const canReadOutput = row.retainContent || Boolean(row.recoveryExpiresAt && row.recoveryExpiresAt > now);
+  return {
+    id: row.id,
+    type: row.type,
+    status: row.status,
+    outputText: canReadOutput ? row.outputText ?? "" : "",
+    errorCode: row.errorCode ?? undefined,
+    generatedImage: row.generatedImage ?? undefined,
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }

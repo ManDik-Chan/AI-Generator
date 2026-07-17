@@ -23,10 +23,12 @@ import {
   logImageSafetyDiagnostic,
 } from "@/lib/ai/image/errors";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
+import { registerGenerationTask } from "@/features/generation/background-task";
+import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
-const encoder = new TextEncoder();
 const stageLabels: Record<
   ToolImageGenerationStage,
   { label: string; detail: string }
@@ -102,23 +104,8 @@ export async function POST(request: Request) {
     return jsonError("无法创建图片生成任务，请稍后重试。", 500, "UNAVAILABLE");
   }
 
-  const abortController = new AbortController();
-  const abort = () => abortController.abort();
-  request.signal.addEventListener("abort", abort, { once: true });
-  if (request.signal.aborted) abortController.abort();
-
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (event: string, data: unknown) => {
-        try {
-          controller.enqueue(encoder.encode(encodeToolSse(event, data)));
-          return true;
-        } catch {
-          abortController.abort();
-          return false;
-        }
-      };
-      send("run", {
+  const observer = new SseObserver(encodeToolSse);
+  observer.send("run", {
         runId: usage.runId,
         usage: {
           limit: usage.limit,
@@ -126,17 +113,17 @@ export async function POST(request: Request) {
           remaining: usage.remaining,
           unlimited: usage.unlimited,
         },
-      });
+  });
+  const generation = (async () => {
       try {
         const image = await generateToolImage({
           userId,
           runId: usage.runId,
           prompt: parsed.data.prompt,
           style: parsed.data.style,
-          signal: abortController.signal,
-          onProgress: (stage) => send("progress", { stage, ...stageLabels[stage] }),
+          onProgress: (stage) => observer.send("progress", { stage, ...stageLabels[stage] }),
         });
-        send("done", {
+        observer.send("done", {
           runId: usage.runId,
           image,
           usage: {
@@ -149,38 +136,19 @@ export async function POST(request: Request) {
       } catch (error) {
         logImageSafetyDiagnostic(error);
         const normalized = toPublicToolImageError(error);
-        const cancelled =
-          abortController.signal.aborted ||
-          (error instanceof ImageProviderError && error.code === "ABORTED");
+        const cancelled = error instanceof ImageProviderError && error.code === "ABORTED";
         await finishToolRun(
           userId,
           usage.runId,
           cancelled ? "CANCELLED" : "ERROR",
           { errorCode: cancelled ? "ABORTED" : normalized.code },
         ).catch(() => undefined);
-        send(cancelled ? "cancelled" : "error", {
+        observer.send(cancelled ? "cancelled" : "error", {
           code: cancelled ? "ABORTED" : normalized.code,
           message: cancelled ? "图片生成已停止，没有保存半成品。" : normalized.message,
         });
-      } finally {
-        request.signal.removeEventListener("abort", abort);
-        try {
-          controller.close();
-        } catch {
-          // Client disconnected.
-        }
       }
-    },
-    cancel() {
-      abortController.abort();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-    },
-  });
+  })();
+  const task = registerGenerationTask(generation, { taskType: "IMAGE_GENERATE", taskId: usage.runId, userId });
+  return createObservedSseResponse(observer, task, request.signal);
 }

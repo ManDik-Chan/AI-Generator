@@ -7,17 +7,19 @@ import { processUploadedImage, UnsafeUploadError } from "@/features/tools/image/
 import { imageRunFieldsSchema } from "@/features/tools/image/schemas";
 import { buildToolAssetPath, downloadToolAsset, removeToolAssets, uploadToolAsset } from "@/features/tools/image/storage";
 import { TOOL_OUTPUT_MAX_CHARS } from "@/features/tools/constants";
-import { ToolOutputGuard, UnsafeToolOutputError } from "@/features/tools/output-guard";
-import { createPendingVisionToolRun, DailyToolLimitError, finishToolRun } from "@/features/tools/usage";
+import { ToolOutputGuard } from "@/features/tools/output-guard";
+import { createPendingVisionToolRun, DailyToolLimitError, finishRecoverableToolRun, finishToolRun, isToolRunPending, persistToolRunPartial } from "@/features/tools/usage";
 import { encodeToolSse, publicToolError } from "@/features/tools/utils";
 import { AiProviderError } from "@/lib/ai/errors";
 import { getToolAssetConfig } from "@/lib/ai/vision/config";
 import { getVisionProvider } from "@/lib/ai/vision/registry";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
+import { registerGenerationTask } from "@/features/generation/background-task";
+import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 
 export const runtime = "nodejs";
-const encoder = new TextEncoder();
+export const maxDuration = 300;
 const jsonError = (message: string, status: number, code: string, details?: Record<string, number>) => NextResponse.json({ message, code, ...details }, { status });
 
 export async function POST(request: Request) {
@@ -67,28 +69,34 @@ export async function POST(request: Request) {
     return jsonError("图片暂时无法安全保存，请稍后重试。", 503, "STORAGE");
   }
 
-  const abortController = new AbortController(); const abort = () => abortController.abort();
-  request.signal.addEventListener("abort", abort, { once: true }); if (request.signal.aborted) abortController.abort();
-  const prompt = buildImageAnalysisPrompt(parsed.data.options, parsed.data.question); let output = ""; const guard = new ToolOutputGuard();
-  const stream = new ReadableStream<Uint8Array>({ async start(controller) {
-    const send = (event: string, payload: unknown) => { try { controller.enqueue(encoder.encode(encodeToolSse(event, payload))); return true; } catch { abortController.abort(); return false; } };
-    send("start", { runId: usage.runId, tool: "IMAGE_ANALYZE", limit: usage.limit, used: usage.used, remaining: usage.remaining, unlimited: usage.unlimited });
+  const prompt = buildImageAnalysisPrompt(parsed.data.options, parsed.data.question);
+  const observer = new SseObserver(encodeToolSse);
+  observer.send("start", { runId: usage.runId, tool: "IMAGE_ANALYZE", limit: usage.limit, used: usage.used, remaining: usage.remaining, unlimited: usage.unlimited });
+  const generation = (async () => {
+    let output = ""; let persistedLength = 0; let lastPersistedAt = Date.now(); const guard = new ToolOutputGuard();
     try {
-      for await (const delta of provider.streamImageAnalysis({ system: prompt.system, question: prompt.user, image: image.bytes, mimeType: image.mimeType, signal: abortController.signal })) {
+      if (!await isToolRunPending(userId, usage.runId)) return;
+      for await (const delta of provider.streamImageAnalysis({ system: prompt.system, question: prompt.user, image: image.bytes, mimeType: image.mimeType })) {
         if (output.length + delta.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Vision output too large");
-        output += delta; const safe = guard.push(delta); if (safe && !send("delta", { text: safe })) break;
+        output += delta; const safe = guard.push(delta); if (safe) observer.send("delta", { text: safe });
+        if (Date.now() - lastPersistedAt >= 750 || output.length - persistedLength >= 1024) {
+          const persisted = await persistToolRunPartial(userId, usage.runId, output);
+          if (!persisted.count) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
+          lastPersistedAt = Date.now(); persistedLength = output.length;
+        }
       }
-      const final = guard.flush(); if (final) send("delta", { text: final });
-      const completed = await finishToolRun(userId, usage.runId, "COMPLETE", { outputText: parsed.data.saveHistory ? output : undefined });
+      const final = guard.flush(); if (final) observer.send("delta", { text: final });
+      const completed = await finishRecoverableToolRun(userId, usage.runId, "COMPLETE", { outputText: output });
       if (!parsed.data.saveHistory) await cleanupToolRunAssets(userId, usage.runId);
-      if (completed.count) send("done", { runId: usage.runId, status: "COMPLETE", saved: parsed.data.saveHistory });
+      if (completed.count) observer.send("done", { runId: usage.runId, status: "COMPLETE", saved: parsed.data.saveHistory });
+      else observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" });
     } catch (error) {
-      const normalized = publicToolError(error); const cancelled = abortController.signal.aborted || normalized.code === "CANCELLED";
-      if (error instanceof UnsafeToolOutputError) abortController.abort();
-      await finishToolRun(userId, usage.runId, cancelled ? "CANCELLED" : "ERROR", { errorCode: normalized.code }).catch(() => undefined);
+      const normalized = publicToolError(error);
+      const failed = await finishRecoverableToolRun(userId, usage.runId, "ERROR", { outputText: output, errorCode: normalized.code }).catch(() => ({ count: 0 }));
       if (!parsed.data.saveHistory) await cleanupToolRunAssets(userId, usage.runId);
-      send("error", { code: cancelled ? "CANCELLED" : normalized.code, message: cancelled ? "已停止分析，已保留接收的部分结果。" : normalized.message });
-    } finally { request.signal.removeEventListener("abort", abort); try { controller.close(); } catch { /* disconnected */ } }
-  }, cancel() { abortController.abort(); } });
-  return new Response(stream, { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" } });
+      observer.send(failed.count ? "error" : "cancelled", failed.count ? { code: normalized.code, message: normalized.message } : { runId: usage.runId, status: "CANCELLED" });
+    }
+  })();
+  const task = registerGenerationTask(generation, { taskType: "IMAGE_ANALYZE", taskId: usage.runId, userId });
+  return createObservedSseResponse(observer, task, request.signal);
 }

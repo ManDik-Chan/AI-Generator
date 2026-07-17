@@ -41,6 +41,14 @@ function assertNotAborted(signal?: AbortSignal) {
   }
 }
 
+async function assertRunPending(userId: string, runId: string) {
+  const pending = await prisma.toolRun.findFirst({
+    where: { id: runId, userId, type: "IMAGE_GENERATE", status: "PENDING" },
+    select: { id: true },
+  });
+  if (!pending) throw new ImageProviderError("ABORTED", "Image generation is no longer pending");
+}
+
 export async function generateToolImage(
   input: GenerateToolImageInput,
 ): Promise<GeneratedToolImageDto> {
@@ -48,6 +56,7 @@ export async function generateToolImage(
   const finalPrompt = buildToolImagePrompt(input.prompt, input.style);
   const config = requireImageConfig();
   assertNotAborted(input.signal);
+  await assertRunPending(input.userId, input.runId);
 
   input.onProgress?.("generating");
   const providerResult = await getImageProvider().generateImage({
@@ -56,6 +65,7 @@ export async function generateToolImage(
     signal: input.signal,
   });
   assertNotAborted(input.signal);
+  await assertRunPending(input.userId, input.runId);
 
   input.onProgress?.("downloading");
   const downloaded = await downloadRemoteImageSafely(providerResult.remoteUrl, {
@@ -63,6 +73,7 @@ export async function generateToolImage(
     onProgress: () => input.onProgress?.("validating"),
   });
   assertNotAborted(input.signal);
+  await assertRunPending(input.userId, input.runId);
 
   const generatedImageId = randomUUID();
   const storagePath = buildGeneratedImageStoragePath(
@@ -71,6 +82,7 @@ export async function generateToolImage(
     downloaded.extension,
   );
   input.onProgress?.("uploading");
+  await assertRunPending(input.userId, input.runId);
   const storageTarget = await uploadGeneratedImage(
     input.userId,
     storagePath,
@@ -80,6 +92,7 @@ export async function generateToolImage(
 
   try {
     assertNotAborted(input.signal);
+    await assertRunPending(input.userId, input.runId);
     input.onProgress?.("saving");
     const created = await prisma.$transaction(async (transaction) => {
       const pending = await transaction.toolRun.findFirst({

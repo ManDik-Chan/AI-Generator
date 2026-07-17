@@ -13,6 +13,9 @@
 - [x] Service Role Bucket/Path 可信目标解析、GeneratedImage server-only 写 RLS
 - [x] 结果元数据、复制原始描述、加载失败状态与历史再次创作回填
 - [x] 自动测试、lint、typecheck、无密钥构建和 Prisma 校验
+- [x] 修复文本工具卡片等高布局，移除首卡 row-span/index 特例
+- [x] waitUntil 后台生命周期、transport detached/explicit cancel 分离与 durable recovery
+- [x] Chat/ToolRun partial output 节流持久化、Persona GenerationRun 与所有者 status/cancel API
 - [ ] 项目所有者真实 Supabase migration / RLS / private bucket 验收
 - [ ] 项目所有者真实 GLM-Image、停止、隔离与 390/430/768/1440px 验收
 

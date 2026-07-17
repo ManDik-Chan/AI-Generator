@@ -9,8 +9,8 @@ describe("memory database contract", () => {
   it("defines the scope, origin, master switch and nullable source relation", () => {
     expect(schema).toContain("enum MemoryScope");
     expect(schema).toContain("enum MemoryOrigin");
-    expect(schema).toContain("memoryEnabled Boolean @default(true)");
-    expect(schema).toContain('sourceMessage      Message?      @relation("MemorySourceMessage"');
+    expect(schema).toMatch(/memoryEnabled\s+Boolean\s+@default\(true\)/);
+    expect(schema).toMatch(/sourceMessage\s+Message\?\s+@relation\("MemorySourceMessage"/);
     expect(schema).toContain("onDelete: SetNull");
   });
 

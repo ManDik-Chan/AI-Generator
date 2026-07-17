@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 
 import { GenerationProgress, type GenerationStage } from "@/components/ai/generation-progress";
@@ -8,6 +8,7 @@ import { useElapsedTime } from "@/components/ai/use-elapsed-time";
 import { Button } from "@/components/ui/button";
 import { readSseEvents } from "@/lib/ai/read-sse";
 import type { PersonaInput } from "@/features/persona/types";
+import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 
 export interface GeneratedPersonaClientDraft extends PersonaInput { avatarPrompt: string; avatarPresetId: string }
 
@@ -31,11 +32,28 @@ export function AiPersonaGenerator({ configured, hasDraft, onDraft }: { configur
   const [repairingSeen, setRepairingSeen] = useState(false);
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
+  const [runId, setRunId] = useState<string>();
   const controllerRef = useRef<AbortController | undefined>(undefined);
   const requestVersion = useRef(0);
   const elapsed = useElapsedTime(loading);
+  const recover = useCallback((snapshot: { status: string; result?: { draft?: GeneratedPersonaClientDraft } }) => {
+    if (snapshot.status === "PENDING") { setLoading(true); setError("任务正在后台继续生成。"); }
+    if (snapshot.status === "COMPLETE" && snapshot.result?.draft) { onDraft(snapshot.result.draft); setLoading(false); setSuccess("人格草稿已生成，可以继续修改后保存。"); setError(undefined); }
+    if (snapshot.status === "CANCELLED") { setLoading(false); setError("生成已取消，现有内容未被修改。"); }
+    if (snapshot.status === "ERROR") { setLoading(false); setError("AI 人格生成失败，请稍后重试。"); }
+  }, [onDraft]);
+  useGenerationRecovery({ storageKey: "persona-draft-generation", runId, onRunId: setRunId, statusUrl: "/api/generation-runs/", onSnapshot: recover });
 
   useEffect(() => () => { requestVersion.current += 1; controllerRef.current?.abort(); }, []);
+
+  async function cancel() {
+    if (runId) await fetch(`/api/generation-runs/${runId}/cancel`, { method: "POST", keepalive: true }).catch(() => undefined);
+    requestVersion.current += 1;
+    controllerRef.current?.abort();
+    controllerRef.current = undefined;
+    setLoading(false);
+    setError("生成已取消，现有内容未被修改。");
+  }
 
   async function generate() {
     if (hasDraft && !window.confirm("重新生成会覆盖当前未保存的人格内容，是否继续？")) return;
@@ -51,19 +69,20 @@ export function AiPersonaGenerator({ configured, hasDraft, onDraft }: { configur
       let streamError: string | undefined;
       await readSseEvents(response, (name, data) => {
         if (version !== requestVersion.current || controller.signal.aborted) return;
-        const payload = data as { stage?: string; message?: string; draft?: GeneratedPersonaClientDraft };
+        const payload = data as { runId?: string; stage?: string; message?: string; draft?: GeneratedPersonaClientDraft };
+        if (name === "run" && payload.runId) setRunId(payload.runId);
         if (name === "progress" && payload.stage) { setActiveStage(payload.stage); if (payload.stage === "repairing") setRepairingSeen(true); }
         if (name === "done") draft = payload.draft;
         if (name === "error") streamError = payload.message || "AI 人格生成失败，请稍后重试。";
       });
       if (version !== requestVersion.current || controller.signal.aborted) return;
       if (streamError) throw new Error(streamError);
-      if (!draft) throw new Error("AI 返回的人格格式不完整，请重新生成。");
+      if (!draft) { setError("连接暂时中断，任务仍在后台处理。"); return; }
       onDraft(draft);
       setSuccess("人格草稿已生成，可以继续修改后保存。");
     } catch (caught) {
       if (version !== requestVersion.current) return;
-      setError(controller.signal.aborted ? "生成已取消，现有内容未被修改。" : caught instanceof Error ? caught.message : "AI 人格生成失败，请稍后重试。");
+      setError(controller.signal.aborted ? "连接暂时中断，任务仍在后台处理。" : caught instanceof Error ? caught.message : "AI 人格生成失败，请稍后重试。");
     } finally {
       if (version === requestVersion.current) { controllerRef.current = undefined; setLoading(false); }
     }
@@ -78,7 +97,7 @@ export function AiPersonaGenerator({ configured, hasDraft, onDraft }: { configur
     <textarea className="premium-field relative mt-2 min-h-32 resize-y p-3 text-sm leading-6" disabled={!configured || loading} id="persona-ai-description" maxLength={1500} onChange={(event) => setDescription(event.target.value)} placeholder="例如：帮我创建一个温和但严格的大学计算机老师……" value={description} />
     <div className="relative mt-1 flex justify-between text-xs text-muted-foreground"><span>10–1500 字符</span><span>{description.length}/1500</span></div>
     <div className="relative mt-3 flex flex-wrap gap-2">{examples.map((example) => <button className="premium-chip min-h-9 text-left hover:border-primary/25 hover:bg-primary-subtle disabled:opacity-50" disabled={loading} key={example} onClick={() => setDescription(example)} type="button">{example.slice(0, 18)}…</button>)}</div>
-    {loading && <div className="relative mt-4"><GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={() => { requestVersion.current += 1; controllerRef.current?.abort(); controllerRef.current = undefined; setLoading(false); setError("生成已取消，现有内容未被修改。"); }} stages={visibleStages} title="正在生成人格草稿" /></div>}
+    {loading && <div className="relative mt-4"><GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={() => void cancel()} stages={visibleStages} title="正在生成人格草稿" /></div>}
     {error && <p className="relative mt-3 rounded-control bg-destructive-subtle p-3 text-sm text-destructive-foreground" role="alert">{error}</p>}
     {success && <p className="relative mt-3 rounded-control bg-success-subtle p-3 text-sm text-success-foreground">{success}</p>}
     {!loading && <div className="relative mt-4"><Button disabled={!configured || description.trim().length < 10} onClick={() => void generate()} type="button"><Sparkles className="size-4" />{hasDraft ? "重新生成草稿" : "生成草稿"}</Button></div>}

@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Copy, Download, ImagePlus, ShieldCheck, Square, Trash2, WandSparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { readSseEvents } from "@/lib/ai/read-sse";
 import type { ToolRunState } from "@/features/tools/types";
 import { formatVisionUsage } from "@/features/tools/image/usage-display";
+import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 
 interface Props { configured: boolean; initialRemaining: number; initialLimit: number; initialUsed: number; initialUnlimited: boolean }
 const defaults = { mode: "general", detail: "standard", language: "auto" };
@@ -28,6 +29,14 @@ export function ImageAnalyzer({ configured, initialRemaining, initialLimit, init
   const controllerRef = useRef<AbortController | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
   const active = state === "submitting" || state === "streaming";
+  const recover = useCallback((snapshot: { status: string; outputText?: string }) => {
+    if (snapshot.outputText !== undefined) setOutput(snapshot.outputText);
+    if (snapshot.status === "PENDING") setState("streaming");
+    if (snapshot.status === "COMPLETE") { setState("complete"); setError(undefined); }
+    if (snapshot.status === "CANCELLED") setState("stopped");
+    if (snapshot.status === "ERROR") { setState("error"); setError("图片分析失败，请重试。"); }
+  }, []);
+  useGenerationRecovery({ storageKey: "ai-tool-run:IMAGE_ANALYZE", runId, onRunId: setRunId, statusUrl: "/api/tools/runs/", statusSuffix: "?recovery=1", onSnapshot: recover });
 
   useEffect(() => {
     const raw = sessionStorage.getItem("ai-tool-draft:IMAGE_ANALYZE");
@@ -63,16 +72,17 @@ export function ImageAnalyzer({ configured, initialRemaining, initialLimit, init
         if (event === "start") { setRunId(String(payload.runId)); setUsage({ limit: Number(payload.limit), used: Number(payload.used), remaining: Number(payload.remaining), unlimited: payload.unlimited === true }); setState("streaming"); }
         if (event === "delta") { setState("streaming"); setOutput((current) => current + String(payload.text || "")); }
         if (event === "done") { terminal = true; setState("complete"); }
+        if (event === "cancelled") { terminal = true; setState("stopped"); }
         if (event === "error") { terminal = true; if (payload.code === "CANCELLED") setState("stopped"); else { setState("error"); setError(String(payload.message || "图片分析失败，请重试。")); } }
       });
-      if (!terminal && !controller.signal.aborted) { setState("error"); setError("连接提前结束，请重试。"); }
-    } catch (caught) {
+      if (!terminal && !controller.signal.aborted) { setState("streaming"); setError("连接暂时中断，任务仍在后台处理。"); }
+    } catch {
       if (controller.signal.aborted) setState("stopped");
-      else { setState("error"); setError(caught instanceof Error ? caught.message : "图片分析失败，请重试。"); }
+      else { setState("streaming"); setError("连接暂时中断，任务仍在后台处理。"); }
     } finally { controllerRef.current = undefined; }
   }
 
-  function stop() { if (runId) void fetch(`/api/tools/runs/${runId}/cancel`, { method: "POST", keepalive: true }); controllerRef.current?.abort(); setState("stopped"); }
+  async function stop() { if (runId) await fetch(`/api/tools/runs/${runId}/cancel`, { method: "POST", keepalive: true }).catch(() => undefined); controllerRef.current?.abort(); setState("stopped"); }
   function download(extension: "txt" | "md") { const url = URL.createObjectURL(new Blob([output], { type: "text/plain;charset=utf-8" })); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `图片分析-${new Date().toISOString().slice(0, 10)}.${extension}`; anchor.click(); URL.revokeObjectURL(url); }
 
   const statusLabel = state === "streaming" ? "正在流式分析" : state === "submitting" ? "正在安全处理图片" : state === "stopped" ? "已停止，部分结果已保留" : state === "complete" ? "分析完成" : state === "error" ? "分析失败" : "等待图片";
@@ -86,7 +96,7 @@ export function ImageAnalyzer({ configured, initialRemaining, initialLimit, init
       <div className="mt-4 grid gap-3 sm:grid-cols-3"><Select label="分析模式" value={options.mode} onChange={(value) => update("mode", value)}><option value="general">通用描述</option><option value="detailed">详细分析</option><option value="question">针对问题回答</option></Select><Select label="详细程度" value={options.detail} onChange={(value) => update("detail", value)}><option value="short">简短</option><option value="standard">标准</option><option value="detailed">详细</option></Select><Select label="输出语言" value={options.language} onChange={(value) => update("language", value)}><option value="auto">自动</option><option value="zh-CN">中文</option><option value="en">English</option></Select></div>
       <label className="premium-subpanel mt-4 flex items-start gap-3 p-3 text-sm"><input checked={saveHistory} className="mt-0.5 size-4 accent-[hsl(var(--primary))]" onChange={(event) => setSaveHistory(event.target.checked)} type="checkbox" /><span><strong>保存到工具历史</strong><span className="mt-1 block text-xs text-muted-foreground">图片为私有资源，默认保留 7 天；关闭后终态立即清理。</span></span></label>
       {error && <p className="mt-4 rounded-control bg-destructive-subtle p-3 text-sm text-destructive-foreground" role="alert">{error}</p>}
-      <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/10 pt-4">{active ? <Button onClick={stop} variant="outline"><Square className="size-4" />停止分析</Button> : <Button disabled={!preview || (options.mode === "question" && !question.trim())} onClick={() => void run()}><WandSparkles className="size-4" />开始分析</Button>}<span className="premium-chip">{statusLabel}</span></div>
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-border/10 pt-4">{active ? <Button onClick={() => void stop()} variant="outline"><Square className="size-4" />停止分析</Button> : <Button disabled={!preview || (options.mode === "question" && !question.trim())} onClick={() => void run()}><WandSparkles className="size-4" />开始分析</Button>}<span className="premium-chip">{statusLabel}</span></div>
     </section>
     <section className="premium-panel-strong min-w-0 p-4 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/10 pb-4"><div><p className="premium-kicker">VISION RESULT</p><p className="mt-1 font-semibold">分析结果</p><p className="text-xs text-muted-foreground">{statusLabel}</p></div>{output && <div className="flex flex-wrap gap-2"><Button onClick={async () => { await navigator.clipboard.writeText(output); setCopied(true); setTimeout(() => setCopied(false), 1500); }} size="sm" variant="outline">{copied ? <Check className="size-4" /> : <Copy className="size-4" />}{copied ? "已复制" : "复制"}</Button><Button onClick={() => download("txt")} size="sm" variant="ghost"><Download className="size-4" />TXT</Button><Button onClick={() => download("md")} size="sm" variant="ghost"><Download className="size-4" />Markdown</Button></div>}</div><div className="premium-result premium-scrollbar mt-4 min-h-[24rem] whitespace-pre-wrap break-words p-4 text-sm leading-7 sm:p-5">{output || <span className="grid min-h-[20rem] place-items-center text-center text-muted-foreground"><span><ShieldCheck className="mx-auto size-8 text-primary/70" /><span className="mt-3 block font-medium text-foreground">安全分析结果将在这里显示</span><span className="mt-1 block text-xs">上传图片不会自动产生调用。</span></span></span>}</div></section>
   </div>;

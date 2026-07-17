@@ -48,7 +48,7 @@ export async function getConversationDetail(
         id: message.id,
         role: message.role === "USER" ? "user" : "assistant",
         content: message.content,
-        status: message.status.toLowerCase() as "pending" | "complete" | "error",
+        status: message.status.toLowerCase() as "pending" | "complete" | "error" | "cancelled",
         createdAt: message.createdAt.toISOString(),
       })),
   };

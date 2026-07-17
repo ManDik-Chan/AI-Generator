@@ -7,7 +7,7 @@ const messageItemSource = readFileSync("features/chat/components/message-item.ts
 describe("memory chat integration boundaries", () => {
   it("loads enabled owned memories and emits only the selected count", () => {
     expect(routeSource).toContain("userId: user.id, enabled: true");
-    expect(routeSource).toContain('encodeChatSse("memory", { count: selectedMemories.length })');
+    expect(routeSource).toContain('observer.send("memory", { count: selectedMemories.length })');
     expect(routeSource).not.toContain('encodeChatSse("memory", { memories:');
   });
 

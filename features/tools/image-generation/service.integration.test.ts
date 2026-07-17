@@ -24,7 +24,7 @@ vi.mock("@/features/tools/image-generation/storage", () => ({
 vi.mock("@/lib/database/prisma", () => ({ prisma: {
   $transaction: mocks.transaction,
   generatedImage: { findFirst: mocks.imageFind },
-  toolRun: { deleteMany: mocks.runDelete },
+  toolRun: { findFirst: mocks.pending, deleteMany: mocks.runDelete },
 } }));
 
 import { deleteToolGeneratedImage, generateToolImage } from "@/features/tools/image-generation/service";
@@ -57,7 +57,7 @@ describe("tool image generation orchestration", () => {
   });
 
   it("cleans uploaded Storage when the pending run was cancelled", async () => {
-    mocks.pending.mockResolvedValue(null);
+    mocks.pending.mockResolvedValueOnce({ id: "run" }).mockResolvedValueOnce({ id: "run" }).mockResolvedValueOnce({ id: "run" }).mockResolvedValueOnce({ id: "run" }).mockResolvedValueOnce(null);
     await expect(generateToolImage({ userId: "owner", runId: "run", prompt: "山间小屋", style: "AUTO" })).rejects.toMatchObject({ code: "ABORTED" });
     expect(mocks.remove).toHaveBeenCalledWith(expect.objectContaining({ bucket: "generated-images", path: expect.stringMatching(/^owner\/.+\.png$/), kind: "TOOL_GENERATION" }));
   });

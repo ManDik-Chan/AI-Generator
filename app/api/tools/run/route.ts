@@ -2,7 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { toolRunRequestSchema } from "@/features/tools/schemas";
-import { createPendingToolRun, DailyToolLimitError, finishToolRun } from "@/features/tools/usage";
+import { createPendingToolRun, DailyToolLimitError, finishRecoverableToolRun, isToolRunPending, persistToolRunPartial } from "@/features/tools/usage";
 import { buildToolPrompt } from "@/features/tools/prompts";
 import { createToolRunTitle, encodeToolSse, publicToolError, toolErrorCode } from "@/features/tools/utils";
 import { TOOL_OUTPUT_MAX_CHARS } from "@/features/tools/constants";
@@ -11,10 +11,12 @@ import { getAiConfigurationStatus } from "@/lib/ai/config";
 import { AiProviderError } from "@/lib/ai/errors";
 import { getToolAiProvider } from "@/lib/ai/registry";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
+import { registerGenerationTask } from "@/features/generation/background-task";
+import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
-const encoder = new TextEncoder();
 const jsonError = (message: string, status: number, code: string, details?: Record<string, number>) => NextResponse.json({ code, message, ...details }, { status });
 
 export async function POST(request: Request) {
@@ -55,53 +57,49 @@ export async function POST(request: Request) {
     return jsonError("工具运行记录创建失败，请稍后重试。", 500, "UNKNOWN");
   }
 
-  const abortController = new AbortController();
-  const abortFromRequest = () => abortController.abort();
-  request.signal.addEventListener("abort", abortFromRequest, { once: true });
-  if (request.signal.aborted) abortController.abort();
   const prompt = buildToolPrompt(parsed.data);
-  let output = "";
-  const outputGuard = new ToolOutputGuard();
+  const observer = new SseObserver(encodeToolSse);
+  observer.send("start", { runId: usage.runId, tool: parsed.data.tool, limit: usage.limit, used: usage.used, remaining: usage.remaining });
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (event: string, data: unknown) => {
-        try { controller.enqueue(encoder.encode(encodeToolSse(event, data))); return true; } catch { abortController.abort(); return false; }
-      };
-      send("start", { runId: usage.runId, tool: parsed.data.tool, limit: usage.limit, used: usage.used, remaining: usage.remaining });
-      try {
-        for await (const text of provider.streamText({
-          messages: [{ role: "system", content: prompt.system }, { role: "user", content: prompt.user }],
-          model: config.model,
-          temperature: config.temperature,
-          maxOutputTokens: config.maxOutputTokens,
-          thinking: "disabled",
-          signal: abortController.signal,
-        })) {
-          if (output.length + text.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Tool output exceeded the safe storage limit.");
-          output += text;
-          const safeText = outputGuard.push(text);
-          if (safeText && !send("delta", { text: safeText })) break;
+  const generation = (async () => {
+    let output = "";
+    let persistedLength = 0;
+    let lastPersistedAt = Date.now();
+    const outputGuard = new ToolOutputGuard();
+    try {
+      if (!await isToolRunPending(userId, usage.runId)) return;
+      for await (const text of provider.streamText({
+        messages: [{ role: "system", content: prompt.system }, { role: "user", content: prompt.user }],
+        model: config.model,
+        temperature: config.temperature,
+        maxOutputTokens: config.maxOutputTokens,
+        thinking: "disabled",
+      })) {
+        if (output.length + text.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Tool output exceeded the safe storage limit.");
+        output += text;
+        const safeText = outputGuard.push(text);
+        if (safeText) observer.send("delta", { text: safeText });
+        if (Date.now() - lastPersistedAt >= 750 || output.length - persistedLength >= 1024) {
+          const persisted = await persistToolRunPartial(userId, usage.runId, output);
+          if (!persisted.count) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
+          persistedLength = output.length;
+          lastPersistedAt = Date.now();
         }
-        const finalSafeText = outputGuard.flush();
-        if (finalSafeText) send("delta", { text: finalSafeText });
-        const completed = await finishToolRun(userId, usage.runId, "COMPLETE", { outputText: parsed.data.saveHistory ? output : undefined });
-        if (completed.count) send("done", { runId: usage.runId, status: "COMPLETE", saved: parsed.data.saveHistory });
-      } catch (error) {
-        const normalized = publicToolError(error);
-        if (error instanceof UnsafeToolOutputError) abortController.abort();
-        const cancelled = abortController.signal.aborted || normalized.code === "CANCELLED";
-        const unsafe = error instanceof UnsafeToolOutputError;
-        await finishToolRun(userId, usage.runId, unsafe ? "ERROR" : cancelled ? "CANCELLED" : "ERROR", { errorCode: unsafe ? "UNSAFE_OUTPUT" : cancelled ? "CANCELLED" : normalized.code }).catch(() => undefined);
-        console.error("tool_run_failed", { requestId, userId, runId: usage.runId, toolType: parsed.data.tool, stage: unsafe ? "output_guard" : "provider_request", errorCode: unsafe ? "UNSAFE_OUTPUT" : toolErrorCode(error), status: error instanceof AiProviderError ? error.status : undefined, durationMs: Date.now() - startedAt });
-        send("error", { code: unsafe ? "UNSAFE_OUTPUT" : cancelled ? "CANCELLED" : normalized.code, message: unsafe ? "AI 返回内容未通过安全检查，请重试或联系管理员。" : cancelled ? "已停止生成。" : normalized.message });
-      } finally {
-        request.signal.removeEventListener("abort", abortFromRequest);
-        try { controller.close(); } catch { /* disconnected clients are already closed */ }
       }
-    },
-    cancel() { abortController.abort(); },
-  });
-
-  return new Response(stream, { headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive" } });
+      const finalSafeText = outputGuard.flush();
+      if (finalSafeText) observer.send("delta", { text: finalSafeText });
+      const completed = await finishRecoverableToolRun(userId, usage.runId, "COMPLETE", { outputText: output });
+      if (completed.count) observer.send("done", { runId: usage.runId, status: "COMPLETE", saved: parsed.data.saveHistory });
+      else observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" });
+    } catch (error) {
+      const normalized = publicToolError(error);
+      const unsafe = error instanceof UnsafeToolOutputError;
+      const failed = await finishRecoverableToolRun(userId, usage.runId, "ERROR", { ...(unsafe ? {} : { outputText: output }), errorCode: unsafe ? "UNSAFE_OUTPUT" : normalized.code }).catch(() => ({ count: 0 }));
+      if (!failed.count) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
+      console.error("tool_run_failed", { requestId, userId, runId: usage.runId, toolType: parsed.data.tool, stage: unsafe ? "output_guard" : "provider_request", errorCode: unsafe ? "UNSAFE_OUTPUT" : toolErrorCode(error), status: error instanceof AiProviderError ? error.status : undefined, durationMs: Date.now() - startedAt });
+      observer.send("error", { code: unsafe ? "UNSAFE_OUTPUT" : normalized.code, message: unsafe ? "AI 返回内容未通过安全检查，请重试或联系管理员。" : normalized.message });
+    }
+  })();
+  const task = registerGenerationTask(generation, { taskType: parsed.data.tool, taskId: usage.runId, userId });
+  return createObservedSseResponse(observer, task, request.signal);
 }

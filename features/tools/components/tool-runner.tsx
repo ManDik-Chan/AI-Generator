@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, Download, Square, WandSparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LANGUAGE_LABELS, TOOL_INPUT_MAX_CHARS, TOOL_LABELS } from "@/features/tools/constants";
 import type { TextToolTypeValue, ToolRunState } from "@/features/tools/types";
 import { readSseEvents } from "@/lib/ai/read-sse";
+import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 
 const defaults = {
   SUMMARIZE: { length: "standard", format: "paragraph", language: "auto" },
@@ -39,6 +40,21 @@ export function ToolRunner({ tool, aiConfigured }: Props) {
   const mountedRef = useRef(true);
   const active = state === "submitting" || state === "streaming";
   const updateOption = (key: string, value: string | boolean) => setOptions((current) => ({ ...current, [key]: value }));
+  const recover = useCallback((snapshot: { status: string; outputText?: string; errorCode?: string }) => {
+    if (snapshot.outputText !== undefined) setOutput(snapshot.outputText);
+    if (snapshot.status === "PENDING") setState("streaming");
+    if (snapshot.status === "COMPLETE") { setState("complete"); setError(undefined); }
+    if (snapshot.status === "CANCELLED") setState("stopped");
+    if (snapshot.status === "ERROR") { setState("error"); setError("处理失败，请重试。"); }
+  }, []);
+  const recoveryPhase = useGenerationRecovery({
+    storageKey: `ai-tool-run:${tool}`,
+    runId,
+    onRunId: setRunId,
+    statusUrl: "/api/tools/runs/",
+    statusSuffix: "?recovery=1",
+    onSnapshot: recover,
+  });
 
   useEffect(() => {
     mountedRef.current = true;
@@ -77,20 +93,21 @@ export function ToolRunner({ tool, aiConfigured }: Props) {
         if (event === "start") { setRunId(String(payload.runId)); setState("streaming"); }
         if (event === "delta") { setState("streaming"); setOutput((current) => current + String(payload.text ?? "")); }
         if (event === "done") { terminalEvent = true; setState("complete"); }
+        if (event === "cancelled") { terminalEvent = true; setState("stopped"); }
         if (event === "error") { terminalEvent = true; if (payload.code === "CANCELLED") setState("stopped"); else { setState("error"); setError(String(payload.message ?? "处理失败，请重试。")); } }
       });
-      if (!terminalEvent && !controller.signal.aborted) { setState("error"); setError("连接提前结束，请重试。"); }
-    } catch (caught) {
+      if (!terminalEvent && !controller.signal.aborted) { setState("streaming"); setError("连接暂时中断，任务仍在后台处理。"); }
+    } catch {
       if (!mountedRef.current) return;
       if (controller.signal.aborted) setState("stopped");
-      else { setState("error"); setError(caught instanceof Error ? caught.message : "处理失败，请重试。"); }
+      else { setState("streaming"); setError("连接暂时中断，任务仍在后台处理。"); }
     } finally {
       if (mountedRef.current) controllerRef.current = undefined;
     }
   }
 
   async function stop() {
-    if (runId) void fetch(`/api/tools/runs/${runId}/cancel`, { method: "POST", keepalive: true }).catch(() => undefined);
+    if (runId) await fetch(`/api/tools/runs/${runId}/cancel`, { method: "POST", keepalive: true }).catch(() => undefined);
     controllerRef.current?.abort();
     setState("stopped");
   }
@@ -110,6 +127,7 @@ export function ToolRunner({ tool, aiConfigured }: Props) {
       </div>
       <label className="premium-subpanel mt-5 flex items-start gap-3 p-3 text-sm"><input checked={saveHistory} className="mt-0.5 size-4 accent-[hsl(var(--primary))]" onChange={(event) => setSaveHistory(event.target.checked)} type="checkbox" /><span><strong>保存到工具历史</strong><span className="mt-1 block text-xs text-muted-foreground">关闭后，本次输入和结果不会保存在工具历史中。</span></span></label>
       {error && <p className="mt-4 rounded-control bg-destructive-subtle p-3 text-sm text-destructive-foreground" role="alert">{error}</p>}
+      {active && recoveryPhase === "background" && <p className="mt-3 text-xs text-muted-foreground">任务正在后台继续生成，返回前台后会自动恢复。</p>}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/10 pt-4">{active ? <Button onClick={stop} type="button" variant="outline"><Square className="size-4" />停止生成</Button> : <Button disabled={!input.trim()} onClick={() => void run()} type="button"><WandSparkles className="size-4" />开始处理</Button>}<span className="premium-chip">{statusText}{startedAt ? ` · ${elapsed} 秒` : ""}</span></div>
     </section>
     <section className="premium-panel-strong min-w-0 p-4 sm:p-6">

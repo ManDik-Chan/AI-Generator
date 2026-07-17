@@ -8,10 +8,13 @@ import { buildPersonaGeneratorPrompt, buildPersonaRepairPrompt, wrapPersonaReque
 import { PERSONA_AVATAR_PRESETS } from "@/features/persona/constants";
 import { personaDescriptionSchema } from "@/features/persona/generation";
 import { generatePersonaDraftWithRepair } from "@/features/persona/generate-draft";
+import { createGenerationRun, finishGenerationRun, isGenerationRunPending } from "@/features/generation/runs";
+import { registerGenerationTask } from "@/features/generation/background-task";
+import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 
 export const runtime = "nodejs";
-const encoder = new TextEncoder();
-const event = (name: string, data: unknown) => encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+export const maxDuration = 300;
+const event = (name: string, data: unknown) => `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
 
 export async function POST(request: Request) {
   let user;
@@ -24,27 +27,31 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ message: parsed.error.issues[0]?.message ?? "人格描述无效。" }, { status: 400 });
 
   const requestId = crypto.randomUUID(); const userId = user.id;
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const progress = (stage: string, label: string, detail?: string) => controller.enqueue(event("progress", { stage, label, ...(detail ? { detail } : {}) }));
+  const run = await createGenerationRun({ userId, type: "PERSONA_DRAFT", input: { description: parsed.data.description } });
+  const observer = new SseObserver(event);
+  observer.send("run", { runId: run.id });
+  const generation = (async () => {
+      const progress = (stage: string, label: string, detail?: string) => observer.send("progress", { stage, label, ...(detail ? { detail } : {}) });
       try {
+        if (!await isGenerationRunPending(userId, run.id)) return;
         progress("preparing", "正在整理人格需求");
         const { config, provider } = getPersonaAiProvider();
         progress("generating", "AI 正在生成人格设定", "正在生成身份、性格、表达方式和开场白");
         const draft = await generatePersonaDraftWithRepair(async (repair) => collectGeneratedText(provider, {
-          model: config.model, temperature: config.temperature, maxOutputTokens: config.maxOutputTokens, signal: request.signal,
+          model: config.model, temperature: config.temperature, maxOutputTokens: config.maxOutputTokens,
           messages: repair ? [{ role: "system", content: buildPersonaGeneratorPrompt(PERSONA_AVATAR_PRESETS) }, { role: "user", content: buildPersonaRepairPrompt(repair.error, repair.raw) }] : [{ role: "system", content: buildPersonaGeneratorPrompt(PERSONA_AVATAR_PRESETS) }, { role: "user", content: wrapPersonaRequest(parsed.data.description) }],
         }), (stage) => stage === "repairing" ? progress("repairing", "正在修复 AI 返回格式") : progress("validating", "正在检查人格结构", "校验字段、头像建议和输出格式"));
         progress("drafting", "正在准备可编辑草稿");
-        controller.enqueue(event("done", { draft }));
+        const completed = await finishGenerationRun(userId, run.id, "COMPLETE", { result: { draft } });
+        observer.send(completed.count ? "done" : "cancelled", completed.count ? { runId: run.id, draft } : { runId: run.id });
         console.info("[persona.generate] completed", { requestId, userId, provider: "openai-compatible", model: config.model });
       } catch (error) {
         if (!(error instanceof AiProviderError && error.code === "ABORTED")) console.error("[persona.generate] failed", { requestId, userId, code: error instanceof AiProviderError ? error.code : "INVALID_DRAFT" });
         const message = error instanceof AiProviderError ? toPublicAiError(error) : error instanceof Error ? error.message : "AI 返回的人格格式不完整，请重新生成。";
-        controller.enqueue(event("error", { message }));
-      } finally { controller.close(); }
-    },
-    cancel() { /* request.signal aborts provider work when the client disconnects */ },
-  });
-  return new Response(stream, { headers: { "Cache-Control": "no-cache, no-transform", "Content-Type": "text/event-stream; charset=utf-8", Connection: "keep-alive" } });
+        const failed = await finishGenerationRun(userId, run.id, "ERROR", { errorCode: error instanceof AiProviderError ? error.code : "INVALID_DRAFT" }).catch(() => ({ count: 0 }));
+        observer.send(failed.count ? "error" : "cancelled", failed.count ? { message } : { runId: run.id });
+      }
+  })();
+  const task = registerGenerationTask(generation, { taskType: "PERSONA_DRAFT", taskId: run.id, userId });
+  return createObservedSseResponse(observer, task, request.signal);
 }
