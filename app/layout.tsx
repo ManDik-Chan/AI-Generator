@@ -10,6 +10,10 @@ export const metadata: Metadata = {
     template: "%s · AI-Generator",
   },
   description: "简单、私密、低成本的私人 AI 助手平台。",
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon.png", type: "image/png", sizes: "512x512" }],
+    apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {

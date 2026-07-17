@@ -1,5 +1,5 @@
 import { AiProviderError } from "@/lib/ai/errors";
-import type { AiProviderConfig, AiRuntimeLimits, MemoryGenerationConfig, PersonaGenerationConfig, ToolGenerationConfig } from "@/lib/ai/types";
+import type { AiProviderConfig, AiRuntimeLimits, BrainstormGenerationConfig, MemoryGenerationConfig, PersonaGenerationConfig, ToolGenerationConfig } from "@/lib/ai/types";
 
 type Environment = Record<string, string | undefined>;
 
@@ -49,6 +49,62 @@ export function getToolGenerationConfig(env: Environment = process.env): ToolGen
     maxOutputTokens: numberFromEnvironment(env.AI_TOOL_MAX_OUTPUT_TOKENS, 4096, 1, 40_000),
     requestTimeoutMs: numberFromEnvironment(env.AI_TOOL_REQUEST_TIMEOUT_MS, 120_000, 1_000, 600_000),
     dailyLimit: numberFromEnvironment(env.AI_DAILY_TOOL_LIMIT, 30, 1, 10_000),
+  };
+}
+
+function brainstormModelSelection(env: Environment) {
+  const brainstorm = env.AI_BRAINSTORM_MODEL?.trim();
+  const tool = env.AI_TOOL_MODEL?.trim();
+  const base = env.AI_MODEL?.trim();
+  const workerModel = brainstorm || tool || base || "";
+  const synthesis = env.AI_BRAINSTORM_SYNTHESIS_MODEL?.trim();
+  return {
+    workerModel,
+    synthesisModel: synthesis || workerModel,
+    workerModelSource: (brainstorm ? "brainstorm" : tool ? "tool" : "base") as BrainstormGenerationConfig["workerModelSource"],
+    synthesisModelSource: (synthesis ? "synthesis" : brainstorm ? "brainstorm" : tool ? "tool" : "base") as BrainstormGenerationConfig["synthesisModelSource"],
+  };
+}
+
+export function getBrainstormConfigurationStatus(env: Environment = process.env) {
+  const models = brainstormModelSelection(env);
+  const missing = [
+    ...(["AI_BASE_URL", "AI_API_KEY"] as const).filter((key) => !env[key]?.trim()),
+    ...(!models.workerModel ? ["AI_BRAINSTORM_MODEL / AI_TOOL_MODEL / AI_MODEL"] : []),
+  ];
+  return { configured: missing.length === 0 && (!env.AI_PROVIDER || env.AI_PROVIDER === "openai-compatible"), missing };
+}
+
+export function getBrainstormGenerationConfig(env: Environment = process.env): BrainstormGenerationConfig {
+  const status = getBrainstormConfigurationStatus(env);
+  if (!status.configured) throw new AiProviderError("CONFIGURATION", "Brainstorm provider configuration is incomplete.");
+  const models = brainstormModelSelection(env);
+  return {
+    ...models,
+    temperature: numberFromEnvironment(env.AI_BRAINSTORM_TEMPERATURE, 0.6, 0, 2),
+    workerMaxOutputTokens: numberFromEnvironment(env.AI_BRAINSTORM_MAX_OUTPUT_TOKENS, 1400, 200, 8000),
+    synthesisMaxOutputTokens: numberFromEnvironment(env.AI_BRAINSTORM_SYNTHESIS_MAX_OUTPUT_TOKENS, 2600, 400, 12_000),
+    requestTimeoutMs: numberFromEnvironment(env.AI_BRAINSTORM_REQUEST_TIMEOUT_MS, 180_000, 1_000, 300_000),
+    totalTimeoutMs: numberFromEnvironment(env.AI_BRAINSTORM_TOTAL_TIMEOUT_MS, 285_000, 1_000, 285_000),
+    dailyLimit: getBrainstormDailyLimit(env),
+    maxConcurrency: numberFromEnvironment(env.AI_BRAINSTORM_MAX_CONCURRENCY, 4, 1, 4),
+  };
+}
+
+export function getBrainstormDailyLimit(env: Environment = process.env) {
+  return numberFromEnvironment(env.AI_DAILY_BRAINSTORM_LIMIT, 3, 1, 1000);
+}
+
+export function requireBrainstormProviderConfig(env: Environment = process.env): AiProviderConfig {
+  const generation = getBrainstormGenerationConfig(env);
+  return {
+    provider: "openai-compatible",
+    baseUrl: env.AI_BASE_URL!.trim(),
+    apiKey: env.AI_API_KEY!.trim(),
+    model: generation.workerModel,
+    temperature: generation.temperature,
+    maxOutputTokens: generation.workerMaxOutputTokens,
+    requestTimeoutMs: generation.requestTimeoutMs,
   };
 }
 

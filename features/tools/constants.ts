@@ -8,6 +8,7 @@ export const TOOL_LABELS = {
   TRANSLATE: "多语言翻译",
   IMAGE_ANALYZE: "图片分析",
   IMAGE_GENERATE: "AI 图片创作",
+  BRAINSTORM: "多 Agent 头脑风暴",
 } as const;
 
 export const TOOL_PATHS = {
@@ -16,6 +17,7 @@ export const TOOL_PATHS = {
   TRANSLATE: "/tools/translate",
   IMAGE_ANALYZE: "/tools/image",
   IMAGE_GENERATE: "/tools/image-generate",
+  BRAINSTORM: "/tools/brainstorm",
 } as const;
 
 export const LANGUAGE_LABELS = {

@@ -1,6 +1,25 @@
 # 重构进度
 
-## Phase 6A3 通用 AI 图片生成工作台（Draft 验收中）
+## Phase 7A1 多 Agent 头脑风暴（Draft）
+
+- [x] `/tools/brainstorm` Premium 工作台与工具中心/历史入口
+- [x] 固定分析研究员、创意探索者、批判审查员、落地规划师四个 Worker
+- [x] 四 Worker 并发执行，至少两个成功后由协调器综合，总调用最多五次且不自动重试
+- [x] `ToolType.BRAINSTORM`、`BrainstormWorker`、复合所有权外键和独立 migration
+- [x] BrainstormWorker authenticated select-own RLS，写操作仅由 trusted server 执行
+- [x] ToolRun waitUntil、SSE observer、durable cancellation、状态恢复和迟到终态保护
+- [x] 普通用户独立每日 3 次额度与 ADMIN 豁免/真实用量
+- [x] 保存历史开关、短期 recovery 与过期正文清理
+- [x] 服务端固定角色/模型/调用次数，用户与 Worker 中间输出均按不可信数据处理
+- [x] 头脑风暴历史、复制、TXT/Markdown 下载、再次回填和级联删除
+- [x] 浏览器 favicon、512px 应用图标与 180px Apple 图标
+- [x] 自动测试、lint、typecheck、无密钥构建和 Prisma 校验
+- [ ] 项目所有者部署 `20260717180000_add_brainstorm_workers` 与最新版 RLS
+- [ ] 项目所有者真实模型、取消、手机后台恢复、隐私清理与响应式验收
+
+本阶段没有 Vibe Coding、代码执行、Shell、Git 写操作、浏览器自动化、MCP、联网搜索、文件上传、RAG、递归 Agent 或多轮自动循环。Phase 7A2 尚未开始。
+
+## Phase 6A3 通用 AI 图片生成工作台（项目所有者真实验收通过）
 
 - [x] `/tools/image-generate` 单图生成工作台、服务端风格白名单与明确点击调用
 - [x] `IMAGE_GENERATE` ToolRun、独立 Serializable 每日限额与 ADMIN 真实用量显示
@@ -16,10 +35,10 @@
 - [x] 修复文本工具卡片等高布局，移除首卡 row-span/index 特例
 - [x] waitUntil 后台生命周期、transport detached/explicit cancel 分离与 durable recovery
 - [x] Chat/ToolRun partial output 节流持久化、Persona GenerationRun 与所有者 status/cancel API
-- [ ] 项目所有者真实 Supabase migration / RLS / private bucket 验收
-- [ ] 项目所有者真实 GLM-Image、停止、隔离与 390/430/768/1440px 验收
+- [x] 项目所有者真实 Supabase migration / RLS / private bucket 验收
+- [x] 项目所有者真实 GLM-Image、停止、隔离与 390/430/768/1440px 验收
 
-本阶段不包含图片编辑、局部重绘、多图、视频、专业 OCR、文件/网页/图片 RAG 或公开分享。Phase 7 未开始。
+本阶段不包含图片编辑、局部重绘、多图、视频、专业 OCR、文件/网页/图片 RAG 或公开分享。Phase 7A1 现已进入 Draft，Phase 7A2 尚未开始。
 
 ## Phase 6B1 全产品 UI 迁移（待第三次真实视觉验收）
 

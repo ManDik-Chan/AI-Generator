@@ -134,3 +134,10 @@ pnpm memory:embed:backfill -- --user=<uuid> --limit=300
 ## 成本与恢复
 
 默认使用 Vercel/Supabase 免费或低成本层，并为 AI 请求设置用户级限流与最大 token。数据库启用 Supabase 备份能力；对象存储使用不可预测路径。重大 schema 变更先在 Preview 数据库演练，恢复以数据库备份 + 前滚 migration 为主。
+## Phase 7A1 部署补充
+
+Phase 7A1 需要部署独立 migration `20260717180000_add_brainstorm_workers`，随后在 Supabase SQL Editor 重复执行最新版 `prisma/rls.sql`。配置仅服务端可见的 `AI_BRAINSTORM_*` 与 `AI_DAILY_BRAINSTORM_LIMIT`；没有独立模型时按 `AI_TOOL_MODEL`、`AI_MODEL` 回退。`AI_BRAINSTORM_TOTAL_TIMEOUT_MS` 默认并最多为 285000ms，为 Route 的 `maxDuration=300` 预留终态写入时间。Route 使用 Node.js Function 与 `waitUntil`，仍受 Vercel 套餐实际最大时长约束。
+
+生产构建通过 `prebuild: prisma generate` 强制根据当前 schema 重新生成 Prisma Client，同时保留 `postinstall` 生成步骤，避免依赖缓存中的旧 enum 导致 `ToolType.BRAINSTORM` 构建失败。
+
+部署前后不要修改旧 migration，不要将 Key、用户问题或 Worker 输出写入 Vercel 配置说明或日志。完整真实验收与回滚见 `multi-agent-brainstorm.md`。

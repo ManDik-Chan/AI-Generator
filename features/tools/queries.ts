@@ -7,6 +7,33 @@ import { prisma } from "@/lib/database/prisma";
 import { cleanupExpiredToolRunRecovery } from "@/features/tools/usage";
 import { imageGenerationHistoryOptionsSchema } from "@/features/tools/image-generation/schemas";
 import type { GeneratedToolImageDto } from "@/features/tools/image-generation/types";
+import { BRAINSTORM_ROLE_LABELS } from "@/features/tools/brainstorm/constants";
+import type { BrainstormWorkerDto } from "@/features/tools/brainstorm/types";
+import { getBrainstormDailyLimit } from "@/lib/ai/config";
+import { getBrainstormUsage } from "@/features/tools/usage";
+
+function mapBrainstormWorker(worker: {
+  id: string;
+  role: keyof typeof BRAINSTORM_ROLE_LABELS;
+  position: number;
+  status: BrainstormWorkerDto["status"];
+  outputText: string | null;
+  errorCode: string | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+}): BrainstormWorkerDto {
+  return {
+    id: worker.id,
+    role: worker.role,
+    position: worker.position,
+    label: BRAINSTORM_ROLE_LABELS[worker.role],
+    status: worker.status,
+    output: worker.outputText ?? "",
+    errorCode: worker.errorCode ?? undefined,
+    startedAt: worker.startedAt?.toISOString(),
+    completedAt: worker.completedAt?.toISOString(),
+  };
+}
 
 export function resolveRecoveryGeneratedImage(
   type: ToolType,
@@ -29,6 +56,7 @@ export function resolveRecoveryGeneratedImage(
 }
 
 export async function getToolHistory(userId: string, page = 1, type?: ToolType) {
+  await cleanupExpiredToolRunRecovery().catch(() => undefined);
   const safePage = Math.max(1, Math.floor(page));
   const where = { userId, retainContent: true, ...(type ? { type } : {}) };
   const [rows, total] = await Promise.all([
@@ -58,7 +86,7 @@ export async function getToolHistory(userId: string, page = 1, type?: ToolType) 
 export async function getToolRunDetail(userId: string, runId: string): Promise<ToolRunDetail | null> {
   const row = await prisma.toolRun.findFirst({
     where: { id: runId, userId, retainContent: true },
-    select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, options: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } } },
+    select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, options: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } }, brainstormWorkers: { orderBy: { position: "asc" }, select: { id: true, role: true, position: true, status: true, outputText: true, errorCode: true, startedAt: true, completedAt: true } } },
   });
   if (!row?.inputText) return null;
   return {
@@ -72,6 +100,7 @@ export async function getToolRunDetail(userId: string, runId: string): Promise<T
     createdAt: row.createdAt.toISOString(),
     asset: row.assets[0] ? { id: row.assets[0].id, mimeType: row.assets[0].mimeType, width: row.assets[0].width, height: row.assets[0].height, expired: row.assets[0].expiresAt <= new Date() } : undefined,
     generatedImage: row.generatedImage ?? undefined,
+    brainstormWorkers: row.type === "BRAINSTORM" ? row.brainstormWorkers.map(mapBrainstormWorker) : undefined,
   };
 }
 
@@ -94,16 +123,34 @@ export async function getToolRunRecovery(userId: string, runId: string) {
       type: true,
       status: true,
       retainContent: true,
+      inputText: true,
       outputText: true,
       errorCode: true,
       recoveryExpiresAt: true,
       updatedAt: true,
+      createdAt: true,
       options: true,
+      brainstormWorkers: { orderBy: { position: "asc" }, select: { id: true, role: true, position: true, status: true, outputText: true, errorCode: true, startedAt: true, completedAt: true } },
       generatedImage: { select: { id: true, prompt: true, width: true, height: true, createdAt: true } },
     },
   });
   if (!row) return null;
   const canReadOutput = row.retainContent || Boolean(row.recoveryExpiresAt && row.recoveryExpiresAt > now);
+  if (row.type === "BRAINSTORM") {
+    const usage = await getBrainstormUsage(userId, getBrainstormDailyLimit());
+    return {
+      id: row.id,
+      type: row.type,
+      status: row.status,
+      prompt: canReadOutput ? row.inputText ?? "" : "",
+      outputText: canReadOutput ? row.outputText ?? "" : "",
+      errorCode: row.errorCode ?? undefined,
+      workers: row.brainstormWorkers.map((worker) => mapBrainstormWorker({ ...worker, outputText: canReadOutput ? worker.outputText : null })),
+      usage,
+      createdAt: row.createdAt.toISOString(),
+      updatedAt: row.updatedAt.toISOString(),
+    };
+  }
   return {
     id: row.id,
     type: row.type,

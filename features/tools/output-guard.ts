@@ -9,6 +9,7 @@ export function detectObviousToolPolicyLeak(output: string) {
   const patterns = [
     /Authorization\s*:\s*Bearer\s+[A-Za-z0-9._~+/-]{8,}/i,
     /(?:postgres(?:ql)?|mysql):\/\/[^\s/:@]+:[^\s/@]+@/i,
+    /(?:api[_ -]?key|secret[_ -]?key)\s*[:=]\s*["']?[A-Za-z0-9._~+/-]{12,}/i,
     /(?:以下是|这是)我的完整系统提示词\s*[:：\n]/i,
     /(?:here is|below is) my (?:complete|full) system prompt\s*[:\n]/i,
     /(?:我的|真实)\s*(?:API\s*Key|API\s*密钥)\s*(?:是|为|[:：])\s*[A-Za-z0-9._-]{16,}/i,
