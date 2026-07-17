@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { MobileViewportSync } from "@/features/mobile/mobile-viewport-sync";
 import { themeInitializationScript } from "@/lib/theme";
 
 export const metadata: Metadata = {
@@ -29,7 +30,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} /></head>
-      <body><ThemeProvider>{children}</ThemeProvider></body>
+      <body><MobileViewportSync /><ThemeProvider>{children}</ThemeProvider></body>
     </html>
   );
 }

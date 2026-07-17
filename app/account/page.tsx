@@ -41,8 +41,8 @@ export default async function AccountPage() {
             <Avatar className="size-20 rounded-[1.5rem]" name={name} src={profile?.avatarUrl ?? undefined} />
             <div className="min-w-0 flex-1">
               <p className="premium-kicker">PROFILE</p>
-              <h1 className="mt-2 truncate text-2xl font-bold tracking-[-.04em]">{name}</h1>
-              <p className="mt-1 truncate text-supporting">{user.email}</p>
+              <h1 className="mt-2 overflow-wrap-anywhere text-2xl font-bold tracking-[-.04em]">{name}</h1>
+              <p className="mt-1 overflow-wrap-anywhere text-supporting">{user.email}</p>
             </div>
             <Badge variant={profile?.role === "ADMIN" ? "info" : "neutral"}>
               {profile?.role === "ADMIN" ? "管理员" : "个人用户"}

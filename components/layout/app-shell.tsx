@@ -30,17 +30,18 @@ export async function AppShell({
   const resolvedViewer = viewer ?? (await getShellViewer());
 
   return (
-    <div className="premium-shell relative z-[1] min-h-screen">
+    <div className="premium-shell app-viewport relative z-[1] overflow-hidden">
       <DesktopSidebar viewer={resolvedViewer} />
-      <div className="min-w-0 min-[821px]:ml-[14.375rem] min-[1181px]:ml-[17rem]">
+      <div className="flex h-full min-w-0 flex-col min-[821px]:ml-[14.375rem] min-[1181px]:ml-[17rem]">
         <MobileHeader
           action={mobileAction}
           title={mobileTitle}
           viewer={resolvedViewer}
         />
         <main
+          data-app-scroll-region
           className={cn(
-            "relative z-[1] mx-auto w-full px-3.5 pb-28 pt-4 min-[521px]:px-6 min-[821px]:px-8 min-[821px]:pb-16 min-[821px]:pt-[2.375rem]",
+            "mobile-scroll-region relative z-[1] mx-auto min-h-0 w-full flex-1 px-3.5 pb-[calc(var(--mobile-nav-height)+var(--safe-area-bottom)+1.5rem)] pt-4 min-[521px]:px-6 min-[821px]:px-8 min-[821px]:pb-16 min-[821px]:pt-[2.375rem]",
             appShellWidthClasses[variant],
             variant === "full" && "p-0 min-[821px]:p-0",
             className,

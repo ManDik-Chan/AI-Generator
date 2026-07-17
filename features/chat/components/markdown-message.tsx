@@ -5,13 +5,13 @@ import { CodeBlock } from "@/features/chat/components/code-block";
 
 export function MarkdownMessage({ content }: { content: string }) {
   return (
-    <div className="min-w-0 space-y-4 text-[.9375rem] leading-[1.78] text-foreground/94">
+    <div className="min-w-0 max-w-full space-y-4 overflow-wrap-anywhere text-[.9375rem] leading-[1.78] text-foreground/94">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         skipHtml
         components={{
           a: ({ children, href }) => (
-            <a className="text-primary underline underline-offset-4" href={href} rel="noopener noreferrer" target="_blank">
+            <a className="break-all text-primary underline underline-offset-4" href={href} rel="noopener noreferrer" target="_blank">
               {children}
             </a>
           ),
@@ -27,7 +27,7 @@ export function MarkdownMessage({ content }: { content: string }) {
           h3: ({ children }) => <h3 className="mt-5 text-lg font-semibold tracking-[-.015em]">{children}</h3>,
           hr: () => <hr className="premium-divider my-6" />,
           ol: ({ children }) => <ol className="ml-5 list-decimal space-y-1">{children}</ol>,
-          p: ({ children }) => <p className="whitespace-pre-wrap">{children}</p>,
+          p: ({ children }) => <p className="whitespace-pre-wrap break-words">{children}</p>,
           pre: ({ children }) => <>{children}</>,
           table: ({ children }) => <div className="premium-scrollbar my-4 max-w-full overflow-x-auto rounded-control border border-border/10"><table className="w-full border-collapse text-left text-sm">{children}</table></div>,
           td: ({ children }) => <td className="border border-border/10 px-3 py-2.5">{children}</td>,

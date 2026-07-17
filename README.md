@@ -1,5 +1,7 @@
 # AI-Generator V2
 
+> Phase 6B2 全站移动端体验已进入 Draft：应用壳统一使用 `svh` / `dvh`、Safe Area 与 VisualViewport，Chat、底部导航、表单、Dialog/Sheet、Dropdown 和长内容共享同一套移动契约；新增 Chromium/WebKit Playwright 基线。该阶段不改变 API、Provider、数据库或权限语义，等待项目所有者进行 iPhone、Android 与 PWA 真实设备验收。详见 `docs/mobile-experience.md`。Phase 7A2 尚未开始。
+
 > Phase 7A1 多 Agent 头脑风暴已进入 Draft：一次明确点击固定创建四个独立 Worker，并在至少两个成功后调用一次协调器，总模型调用最多五次。任务复用 ToolRun、waitUntil、durable cancellation 与恢复机制，不读取聊天、Persona、Memory，不联网或调用工具。当前等待项目所有者部署独立 migration/RLS 并完成真实模型、后台恢复和响应式验收；Phase 7A2 Vibe Coding 尚未开始。详见 `docs/multi-agent-brainstorm.md`。
 
 > Phase 6A3 通用 AI 图片生成工作台已完成项目所有者真实验收：单图文生图、private `generated-images`、停止与 durable recovery、移动后台继续、Prompt/Storage 隔离和响应式均已通过。当前不包含图片编辑、多图、视频、OCR 或 RAG。详见 `docs/image-generation-tool.md`。
@@ -58,5 +60,14 @@ pnpm test
 pnpm build
 pnpm exec prisma validate
 ```
+
+移动浏览器回归测试：
+
+```bash
+pnpm exec playwright install chromium webkit
+pnpm test:e2e
+```
+
+未提供登录态时会运行公开认证页面的 Chromium/WebKit 测试；受保护页面需要将真实测试账号的 Playwright storage state 路径写入本地 `PLAYWRIGHT_AUTH_STATE`，该文件不得提交。
 
 架构、迁移、数据库与部署决策见 `docs/`。旧 Streamlit 原型保存在 `legacy/streamlit/`，仅供迁移参考。

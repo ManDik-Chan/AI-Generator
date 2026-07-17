@@ -244,18 +244,18 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   }
 
   return (
-    <div className="surface-grid flex h-[100dvh] max-w-[100vw] overflow-hidden bg-background" data-chat-shell>
+    <div className="surface-grid app-viewport flex w-full overflow-hidden bg-background" data-chat-shell>
       <aside className="hidden w-[17.5rem] shrink-0 border-r border-border/10 bg-background-subtle/82 backdrop-blur-xl md:block"><ConversationList activeId={activeConversationId} conversations={conversations} /></aside>
       {drawerOpen && (
-        <div className="fixed inset-0 z-50 bg-overlay/55 backdrop-blur-sm md:hidden" onClick={() => setDrawerOpen(false)}>
-          <aside className="flex h-full w-[min(88vw,21rem)] flex-col border-r border-border/10 bg-background-subtle shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <div className="flex h-[4.25rem] items-center justify-between border-b border-border/10 px-4"><div><span className="premium-kicker">CONVERSATIONS</span><p className="text-sm font-semibold">对话历史</p></div><button aria-label="关闭历史" className="grid size-11 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground" onClick={() => setDrawerOpen(false)} type="button"><X className="size-5" /></button></div>
+        <div className="fixed inset-0 z-50 overflow-hidden bg-overlay/55 backdrop-blur-sm md:hidden" onClick={() => setDrawerOpen(false)}>
+          <aside className="flex h-[var(--visual-viewport-height)] w-[min(88vw,21rem)] max-w-[calc(100vw-var(--safe-area-right)-.5rem)] flex-col border-r border-border/10 bg-background-subtle pb-[var(--safe-area-bottom)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex min-h-[calc(var(--mobile-header-height)+var(--safe-area-top))] items-center justify-between border-b border-border/10 px-4 pb-2 pt-[max(.5rem,var(--safe-area-top))]"><div><span className="premium-kicker">CONVERSATIONS</span><p className="text-sm font-semibold">对话历史</p></div><button aria-label="关闭历史" className="grid size-11 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground" onClick={() => setDrawerOpen(false)} type="button"><X className="size-5" /></button></div>
             <ConversationList activeId={activeConversationId} conversations={conversations} onNavigate={() => setDrawerOpen(false)} />
           </aside>
         </div>
       )}
       <section className="flex min-w-0 flex-1 flex-col bg-background/72">
-        <header className="flex h-[4.25rem] shrink-0 items-center gap-1.5 border-b border-border/10 bg-surface/72 px-2.5 backdrop-blur-xl sm:gap-2 sm:px-4 md:gap-3 md:px-6">
+        <header className="flex min-h-[calc(var(--mobile-header-height)+var(--safe-area-top))] shrink-0 items-center gap-1 border-b border-border/10 bg-surface/72 px-[max(.5rem,var(--safe-area-left))] pb-2 pt-[max(.5rem,var(--safe-area-top))] backdrop-blur-xl min-[360px]:gap-1.5 min-[360px]:px-[max(.625rem,var(--safe-area-left))] sm:gap-2 sm:px-4 md:min-h-[4.25rem] md:gap-3 md:px-6 md:py-0">
           <button aria-label="打开对话历史" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
           <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
           <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || activePersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || activePersona)!.name} src={(conversation?.persona || activePersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>

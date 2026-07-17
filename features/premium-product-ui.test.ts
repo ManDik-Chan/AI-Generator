@@ -22,7 +22,7 @@ describe("full product premium UI contract", () => {
     expect(chatLayout).toContain("<ConversationList");
     expect(chatLayout).toContain("<MessageList");
     expect(chatLayout).toContain("<AssistantSelectorPanel");
-    expect(chatLayout).toContain("h-[100dvh]");
+    expect(chatLayout).toContain("app-viewport");
     expect(chatLayout).toContain("setDrawerOpen(true)");
     expect(conversations).toContain('aria-current={conversation.id === activeId ? "page"');
   });
@@ -83,7 +83,7 @@ describe("full product premium UI contract", () => {
       expect(globals).toContain(token);
     }
     expect(globals).toContain("prefers-reduced-motion");
-    expect(globals).toContain("env(safe-area-inset-bottom)");
+    expect(globals).toContain("env(safe-area-inset-bottom, 0px)");
   });
 
   it("removes the former admin-card visual language and prototype fake data", () => {

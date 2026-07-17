@@ -36,14 +36,14 @@ export function MessageItem(props: MessageItemProps) {
   }, [props.editing]);
 
   return (
-    <article className={isUser ? "group flex justify-end gap-2.5 sm:gap-3" : "group flex justify-start gap-2.5 sm:gap-4"}>
+    <article className={isUser ? "group flex min-w-0 justify-end gap-2.5 sm:gap-3" : "group flex min-w-0 justify-start gap-2.5 sm:gap-4"}>
       {!isUser && <AssistantAvatar className="mt-1" persona={resolveMessageAssistantPersona(message.role, props.persona)} />}
       <div className={isUser ? "max-w-[88%] rounded-[1.35rem] rounded-tr-[.4rem] bg-foreground px-4 py-3.5 text-background shadow-soft sm:max-w-[76%] sm:px-5" : "min-w-0 max-w-[calc(100%_-_2.75rem)] flex-1 border-l border-primary/18 pl-4 pr-1 py-1 sm:max-w-[calc(100%_-_3.5rem)] sm:pl-5"}>
         {isUser && props.editing ? (
           <div className="space-y-2">
             <textarea
               aria-label="编辑消息"
-              className="min-h-24 w-full resize-y rounded-control border border-background/25 bg-background/10 p-3 text-sm outline-none focus:border-background/50"
+              className="min-h-24 w-full resize-y rounded-control border border-background/25 bg-background/10 p-3 text-base outline-none focus:border-background/50 sm:text-sm"
               maxLength={props.maxInputChars}
               onChange={(event) => props.onEditChange(event.target.value)}
               onKeyDown={(event) => {
@@ -77,7 +77,7 @@ export function MessageItem(props: MessageItemProps) {
         <span className="grid size-9 place-items-center rounded-control border border-border/12 bg-surface-raised shadow-sm"><UserRound className="size-4" /></span>
         {props.canEdit && !props.editing && <button
           aria-label={props.editDisabled ? "停止生成并编辑此消息" : "编辑最后一条消息"}
-          className="grid size-10 place-items-center rounded-control text-muted-foreground opacity-80 hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 sm:size-8 sm:opacity-0 sm:group-hover:opacity-100"
+          className="grid size-11 place-items-center rounded-control text-muted-foreground opacity-80 hover:bg-surface-muted hover:text-foreground focus-visible:opacity-100 sm:size-9 sm:opacity-0 sm:group-hover:opacity-100"
           onClick={props.onBeginEdit}
           title={props.editDisabled ? "停止并编辑" : "编辑"}
           type="button"

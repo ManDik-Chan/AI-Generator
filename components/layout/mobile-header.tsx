@@ -18,7 +18,7 @@ export function MobileHeader({
   const displayName = viewer?.displayName || viewer?.email || "我的空间";
 
   return (
-    <header className="sticky top-0 z-40 flex min-h-[4.25rem] items-center justify-between gap-3 border-b border-border/10 bg-surface-raised/86 px-4 pb-2 pt-[max(.5rem,env(safe-area-inset-top))] backdrop-blur-xl min-[821px]:hidden">
+    <header className="safe-inline z-40 flex min-h-[var(--mobile-header-height)] shrink-0 items-center justify-between gap-2 border-b border-border/10 bg-surface-raised/86 pb-2 pt-[max(.5rem,var(--safe-area-top))] backdrop-blur-xl min-[821px]:hidden">
       <div className="flex min-w-0 items-center gap-2">
         {title ? (
           <>
