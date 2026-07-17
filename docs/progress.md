@@ -1,5 +1,27 @@
 # 重构进度
 
+## Phase 6B3 — Lumen 全站前端集成与应用基础架构审计（Draft）
+
+实施时间：2026-07-18
+
+- [x] 从 PR #18 Head `d8f5c092422102d586a6537d1585df2bcc69de44` 创建独立分支，保留首页 Server Component、动态列表预取限制、桌面自然滚动和导航反馈。
+- [x] 只读审计 `ai-generator-lumen-preview.zip`；确认它是静态 HTML + 两张截图，无 package、脚本、字体、密钥或可复制业务代码；ZIP 与解压目录未进入仓库。
+- [x] 建立 `lumen-integration-map.md` 与 `application-foundation-audit.md`，完成路由、Server/Client、Auth、数据库、Storage、生成任务、Agent、性能与安全边界映射。
+- [x] 重建 Lumen 紫罗兰/青色/薄荷/琥珀 Design Token、252 px 桌面 Sidebar、Workspace Topbar、命令搜索、完整移动菜单和角色过滤导航。
+- [x] Home 使用真实最近对话与 Prisma 工作区计数；Auth、Account、Persona、Memory、Tools、Image、History 统一到 Lumen 组件且保留原业务能力。
+- [x] 删除根级 `MobileViewportSync`；普通页面在所有宽度自然 document 滚动，手机 Chat 独立 fixed 到 VisualViewport top/height，body 不参与 Chat 纵向滚动。
+- [x] Chat Composer 变量限制在 Chat shell；消息列表在靠底时继续跟随、读历史时保留位置；无 focus `scrollIntoView`、`window.scrollTo` 或 document scrollTop 写入。
+- [x] Playwright 增加 mocked VisualViewport、`offsetTop`、反复开合、Composer 边界、单一主 scroller 与历史位置公共断言。
+- [x] Brainstorm 展示真实 Worker 完成数、PENDING/COMPLETE/ERROR/CANCELLED/TIMEOUT、协调阶段、复制、TXT/Markdown 下载和诚实 partial failure；四 Worker + 一协调器、最多五次调用不变。
+- [x] Admin 使用真实用户、角色、ToolRun 用量、Provider 就绪状态和最近运行；角色 Action 重新校验管理员、禁止自改、保护最后管理员并使用 Serializable 事务。
+- [x] React/React DOM 从 19.1.1 升级到 19.1.8；PostCSS 统一到 8.5.16；`pnpm audit --prod` 无已知漏洞。
+- [x] 最终生产包：首页 2.03 kB / 124 kB First Load，Chat 173 kB，Tools 124 kB，Brainstorm 176 kB，Image Generate 154 kB，Shared 103 kB；首页低于 132 kB 预算。
+- [x] 公开响应式矩阵覆盖 20 个手机/横屏/平板/桌面尺寸和 200% 根字体，无水平溢出或 console/page error；Chromium Mobile 与 WebKit iPhone 13 公开回归通过。
+- [ ] 提供真实登录态 `PLAYWRIGHT_AUTH_STATE` 后执行受保护页面、Admin 角色 mutation 和 mock 键盘 E2E。
+- [ ] 项目所有者在真实 iPhone Safari、Android Chrome、微信 WebView 与 PWA 验收软键盘、动态工具栏、Safe Area 与后台恢复。
+
+本阶段没有修改 Prisma Schema、migration 或 RLS，没有部署生产、修改域名或环境变量，没有提交密钥。Phase 7A2 与 Vibe Coding 尚未开始。
+
 ## Phase 6B2.1 — 移动键盘、全站性能与桌面布局修复（Draft）
 
 实施时间：2026-07-18

@@ -1,6 +1,6 @@
 # AI-Generator V2
 
-> Phase 6B2.1 移动键盘、全站性能与桌面布局修复已进入 Draft：窄屏继续使用 `svh` / `dvh`、Safe Area 与 VisualViewport，普通桌面页改回浏览器自然文档滚动，Chat 保持独立固定 viewport。Composer 聚焦不再主动移动页面；VisualViewport 仅在 820px 以下按需同步。首页主体改为 Server Component、移除 Framer Motion、扩大宽屏画布，并为动态历史关闭批量预取、为主要路由增加即时反馈。自动构建与多宽度 Edge/Playwright 检查已通过，仍等待项目所有者在 iPhone、Android、微信 WebView 与真实登录态下复验软键盘。详见 `docs/mobile-experience.md`。Phase 7A2 尚未开始。
+> Phase 6B3 — Lumen 全站前端集成与应用基础架构审计已进入 Draft：Lumen 的紫罗兰/青色/薄荷视觉语言、完整桌面与移动导航、真实首页指标、账户隐私和管理员控制台已接入既有业务。普通页面继续自然文档滚动；VisualViewport 不再写全站根节点，只由手机 Chat 固定窗口消费，消息区是唯一主滚动区，Composer 与历史阅读位置在键盘开合时分别保持。首页仍是 Server Component，First Load JS 为 124 kB，低于 132 kB 预算。React 已从 19.1.1 安全补丁升级至 19.1.8，PostCSS 统一为 8.5.16，`pnpm audit --prod` 无已知漏洞。自动 Chromium/WebKit 与完整尺寸矩阵已通过；真实 iPhone Safari、Android、微信 WebView、PWA 和登录态键盘仍需项目所有者设备验收。详见 `docs/lumen-integration-map.md`、`docs/application-foundation-audit.md` 与 `docs/mobile-experience.md`。Phase 7A2 尚未开始。
 
 > Phase 7A1 多 Agent 头脑风暴已进入 Draft：一次明确点击固定创建四个独立 Worker，并在至少两个成功后调用一次协调器，总模型调用最多五次。任务复用 ToolRun、waitUntil、durable cancellation 与恢复机制，不读取聊天、Persona、Memory，不联网或调用工具。当前等待项目所有者部署独立 migration/RLS 并完成真实模型、后台恢复和响应式验收；Phase 7A2 Vibe Coding 尚未开始。详见 `docs/multi-agent-brainstorm.md`。
 

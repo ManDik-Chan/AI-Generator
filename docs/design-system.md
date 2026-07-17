@@ -1,88 +1,92 @@
-# AI-Generator Premium 视觉设计系统
+# Lumen 视觉设计系统
 
-## 视觉基准
+> Phase 6B3 — Draft。视觉源为项目所有者提供的 `ai-generator-lumen-preview.zip`；生产仓库仍是组件、路由、数据与行为的唯一来源。
 
-项目所有者提供的 `AI-Generator Premium Rework` 高保真静态原型是 Phase 6B 的主要视觉基准。生产实现不会复制原型的 HTML、单体 CSS 或 DOM 脚本，而是把其视觉语言拆成 React 组件、Tailwind 语义 Token、真实 Next.js 路由和真实数据查询。
+## 视觉基准与边界
 
-Phase 6B1 第一次自由设计方向未通过项目所有者视觉验收；第二次验收确认首页与外壳方向正确，同时要求把同一视觉语言覆盖全部用户可见页面。当前分支已完成全产品表面迁移，等待第三次真实视觉验收。原型压缩包只用于本地比对，没有提交到仓库或放入 `public`。
+ZIP 是静态 HTML/CSS/JavaScript 原型，只包含 `index.html` 和两张参考截图。生产实现没有执行原型脚本、复制 mock 数据或引入第二套应用，而是把版式和视觉语法映射到现有 Next.js Server Components、Client Islands、Tailwind 语义类和真实 Supabase/Prisma 数据。
 
-## 品牌语言
+Lumen 定位为安静、清晰、私密的 AI 工作室：浅色是冷白与淡蓝灰画布，深色是接近黑色的蓝灰画布；紫罗兰是主操作，青色用于辅助能力，薄荷用于成功，琥珀用于警告，粉红用于破坏性状态。低对比细边框、克制的玻璃层和局部光晕负责层级，不使用厚重黑影或假霓虹数据。
 
-产品定位是“高级、安静、私人化的 AI Studio”。浅色具有温暖纸张感，深色使用深炭背景；翡翠绿负责链接、状态、焦点和视觉中心，藏蓝、暖金、淡紫只作为少量辅助。主操作使用深墨色，不用大面积绿色把界面变成普通后台模板。
+## 语义 Token
 
-品牌标志使用原型的双星 SVG，副标题统一为 `Personal AI Studio`。产品 UI 不展示 Phase、开发信息、假快捷键或不存在的功能。
+Token 集中在 `app/globals.css`，Tailwind 映射集中在 `tailwind.config.ts`。业务组件只消费语义，不绑定原型颜色名。
 
-## 原型 Token 到生产 Token
+| 语义 | 浅色 HSL | 深色 HSL | 用途 |
+|---|---:|---:|---|
+| `background` | `225 33% 95%` | `225 36% 4%` | 页面画布 |
+| `background-subtle` | `224 27% 92%` | `223 29% 7%` | 侧栏、次级底色 |
+| `foreground` | `228 29% 9%` | `228 100% 98%` | 主文字 |
+| `surface` | `0 0% 100%` | `224 31% 10%` | 面板 |
+| `surface-muted` | `225 28% 93%` | `223 25% 14%` | 内嵌区、弱卡片 |
+| `primary` | `248 84% 69%` | `248 91% 74%` | 紫罗兰主操作与焦点 |
+| `secondary` | `191 96% 54%` | `191 96% 66%` | 青色能力强调 |
+| `accent` | `157 75% 53%` | `157 75% 78%` | 薄荷成功与在线状态 |
+| `accent-gold` | `39 100% 67%` | `39 100% 72%` | 琥珀提示 |
+| `destructive` | `348 78% 54%` | `348 100% 74%` | 删除与失败 |
 
-| 原型颜色 | 生产语义 | 浅色 | 深色 |
-| --- | --- | --- | --- |
-| `--bg` | `background` | `#f4f1ea` | `#101415` |
-| `--bg-2` | `background-subtle` | `#ece8df` | `#161b1b` |
-| `--panel` | `surface` + 透明度 | 半透明暖白 | 半透明深炭 |
-| `--panel-strong` | `surface-raised` | `#fffefa` | `#1b2121` |
-| `--panel-muted` | `surface-muted` | `#efede7` | `#202727` |
-| `--ink` | `foreground` | `#151a20` | `#f5f7f5` |
-| `--muted` | `muted-foreground` | `#697078` | `#a5adab` |
-| `--jade` | `primary` | `#128969` | `#39c49b` |
-| `--jade-2` | `primary-hover` / 高光 | `#35b893` | `#70dbbc` |
-| `--jade-soft` | `primary-subtle` | `#dff2eb` | `#193a31` |
-| `--night` | `secondary` | `#17253b` | 浅藏蓝前景 |
-| `--gold` | `accent-gold` | `#cc8e38` | 调亮暖金 |
+状态同时使用文字、图标和 `success` / `warning` / `destructive` / `info` subtle surface，不只靠颜色传意。
 
-状态色仍使用 `success`、`warning`、`destructive`、`info` 和对应 subtle/foreground。边框以低透明度使用，避免所有卡片都出现明显灰框。
+## 形状、阴影与间距
 
-## 形状、阴影与排版
+- Control：`0.75rem`（12 px）。
+- Card / Panel：`1.125rem`（18 px）。
+- Dialog / Sheet / Display：`1.625rem`（26 px）。
+- `shadow-soft`：普通悬浮层；`shadow-raised`：重点卡片与 hover；`shadow-overlay`：Dialog、Sheet 与高层浮层。
+- 页面布局使用 Tailwind 4 px spacing scale 和少量语义 CSS 变量；响应式 gutter 使用 `clamp(1.5rem, 3vw, 3rem)`。
+- 320 px 手机允许操作组纵向堆叠，不通过无规则负 margin 或固定宽度挤压内容。
 
-- 控件圆角约 14px，对应 `rounded-control`。
-- 普通卡片约 22px，对应 `rounded-card`。
-- Hero 与大型展示面板约 34px，对应 `rounded-display`。
-- `shadow-soft` 用于轻卡片，`shadow-raised` 用于 hover，`shadow-overlay` 只用于 Hero、Dialog 和重点浮层。
-- 首页展示标题使用紧凑字距与约 0.99 行高；页面、章节、卡片、正文、辅助文字和 Kicker 均有独立层级。
-- 使用系统字体栈，保持无外部字体的离线构建能力。
+## 排版
 
-## 氛围与动效
+系统字体栈覆盖 Inter、Apple/Windows UI、苹方和微软雅黑，不提交授权未知字体。公共层级为：
 
-纸张点阵、局部网格、绿色/淡紫 Aurora、AI Core、双轨道和能力标签全部使用 CSS/SVG；它们不接收指针事件、不依赖外部图片，也不影响布局。移动端缩小视觉中心，保留辨识度。
+- `text-display`：Hero Display。
+- `text-page-title`：页面标题。
+- `text-section-title`：章节标题。
+- `text-card-title`：卡片标题。
+- `text-body` / `text-supporting`：正文与辅助文字。
+- `text-label` / `text-caption` / `premium-kicker`：控件、说明与英文 Kicker。
+- Markdown/Code 在自己的边界内换行或横向滚动，不制造页面级横向溢出。
 
-页面只做轻微淡入上移，卡片 hover 小幅抬升，轨道与 Aurora 缓慢运动。`prefers-reduced-motion` 会关闭旋转、漂浮和明显位移，并把非必要过渡缩至最低。
+邮箱、UUID、URL、连续英文和中文长句使用 `overflow-wrap:anywhere` 或组件级 break 规则。手机输入控件至少 16 px；Viewport 未禁用缩放，自动矩阵额外覆盖 200% 根字体。
 
-## 应用外壳
+## 应用外壳与信息架构
 
-- 1181px 以上桌面侧栏为 272px；821–1180px 收窄为 230px。
-- 820px 及以下使用 68px 半透明移动顶栏和悬浮底部导航。
-- 移动底栏包含首页、对话、中央新建、助手、工具，全部是真实 Next.js 路由。
-- 侧栏读取真实 Profile 显示名、头像和角色；无显示名时使用自然回退，ADMIN 才显示系统管理入口。
-- 页面内容宽度分为 reading、standard、wide、full，对应 52rem、84rem、100rem 和无限制；桌面 gutter 使用 1.5–3rem 的流体 `clamp()`，首页在 1440/1600/1920px 能自然使用侧栏右侧空间。
+桌面 Sidebar 为 252 px，内容使用真实剩余宽度；顶部 Workspace bar 提供当前路由、主题和 `Ctrl/Cmd + K` 命令搜索。导航分为：
 
-## 共享组件
+- 工作空间：控制中心、AI 对话、AI 助手、长期记忆。
+- 创作实验室：文本工具、图片理解、图片生成、多 Agent 头脑风暴。
+- 系统：运行历史、账户与隐私、ADMIN 可见的系统管理。
 
-`components/ui` 提供 Button、Input/Textarea/Select/Field、Surface、PageHeader、SectionHeader、EmptyState、StatusBanner、Skeleton、Dialog/ConfirmDialog、Dropdown/Popover、Tooltip、Badge、SegmentedControl、Avatar、Divider 和 Toast。
+820 px 及以下使用顶部完整菜单与五项底部主导航；所有未进入底栏的能力仍能从菜单到达。动态 Conversation/Persona 等增长列表关闭详情批量预取，固定导航保留框架预取。
 
-共享组件只表达视觉、状态和无障碍契约，不绑定业务。Button 默认主操作使用 foreground/background 反转；翡翠色主要服务于状态、链接、焦点和图标。Avatar 支持受控真实地址，加载失败或缺失时回退为名称首字。
+普通页面默认自然 document 滚动。Chat 使用独立固定可视窗口；视口 Token 不进入普通 AppShell。详情见 `mobile-experience.md`。
 
-业务页面使用 `premium-panel`、`premium-panel-strong`、`premium-subpanel`、`premium-field`、`premium-chip`、`premium-icon-tile` 和 `premium-result` 组合共享 Token，不再自行复制旧式 `bg-card` 灰框卡片。聊天消息、人格预览、记忆条目和工具结果仍由各自 feature 组件负责业务状态；这些类只统一材质、层级和交互反馈。
+## 共享组件与业务组件
 
-## 产品表面布局
+`components/ui` 提供 Button、表单字段、Page/Section Header、Empty/Status/Skeleton、Dialog、Dropdown、Toast 等无业务 primitive。Lumen surface 组合为：
 
-- Chat：桌面为历史 rail、消息画布、助手 dock 三栏；平板收起助手 dock；手机使用顶栏抽屉和底部安全区 Composer。流式、停止、编辑重提和错误状态继续由原逻辑驱动。
-- Persona：列表、创建、详情、编辑、回收站和 AI 头像统一为 Assistant Studio；桌面编辑器为表单加实时预览，手机提供 Edit / Preview 分段切换。
-- Memory：容量、启用数、置顶数、语义索引均来自真实查询；搜索、筛选、排序和移动折叠只作用于已有数据，不展示内部 `topicKey`。
-- Tools：文本工具和图片分析采用输入工作区加结果工作区；历史展示真实 ToolRun、隐私保留和资源过期状态，不添加尚未实现的 PDF、OCR 或网页工具。
-- Account / Admin / public states：沿用同一 PageHeader、Surface、StatusBanner、EmptyState 和主题机制，不伪造统计图或管理数据。
+- `premium-panel` / `premium-panel-strong`
+- `premium-subpanel` / `premium-result`
+- `premium-field` / `premium-chip`
+- `premium-icon-tile`
 
-## 主题与无障碍
+业务状态继续由各 feature 拥有：Chat 负责消息与恢复，Persona 负责草稿/头像/Apply，Memory 负责搜索/作用域/语义索引，Tools 负责 ToolRun、配额、取消与恢复，Admin 负责服务端角色和运营读模型。视觉层不复制服务端状态到 localStorage。
 
-浅色、深色和跟随系统继续保存到 `localStorage`。根布局在 hydration 前设置 `.dark`、`data-theme` 和 `color-scheme`，避免主题首屏闪烁。主题切换可在桌面侧栏看到完整三态选择，手机和认证页使用紧凑入口。
+## 页面映射
 
-所有交互控件保留翡翠色 `focus-visible`，icon-only 操作提供 `aria-label`，移动触控区域至少 44px。状态不能只靠颜色表达；Dialog、表单错误、Toast 和加载状态保留语义角色。
+- Home：Lumen Hero、真实 Quick Launch、最近对话、真实工作区计数、完整能力入口。
+- Auth / Account：玻璃表单、身份/角色/主题/安全边界和真实登出。
+- Chat：历史 rail、消息画布、助手选择、独立手机视口和图片理解入口。
+- Persona / Memory：保留全部 CRUD、AI 草稿/头像、回收站、自动记忆与语义状态。
+- Tools / Image / History：真实 ToolRun、图片私有资产、生成状态、复制/下载/再次创作/删除。
+- Brainstorm：四个固定 Worker、真实完成数、超时/失败/取消、协调阶段与综合结果。
+- Admin：真实用户、角色、用量、系统状态和受保护操作；不伪造图表。
 
-## 移动端组件契约（Phase 6B2）
+## 主题、动效与无障碍
 
-- 页面高度只通过 `--app-height` / `--visual-viewport-height` 消费 `svh`、`dvh` 和旧浏览器回退，不将 `100vh` 作为唯一高度。
-- `--safe-area-*` 统一包装 `env(safe-area-inset-*)`；Header、底部导航、Composer 和 Sheet 不自行复制安全区表达式。
-- 手机 AppShell 只有一个 `data-app-scroll-region` 主滚动区；普通桌面页使用 document 自然滚动。Chat 独立使用固定 viewport，把唯一滚动区放在 `data-chat-message-scroll`，Composer 不参与消息滚动。
-- 820px 及以下的文本输入、选择器和 contenteditable 计算字号至少为 16px；Viewport 不禁用缩放，页面应支持 200% 浏览器缩放。
-- 手机 Dialog 使用 Bottom Sheet，最大高度来自 VisualViewport，正文内部滚动；Dropdown/Popover 必须 Portal 渲染并保留 12px collision padding。
-- Flex/Grid 可收缩内容必须有 `min-w-0`；普通文字使用 anywhere wrapping，代码块和真实表格只在自身容器内横向滚动，媒体不超过容器宽度。
-- 主要触控目标至少 44 × 44 CSS px。320px 下操作组可以纵向增长，不通过裁剪隐藏溢出。
-- 所有动画继续遵守 `prefers-reduced-motion`，浅色/深色共享相同布局行为。
+主题支持浅色、深色和跟随系统；hydration 前脚本只读取主题偏好。Orbit、float、aurora 与 hover 使用 CSS，`prefers-reduced-motion` 会关闭持续运动和明显位移。所有 icon-only 操作有 `aria-label`，主要触控目标至少 44 px，焦点环可见，错误与异步状态使用语义角色。
+
+## 素材结论
+
+ZIP 无可直接复制的授权字体、独立图片资产或 Logo 文件；两张截图仅用于比对。现有 `favicon.ico`、`icon.png`、`apple-icon.png` 与 AI-Generator 产品名保持不变，没有外部 CDN、巨大 Base64 或重复资产进入构建。

@@ -1,6 +1,6 @@
 # Lumen integration map
 
-> Phase 6B3 — Draft. This map was created before implementation. It treats the production repository as the only source of business truth and the Lumen ZIP as a visual reference only.
+> Phase 6B3 — Draft. This map was created before implementation and finalized after all six checkpoints. It treats the production repository as the only source of business truth and the Lumen ZIP as a visual reference only.
 
 ## 1. Source and safety audit
 
@@ -92,7 +92,7 @@ All routes below remain backed by the existing Supabase, Prisma, API route, and 
 | `/tools/brainstorm` | `BrainstormWorkspace` | `ToolRun`, four `BrainstormWorker` rows, provider | partial failure, cancel, recovery, quota |
 | `/tools/history` | `ToolHistory` | owned retained `ToolRun` records and assets | filters, pagination, empty state |
 | `/account` | account page | Supabase user and Prisma `Profile` | route loading |
-| `/admin` | admin page | server-side `requireAdmin`, Prisma | current honest empty state; real admin views are a Phase 6B3 gap |
+| `/admin` | Lumen operations console | server-side `requireAdmin`, Prisma aggregates and guarded role Server Action | real empty lists, config readiness and action feedback |
 | API routes | `app/api/**/route.ts` | authenticated, owner-scoped server services | structured HTTP/SSE errors |
 | Global states | `app/loading.tsx`, `app/error.tsx`, `app/global-error.tsx`, `app/not-found.tsx` | App Router boundaries | retained and restyled |
 
@@ -104,7 +104,7 @@ All routes below remain backed by the existing Supabase, Prisma, API route, and 
 | Desktop sidebar | `DesktopSidebar` | Adopt grouping, density, active rail, account card, and responsive widths | shell viewer profile and role | Add every real feature entry, with admin role gate |
 | Mobile sidebar/top bar | `MobileHeader`, `MobileNavigation` | Use an accessible Sheet/drawer and compact command/search affordance | route tree and shell viewer | Bottom navigation remains available outside Chat only |
 | Command palette | new navigation client island | Map commands to real internal routes only | static route catalogue | No fake notification or fake search result |
-| AI chat | `/chat`, `/chat/[conversationId]`, `ChatLayout` | Re-skin header/history/messages/composer; isolate mobile viewport | owned conversations/messages, chat SSE, recovery status | Mobile Safari viewport and scroll anchoring are blocking work |
+| AI chat | `/chat`, `/chat/[conversationId]`, `ChatLayout` | Re-skin header/history/messages/composer; isolate mobile viewport | owned conversations/messages, chat SSE, recovery status | Fixed Chat-only VisualViewport implemented; real Safari device acceptance remains |
 | Conversation rail | `ConversationList` | Lumen recent-row treatment; dynamic links keep `prefetch={false}` | owned conversation summaries | Deletion remains confirmed and functional |
 | Persona gallery | `/personas`, `PersonaList` | Lumen cards with real avatar/name/description/actions | owned personas | No fake category or recent-use values |
 | Persona builder | `/personas/new`, edit/detail routes | Apply Lumen field and panel system without changing mutations | Server Actions, GenerationRun, private avatar Storage | Generated avatar is never auto-applied |
@@ -115,55 +115,51 @@ All routes below remain backed by the existing Supabase, Prisma, API route, and 
 | Four-agent brainstorm | `/tools/brainstorm`, `BrainstormWorkspace` | Lumen worker rows/cards, mobile role disclosure, synthesis result | four durable workers plus one coordinator | Exactly four workers; maximum five provider calls; no Vibe Coding |
 | Run history | `/tools/history`, `ToolHistory` | Lumen filters and rows with open/copy/download/delete | retained owned ToolRun rows/assets | Dynamic detail links do not prefetch in bulk |
 | Account/privacy | `/account` | Lumen profile, theme, role, sign-out, memory and privacy explanation | Supabase user and Profile | Only implemented controls are interactive |
-| Admin | `/admin` | Extend Lumen panels with real users/roles/usage/system state | Prisma plus server-side admin gate | Must not invent charts; privileged mutations need explicit validation |
+| Admin | `/admin` | Lumen users/roles/usage/system/operations panels | Prisma plus server-side admin gate | Role updates validate target/role, self-change, final admin and transaction isolation |
 | Modal/Sheet | `Dialog` and mobile overlay primitives | Keep portal, focus, escape, collision, nested scroll lock | local UI state only | Restore document scroll without iOS jump |
 | Dropdown | `Dropdown` | Keep portal/collision/flip/viewport padding | local UI state only | Long email and touch validation required |
 | Toast | `Toast` | Apply Lumen visual tokens and safe-area/composer avoidance | transient local feedback | No business truth stored in toast state |
 
 ## 5. Functional completeness checklist
 
-Legend: **Preserve** = business behavior already exists and must survive; **Revise** = Phase 6B3 UI/architecture work; **Gap** = real capability required by the request but not yet complete at audit time.
+Legend: **Preserved** = existing behavior retained; **Completed** = Phase 6B3 implementation; **Device gap** = requires hardware or credentials unavailable to local automation.
 
 ### Home and global navigation
 
-- Preserve: new chat, latest conversation, Persona, Memory, Tools, image understanding, image generation, multi-Agent, tool history, Account.
-- Revise: desktop grouping, mobile all-feature access, route feedback, command palette, Lumen layout.
-- Gap: explicit role-gated Admin entry is not present in the main navigation.
-- Gap: real aggregate overview data is not shown; fake prototype statistics must not be copied.
+- Preserved: new chat, latest conversation, Persona, Memory, Tools, image understanding, image generation, multi-Agent, tool history, Account.
+- Completed: grouped desktop navigation, complete mobile menu, route feedback, real command palette, role-gated Admin, Lumen Home and real aggregate overview.
 
 ### Chat
 
-- Preserve: new/history/persona selection, edit-and-resubmit, explicit stop, durable recovery, error recovery, delete, Markdown/GFM/code, scroll-to-bottom.
-- Revise: Lumen appearance, mobile history Sheet, independent mobile visual viewport, composer auto-grow, safe area, scroll anchor.
-- Gap: add a clear image-tool entry without pretending Chat supports an unsupported attachment payload.
+- Preserved: new/history/persona selection, edit-and-resubmit, explicit stop, durable recovery, error recovery, delete, Markdown/GFM/code, scroll-to-bottom.
+- Completed: Lumen appearance, mobile history Sheet, independent fixed visual viewport, composer auto-grow, safe area, bottom/history anchor, functional image-understanding entry.
+- Device gap: real iPhone Safari keyboard/accessory bar and Android keyboard acceptance.
 
 ### Persona
 
-- Preserve: list/new/edit/archive/trash/restore, AI draft, avatar candidates, explicit Apply, current avatar, default assistant chat.
-- Revise: Lumen gallery, forms, dialogs, empty/error/loading states, mobile entry.
+- Preserved: list/new/edit/archive/trash/restore, AI draft, avatar candidates, explicit Apply, current avatar, default assistant chat.
+- Completed: Lumen gallery, forms, dialogs, empty/error/loading states and mobile entry.
 
 ### Memory
 
-- Preserve: list/search/filter/edit/delete/enable, automatic memory state, global/persona scope, empty/error states.
-- Revise: Lumen rows, controls, mobile sheet/dialog behavior.
+- Preserved: list/search/filter/edit/delete/enable, automatic memory state, global/persona scope, empty/error states.
+- Completed: Lumen rows, controls and mobile sheet/dialog behavior.
 
 ### Tools and history
 
-- Preserve: summarize/rewrite/translate/image understanding/image generation/brainstorm/history, re-create, delete, download, copy, explicit stop, recovery, quota.
-- Revise: Lumen workspaces, honest status visualization, mobile layouts, unified run presentation.
-- Gap: ensure every history action is visibly discoverable at mobile widths.
+- Preserved: summarize/rewrite/translate/image understanding/image generation/brainstorm/history, re-create, delete, download, copy, explicit stop, recovery, quota.
+- Completed: Lumen workspaces, mobile action layouts, honest PENDING/COMPLETE/ERROR/CANCELLED/TIMEOUT presentation, real Worker count and synthesis state.
 
 ### Account and Admin
 
-- Preserve: user identity, email, role, sign-out, theme, security and privacy explanations.
-- Revise: Lumen profile/privacy panels and accessible long-value wrapping.
-- Gap: Admin currently exposes no real users, role, usage, or system-status view. Phase 6B3 may add read-only real views and carefully bounded role actions without schema changes.
+- Preserved: user identity, email, role, sign-out, theme, security and privacy explanations.
+- Completed: Lumen profile/privacy panels, long-value wrapping, real Admin users/usage/roles/system/operations and guarded role updates without schema changes.
 
 ### Cross-cutting states
 
-- Preserve: App Router loading/error/not-found boundaries; server-side ownership and role checks.
-- Revise: Lumen empty/error/loading/permission treatment, accessible focus, reduced motion, 200% zoom, touch targets, safe-area toasts, dialog and dropdown primitives.
-- Gap: automated viewport matrix and mocked VisualViewport keyboard coverage are incomplete.
+- Preserved: App Router loading/error/not-found boundaries; server-side ownership and role checks.
+- Completed: Lumen empty/error/loading/permission treatment, accessible focus, reduced motion, 200% text scaling, touch targets, safe-area/dialog/dropdown contracts, full public viewport matrix and mocked VisualViewport keyboard coverage.
+- Device gap: protected route E2E requires a local `PLAYWRIGHT_AUTH_STATE`; real hardware remains unverified.
 
 ## 6. Explicit non-mappings
 
@@ -171,4 +167,3 @@ Legend: **Preserve** = business behavior already exists and must survive; **Revi
 - Prototype buttons that have no production behavior are either mapped to a real route/action or omitted/disabled with an explanation.
 - The prototype brand treatment informs the Lumen visual language, but existing `favicon.ico`, `icon.png`, `apple-icon.png`, product name, and licensed repository assets remain authoritative.
 - Phase 7A2, Vibe Coding, code execution, Shell/file-writing agents, unbounded agents, new queues, and new backends are outside Phase 6B3.
-

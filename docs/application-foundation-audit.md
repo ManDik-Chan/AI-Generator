@@ -53,7 +53,7 @@ flowchart LR
 - Viewport workspaces are appropriate only for Chat and similarly bounded tools.
 - `DesktopSidebar` and `MobileHeader` each resolve the same cached viewer data in independent Suspense boundaries.
 
-### Finding F-01 — global mobile viewport coupling (blocking)
+### Finding F-01 — global mobile viewport coupling (blocking, resolved)
 
 `MobileViewportSync` is mounted in the root layout. It writes `--visual-viewport-height` and `data-keyboard-open` on the root for every mobile route. `app-shell-root`, `.app-viewport`, dialogs, and Chat consume those global values.
 
@@ -64,12 +64,12 @@ Consequences:
 - WebKit may scroll the layout viewport while the root height changes, leaving the composer near the visible top and a large blank region below;
 - the root-level height mutation causes avoidable layout work across unrelated pages.
 
-Required fix:
+Resolution:
 
-- remove global VisualViewport height synchronization;
-- keep ordinary pages on natural document scrolling;
-- mount a Chat-only viewport controller that writes `--chat-viewport-top`, `--chat-viewport-height`, and `--keyboard-inset` on the Chat shell;
-- make the mobile Chat shell fixed to the current visual viewport and make the message list the only primary scroller.
+- Removed `MobileViewportSync`, root `--visual-viewport-height`, root keyboard state, and all ordinary-route VisualViewport listeners.
+- Ordinary pages now use natural document scrolling at every width.
+- `ChatLayout` alone mounts a controller that writes `--chat-viewport-top`, `--chat-viewport-height`, and `--keyboard-inset` on its own shell.
+- Mobile Chat is fixed to the current visual viewport; document scroll remains stable and MessageList is the only primary scroller.
 
 ## 4. Chat shell audit
 
@@ -95,19 +95,19 @@ Chat root (`.app-viewport`)
 - Textarea uses a 16 px mobile font, composition-safe Enter handling, bounded auto-growth, and an internal overflow state.
 - Conversation deletion, edit/resubmit, explicit stop, background detach, recovery, Markdown/code rendering, and scroll-to-bottom are real behaviors.
 
-### Finding F-02 — viewport and anchor lifecycle (blocking)
+### Finding F-02 — viewport and anchor lifecycle (blocking, resolved)
 
 - Chat currently inherits the root `--visual-viewport-height` instead of owning its visual viewport.
 - The visual viewport `offsetTop` is recorded globally but not used to position the Chat shell.
 - Message following only responds to message changes. It does not preserve a bottom anchor or historical reading position when viewport/composer height changes.
 - The composer writes a global `--composer-height`, so its lifecycle can affect unrelated routes.
 
-Required fix:
+Resolution:
 
-- Chat-only fixed shell at visual viewport top/height on mobile; desktop remains a normal 100dvh workspace.
-- One rAF for viewport resize/scroll, sub-pixel write suppression, visibility pause/resume, and full listener cleanup.
-- ResizeObserver-driven anchor preservation using scroll-height/client-height deltas.
-- No focus `scrollIntoView`, `window.scrollTo`, document `scrollTop`, or layout-viewport rewrites.
+- Chat-only fixed shell uses visual viewport top/height on mobile; desktop remains a bounded workspace.
+- One rAF merges viewport resize/scroll/focus/pageshow, suppresses sub-pixel writes, pauses while hidden, and removes every listener/variable on cleanup.
+- MessageList and Composer ResizeObservers preserve a bottom anchor for followers and a clamped reading position for historical readers.
+- Source contracts and Playwright helpers verify no focus `scrollIntoView`, `window.scrollTo`, document `scrollTop`, or root viewport writes.
 
 ## 5. Generation infrastructure audit
 
@@ -119,9 +119,9 @@ Required fix:
 - Recovery IDs are stored in `sessionStorage`; prompts, outputs, signed URLs, and server state are not stored there.
 - Late completion writes are guarded with `updateMany(... status: PENDING)`, preventing overwrite of a terminal state.
 
-### Finding F-03 — shared workspace presentation
+### Finding F-03 — shared workspace presentation (audited, deliberately bounded)
 
-Recovery, cancel, SSE, error, quota, and status semantics are sound but presentation code is repeated across text, image, Persona, and brainstorm workspaces. Phase 6B3 should share small status/presentation primitives only where behavior is already equivalent; it must not rewrite stable provider or persistence logic for abstraction's sake.
+Recovery, cancel, SSE, error, quota, and status semantics are sound but presentation code is repeated across text, image, Persona, and brainstorm workspaces. Phase 6B3 retained the existing shared recovery hook, cancel client, SSE observer, output presentation and status primitives; it did not rewrite stable provider or persistence logic merely to force a new abstraction. Further convergence remains low-priority technical debt.
 
 ## 6. Multi-Agent foundation audit
 
@@ -132,7 +132,7 @@ Recovery, cancel, SSE, error, quota, and status semantics are sound but presenta
 - Timeout, explicit cancellation, output limits, `ToolOutputGuard`, usage quota, owner scope, partial persistence, and recovery already exist.
 - No retry loop, network search, fake token count, fake confidence, or Vibe Coding behavior exists.
 
-Phase 6B3 work is presentation and observability: Lumen worker states, compact mobile disclosure, copy/download, honest partial failure, recovery phase, completed worker count, and synthesis state.
+Phase 6B3 added Lumen worker cards, copy/download, honest partial failure/timeout labels, recovery phase, real completed-worker count, and explicit synthesis state. Mobile uses the permitted single-column layout. Fixed four-worker/one-coordinator behavior and the maximum five calls are unchanged.
 
 ## 7. Authentication and authorization audit
 
@@ -142,7 +142,7 @@ Phase 6B3 work is presentation and observability: Lumen worker states, compact m
 - Conversation, Persona, Memory, ToolRun, BrainstormWorker, GeneratedImage, GenerationRun, and asset lookups are owner-scoped.
 - No service-role key or AI key is exposed through `NEXT_PUBLIC_*`.
 
-Phase 6B3 must preserve these boundaries. Admin UI must never accept an acting user ID from the browser as authority.
+Phase 6B3 preserved these boundaries. Admin data reads are gated by `requireAdmin`; the role action derives the acting user from the server session, validates target UUID/role, blocks self-change, protects the final admin, and executes the update in a Serializable transaction.
 
 ## 8. Database and Storage audit
 
@@ -187,31 +187,48 @@ Performance constraints for Phase 6B3:
 - Keep Home as a Server Component and do not load Framer Motion, image generation, brainstorm, or admin code into its initial client graph.
 - Keep heavy workspaces route-scoped and dynamic list prefetch bounded.
 
+Final production build:
+
+| Route | Route size | First Load JS | Baseline delta |
+|---|---:|---:|---:|
+| `/` | 2.03 kB | 124 kB | +4 kB First Load |
+| `/chat` | 135 B | 173 kB | +2 kB |
+| `/tools` | 2.03 kB | 124 kB | +4 kB |
+| `/tools/brainstorm` | 9.57 kB | 176 kB | +4 kB |
+| `/tools/image-generate` | 24.2 kB | 154 kB | +4 kB |
+| `/admin` | 2.93 kB | 125 kB | route-scoped client action only |
+| Shared | — | 103 kB | +1 kB after React security patch |
+
+Home remains below the 132 kB budget (124 kB, +3.3% from 120 kB). It is still a Server Component and does not import Framer Motion, image generation, brainstorm workspace, or Admin client code. Heavy workspaces remain route-scoped.
+
 ## 11. Security findings and constraints
 
 - Preserve server-derived identity, RLS, Prisma ownership, private buckets, signed responses, OutputGuard, prompt boundaries, and safe logs.
 - Do not log full prompts, full model outputs, cookies, Authorization headers, database URLs, or private Storage paths.
 - Do not expose mock auth or copy prototype data.
-- Dependency patch status must be checked against official advisories before changing versions; upgrades are separate from visual replacement unless a confirmed high-severity issue is present.
+- React 19.1.1 was in the React team's disclosed RSC RCE/DoS affected line. It was patched to React/React DOM 19.1.8; Next 15.5.20 already exceeds the official 15.5 fixed version.
+- `pnpm audit --prod` found PostCSS `<8.5.10`; the workspace now overrides all PostCSS consumers to 8.5.16 and the final audit reports no known vulnerabilities.
 
 ## 12. Technical debt and fix register
 
 | ID | Severity | Finding | Phase 6B3 disposition |
 |---|---|---|---|
-| F-01 | Blocking | Root-level VisualViewport height couples all routes | Fix with Chat-only controller |
-| F-02 | Blocking | Chat does not position from `offsetTop` or preserve scroll anchor on viewport/composer resize | Fix and add mocked viewport tests |
-| F-03 | Medium | Repeated generation presentation patterns | Extract only low-risk shared UI/status primitives |
-| F-04 | Medium | Main navigation omits image generation, brainstorm, history, account, and admin visibility | Complete desktop and mobile information architecture |
-| F-05 | Medium | Admin route has an honest empty state but no real management surface | Add real, server-gated read views and bounded actions if safe |
-| F-06 | Medium | ESLint config is not a repository root | Add `root: true` |
-| F-07 | Low | Prototype visual tokens and current green/gold tokens diverge | Re-tokenize globally while preserving semantic names |
-| F-08 | Low | Dialog/toast/dropdown safe-area and nested lock behavior need broader regression coverage | Audit primitives and add tests |
+| F-01 | Blocking | Root-level VisualViewport height couples all routes | Resolved: Chat-only controller; root sync deleted |
+| F-02 | Blocking | Chat does not position from `offsetTop` or preserve scroll anchor on resize | Resolved with fixed shell, mock viewport and anchor tests |
+| F-03 | Medium | Repeated generation presentation patterns | Existing safe shared primitives retained; deeper rewrite deferred |
+| F-04 | Medium | Main navigation omits feature entries | Resolved on desktop, command menu and mobile full menu |
+| F-05 | Medium | Admin route lacks real management | Resolved with read model and bounded role action |
+| F-06 | Medium | ESLint config is not a repository root | Resolved with `root: true` |
+| F-07 | Low | Prototype/current tokens diverge | Resolved with Lumen semantic tokens |
+| F-08 | Low | Safe-area/lock regression coverage | Dialog/dropdown contracts retained; full public viewport matrix added |
+| F-09 | Critical | React 19.1.1 RSC advisory exposure | Resolved with React 19.1.8 |
+| F-10 | Moderate | PostCSS audit advisory | Resolved with 8.5.16 workspace override |
 
 ## 13. Completed and deferred work
 
 Completed before Phase 6B3 (from PR #18 base): Home Server Component split, removal of Home Framer Motion, dynamic-history prefetch limits, desktop document scrolling, AppShell document/viewport modes, mobile-limited VisualViewport listeners, navigation feedback, and reduced Home bundle.
 
-Phase 6B3 must retain those gains while replacing the faulty root viewport strategy.
+Phase 6B3 retained those gains and replaced the faulty root viewport strategy. It also completed Lumen surfaces, real Home/Account/Admin data views, dependency patches, the viewport matrix, and final architecture documentation.
 
 Deferred intentionally:
 
@@ -231,3 +248,20 @@ Before Phase 7A2 may start, the owner should have:
 - documented threat model for code execution, filesystem, secrets, sandboxing, quotas, audit logs, and abuse handling;
 - explicit approval to expand the product/security scope.
 
+## 15. Final verification
+
+Executed from the repository root on 2026-07-18:
+
+- `pnpm install --frozen-lockfile`: passed.
+- `pnpm test`: 95 files / 555 tests passed.
+- `pnpm lint`: passed with zero warnings.
+- `pnpm typecheck`: passed.
+- `pnpm build`: passed; final route table is recorded above.
+- `pnpm exec prisma validate`: passed with local placeholder connection strings; it did not connect to or mutate a database.
+- `pnpm audit --prod`: no known vulnerabilities.
+- `pnpm test:e2e --workers=1`: 15 passed / 21 explicitly skipped. Public Desktop Chromium, Mobile Chromium and WebKit iPhone projects passed; protected-route tests skipped because no `PLAYWRIGHT_AUTH_STATE` was supplied.
+- The public acceptance matrix covered all 20 requested phone, landscape, tablet and desktop sizes plus 200% root text scaling, with no horizontal overflow or console/page errors.
+
+No Prisma Schema, migration, RLS, bucket, environment variable, domain or production deployment was changed. No ZIP, extracted prototype, `.env`, credential, `node_modules`, `.next`, prompt/output dump or private Storage path was committed.
+
+The remaining blocker is hardware/credential acceptance, not an unimplemented code path: real iPhone Safari, Android Chrome, WeChat WebView, PWA, and authenticated Chat/Admin mutation flows remain unverified locally. WebKit emulation is explicitly not claimed as real iPhone Safari.

@@ -23,7 +23,7 @@ describe("Phase 6B2 mobile experience contracts", () => {
     expect(css).not.toMatch(/body\s*\{[\s\S]*?overflow-x:\s*hidden/);
   });
 
-  it("uses a mobile scroll region and document scrolling on ordinary desktop pages", () => {
+  it("uses document scrolling for ordinary pages at every width", () => {
     const shell = read("components/layout/app-shell.tsx");
     const css = read("app/globals.css");
     expect(shell).toContain("app-shell-root");
@@ -33,6 +33,7 @@ describe("Phase 6B2 mobile experience contracts", () => {
     expect(shell).toContain("var(--mobile-nav-height)");
     expect(css).toContain('.app-shell-root[data-scroll-mode="document"]');
     expect(css).toContain("overflow: visible");
+    expect(css.indexOf('.app-shell-root[data-scroll-mode="document"]')).toBeLessThan(css.indexOf("@media (max-width: 820px)"));
   });
 
   it("updates the Chat-scoped VisualViewport through requestAnimationFrame and cleans every listener", () => {

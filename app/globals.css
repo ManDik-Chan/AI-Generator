@@ -183,6 +183,13 @@ body:has([data-chat-shell]) {
   overscroll-behavior: none;
 }
 
+.app-shell-root[data-scroll-mode="document"] { height: auto; min-height: var(--app-height); overflow: visible; }
+.app-shell-root[data-scroll-mode="document"] .app-shell-content { height: auto; min-height: var(--app-height); }
+.app-shell-root[data-scroll-mode="document"] .app-shell-main { min-height: 0; overflow: visible; }
+.app-shell-root[data-scroll-mode="viewport"] { height: var(--app-height); overflow: hidden; }
+.app-shell-root[data-scroll-mode="viewport"] .app-shell-content { height: 100%; }
+.app-shell-root[data-scroll-mode="viewport"] .app-shell-main { overflow-y: auto; }
+
 .premium-shell::before {
   content: "";
   position: fixed;
@@ -220,12 +227,6 @@ body:has([data-chat-shell]) {
 }
 
 @media (min-width: 821px) {
-  .app-shell-root[data-scroll-mode="document"] { height: auto; min-height: 100vh; overflow: visible; }
-  .app-shell-root[data-scroll-mode="document"] .app-shell-content { height: auto; min-height: 100vh; }
-  .app-shell-root[data-scroll-mode="document"] .app-shell-main { min-height: 100vh; overflow: visible; }
-  .app-shell-root[data-scroll-mode="viewport"] { height: 100vh; overflow: hidden; }
-  .app-shell-root[data-scroll-mode="viewport"] .app-shell-content { height: 100%; }
-  .app-shell-root[data-scroll-mode="viewport"] .app-shell-main { overflow-y: auto; }
   .mobile-modal-overlay { place-items: center; padding: 1.5rem; }
   .mobile-modal-panel { max-width: 32rem; border-radius: var(--radius-overlay); }
 }
