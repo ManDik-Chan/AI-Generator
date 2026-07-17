@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ImageProviderError } from "@/lib/ai/image/errors";
 
-const mocks = vi.hoisted(() => ({ getCurrentUser: vi.fn(), generate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getCurrentUser: vi.fn(), generate: vi.fn(), remove: vi.fn(), createRun: vi.fn(), pending: vi.fn(), finish: vi.fn() }));
 vi.mock("@/lib/auth/session", () => ({ getCurrentUser: mocks.getCurrentUser }));
-vi.mock("@/features/persona/avatar-service", () => ({ generatePersonaAvatarCandidate: mocks.generate }));
+vi.mock("@/features/persona/avatar-service", () => ({ generatePersonaAvatarCandidate: mocks.generate, deleteGeneratedAvatar: mocks.remove }));
+vi.mock("@/features/generation/runs", () => ({ createGenerationRun: mocks.createRun, isGenerationRunPending: mocks.pending, finishGenerationRun: mocks.finish }));
 
 import { POST } from "@/app/api/personas/[personaId]/avatar/generate/route";
 
 describe("persona avatar generation diagnostics", () => {
-  beforeEach(() => { vi.clearAllMocks(); mocks.getCurrentUser.mockResolvedValue({ id: "owner" }); });
+  beforeEach(() => { vi.clearAllMocks(); mocks.getCurrentUser.mockResolvedValue({ id: "owner" }); mocks.createRun.mockResolvedValue({ id: "run" }); mocks.pending.mockResolvedValue(true); mocks.finish.mockResolvedValue({ count: 1 }); });
 
   it("logs sanitized diagnostics while the browser receives only a friendly message", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);

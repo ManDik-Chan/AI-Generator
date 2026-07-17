@@ -24,6 +24,19 @@ enum MessageStatus {
   PENDING
   COMPLETE
   ERROR
+  CANCELLED
+}
+
+enum GenerationRunType {
+  PERSONA_DRAFT
+  PERSONA_AVATAR
+}
+
+enum GenerationRunStatus {
+  PENDING
+  COMPLETE
+  ERROR
+  CANCELLED
 }
 
 enum MemoryScope {
@@ -42,6 +55,12 @@ enum ToolType {
   REWRITE
   TRANSLATE
   IMAGE_ANALYZE
+  IMAGE_GENERATE
+}
+
+enum GeneratedImageKind {
+  PERSONA_AVATAR
+  TOOL_GENERATION
 }
 
 enum ToolAssetKind {
@@ -56,47 +75,73 @@ enum ToolRunStatus {
 }
 
 model Profile {
-  id          String   @id @db.Uuid
-  email       String   @unique
-  displayName String?  @map("display_name")
-  avatarUrl   String?  @map("avatar_url")
-  role        Role     @default(USER)
-  memoryEnabled Boolean @default(true) @map("memory_enabled")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id            String   @id @db.Uuid
+  email         String   @unique
+  displayName   String?  @map("display_name")
+  avatarUrl     String?  @map("avatar_url")
+  role          Role     @default(USER)
+  memoryEnabled Boolean  @default(true) @map("memory_enabled")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  personas      Persona[]
-  conversations Conversation[]
-  memories      Memory[]
+  personas         Persona[]
+  conversations    Conversation[]
+  memories         Memory[]
   memoryEmbeddings MemoryEmbedding[]
-  images        GeneratedImage[]
-  toolRuns      ToolRun[]
-  toolAssets    ToolAsset[]
+  images           GeneratedImage[]
+  toolRuns         ToolRun[]
+  toolAssets       ToolAsset[]
+  generationRuns   GenerationRun[]
 
   @@map("profiles")
 }
 
 model ToolRun {
-  id            String        @id @default(uuid()) @db.Uuid
-  userId        String        @map("user_id") @db.Uuid
-  type          ToolType
-  status        ToolRunStatus @default(PENDING)
-  title         String?       @db.VarChar(100)
-  inputText     String?       @map("input_text") @db.Text
-  outputText    String?       @map("output_text") @db.Text
-  options       Json
-  retainContent Boolean       @default(true) @map("retain_content")
-  errorCode     String?       @map("error_code") @db.VarChar(100)
-  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                String        @id @default(uuid()) @db.Uuid
+  userId            String        @map("user_id") @db.Uuid
+  type              ToolType
+  status            ToolRunStatus @default(PENDING)
+  title             String?       @db.VarChar(100)
+  inputText         String?       @map("input_text") @db.Text
+  outputText        String?       @map("output_text") @db.Text
+  options           Json
+  retainContent     Boolean       @default(true) @map("retain_content")
+  errorCode         String?       @map("error_code") @db.VarChar(100)
+  recoveryExpiresAt DateTime?     @map("recovery_expires_at") @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assets ToolAsset[]
+  user           Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets         ToolAsset[]
+  generatedImage GeneratedImage?
 
+  @@unique([id, userId])
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, type, createdAt(sort: Desc)])
   @@index([userId, status, createdAt(sort: Desc)])
   @@map("tool_runs")
+}
+
+model GenerationRun {
+  id        String              @id @default(uuid()) @db.Uuid
+  userId    String              @map("user_id") @db.Uuid
+  personaId String?             @map("persona_id") @db.Uuid
+  type      GenerationRunType
+  status    GenerationRunStatus @default(PENDING)
+  input     Json
+  result    Json?
+  errorCode String?             @map("error_code") @db.VarChar(100)
+  expiresAt DateTime            @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user    Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona Persona? @relation(fields: [personaId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([personaId, type, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("generation_runs")
 }
 
 model ToolAsset {
@@ -123,27 +168,28 @@ model ToolAsset {
 }
 
 model Persona {
-  id            String   @id @default(uuid()) @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
   name          String
-  avatarUrl     String?  @map("avatar_url")
-  avatarPrompt  String?  @map("avatar_prompt")
-  avatarImageId String?  @unique @map("avatar_image_id") @db.Uuid
+  avatarUrl     String?   @map("avatar_url")
+  avatarPrompt  String?   @map("avatar_prompt")
+  avatarImageId String?   @unique @map("avatar_image_id") @db.Uuid
   description   String?
   personality   String
   identity      String?
-  speakingStyle String?  @map("speaking_style")
+  speakingStyle String?   @map("speaking_style")
   expertise     String?
   greeting      String?
-  systemPrompt  String   @map("system_prompt")
+  systemPrompt  String    @map("system_prompt")
   archivedAt    DateTime? @map("archived_at") @db.Timestamptz(6)
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user          Profile        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversations Conversation[]
-  memories      Memory[]
-  avatarImage   GeneratedImage? @relation("PersonaAvatarImage", fields: [avatarImageId], references: [id], onDelete: SetNull)
+  user           Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations  Conversation[]
+  memories       Memory[]
+  avatarImage    GeneratedImage? @relation("PersonaAvatarImage", fields: [avatarImageId], references: [id], onDelete: SetNull)
+  generationRuns GenerationRun[]
 
   @@index([userId, updatedAt(sort: Desc)])
   @@index([userId, archivedAt, updatedAt(sort: Desc)])
@@ -158,8 +204,8 @@ model Conversation {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user     Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  persona  Persona?   @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  user     Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona  Persona?  @relation(fields: [personaId], references: [id], onDelete: SetNull)
   messages Message[]
   memories Memory[]
 
@@ -178,8 +224,8 @@ model Message {
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   supersededAt   DateTime?     @map("superseded_at") @db.Timestamptz(6)
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sourceMemories Memory[] @relation("MemorySourceMessage")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMemories Memory[]     @relation("MemorySourceMessage")
 
   @@index([conversationId, createdAt])
   @@index([conversationId, supersededAt, createdAt])
@@ -195,7 +241,7 @@ model Memory {
   scope                MemoryScope  @default(GLOBAL)
   origin               MemoryOrigin @default(MANUAL)
   importance           Int          @default(3)
-  sourceConversationId String?  @map("source_conversation_id") @db.Uuid
+  sourceConversationId String?      @map("source_conversation_id") @db.Uuid
   sourceMessageId      String?      @map("source_message_id") @db.Uuid
   enabled              Boolean      @default(true)
   lastUsedAt           DateTime?    @map("last_used_at") @db.Timestamptz(6)
@@ -206,10 +252,10 @@ model Memory {
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user               Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  persona            Persona?      @relation(fields: [personaId], references: [id], onDelete: Cascade)
-  sourceConversation Conversation? @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
-  sourceMessage      Message?      @relation("MemorySourceMessage", fields: [sourceMessageId], references: [id], onDelete: SetNull)
+  user               Profile          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona            Persona?         @relation(fields: [personaId], references: [id], onDelete: Cascade)
+  sourceConversation Conversation?    @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
+  sourceMessage      Message?         @relation("MemorySourceMessage", fields: [sourceMessageId], references: [id], onDelete: SetNull)
   embedding          MemoryEmbedding?
 
   @@index([userId, enabled, scope, importance, updatedAt(sort: Desc)])
@@ -222,14 +268,14 @@ model Memory {
 }
 
 model MemoryEmbedding {
-  memoryId    String   @id @map("memory_id") @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
+  memoryId    String                     @id @map("memory_id") @db.Uuid
+  userId      String                     @map("user_id") @db.Uuid
   model       String
   dimensions  Int
-  contentHash String   @map("content_hash")
+  contentHash String                     @map("content_hash")
   embedding   Unsupported("vector(512)")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   memory Memory  @relation(fields: [memoryId], references: [id], onDelete: Cascade)
   user   Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -239,20 +285,28 @@ model MemoryEmbedding {
 }
 
 model GeneratedImage {
-  id          String   @id @default(uuid()) @db.Uuid
-  userId      String   @map("user_id") @db.Uuid
-  prompt      String
-  provider    String
-  model       String
-  storagePath String   @map("storage_path")
-  width       Int?
-  height      Int?
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @map("user_id") @db.Uuid
+  kind          GeneratedImageKind @default(PERSONA_AVATAR)
+  prompt        String
+  provider      String
+  model         String
+  storagePath   String             @map("storage_path")
+  storageBucket String             @default("persona-avatars") @map("storage_bucket") @db.VarChar(100)
+  mimeType      String?            @map("mime_type") @db.VarChar(100)
+  sizeBytes     Int?               @map("size_bytes")
+  width         Int?
+  height        Int?
+  toolRunId     String?            @unique @map("tool_run_id") @db.Uuid
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
   personaAvatar Persona? @relation("PersonaAvatarImage")
+  toolRun       ToolRun? @relation(fields: [toolRunId, userId], references: [id, userId], onDelete: Cascade)
 
+  @@unique([toolRunId, userId])
   @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, kind, createdAt(sort: Desc)])
   @@map("generated_images")
 }
 

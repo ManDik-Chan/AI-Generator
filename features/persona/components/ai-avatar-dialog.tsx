@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, LoaderCircle, Sparkles, X } from "lucide-react";
 
 import { GenerationProgress, type GenerationStage } from "@/components/ai/generation-progress";
@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import { PERSONA_LIMITS } from "@/features/persona/constants";
 import { readSseEvents } from "@/lib/ai/read-sse";
+import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
+import { requestDurableCancellation } from "@/features/generation/cancel-client";
 
 interface Candidate { generatedImageId: string; previewUrl: string; prompt: string; width: number; height: number }
 const stages: GenerationStage[] = [
@@ -34,13 +36,23 @@ interface Props {
 export function AiAvatarDialog({ open, onOpenChange, onApplied, personaId, personaName, currentAvatarUrl, initialPrompt = "", configured }: Props) {
   const controllerRef = useRef<AbortController | undefined>(undefined);
   const requestVersion = useRef(0);
+  const pendingCancelRef = useRef(false);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [candidate, setCandidate] = useState<Candidate>();
   const [generating, setGenerating] = useState(false);
   const [applying, setApplying] = useState(false);
   const [activeStage, setActiveStage] = useState("preparing");
   const [error, setError] = useState<string>();
+  const [runId, setRunId] = useState<string>();
+  const [cancelling, setCancelling] = useState(false);
   const elapsed = useElapsedTime(generating);
+  const recover = useCallback((snapshot: { status: string; result?: { candidate?: Candidate } }) => {
+    if (snapshot.status === "PENDING") { setGenerating(true); setError("任务正在后台继续生成。"); }
+    if (snapshot.status === "COMPLETE" && snapshot.result?.candidate) { setCandidate(snapshot.result.candidate); setPrompt(snapshot.result.candidate.prompt); setGenerating(false); setError(undefined); }
+    if (snapshot.status === "CANCELLED") { setGenerating(false); setError("头像生成已取消，当前头像未发生变化。"); }
+    if (snapshot.status === "ERROR") { setGenerating(false); setError("头像生成失败，请稍后重试。"); }
+  }, []);
+  useGenerationRecovery({ storageKey: `persona-avatar-generation:${personaId}`, runId, onRunId: setRunId, statusUrl: "/api/generation-runs/", onSnapshot: recover });
 
   useEffect(() => () => { requestVersion.current += 1; controllerRef.current?.abort(); }, []);
   useEffect(() => { if (!open) return; const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape" && !applying) void close(); }; window.addEventListener("keydown", closeOnEscape); return () => window.removeEventListener("keydown", closeOnEscape); });
@@ -49,6 +61,27 @@ export function AiAvatarDialog({ open, onOpenChange, onApplied, personaId, perso
     if (!next) return;
     try { await fetch(`/api/generated-images/${next.generatedImageId}`, { method: "DELETE" }); } catch { /* candidate can be cleaned up later */ }
     setCandidate((current) => current?.generatedImageId === next.generatedImageId ? undefined : current);
+  }
+  async function confirmCancel(id: string) {
+    setCancelling(true);
+    try {
+      const status = await requestDurableCancellation(`/api/generation-runs/${id}/cancel`);
+      if (status === "CANCELLED") {
+        pendingCancelRef.current = false; requestVersion.current += 1; controllerRef.current?.abort(); controllerRef.current = undefined; setGenerating(false); setError("头像生成已取消，当前头像未发生变化。");
+      } else {
+        const response = await fetch(`/api/generation-runs/${id}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("停止请求未确认，任务可能仍在后台处理。");
+        recover(await response.json() as { status: string; result?: { candidate?: Candidate } });
+      }
+    } catch (reason) {
+      setGenerating(true);
+      setError(reason instanceof Error ? reason.message : "停止请求未确认，任务可能仍在后台处理。");
+    } finally { setCancelling(false); }
+  }
+  async function cancelGeneration() {
+    if (cancelling) return;
+    if (!runId) { pendingCancelRef.current = true; setCancelling(true); setError("正在请求停止，等待服务端确认任务编号。"); return; }
+    await confirmCancel(runId);
   }
   async function close() {
     requestVersion.current += 1; controllerRef.current?.abort(); controllerRef.current = undefined; setGenerating(false);
@@ -59,26 +92,27 @@ export function AiAvatarDialog({ open, onOpenChange, onApplied, personaId, perso
     const previous = candidate;
     const version = ++requestVersion.current;
     const controller = new AbortController();
-    controllerRef.current = controller; setGenerating(true); setActiveStage("preparing"); setError(undefined);
+    controllerRef.current = controller; pendingCancelRef.current = false; setCancelling(false); setGenerating(true); setActiveStage("preparing"); setError(undefined);
     try {
       const response = await fetch(`/api/personas/${personaId}/avatar/generate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ prompt }), signal: controller.signal });
       let next: Candidate | undefined;
       let streamError: string | undefined;
       await readSseEvents(response, (name, data) => {
         if (version !== requestVersion.current || controller.signal.aborted) return;
-        const payload = data as { stage?: string; message?: string; candidate?: Candidate };
+        const payload = data as { runId?: string; stage?: string; message?: string; candidate?: Candidate };
+        if (name === "run" && payload.runId) { setRunId(payload.runId); if (pendingCancelRef.current) void confirmCancel(payload.runId); }
         if (name === "progress" && payload.stage) setActiveStage(payload.stage);
         if (name === "done") next = payload.candidate;
         if (name === "error") streamError = payload.message || "头像生成失败，请稍后重试。";
       });
       if (version !== requestVersion.current || controller.signal.aborted) return;
       if (streamError) throw new Error(streamError);
-      if (!next) throw new Error("头像生成失败，请稍后重试。");
+      if (!next) { setError("连接暂时中断，任务仍在后台处理。"); return; }
       setCandidate(next); setPrompt(next.prompt);
       if (previous && previous.generatedImageId !== next.generatedImageId) await discard(previous);
     } catch (reason) {
       if (version !== requestVersion.current) return;
-      setError(controller.signal.aborted ? "头像生成已取消，当前头像未发生变化。" : reason instanceof Error ? reason.message : "头像生成失败，请稍后重试。");
+      setError(controller.signal.aborted ? "连接暂时中断，任务仍在后台处理。" : reason instanceof Error ? reason.message : "头像生成失败，请稍后重试。");
     } finally { if (version === requestVersion.current) { controllerRef.current = undefined; setGenerating(false); } }
   }
   async function apply() {
@@ -97,7 +131,7 @@ export function AiAvatarDialog({ open, onOpenChange, onApplied, personaId, perso
   return <div aria-labelledby="ai-avatar-title" aria-modal="true" className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-overlay/60 p-3 backdrop-blur-sm" onClick={() => { if (!applying) void close(); }} role="dialog">
     <div className="premium-panel-strong my-auto w-full max-w-2xl overflow-hidden p-4 sm:p-6" onClick={(event) => event.stopPropagation()}>
       <div className="flex items-start justify-between gap-3 border-b border-border/10 pb-4"><div><p className="premium-kicker">AI AVATAR STUDIO</p><h2 className="mt-1 text-xl font-semibold tracking-[-.025em]" id="ai-avatar-title">AI 生成头像</h2><p className="mt-1 text-sm text-muted-foreground">仅在点击生成后调用一次；应用前不会改变当前头像。</p></div><Button aria-label="关闭" disabled={applying} onClick={() => void close()} size="icon" type="button" variant="ghost"><X className="size-4" /></Button></div>
-      {!configured ? <p className="mt-5 rounded-control bg-warning-subtle p-4 text-sm text-warning-foreground">GLM-Image 或 Supabase 头像存储尚未配置。你仍可继续使用预设头像和人格聊天。</p> : generating ? <div className="mt-5"><GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={() => { requestVersion.current += 1; controllerRef.current?.abort(); controllerRef.current = undefined; setGenerating(false); setError("头像生成已取消，当前头像未发生变化。"); }} stages={stages} title="正在生成头像" /></div> : <>
+      {!configured ? <p className="mt-5 rounded-control bg-warning-subtle p-4 text-sm text-warning-foreground">GLM-Image 或 Supabase 头像存储尚未配置。你仍可继续使用预设头像和人格聊天。</p> : generating ? <div className="mt-5"><GenerationProgress activeStage={activeStage} elapsedSeconds={elapsed} onCancel={() => void cancelGeneration()} stages={stages} title={cancelling ? "正在请求停止" : "正在生成头像"} /></div> : <>
         <div className="mt-5 grid gap-4 sm:grid-cols-2"><div className="premium-subpanel flex items-center gap-3 p-4"><PersonaAvatar className="size-16 rounded-[1rem]" name={personaName} src={currentAvatarUrl} /><div><p className="premium-kicker">CURRENT</p><p className="mt-1 text-sm font-medium">当前头像</p><p className="text-xs text-muted-foreground">生成候选前不会改变</p></div></div>{candidate ? <div className="premium-subpanel border-primary/18 bg-primary-subtle/55 p-4"><div className="flex items-center gap-3"><PersonaAvatar className="size-16 rounded-[1rem] shadow-soft" name={personaName} src={candidate.previewUrl} /><div><p className="premium-kicker">CANDIDATE</p><p className="mt-1 text-sm font-medium">候选头像</p><p className="text-xs text-muted-foreground">{candidate.width} × {candidate.height}</p></div></div></div> : <div className="surface-grid premium-subpanel grid min-h-24 place-items-center p-4 text-center"><span><Sparkles className="mx-auto size-5 text-primary" /><span className="mt-2 block text-xs text-muted-foreground">生成后的候选会显示在这里</span></span></div>}</div>
         <label className="mt-5 block text-sm font-medium" htmlFor="avatar-generation-prompt">头像提示词</label><textarea className="premium-field mt-2 min-h-32 resize-y p-3 text-sm leading-6" disabled={applying} id="avatar-generation-prompt" maxLength={PERSONA_LIMITS.avatarPrompt} onChange={(event) => setPrompt(event.target.value)} value={prompt} /><p className="mt-1 text-right text-xs text-muted-foreground">{prompt.length}/{PERSONA_LIMITS.avatarPrompt}</p>
         {candidate && <div className="premium-result mt-4 p-4"><PersonaAvatar className="mx-auto size-64 max-w-full rounded-[1.75rem] shadow-raised" name={personaName} src={candidate.previewUrl} /><p className="mt-3 text-center text-xs text-muted-foreground">候选预览 · 尚未应用</p></div>}

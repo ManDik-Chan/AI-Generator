@@ -1,5 +1,5 @@
 export type ChatMessageRole = "user" | "assistant";
-export type ChatMessageStatus = "pending" | "complete" | "error";
+export type ChatMessageStatus = "pending" | "complete" | "error" | "cancelled";
 
 export interface ChatMessageView {
   id: string;
@@ -28,4 +28,5 @@ export type ChatStreamEvent =
   | { event: "memory"; data: { count: number } }
   | { event: "delta"; data: { text: string } }
   | { event: "done"; data: { messageId: string } }
+  | { event: "cancelled"; data: { messageId: string } }
   | { event: "error"; data: { message: string } };

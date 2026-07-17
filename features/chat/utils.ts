@@ -4,7 +4,7 @@ import { CHAT_CONTEXT_CHAR_BUDGET, CHAT_CONTEXT_MESSAGE_LIMIT, CHAT_TITLE_MAX_LE
 export interface ContextMessage {
   id: string;
   role: "USER" | "ASSISTANT" | "SYSTEM" | "TOOL";
-  status: "PENDING" | "COMPLETE" | "ERROR";
+  status: "PENDING" | "COMPLETE" | "ERROR" | "CANCELLED";
   content: string;
   createdAt: Date;
   supersededAt: Date | null;

@@ -1,4 +1,4 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { Prisma } from "@prisma/client";
 
@@ -17,12 +17,11 @@ import {
   planLastUserMessageEdit,
   resolveEditMessageId,
 } from "@/features/chat/edit";
-import { finalizeAssistantMessage } from "@/features/chat/persistence";
+import { finalizeAssistantMessage, isAssistantMessagePending, persistAssistantPartial } from "@/features/chat/persistence";
 import { createChatRequestSchema } from "@/features/chat/schemas";
 import { getMemoryRuntimeLimits } from "@/features/memory/constants";
 import { retrieveRelevantMemories } from "@/features/memory/semantic-retrieval";
 import { buildUserMemoryBlock } from "@/lib/ai/prompts/user-memory";
-import { scheduleMemoryExtraction } from "@/features/memory/after";
 import { extractAndPersistMemories } from "@/features/memory/extractor";
 import { syncMemoryEmbeddingsForSourceMessage } from "@/features/memory/embedding-lifecycle";
 import {
@@ -32,10 +31,12 @@ import {
   buildCompleteTurnContext,
   startOfUtcDay,
 } from "@/features/chat/utils";
+import { registerGenerationTask } from "@/features/generation/background-task";
+import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
-
-const encoder = new TextEncoder();
+export const maxDuration = 300;
 
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ message }, { status });
@@ -221,47 +222,55 @@ export async function POST(request: Request) {
   }
   const systemContent = buildPersonaAssistantPrompt(runtimePersona) + buildUserMemoryBlock(selectedMemories);
   const { config, provider } = getAiProvider();
-  const abortController = new AbortController();
-  const abortFromRequest = () => abortController.abort();
-  request.signal.addEventListener("abort", abortFromRequest, { once: true });
-  if (request.signal.aborted) abortController.abort();
-  let fullContent = "";
-
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      controller.enqueue(encoder.encode(encodeChatSse("conversation", {
+  const observer = new SseObserver(encodeChatSse);
+  observer.send("conversation", {
         conversationId,
         updatedAt: conversationUpdatedAt.toISOString(),
-      })));
-      controller.enqueue(encoder.encode(encodeChatSse("turn", {
+  });
+  observer.send("turn", {
         conversationId,
         userMessageId,
         assistantMessageId,
         ...(editedMessageId ? { editedMessageId } : {}),
-      })));
-      if (selectedMemories.length) controller.enqueue(encoder.encode(encodeChatSse("memory", { count: selectedMemories.length })));
+  });
+  if (selectedMemories.length) observer.send("memory", { count: selectedMemories.length });
 
+  const generation = (async () => {
+      let fullContent = "";
+      let persistedLength = 0;
+      let lastPersistedAt = Date.now();
+      const cancellation = await createDurableCancellationController({ isPending: () => isAssistantMessagePending(assistantMessageId), taskType: "CHAT", taskId: assistantMessageId });
       try {
+        if (cancellation.signal.aborted) { observer.send("cancelled", { messageId: assistantMessageId }); return; }
         for await (const text of provider.streamText({
           messages: [{ role: "system", content: systemContent }, ...context],
           model: config.model,
           temperature: config.temperature,
           maxOutputTokens: config.maxOutputTokens,
-          signal: abortController.signal,
+          signal: cancellation.signal,
         })) {
           fullContent += text;
-          controller.enqueue(encoder.encode(encodeChatSse("delta", { text })));
+          observer.send("delta", { text });
+          if (Date.now() - lastPersistedAt >= 750 || fullContent.length - persistedLength >= 1024) {
+            if (!await persistAssistantPartial(assistantMessageId, fullContent)) {
+              observer.send("cancelled", { messageId: assistantMessageId });
+              return;
+            }
+            persistedLength = fullContent.length;
+            lastPersistedAt = Date.now();
+          }
         }
 
         const finalized = await finalizeAssistantMessage(assistantMessageId, fullContent, "COMPLETE");
+        if (!finalized) { observer.send("cancelled", { messageId: assistantMessageId }); return; }
         if (finalized && selectedMemories.length) { try { await prisma.memory.updateMany({ where: { userId: user.id, id: { in: selectedMemories.map((memory) => memory.id) } }, data: { lastUsedAt: new Date(), useCount: { increment: 1 } } }); } catch { console.warn("memory_last_used_update_failed", { userId: user.id, conversationId, count: selectedMemories.length }); } }
-        controller.enqueue(encoder.encode(encodeChatSse("done", { messageId: assistantMessageId })));
+        observer.send("done", { messageId: assistantMessageId });
         if (finalized && (profile?.memoryEnabled ?? true)) {
           const recentTurns = context
             .slice(0, -1)
             .filter((message): message is { role: "user" | "assistant"; content: string } => message.role !== "system")
             .slice(-8);
-          scheduleMemoryExtraction(after, async () => {
+          try {
             await extractAndPersistMemories({
               userId: user.id,
               conversationId,
@@ -273,38 +282,25 @@ export async function POST(request: Request) {
               persona: runtimePersonaId && runtimePersona ? { id: runtimePersonaId, name: runtimePersona.name } : undefined,
             });
             await syncMemoryEmbeddingsForSourceMessage(user.id, userMessageId);
-          }, { requestId, userId: user.id, conversationId, sourceMessageId: userMessageId });
+          } catch (error) {
+            console.warn("memory_extraction_failed", { requestId, userId: user.id, conversationId, sourceMessageId: userMessageId, errorCode: error instanceof Error ? error.name : "UNKNOWN" });
+          }
         }
       } catch (error) {
-        const stopped = error instanceof AiProviderError && error.code === "ABORTED";
-        await finalizeAssistantMessage(
-          assistantMessageId,
-          fullContent,
-          stopped && fullContent ? "COMPLETE" : "ERROR",
-        );
-
-        if (!stopped) {
+        const failed = await finalizeAssistantMessage(assistantMessageId, fullContent, "ERROR");
+        if (failed) {
           console.error("[chat] Provider request failed", {
             code: error instanceof AiProviderError ? error.code : "UNKNOWN",
             status: error instanceof AiProviderError ? error.status : undefined,
           });
-          controller.enqueue(encoder.encode(encodeChatSse("error", { message: toPublicAiError(error) })));
+          observer.send("error", { message: toPublicAiError(error) });
+        } else {
+          observer.send("cancelled", { messageId: assistantMessageId });
         }
       } finally {
-        request.signal.removeEventListener("abort", abortFromRequest);
-        controller.close();
+        cancellation.dispose();
       }
-    },
-    cancel() {
-      abortController.abort();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Cache-Control": "no-cache, no-transform",
-      "Content-Type": "text/event-stream; charset=utf-8",
-      Connection: "keep-alive",
-    },
-  });
+  })();
+  const task = registerGenerationTask(generation, { taskType: "CHAT", taskId: assistantMessageId, userId: user.id });
+  return createObservedSseResponse(observer, task, request.signal);
 }

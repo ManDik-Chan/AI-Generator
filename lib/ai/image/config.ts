@@ -22,6 +22,22 @@ export function requireAvatarStorageConfig(env: ServerEnv = process.env) {
   return { bucket: env.SUPABASE_PERSONA_AVATAR_BUCKET?.trim() || "persona-avatars" } as const;
 }
 
+export function getImageGenerationConfigurationStatus(env: ServerEnv = process.env) {
+  const image = getImageConfigurationStatus(env);
+  const bucket = env.SUPABASE_GENERATED_IMAGE_BUCKET?.trim();
+  return {
+    configured: image.configured && Boolean(bucket),
+    missing: [...image.missing, ...(!bucket ? ["SUPABASE_GENERATED_IMAGE_BUCKET"] : [])],
+  };
+}
+
+export function requireGeneratedImageStorageConfig(env: ServerEnv = process.env) {
+  if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) throw new ImageProviderError("STORAGE", "Generated image storage is not configured");
+  const bucket = env.SUPABASE_GENERATED_IMAGE_BUCKET?.trim();
+  if (!bucket) throw new ImageProviderError("STORAGE", "Generated image bucket is not configured");
+  return { bucket } as const;
+}
+
 export function requireImageConfig(env: ServerEnv = process.env) {
   if (!getImageConfigurationStatus(env).configured) throw new ImageProviderError("CONFIGURATION", "Image configuration incomplete");
   const size = env.AI_IMAGE_SIZE?.trim() || "1280x1280";

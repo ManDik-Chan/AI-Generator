@@ -10,6 +10,7 @@ interface ChatComposerProps {
   value: string;
   disabledReason: ComposerDisabledReason;
   generating: boolean;
+  stopping?: boolean;
   maxInputChars: number;
   onChange(value: string): void;
   onSend(): void;
@@ -44,7 +45,7 @@ export function ChatComposer(props: ChatComposerProps) {
             value={props.value}
           />
           {props.generating ? (
-            <Button aria-label="停止生成" onClick={props.onStop} size="icon" type="button" variant="outline"><Square className="size-4 fill-current" /></Button>
+            <Button aria-label={props.stopping ? "正在请求停止" : "停止生成"} disabled={props.stopping} onClick={props.onStop} size="icon" title={props.stopping ? "正在请求停止" : "停止生成"} type="button" variant="outline"><Square className="size-4 fill-current" /></Button>
           ) : (
             <Button aria-label="发送消息" disabled={!canSend} onClick={props.onSend} size="icon" type="button"><Send className="size-4" /></Button>
           )}

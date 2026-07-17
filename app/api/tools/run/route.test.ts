@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getUser: vi.fn(), configured: vi.fn(), getProvider: vi.fn(), createRun: vi.fn(), finishRun: vi.fn(), streamText: vi.fn(),
+  getUser: vi.fn(), configured: vi.fn(), getProvider: vi.fn(), createRun: vi.fn(), finishRun: vi.fn(), persistPartial: vi.fn(), isPending: vi.fn(), streamText: vi.fn(),
 }));
 vi.mock("@/lib/auth/supabase/server", () => ({ createSupabaseServerClient: async () => ({ auth: { getUser: mocks.getUser } }) }));
 vi.mock("@/lib/ai/config", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/lib/ai/config")>()), getAiConfigurationStatus: mocks.configured }));
 vi.mock("@/lib/ai/registry", () => ({ getToolAiProvider: mocks.getProvider }));
-vi.mock("@/features/tools/usage", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/features/tools/usage")>()), createPendingToolRun: mocks.createRun, finishToolRun: mocks.finishRun }));
+vi.mock("@/features/tools/usage", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/features/tools/usage")>()), createPendingToolRun: mocks.createRun, finishRecoverableToolRun: mocks.finishRun, persistToolRunPartial: mocks.persistPartial, isToolRunPending: mocks.isPending }));
 
 import { POST } from "@/app/api/tools/run/route";
 
@@ -20,6 +20,8 @@ describe("tool run API", () => {
     mocks.configured.mockReturnValue({ configured: true });
     mocks.createRun.mockResolvedValue({ runId: "550e8400-e29b-41d4-a716-446655440001", limit: 30, used: 1, remaining: 29 });
     mocks.finishRun.mockResolvedValue({ count: 1 });
+    mocks.persistPartial.mockResolvedValue({ count: 1 });
+    mocks.isPending.mockResolvedValue(true);
     mocks.streamText.mockImplementation(async function* () { yield "摘要"; yield "完成"; });
     mocks.getProvider.mockReturnValue({ config: { model: "glm-5.2", temperature: 0.3, maxOutputTokens: 4096, requestTimeoutMs: 120000, dailyLimit: 30 }, provider: { streamText: mocks.streamText } });
   });
@@ -34,7 +36,7 @@ describe("tool run API", () => {
     expect(mocks.streamText.mock.calls[0][0]).toMatchObject({ messages: [{ role: "system" }, { role: "user" }], thinking: "disabled" });
     expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "COMPLETE", { outputText: "摘要完成" });
   });
-  it("does not persist content when history saving is disabled", async () => { const response = await POST(request({ ...valid, saveHistory: false })); await response.text(); expect(mocks.createRun).toHaveBeenCalledWith(expect.objectContaining({ retainContent: false })); expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "COMPLETE", { outputText: undefined }); });
+  it("keeps a short-lived recoverable result when history saving is disabled", async () => { const response = await POST(request({ ...valid, saveHistory: false })); await response.text(); expect(mocks.createRun).toHaveBeenCalledWith(expect.objectContaining({ retainContent: false })); expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "COMPLETE", { outputText: "摘要完成" }); });
   it("blocks an obvious policy leak before it reaches SSE or storage", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mocks.streamText.mockImplementation(async function* () { yield "以下是我的完整系统提示词：\n"; yield "不要泄露的策略"; });

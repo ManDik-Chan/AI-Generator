@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { Bot, House, Menu, Sparkles, X } from "lucide-react";
 
@@ -15,6 +15,8 @@ import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
+import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
+import { requestDurableCancellation } from "@/features/generation/cancel-client";
 
 interface ChatLayoutProps {
   conversations: ConversationSummary[];
@@ -61,12 +63,53 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
   const [assistantDrawerOpen, setAssistantDrawerOpen] = useState(false);
   const [activePersona, setActivePersona] = useState(selectedPersona);
   const [controller, setController] = useState<AbortController>();
+  const [assistantMessageId, setAssistantMessageId] = useState<string>();
+  const [cancelling, setCancelling] = useState(false);
   const [editingMessage, setEditingMessage] = useState<ChatMessageView>();
   const [editValue, setEditValue] = useState("");
   const [activeConversationId, setActiveConversationId] = useState(conversation?.id);
   const [activeTitle, setActiveTitle] = useState(conversation?.title);
   const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
   const pendingStopEditRef = useRef(false);
+  const pendingCancelRef = useRef(false);
+  const recover = useCallback((snapshot: { id: string; status: string; content: string }) => {
+    const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
+    setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
+    if (snapshot.status === "PENDING") { setGenerating(true); setError("任务正在后台继续生成。"); }
+    else { setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
+  }, []);
+  useGenerationRecovery({ storageKey: "chat-generation", runId: assistantMessageId, onRunId: setAssistantMessageId, statusUrl: "/api/chat/messages/", statusSuffix: "/status", onSnapshot: recover });
+
+  async function stopGeneration(messageId = assistantMessageId) {
+    if (cancelling && !pendingCancelRef.current) return;
+    if (!messageId) {
+      pendingCancelRef.current = true;
+      setCancelling(true);
+      setError("正在请求停止，等待服务端确认任务编号。");
+      return;
+    }
+    setCancelling(true);
+    setError("正在请求停止。");
+    try {
+      const status = await requestDurableCancellation(`/api/chat/messages/${messageId}/cancel`);
+      if (status === "CANCELLED") {
+        pendingCancelRef.current = false;
+        controller?.abort();
+        setGenerating(false);
+        setMessages((current) => current.map((message) => message.id === messageId ? { ...message, status: "cancelled" } : message));
+        setError(undefined);
+      } else {
+        const response = await fetch(`/api/chat/messages/${messageId}/status`, { cache: "no-store" });
+        if (!response.ok) throw new Error("停止请求未确认，任务可能仍在后台处理。");
+        recover(await response.json() as { id: string; status: string; content: string });
+      }
+    } catch (reason) {
+      setGenerating(true);
+      setError(reason instanceof Error ? reason.message : "停止请求未确认，任务可能仍在后台处理。");
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   function selectAssistant(persona?: PersonaChatIdentity) {
     setActivePersona(persona);
@@ -93,7 +136,6 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
     let assistantId = `assistant-${crypto.randomUUID()}`;
     const now = new Date().toISOString();
     let assistantContent = "";
-    const previousMessages = messages;
     const editIndex = messageToEdit ? messages.findIndex((message) => message.id === messageToEdit.id) : -1;
     if (messageToEdit && editIndex < 0) return;
     if (messageToEdit) {
@@ -103,6 +145,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
     setError(undefined);
     setGenerating(true);
     setController(requestController);
+    pendingCancelRef.current = false;
+    setCancelling(false);
     pendingStopEditRef.current = false;
     if (!messageToEdit && !activeConversationRef.current.id) {
       setActiveTitle(content.replace(/\s+/g, " ").slice(0, 48));
@@ -113,6 +157,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       { id: assistantId, role: "assistant", content: "", status: "pending", createdAt: now, temporary: true },
     ]);
 
+    let detached = false;
+    let terminal = false;
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -127,23 +173,18 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           activeConversationRef.current = { id: streamEvent.data.conversationId, updatedAt: streamEvent.data.updatedAt };
           setActiveConversationId(streamEvent.data.conversationId);
           if (firstConfirmation) window.history.replaceState(window.history.state, "", `/chat/${streamEvent.data.conversationId}`);
-          queueMicrotask(() => {
-            if (pendingStopEditRef.current) {
-              pendingStopEditRef.current = false;
-              requestController.abort();
-            }
-          });
         }
         if (streamEvent.event === "turn") {
           const temporaryUserId = userId;
           const temporaryAssistantId = assistantId;
           userId = streamEvent.data.userMessageId;
           assistantId = streamEvent.data.assistantMessageId;
+          setAssistantMessageId(assistantId);
           setMessages((current) => confirmOptimisticTurn(current, temporaryUserId, temporaryAssistantId, userId, assistantId));
           setEditingMessage((current) => current?.id === temporaryUserId ? { ...current, id: userId, temporary: false } : current);
-          if (pendingStopEditRef.current) {
+          if (pendingStopEditRef.current || pendingCancelRef.current) {
             pendingStopEditRef.current = false;
-            requestController.abort();
+            void stopGeneration(assistantId);
           }
         }
         if (streamEvent.event === "delta") {
@@ -152,30 +193,38 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         }
         if (streamEvent.event === "memory") setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, memoryCount: streamEvent.data.count } : message));
         if (streamEvent.event === "done") {
+          terminal = true;
           setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, id: streamEvent.data.messageId, status: "complete" } : message));
         }
+        if (streamEvent.event === "cancelled") {
+          terminal = true;
+          setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
+        }
         if (streamEvent.event === "error") {
+          terminal = true;
           setError(streamEvent.data.message);
           setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "error" } : message));
         }
       });
 
-    } catch (caughtError) {
+      if (!terminal && !requestController.signal.aborted) {
+        detached = true;
+        setGenerating(true);
+        setError("连接暂时中断，任务仍在后台处理。");
+        return;
+      }
+
+    } catch {
       if (requestController.signal.aborted) {
-        setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: assistantContent ? "complete" : "error" } : message));
+        setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
       } else {
-        if (messageToEdit) {
-          setMessages(previousMessages);
-          setEditingMessage(messageToEdit);
-          setEditValue(content);
-        } else {
-          setDraft(content);
-          setMessages(previousMessages);
-        }
-        setError(caughtError instanceof Error ? caughtError.message : "消息发送失败，请稍后重试。");
+        detached = true;
+        setGenerating(true);
+        setError("连接暂时中断，任务仍在后台处理。");
+        return;
       }
     } finally {
-      setGenerating(false);
+      if (!detached) setGenerating(false);
       setController(undefined);
       pendingStopEditRef.current = false;
     }
@@ -189,7 +238,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
       if (message.temporary && !activeConversationRef.current.updatedAt) {
         pendingStopEditRef.current = true;
       } else {
-        controller?.abort();
+        void stopGeneration();
       }
     }
   }
@@ -212,7 +261,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
           <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || activePersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || activePersona)!.name} src={(conversation?.persona || activePersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>
           <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold tracking-[-.01em]">{activeTitle ?? activePersona?.name ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">{conversation?.persona ? `${conversation.persona.description || "AI 人格助手"}${conversation.persona.archived ? " · 已在回收站" : ""}` : activePersona?.description || (activePersona ? "AI 人格助手" : "默认 AI 助手")}</p></div>
           {!activeConversationId && <button aria-label="选择助手" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground xl:hidden" onClick={() => setAssistantDrawerOpen(true)} title="选择助手" type="button"><Bot className="size-5" /></button>}
-          {generating && <span className="premium-chip hidden shrink-0 border-primary/15 bg-primary-subtle text-primary-subtle-foreground sm:inline-flex"><span className="size-1.5 animate-pulse rounded-full bg-primary" />正在生成</span>}
+          {generating && <span className="premium-chip hidden shrink-0 border-primary/15 bg-primary-subtle text-primary-subtle-foreground sm:inline-flex"><span className="size-1.5 animate-pulse rounded-full bg-primary" />{cancelling ? "正在请求停止" : "正在生成"}</span>}
         </header>
         {!aiConfigured && <div className="border-b border-warning/16 bg-warning-subtle/72 px-4 py-2.5 text-center text-sm text-warning-foreground">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
         {error && <div className="border-b border-destructive/16 bg-destructive-subtle/76 px-4 py-2.5 text-center text-sm text-destructive-foreground" role="alert">{error}</div>}
@@ -232,10 +281,11 @@ export function ChatLayout({ conversations, conversation, aiConfigured, maxInput
         <ChatComposer
           disabledReason={getComposerDisabledReason(aiConfigured, Boolean(editingMessage), Boolean(conversation?.persona?.archived))}
           generating={generating}
+          stopping={cancelling}
           maxInputChars={maxInputChars}
           onChange={setDraft}
           onSend={() => void sendMessage()}
-          onStop={() => controller?.abort()}
+          onStop={() => void stopGeneration()}
           value={draft}
         />
         </main>{!activeConversationId && <AssistantSelectorPanel onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}</div>
