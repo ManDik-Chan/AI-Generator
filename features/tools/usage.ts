@@ -155,11 +155,17 @@ export async function createPendingBrainstormToolRun(input: {
         options: input.options,
         retainContent: input.retainContent,
         recoveryExpiresAt,
-        brainstormWorkers: {
-          create: BRAINSTORM_WORKERS.map((worker) => ({ userId: input.userId, role: worker.role, position: worker.position })),
-        },
       },
       select: { id: true },
+    });
+    await transaction.brainstormWorker.createMany({
+      data: BRAINSTORM_WORKERS.map((worker) => ({
+        toolRunId: run.id,
+        userId: input.userId,
+        role: worker.role,
+        position: worker.position,
+        status: "PENDING",
+      })),
     });
     return { runId: run.id, limit: input.dailyLimit, used: used + 1, remaining: unlimited ? input.dailyLimit : Math.max(0, input.dailyLimit - used - 1), unlimited };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

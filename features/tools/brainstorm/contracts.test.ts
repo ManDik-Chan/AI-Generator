@@ -9,6 +9,7 @@ const migration = read("prisma/migrations/20260717180000_add_brainstorm_workers/
 const rls = read("prisma/rls.sql");
 const route = read("app/api/tools/brainstorm/route.ts");
 const service = read("features/tools/brainstorm/service.ts");
+const usage = read("features/tools/usage.ts");
 const workspace = read("features/tools/brainstorm/brainstorm-workspace.tsx");
 const packageJson = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
 
@@ -42,6 +43,17 @@ describe("Phase 7A1 brainstorm contracts", () => {
     expect(route).toContain("registerGenerationTask(generation");
     expect(route).toContain("createObservedSseResponse(observer, task, request.signal)");
     expect(route).not.toContain("request.signal.addEventListener");
+  });
+
+  it("creates brainstorm workers explicitly after the parent run without nested create", () => {
+    const start = usage.indexOf("export async function createPendingBrainstormToolRun");
+    const end = usage.indexOf("export async function getBrainstormUsage", start);
+    const implementation = usage.slice(start, end);
+    expect(implementation).toContain("transaction.toolRun.create");
+    expect(implementation).toContain("transaction.brainstormWorker.createMany");
+    expect(implementation).toContain("toolRunId: run.id");
+    expect(implementation).not.toMatch(/brainstormWorkers\s*:\s*\{\s*create\s*:/);
+    expect(implementation).not.toContain("skipDuplicates");
   });
 
   it("runs fixed workers with a maximum of one synthesis call and no retry loop", () => {
