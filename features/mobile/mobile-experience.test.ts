@@ -21,23 +21,30 @@ describe("Phase 6B2 mobile experience contracts", () => {
     expect(css).not.toMatch(/body\s*\{[\s\S]*?overflow-x:\s*hidden/);
   });
 
-  it("uses one AppShell scroll region with navigation compensation", () => {
+  it("uses a mobile scroll region and document scrolling on ordinary desktop pages", () => {
     const shell = read("components/layout/app-shell.tsx");
-    expect(shell).toContain("app-viewport");
+    const css = read("app/globals.css");
+    expect(shell).toContain("app-shell-root");
+    expect(shell).toContain('scrollMode = "document"');
     expect(shell).toContain("data-app-scroll-region");
     expect(shell).toContain("mobile-scroll-region");
     expect(shell).toContain("var(--mobile-nav-height)");
+    expect(css).toContain('.app-shell-root[data-scroll-mode="document"]');
+    expect(css).toContain("overflow: visible");
   });
 
   it("updates VisualViewport through requestAnimationFrame and cleans every listener", () => {
     const hook = read("features/mobile/use-visual-viewport.ts");
     expect(hook).toContain("requestAnimationFrame");
+    expect(hook).toContain('matchMedia(MOBILE_LAYOUT_QUERY)');
     expect(hook).toContain('document.visibilityState === "hidden"');
     expect(hook).toContain('addEventListener("resize"');
     expect(hook).toContain('addEventListener("scroll"');
     expect(hook).toContain('removeEventListener("resize"');
     expect(hook).toContain('removeEventListener("scroll"');
     expect(hook).toContain("cancelAnimationFrame");
+    expect(hook).toContain("Math.abs(current - next) < 1");
+    expect(hook).toContain("isEditableTarget(document.activeElement)");
   });
 
   it("uses 16px mobile fields without disabling browser zoom", () => {
@@ -56,6 +63,7 @@ describe("Phase 6B2 mobile experience contracts", () => {
     expect(composer).toContain("ResizeObserver");
     expect(composer).toContain("max-h-[min(10rem,35dvh)]");
     expect(composer).toContain("text-base");
+    expect(composer).not.toContain("scrollIntoView");
     expect(chat).not.toContain("controller?.abort(); }, []");
   });
 

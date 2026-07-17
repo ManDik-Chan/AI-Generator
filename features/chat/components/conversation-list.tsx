@@ -37,7 +37,7 @@ export function ConversationList({ conversations, activeId, onNavigate }: { conv
           <nav aria-label="对话历史" className="space-y-1">
             {conversations.map((conversation) => (
               <div className={conversation.id === activeId ? "group flex items-center rounded-control border border-primary/14 bg-primary-subtle text-primary-subtle-foreground shadow-sm" : "group flex items-center rounded-control border border-transparent text-muted-foreground hover:border-border/10 hover:bg-surface/60 hover:text-foreground"} key={conversation.id}>
-                <Link aria-current={conversation.id === activeId ? "page" : undefined} className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-sm" href={`/chat/${conversation.id}`} onClick={onNavigate}>
+                <Link aria-current={conversation.id === activeId ? "page" : undefined} className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 px-3 py-2.5 text-sm" href={`/chat/${conversation.id}`} onClick={onNavigate} prefetch={false}>
                   <MessageSquare className={conversation.id === activeId ? "size-4 shrink-0 text-primary" : "size-4 shrink-0"} />
                   <span className="truncate">{conversation.title}</span>
                 </Link>
@@ -55,7 +55,6 @@ export function ConversationList({ conversations, activeId, onNavigate }: { conv
             if (!result.success) { setError(result.message); setDeleting(null); return; }
             setDeleting(null);
             router.push(result.nextConversationId ? `/chat/${result.nextConversationId}` : "/chat");
-            router.refresh();
           }}
           title={deleting.title}
         />

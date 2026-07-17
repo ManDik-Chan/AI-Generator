@@ -21,3 +21,32 @@ test("viewport metadata keeps user zoom available", async ({ page }) => {
   expect(content).not.toContain("user-scalable=no");
   expect(content).not.toContain("maximum-scale=1");
 });
+
+test("home uses document scrolling and a fluid desktop canvas", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desktop", "Desktop width contract only.");
+
+  for (const width of [1366, 1440, 1600, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await expect(page.getByText("把灵感、对话与工具，", { exact: true })).toBeVisible();
+    const metrics = await page.locator("[data-app-scroll-region]").evaluate((main) => {
+      const rect = main.getBoundingClientRect();
+      return {
+        documentOverflow: getComputedStyle(main).overflowY,
+        pageWidth: document.documentElement.clientWidth,
+        width: rect.width,
+      };
+    });
+    expect(metrics.documentOverflow).toBe("visible");
+    expect(metrics.width).toBeGreaterThan((metrics.pageWidth - 272) * 0.82);
+    await expectNoHorizontalOverflow(page);
+  }
+});
+
+test("home primary content is present in the server response", async ({ request }) => {
+  const response = await request.get("/");
+  const html = await response.text();
+  expect(html).toContain("把灵感、对话与工具");
+  expect(html).toContain("从这里开始");
+  expect(html).not.toContain("framer-motion");
+});

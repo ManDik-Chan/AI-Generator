@@ -65,7 +65,6 @@ export function ChatComposer(props: ChatComposerProps) {
                 if (canSend) props.onSend();
               }
             }}
-            onFocus={(event) => window.requestAnimationFrame(() => event.currentTarget.scrollIntoView({ block: "nearest" }))}
             placeholder={getComposerPlaceholder(props.disabledReason)}
             rows={1}
             ref={textareaRef}

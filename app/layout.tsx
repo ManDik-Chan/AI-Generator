@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import { NavigationFeedback } from "@/components/layout/navigation-feedback";
 import { MobileViewportSync } from "@/features/mobile/mobile-viewport-sync";
 import { themeInitializationScript } from "@/lib/theme";
 
@@ -30,7 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-CN" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} /></head>
-      <body><MobileViewportSync /><ThemeProvider>{children}</ThemeProvider></body>
+      <body><MobileViewportSync /><Suspense fallback={null}><NavigationFeedback /></Suspense><ThemeProvider>{children}</ThemeProvider></body>
     </html>
   );
 }

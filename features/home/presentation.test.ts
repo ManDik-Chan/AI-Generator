@@ -11,12 +11,12 @@ describe("premium home presentation", () => {
   });
 
   it("loads an owned latest conversation without inventing message counts", () => {
-    const page = readFileSync("app/page.tsx", "utf8");
-    expect(page).toContain("prisma.conversation");
-    expect(page).toContain("where: { userId: user.id }");
-    expect(page).toContain('orderBy: { updatedAt: "desc" }');
-    expect(page).toContain("persona: { select: { name: true } }");
-    expect(page).not.toContain("messages:");
+    const data = readFileSync("features/home/data.ts", "utf8");
+    expect(data).toContain("prisma.conversation");
+    expect(data).toContain("where: { userId: user.id }");
+    expect(data).toContain('orderBy: { updatedAt: "desc" }');
+    expect(data).toContain("persona: { select: { name: true } }");
+    expect(data).not.toContain("messages:");
   });
 
   it("provides an honest empty state when no recent conversation exists", () => {

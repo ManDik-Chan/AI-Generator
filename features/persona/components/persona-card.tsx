@@ -14,7 +14,7 @@ export function PersonaCard({ persona }: { persona: PersonaView }) {
         <PersonaAvatar className="size-16 rounded-[1.2rem] shadow-soft" name={persona.name} src={persona.avatarUrl} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0"><p className="premium-kicker">ACTIVE ASSISTANT</p><Link className="mt-1 block truncate text-lg font-semibold tracking-[-.025em] hover:text-primary" href={`/personas/${persona.id}`}>{persona.name}</Link></div>
+            <div className="min-w-0"><p className="premium-kicker">ACTIVE ASSISTANT</p><Link className="mt-1 block truncate text-lg font-semibold tracking-[-.025em] hover:text-primary" href={`/personas/${persona.id}`} prefetch={false}>{persona.name}</Link></div>
             <PersonaActionsMenu archived={Boolean(persona.archivedAt)} personaId={persona.id} personaName={persona.name} />
           </div>
         </div>
@@ -26,7 +26,7 @@ export function PersonaCard({ persona }: { persona: PersonaView }) {
       <div className="relative mt-auto flex flex-col items-start justify-between gap-3 border-t border-border/10 pt-4 min-[360px]:flex-row min-[360px]:items-end">
         <p className="text-[.6875rem] text-muted-foreground">更新于 {new Date(persona.updatedAt).toLocaleDateString("zh-CN")}</p>
         <div className="flex w-full gap-1.5 min-[360px]:w-auto">
-          <Button asChild aria-label={`查看 ${persona.name}`} size="icon" variant="ghost"><Link href={`/personas/${persona.id}`}><ArrowUpRight className="size-4" /></Link></Button>
+          <Button asChild aria-label={`查看 ${persona.name}`} size="icon" variant="ghost"><Link href={`/personas/${persona.id}`} prefetch={false}><ArrowUpRight className="size-4" /></Link></Button>
           <Button asChild className="flex-1 min-[360px]:flex-none" size="sm"><Link href={`/chat?personaId=${persona.id}`}><MessageCircle className="size-3.5" />开始对话</Link></Button>
         </div>
       </div>

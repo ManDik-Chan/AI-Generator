@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const route = readFileSync("app/api/chat/route.ts", "utf8");
 const layout = readFileSync("features/chat/components/chat-layout.tsx", "utf8");
+const loading = readFileSync("app/chat/loading.tsx", "utf8");
 
 describe("non-blocking automatic memory chat flow", () => {
   it("emits done before automatic extraction and only on successful finalization", () => {
@@ -26,7 +27,10 @@ describe("non-blocking automatic memory chat flow", () => {
     expect(layout).not.toContain("setMessages(conversation");
   });
 
-  it("does not expose a route-level full-screen loading boundary", () => {
-    expect(existsSync("app/chat/loading.tsx")).toBe(false);
+  it("uses a stable Chat-shaped loading boundary instead of a blocking spinner", () => {
+    expect(loading).toContain("grid-rows-[auto_minmax(0,1fr)_auto]");
+    expect(loading).toContain('aria-label="正在加载对话"');
+    expect(loading).not.toContain("router.refresh");
+    expect(loading).not.toContain("window.location");
   });
 });

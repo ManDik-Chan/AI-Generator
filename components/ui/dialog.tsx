@@ -7,27 +7,17 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 let documentScrollLocks = 0;
-let lockedScrollY = 0;
 
 function lockDocumentScroll() {
   documentScrollLocks += 1;
   if (documentScrollLocks > 1) return;
-  lockedScrollY = window.scrollY;
   document.documentElement.dataset.dialogOpen = "true";
-  Object.assign(document.body.style, {
-    position: "fixed",
-    top: `-${lockedScrollY}px`,
-    width: "100%",
-    overflow: "hidden",
-  });
 }
 
 function unlockDocumentScroll() {
   documentScrollLocks = Math.max(0, documentScrollLocks - 1);
   if (documentScrollLocks > 0) return;
   delete document.documentElement.dataset.dialogOpen;
-  Object.assign(document.body.style, { position: "", top: "", width: "", overflow: "" });
-  window.scrollTo({ top: lockedScrollY, behavior: "auto" });
 }
 
 interface DialogProps {

@@ -28,4 +28,46 @@ test.describe("authenticated mobile shell", () => {
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
     await expectNoHorizontalOverflow(page);
   });
+
+  test("focusing the composer does not reset message or document scroll", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/chat");
+    const scroller = page.locator("[data-chat-message-scroll]");
+    const composer = page.getByLabel("消息内容");
+    await scroller.evaluate((element) => { element.scrollTop = Math.max(80, element.scrollHeight / 3); });
+    const before = await scroller.evaluate((element) => element.scrollTop);
+    const windowBefore = await page.evaluate(() => window.scrollY);
+
+    await composer.focus();
+    await page.setViewportSize({ width: 390, height: 540 });
+    const during = await scroller.evaluate((element) => element.scrollTop);
+    expect(during).toBeGreaterThanOrEqual(Math.max(0, before - 2));
+    expect(await page.evaluate(() => window.scrollY)).toBe(windowBefore);
+
+    await composer.blur();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await composer.focus();
+    await composer.blur();
+    expect(await scroller.evaluate((element) => element.scrollTop)).toBeGreaterThanOrEqual(Math.max(0, before - 2));
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("conversation history does not prefetch every dynamic detail route", async ({ page }) => {
+    const detailRequests: string[] = [];
+    page.on("request", (request) => {
+      const pathname = new URL(request.url()).pathname;
+      if (/^\/chat\/[0-9a-f-]{36}$/i.test(pathname)) detailRequests.push(pathname);
+    });
+    await page.goto("/chat", { waitUntil: "networkidle" });
+    expect(new Set(detailRequests).size).toBeLessThanOrEqual(1);
+
+    const conversationLinks = page.locator('nav[aria-label="对话历史"] a[href^="/chat/"]');
+    const count = await conversationLinks.count();
+    if (count > 0) {
+      const target = conversationLinks.nth(0);
+      const href = await target.getAttribute("href");
+      await target.click();
+      await expect(page).toHaveURL(new RegExp(`${href}$`));
+    }
+  });
 });

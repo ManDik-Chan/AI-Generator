@@ -1,6 +1,6 @@
 # AI-Generator V2
 
-> Phase 6B2 全站移动端体验已进入 Draft：应用壳统一使用 `svh` / `dvh`、Safe Area 与 VisualViewport，Chat、底部导航、表单、Dialog/Sheet、Dropdown 和长内容共享同一套移动契约；新增 Chromium/WebKit Playwright 基线。该阶段不改变 API、Provider、数据库或权限语义，等待项目所有者进行 iPhone、Android 与 PWA 真实设备验收。详见 `docs/mobile-experience.md`。Phase 7A2 尚未开始。
+> Phase 6B2.1 移动键盘、全站性能与桌面布局修复已进入 Draft：窄屏继续使用 `svh` / `dvh`、Safe Area 与 VisualViewport，普通桌面页改回浏览器自然文档滚动，Chat 保持独立固定 viewport。Composer 聚焦不再主动移动页面；VisualViewport 仅在 820px 以下按需同步。首页主体改为 Server Component、移除 Framer Motion、扩大宽屏画布，并为动态历史关闭批量预取、为主要路由增加即时反馈。自动构建与多宽度 Edge/Playwright 检查已通过，仍等待项目所有者在 iPhone、Android、微信 WebView 与真实登录态下复验软键盘。详见 `docs/mobile-experience.md`。Phase 7A2 尚未开始。
 
 > Phase 7A1 多 Agent 头脑风暴已进入 Draft：一次明确点击固定创建四个独立 Worker，并在至少两个成功后调用一次协调器，总模型调用最多五次。任务复用 ToolRun、waitUntil、durable cancellation 与恢复机制，不读取聊天、Persona、Memory，不联网或调用工具。当前等待项目所有者部署独立 migration/RLS 并完成真实模型、后台恢复和响应式验收；Phase 7A2 Vibe Coding 尚未开始。详见 `docs/multi-agent-brainstorm.md`。
 

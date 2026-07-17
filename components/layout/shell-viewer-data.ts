@@ -1,10 +1,12 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { getCurrentUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
 import type { ShellViewer } from "@/components/layout/shell-viewer";
 
-export async function getShellViewer(): Promise<ShellViewer | undefined> {
+export const getShellViewer = cache(async (): Promise<ShellViewer | undefined> => {
   try {
     const user = await getCurrentUser();
     if (!user) return undefined;
@@ -28,4 +30,4 @@ export async function getShellViewer(): Promise<ShellViewer | undefined> {
   } catch {
     return undefined;
   }
-}
+});

@@ -116,7 +116,6 @@ html {
   min-height: 100%;
   background: hsl(var(--background));
   scroll-behavior: smooth;
-  scrollbar-gutter: stable;
 }
 body {
   min-width: 320px;
@@ -132,6 +131,7 @@ body {
 }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
+a[data-navigation-pending="true"] { pointer-events: none; }
 img, video, canvas, svg { max-width: 100%; }
 img, video, canvas { height: auto; }
 p, li, dd, blockquote, figcaption { overflow-wrap: anywhere; }
@@ -150,6 +150,8 @@ p, li, dd, blockquote, figcaption { overflow-wrap: anywhere; }
   .surface-grid { background-image: linear-gradient(hsl(var(--border) / .08) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border) / .08) 1px, transparent 1px); background-size: 38px 38px; }
   .paper-dots { background-image: radial-gradient(hsl(var(--foreground) / .07) .55px, transparent .55px); background-size: 5px 5px; }
   .app-viewport { height: var(--app-height); height: var(--visual-viewport-height); min-height: 0; overflow: hidden; }
+  .app-shell-root { height: var(--app-height); height: var(--visual-viewport-height); min-height: 0; overflow: hidden; }
+  .app-shell-content { height: 100%; min-height: 0; }
   .safe-top { padding-top: max(.625rem, var(--safe-area-top)); }
   .safe-bottom { padding-bottom: max(.625rem, var(--safe-area-bottom)); }
   .safe-inline { padding-left: max(.75rem, var(--safe-area-left)); padding-right: max(.75rem, var(--safe-area-right)); }
@@ -171,6 +173,11 @@ p, li, dd, blockquote, figcaption { overflow-wrap: anywhere; }
   .premium-divider { border-color: hsl(var(--border) / .1); }
   .premium-scrollbar { scrollbar-color: hsl(var(--muted-foreground) / .3) transparent; scrollbar-width: thin; }
 }
+
+.premium-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.premium-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.premium-scrollbar::-webkit-scrollbar-thumb { border-radius: 999px; background: hsl(var(--muted-foreground) / .22); }
+.premium-scrollbar:hover::-webkit-scrollbar-thumb { background: hsl(var(--muted-foreground) / .42); }
 
 .premium-shell::before {
   content: "";
@@ -203,11 +210,17 @@ p, li, dd, blockquote, figcaption { overflow-wrap: anywhere; }
 }
 
 @media (min-width: 821px) {
+  .app-shell-root[data-scroll-mode="document"] { height: auto; min-height: 100vh; overflow: visible; }
+  .app-shell-root[data-scroll-mode="document"] .app-shell-content { height: auto; min-height: 100vh; }
+  .app-shell-root[data-scroll-mode="document"] .app-shell-main { min-height: 100vh; overflow: visible; }
+  .app-shell-root[data-scroll-mode="viewport"] { height: 100vh; overflow: hidden; }
+  .app-shell-root[data-scroll-mode="viewport"] .app-shell-content { height: 100%; }
+  .app-shell-root[data-scroll-mode="viewport"] .app-shell-main { overflow-y: auto; }
   .mobile-modal-overlay { place-items: center; padding: 1.5rem; }
   .mobile-modal-panel { max-width: 32rem; border-radius: var(--radius-overlay); }
 }
 
-html[data-dialog-open="true"], html[data-dialog-open="true"] body { overscroll-behavior: none; }
+html[data-dialog-open="true"], html[data-dialog-open="true"] body { overflow: hidden; overscroll-behavior: none; }
 html[data-dialog-open="true"] [data-app-scroll-region] { overflow: hidden; }
 
 @media (prefers-reduced-motion: reduce) {

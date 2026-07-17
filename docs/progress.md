@@ -1,5 +1,29 @@
 # 重构进度
 
+## Phase 6B2.1 — 移动键盘、全站性能与桌面布局修复（Draft）
+
+实施时间：2026-07-18
+
+- [x] 删除 Chat Composer 聚焦时的 `scrollIntoView`，Dialog 解锁也不再调用 `window.scrollTo`；输入框聚焦不主动改写文档滚动位置。
+- [x] VisualViewport 仅在 820px 以下启用；resize 与 scroll 分离，CSS 像素值变化不足 1px 时不写入，并使用单个 rAF 合并事件。
+- [x] 软键盘状态同时要求可编辑元素聚焦、至少 140px 高度差与 0.82 高度比例，避免把 Safari 地址栏变化误判为键盘。
+- [x] 普通 AppShell 在手机使用固定应用 viewport 与 Main 内部滚动，在桌面使用 document 自然滚动；Chat 继续使用固定 viewport 与消息区独立滚动。
+- [x] reading / standard / wide 宽度调整为 52rem / 84rem / 100rem，桌面 gutter 使用 `clamp()`，首页不再缩成中央海报。
+- [x] 首页主体改为 Server Component，以 Suspense 流式读取个性化区域；认证查询使用请求内 `cache()` 去重，资料与最近对话并行查询。
+- [x] 首页移除 Framer Motion 与轨道/漂浮标签，降低 Hero 高度、字号、圆角和阴影，Quick Start 卡片统一高度。
+- [x] 首页生产包由 45.5 kB / 164 kB First Load JS 降至 1.59 kB / 120 kB；首页 chunk 不包含 Framer Motion、图片生成或头脑风暴工作区代码。
+- [x] 对话、人格和记忆来源等增长型动态列表使用 `prefetch={false}`，避免批量预取详情路由；静态主导航继续保留 Next.js 默认预取。
+- [x] 主要路由增加稳定 loading 骨架和全局即时导航进度；删除跨路由 `router.push()` 后的冗余 `router.refresh()`。
+- [x] 内部滚动区使用 6px 低对比度滚动条；普通桌面页不保留永久 `scrollbar-gutter` 轨道。
+- [x] 93 个测试文件、549 项测试通过；lint、typecheck、production build 与 Prisma validate 通过。
+- [x] Microsoft Edge 的 Playwright 驱动覆盖 320、360、390、430、768、1024、1366、1440、1600、1920px，均无水平溢出或 console error，移动/桌面滚动模式按断点切换。
+- [ ] Playwright 官方 Chromium 运行包因当前网络下载极慢未完成安装；标准 `pnpm test:e2e` 与 WebKit 项目仍待可用浏览器运行包环境执行。
+- [ ] 项目所有者 iPhone Safari、Android Chrome、微信内置浏览器、PWA 与真实登录态 Chat Composer 软键盘复验。
+
+修改后本地无登录生产模式 HTTP 样本仅用于相对参考：首页 330.0 / 127.2 / 134.9ms；Tools 100.9 / 97.8 / 93.1ms；Memories 86.6 / 73.5 / 73.7ms；Personas 80.9 / 77.2 / 95.0ms；Chat 86.8 / 86.3 / 84.9ms。它不是用户登录后的真实路由切换数据，不能替代项目所有者设备验收。
+
+本阶段没有修改 Prisma Schema、migration、RLS、Auth、API、Provider、Prompt、每日限额、Storage 或 durable generation 语义，没有部署生产环境。中断前的全部工作区修改已保留并继续完成。Phase 7A2 Vibe Coding 尚未开始。
+
 ## Phase 6B2 — 全站移动端体验（Draft）
 
 实施时间：2026-07-17

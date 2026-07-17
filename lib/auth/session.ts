@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { prisma } from "@/lib/database/prisma";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 
-export async function getCurrentUser() {
+async function readCurrentUser() {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -11,6 +12,8 @@ export async function getCurrentUser() {
 
   return user;
 }
+
+export const getCurrentUser = cache(readCurrentUser);
 
 export async function requireUser() {
   const user = await getCurrentUser();
