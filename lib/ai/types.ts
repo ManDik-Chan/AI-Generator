@@ -47,6 +47,7 @@ export interface BrainstormGenerationConfig {
   workerMaxOutputTokens: number;
   synthesisMaxOutputTokens: number;
   requestTimeoutMs: number;
+  totalTimeoutMs: number;
   dailyLimit: number;
   maxConcurrency: number;
   workerModelSource: "brainstorm" | "tool" | "base";

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
+import { ToolType } from "@prisma/client";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const schema = read("prisma/schema.prisma");
@@ -9,8 +10,16 @@ const rls = read("prisma/rls.sql");
 const route = read("app/api/tools/brainstorm/route.ts");
 const service = read("features/tools/brainstorm/service.ts");
 const workspace = read("features/tools/brainstorm/brainstorm-workspace.tsx");
+const packageJson = JSON.parse(read("package.json")) as { scripts: Record<string, string> };
 
 describe("Phase 7A1 brainstorm contracts", () => {
+  it("regenerates the Prisma Client on every production build", () => {
+    expect(packageJson.scripts.postinstall).toBe("prisma generate");
+    expect(packageJson.scripts.prebuild).toBe("prisma generate");
+    expect(packageJson.scripts.build).toBe("next build");
+    expect(ToolType.BRAINSTORM).toBe("BRAINSTORM");
+  });
+
   it("adds BRAINSTORM and four worker roles in an independent migration", () => {
     expect(schema).toContain("BRAINSTORM");
     for (const role of ["ANALYST", "CREATIVE", "CRITIC", "PLANNER"]) expect(schema).toContain(role);

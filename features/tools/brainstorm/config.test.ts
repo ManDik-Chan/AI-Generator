@@ -15,4 +15,9 @@ describe("brainstorm configuration", () => {
     expect(getBrainstormDailyLimit({ AI_DAILY_BRAINSTORM_LIMIT: "7" })).toBe(7);
     expect(getBrainstormConfigurationStatus({})).toMatchObject({ configured: false });
   });
+
+  it("reserves shutdown time by capping the overall run budget below maxDuration", () => {
+    expect(getBrainstormGenerationConfig(base).totalTimeoutMs).toBe(285_000);
+    expect(getBrainstormGenerationConfig({ ...base, AI_BRAINSTORM_TOTAL_TIMEOUT_MS: "999999" }).totalTimeoutMs).toBe(285_000);
+  });
 });

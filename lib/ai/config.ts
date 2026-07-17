@@ -85,6 +85,7 @@ export function getBrainstormGenerationConfig(env: Environment = process.env): B
     workerMaxOutputTokens: numberFromEnvironment(env.AI_BRAINSTORM_MAX_OUTPUT_TOKENS, 1400, 200, 8000),
     synthesisMaxOutputTokens: numberFromEnvironment(env.AI_BRAINSTORM_SYNTHESIS_MAX_OUTPUT_TOKENS, 2600, 400, 12_000),
     requestTimeoutMs: numberFromEnvironment(env.AI_BRAINSTORM_REQUEST_TIMEOUT_MS, 180_000, 1_000, 300_000),
+    totalTimeoutMs: numberFromEnvironment(env.AI_BRAINSTORM_TOTAL_TIMEOUT_MS, 285_000, 1_000, 285_000),
     dailyLimit: getBrainstormDailyLimit(env),
     maxConcurrency: numberFromEnvironment(env.AI_BRAINSTORM_MAX_CONCURRENCY, 4, 1, 4),
   };
