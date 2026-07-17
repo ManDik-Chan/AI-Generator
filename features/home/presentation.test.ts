@@ -25,6 +25,6 @@ describe("premium home presentation", () => {
       "utf8",
     );
     expect(home).toContain("还没有最近对话");
-    expect(home).toContain("不使用任何虚构记录");
+    expect(home).toContain("不使用任何虚构数据");
   });
 });

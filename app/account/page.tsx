@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Brain, LogOut, ShieldCheck, Sparkles } from "lucide-react";
+import { Brain, History, LockKeyhole, LogOut, MessageSquareText, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { signOut } from "@/features/auth/actions";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
@@ -16,7 +16,13 @@ export const dynamic = "force-dynamic";
 
 export default async function AccountPage() {
   const user = await requireUser();
-  const profile = await prisma.profile.findUnique({ where: { id: user.id } });
+  const [profile, conversations, personas, memories, toolRuns] = await Promise.all([
+    prisma.profile.findUnique({ where: { id: user.id } }),
+    prisma.conversation.count({ where: { userId: user.id } }),
+    prisma.persona.count({ where: { userId: user.id, archivedAt: null } }),
+    prisma.memory.count({ where: { userId: user.id, enabled: true } }),
+    prisma.toolRun.count({ where: { userId: user.id, retainContent: true } }),
+  ]);
   const name = profile?.displayName ?? "我的 AI 空间";
   const viewer: ShellViewer = {
     avatarUrl: profile?.avatarUrl ?? undefined,
@@ -50,6 +56,10 @@ export default async function AccountPage() {
           </div>
         </Surface>
 
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="真实账户概览">
+          {[{ label: "对话", value: conversations, icon: MessageSquareText }, { label: "专属人格", value: personas, icon: UserRound }, { label: "启用记忆", value: memories, icon: Brain }, { label: "保留的工具记录", value: toolRuns, icon: History }].map((item) => <Surface className="flex items-center gap-3 p-4" key={item.label}><span className="premium-icon-tile size-10 shrink-0"><item.icon className="size-4" /></span><div><p className="text-xl font-semibold tabular-nums">{item.value}</p><p className="mt-1 text-xs text-muted-foreground">{item.label}</p></div></Surface>)}
+        </section>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Surface className="p-5 sm:p-6">
             <span className="grid size-10 place-items-center rounded-control bg-primary-subtle text-primary">
@@ -71,6 +81,11 @@ export default async function AccountPage() {
             </Button>
           </Surface>
         </div>
+
+        <Surface className="p-5 sm:p-6">
+          <div className="flex items-start gap-4"><span className="grid size-10 shrink-0 place-items-center rounded-control bg-info-subtle text-info"><LockKeyhole className="size-4" /></span><div><h2 className="text-card-title">安全与数据边界</h2><p className="mt-1 text-supporting">登录身份由 Supabase 服务端验证；AI 密钥只存在于服务端；图片和工具素材位于私有空间，通过短期签名访问。</p></div></div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3"><div className="premium-subpanel p-4"><p className="premium-kicker">IDENTITY</p><p className="mt-2 text-sm font-semibold">服务端身份</p><p className="mt-1 text-xs leading-5 text-muted-foreground">不会信任浏览器传入的 userId。</p></div><div className="premium-subpanel p-4"><p className="premium-kicker">STORAGE</p><p className="mt-2 text-sm font-semibold">私有素材</p><p className="mt-1 text-xs leading-5 text-muted-foreground">不公开数据库或 Storage 路径。</p></div><div className="premium-subpanel p-4"><p className="premium-kicker">HISTORY</p><p className="mt-2 text-sm font-semibold">按次选择历史</p><p className="mt-1 text-xs leading-5 text-muted-foreground">每次工具运行都可决定是否保留内容。</p></div></div>
+        </Surface>
 
         {profile?.role === "ADMIN" ? (
           <Surface className="flex items-start gap-4 p-5 sm:p-6">

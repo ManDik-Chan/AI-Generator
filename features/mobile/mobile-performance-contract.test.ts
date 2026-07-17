@@ -49,7 +49,7 @@ describe("Phase 6B2.1 performance and scrolling contracts", () => {
     const page = read("app/page.tsx");
     expect(home).not.toContain('"use client"');
     expect(home).not.toContain("framer-motion");
-    expect(home).toContain("把灵感、对话与工具");
+    expect(home).toContain("让你的 AI");
     expect(home).toContain("Suspense");
     expect(page).toContain("<HomeDashboard />");
   });

@@ -29,7 +29,7 @@ test("home uses document scrolling and a fluid desktop canvas", async ({ page },
   for (const width of [1366, 1440, 1600, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    await expect(page.getByText("把灵感、对话与工具，", { exact: true })).toBeVisible();
+    await expect(page.getByText("让你的 AI，", { exact: true })).toBeVisible();
     const metrics = await page.locator("[data-app-scroll-region]").evaluate((main) => {
       const rect = main.getBoundingClientRect();
       return {
@@ -47,7 +47,7 @@ test("home uses document scrolling and a fluid desktop canvas", async ({ page },
 test("home primary content is present in the server response", async ({ request }) => {
   const response = await request.get("/");
   const html = await response.text();
-  expect(html).toContain("把灵感、对话与工具");
-  expect(html).toContain("从这里开始");
+  expect(html).toContain("让你的 AI");
+  expect(html).toContain("快速启动");
   expect(html).not.toContain("framer-motion");
 });
