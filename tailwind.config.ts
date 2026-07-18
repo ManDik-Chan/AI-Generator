@@ -38,13 +38,13 @@ const config: Config = {
         "focus-ring": "hsl(var(--focus-ring))",
       },
       borderRadius: {
-        control: "var(--radius-control)", card: "var(--radius-card)", overlay: "var(--radius-overlay)", display: "var(--radius-display)",
+        control: "var(--radius-control)", card: "var(--radius-card)", panel: "var(--radius-panel)", dialog: "var(--radius-dialog)", sheet: "var(--radius-sheet)", overlay: "var(--radius-overlay)", display: "var(--radius-display)",
         xl: "var(--radius-card)", "2xl": "var(--radius-overlay)",
       },
       boxShadow: {
-        soft: "0 10px 24px hsl(var(--overlay) / .06)",
-        raised: "0 22px 48px hsl(var(--overlay) / .10)",
-        overlay: "0 30px 80px hsl(var(--overlay) / .14)",
+        soft: "0 10px 28px hsl(var(--overlay) / .08)",
+        raised: "0 20px 52px hsl(var(--overlay) / .13)",
+        overlay: "0 28px 72px hsl(var(--overlay) / .18)",
       },
       transitionDuration: { fast: "140ms", panel: "220ms" },
     },

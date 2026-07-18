@@ -16,11 +16,11 @@ export function PersonaActionsMenu({ personaId, personaName, archived }: { perso
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
   function restore() { startTransition(async () => { setError(undefined); const result = await restorePersonaFromTrash(personaId); if (!result.success) setError(result.message); else router.refresh(); }); }
-  function moveToTrash() { startTransition(async () => { setError(undefined); const result = await movePersonaToTrash(personaId); if (!result.success) setError(result.message); else { setDeleteOpen(false); router.push("/personas?trashed=1"); router.refresh(); } }); }
+  function moveToTrash() { startTransition(async () => { setError(undefined); const result = await movePersonaToTrash(personaId); if (!result.success) setError(result.message); else { setDeleteOpen(false); router.push("/personas?trashed=1"); } }); }
 
   return <div className="relative shrink-0">
     <Dropdown placement="bottom-end" trigger={<span aria-label="人格操作" className="grid size-11 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground"><MoreHorizontal className="size-5" /></span>}>
-      <Link className="flex min-h-11 items-center gap-2 rounded-control px-3 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground" href={`/personas/${personaId}/edit`} role="menuitem"><Pencil className="size-4" />编辑人格</Link>
+      <Link className="flex min-h-11 items-center gap-2 rounded-control px-3 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground" href={`/personas/${personaId}/edit`} prefetch={false} role="menuitem"><Pencil className="size-4" />编辑人格</Link>
       {archived ? <button className="flex min-h-11 w-full items-center gap-2 rounded-control px-3 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground" disabled={pending} onClick={restore} role="menuitem" type="button"><RotateCcw className="size-4" />恢复人格</button> : <button className="flex min-h-11 w-full items-center gap-2 rounded-control px-3 text-sm text-destructive-foreground hover:bg-surface-muted" onClick={() => setDeleteOpen(true)} role="menuitem" type="button"><Trash2 className="size-4" />移至回收站</button>}
       {error && <p className="max-w-48 break-words px-2 py-1 text-xs text-destructive-foreground">{error}</p>}
     </Dropdown>

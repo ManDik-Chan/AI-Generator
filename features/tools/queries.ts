@@ -65,7 +65,7 @@ export async function getToolHistory(userId: string, page = 1, type?: ToolType) 
       orderBy: [{ createdAt: "desc" }, { id: "desc" }],
       skip: (safePage - 1) * TOOL_HISTORY_PAGE_SIZE,
       take: TOOL_HISTORY_PAGE_SIZE,
-      select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } } },
+      select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, errorCode: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } } },
     }),
     prisma.toolRun.count({ where }),
   ]);
@@ -73,6 +73,7 @@ export async function getToolHistory(userId: string, page = 1, type?: ToolType) 
     id: row.id,
     type: row.type,
     status: row.status,
+    errorCode: row.errorCode ?? undefined,
     title: row.title ?? undefined,
     inputPreview: previewText(row.inputText),
     outputPreview: previewText(row.outputText),
@@ -86,13 +87,14 @@ export async function getToolHistory(userId: string, page = 1, type?: ToolType) 
 export async function getToolRunDetail(userId: string, runId: string): Promise<ToolRunDetail | null> {
   const row = await prisma.toolRun.findFirst({
     where: { id: runId, userId, retainContent: true },
-    select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, options: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } }, brainstormWorkers: { orderBy: { position: "asc" }, select: { id: true, role: true, position: true, status: true, outputText: true, errorCode: true, startedAt: true, completedAt: true } } },
+    select: { id: true, type: true, status: true, title: true, inputText: true, outputText: true, options: true, errorCode: true, createdAt: true, assets: { take: 1, select: { id: true, mimeType: true, width: true, height: true, expiresAt: true } }, generatedImage: { select: { id: true, width: true, height: true } }, brainstormWorkers: { orderBy: { position: "asc" }, select: { id: true, role: true, position: true, status: true, outputText: true, errorCode: true, startedAt: true, completedAt: true } } },
   });
   if (!row?.inputText) return null;
   return {
     id: row.id,
     type: row.type,
     status: row.status,
+    errorCode: row.errorCode ?? undefined,
     title: row.title ?? undefined,
     inputText: row.inputText,
     outputText: row.outputText ?? undefined,

@@ -17,27 +17,39 @@ describe("Phase 6B2 mobile experience contracts", () => {
     expect(css).toContain("--app-height: 100vh");
     expect(css).toContain("--app-height: 100svh");
     expect(css).toContain("--app-height: 100dvh");
-    for (const token of ["--visual-viewport-height", "--safe-area-top", "--safe-area-right", "--safe-area-bottom", "--safe-area-left", "--mobile-header-height", "--mobile-nav-height", "--composer-height"]) expect(css).toContain(token);
+    for (const token of ["--safe-area-top", "--safe-area-right", "--safe-area-bottom", "--safe-area-left", "--mobile-header-height", "--mobile-nav-height"]) expect(css).toContain(token);
+    expect(css).not.toContain("--visual-viewport-height");
+    expect(read("app/layout.tsx")).not.toContain("MobileViewportSync");
     expect(css).not.toMatch(/body\s*\{[\s\S]*?overflow-x:\s*hidden/);
   });
 
-  it("uses one AppShell scroll region with navigation compensation", () => {
+  it("uses document scrolling for ordinary pages at every width", () => {
     const shell = read("components/layout/app-shell.tsx");
-    expect(shell).toContain("app-viewport");
+    const css = read("app/globals.css");
+    expect(shell).toContain("app-shell-root");
+    expect(shell).toContain('scrollMode = "document"');
     expect(shell).toContain("data-app-scroll-region");
     expect(shell).toContain("mobile-scroll-region");
     expect(shell).toContain("var(--mobile-nav-height)");
+    expect(css).toContain('.app-shell-root[data-scroll-mode="document"]');
+    expect(css).toContain("overflow: visible");
+    expect(css.indexOf('.app-shell-root[data-scroll-mode="document"]')).toBeLessThan(css.indexOf("@media (max-width: 820px)"));
   });
 
-  it("updates VisualViewport through requestAnimationFrame and cleans every listener", () => {
-    const hook = read("features/mobile/use-visual-viewport.ts");
+  it("updates the Chat-scoped VisualViewport through requestAnimationFrame and cleans every listener", () => {
+    const hook = read("features/chat/use-chat-visual-viewport.ts");
     expect(hook).toContain("requestAnimationFrame");
+    expect(hook).toContain('matchMedia(MOBILE_LAYOUT_QUERY)');
     expect(hook).toContain('document.visibilityState === "hidden"');
     expect(hook).toContain('addEventListener("resize"');
     expect(hook).toContain('addEventListener("scroll"');
     expect(hook).toContain('removeEventListener("resize"');
     expect(hook).toContain('removeEventListener("scroll"');
     expect(hook).toContain("cancelAnimationFrame");
+    expect(hook).toContain("Math.abs(current - next) < 1");
+    expect(hook).toContain("isEditableTarget(document.activeElement)");
+    expect(hook).toContain('shell.style.removeProperty("--chat-viewport-height")');
+    expect(hook).not.toContain("document.documentElement.style");
   });
 
   it("uses 16px mobile fields without disabling browser zoom", () => {
@@ -54,9 +66,12 @@ describe("Phase 6B2 mobile experience contracts", () => {
     expect(list).toContain("data-chat-message-scroll");
     expect(list).toContain("回到底部");
     expect(composer).toContain("ResizeObserver");
+    expect(composer).toContain('closest<HTMLElement>("[data-chat-shell]")');
     expect(composer).toContain("max-h-[min(10rem,35dvh)]");
     expect(composer).toContain("text-base");
+    expect(composer).not.toContain("scrollIntoView");
     expect(chat).not.toContain("controller?.abort(); }, []");
+    expect(read("features/chat/components/message-list.tsx")).toContain("getPreservedChatScrollTop");
   });
 
   it("keeps long Markdown inside its own content boundary", () => {

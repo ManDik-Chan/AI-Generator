@@ -22,10 +22,10 @@ function initialWorkers(): BrainstormWorkerDto[] {
   return BRAINSTORM_WORKERS.map((worker) => ({ role: worker.role, position: worker.position, label: worker.label, status: "PENDING", output: "" }));
 }
 
-function workerStatus(status: BrainstormWorkerDto["status"], active: boolean) {
-  if (status === "COMPLETE") return "已完成";
-  if (status === "ERROR") return "失败";
-  if (status === "CANCELLED") return "已停止";
+function workerStatus(worker: BrainstormWorkerDto, active: boolean) {
+  if (worker.status === "COMPLETE") return "已完成";
+  if (worker.status === "ERROR") return worker.errorCode === "TIMEOUT" ? "超时" : "失败";
+  if (worker.status === "CANCELLED") return "已停止";
   return active ? "正在思考" : "等待开始";
 }
 
@@ -50,6 +50,7 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
   const [runId, setRunId] = useState<string>();
   const [error, setError] = useState("");
   const [cancelling, setCancelling] = useState(false);
+  const [synthesizing, setSynthesizing] = useState(false);
   const elapsed = useElapsedTime(state === "running");
 
   const updateWorker = useCallback((role: BrainstormWorkerDto["role"], patch: Partial<BrainstormWorkerDto>) => {
@@ -61,11 +62,14 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
     if (snapshot.status === "PENDING" && observerConnectedRef.current) return;
     setWorkers(snapshot.workers);
     setOutput(snapshot.outputText);
+    const completedWorkers = snapshot.workers.filter((worker) => worker.status === "COMPLETE").length;
+    const workersSettled = snapshot.workers.every((worker) => worker.status !== "PENDING");
+    setSynthesizing(snapshot.status === "PENDING" && completedWorkers >= 2 && workersSettled);
     if (snapshot.prompt) setPrompt(snapshot.prompt);
     if (snapshot.status === "PENDING") { setState("running"); setError("连接暂时中断，任务仍在后台处理。"); }
     if (snapshot.status === "COMPLETE") { setState("complete"); setError(""); }
     if (snapshot.status === "CANCELLED") { setState("cancelled"); setError("头脑风暴已停止；已完成的 Worker 内容仍会保留到隐私恢复期结束。"); }
-    if (snapshot.status === "ERROR") { setState("error"); setError(snapshot.errorCode === "INSUFFICIENT_WORKERS" ? "成功完成的 Worker 少于两个，未调用协调器。" : "头脑风暴失败；已完成的 Worker 结果仍可查看。"); }
+    if (snapshot.status === "ERROR") { setState("error"); setError(snapshot.errorCode === "INSUFFICIENT_WORKERS" ? "成功完成的 Worker 少于两个，未调用协调器。" : snapshot.errorCode === "TIMEOUT" ? "头脑风暴已超时；已完成的 Worker 结果仍可查看。" : "头脑风暴失败；已完成的 Worker 结果仍可查看。"); }
   }, []);
 
   const recoveryPhase = useGenerationRecovery({ storageKey, runId, onRunId: setRunId, statusUrl: "/api/tools/runs/", statusSuffix: "?recovery=1", onSnapshot: recover });
@@ -92,6 +96,7 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
       controllerRef.current?.abort();
       setWorkers((current) => current.map((worker) => worker.status === "PENDING" ? { ...worker, status: "CANCELLED" } : worker));
       setState("cancelled");
+      setSynthesizing(false);
       setError("头脑风暴已停止。");
     } catch (reason) {
       setState("running");
@@ -109,6 +114,7 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
     setRunId(undefined);
     sessionStorage.removeItem(storageKey);
     setWorkers(initialWorkers());
+    setSynthesizing(false);
     setOutput("");
     setError("");
     setState("running");
@@ -143,10 +149,11 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
           const data = raw as { role: BrainstormWorkerDto["role"]; code: string };
           updateWorker(data.role, { status: data.code === "CANCELLED" ? "CANCELLED" : "ERROR", errorCode: data.code, completedAt: new Date().toISOString() });
         }
+        if (event === "synthesis_started") setSynthesizing(true);
         if (event === "synthesis_delta") setOutput((current) => current + (raw as { text: string }).text);
-        if (event === "done") { terminal = true; setState("complete"); setError(""); }
-        if (event === "cancelled") { terminal = true; setState("cancelled"); setError("头脑风暴已停止。"); }
-        if (event === "error") { terminal = true; setState("error"); setError((raw as { message?: string }).message || "头脑风暴失败；已完成的 Worker 结果仍可查看。"); }
+        if (event === "done") { terminal = true; setSynthesizing(false); setState("complete"); setError(""); }
+        if (event === "cancelled") { terminal = true; setSynthesizing(false); setState("cancelled"); setError("头脑风暴已停止。"); }
+        if (event === "error") { terminal = true; setSynthesizing(false); setState("error"); setError((raw as { message?: string }).message || "头脑风暴失败；已完成的 Worker 结果仍可查看。"); }
       });
       observerConnectedRef.current = false;
       if (!terminal && version === requestVersionRef.current) { setState("running"); setError("连接暂时中断，任务仍在后台处理。"); }
@@ -171,12 +178,12 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
     const response = await fetch(`/api/tools/runs/${runId}`, { method: "DELETE" });
     if (!response.ok) { setError("删除失败，请稍后重试。"); return; }
     sessionStorage.removeItem(storageKey);
-    setRunId(undefined); setState("idle"); setWorkers(initialWorkers()); setOutput(""); setError("");
+    setRunId(undefined); setState("idle"); setWorkers(initialWorkers()); setSynthesizing(false); setOutput(""); setError("");
   }
 
   function reuse() {
     sessionStorage.removeItem(storageKey);
-    setRunId(undefined); setState("idle"); setWorkers(initialWorkers()); setOutput(""); setError("");
+    setRunId(undefined); setState("idle"); setWorkers(initialWorkers()); setSynthesizing(false); setOutput(""); setError("");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -188,6 +195,7 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
   }
 
   const active = state === "running";
+  const completedWorkerCount = workers.filter((worker) => worker.status === "COMPLETE").length;
   const recoveryMessage = recoveryPhase === "checking" ? "正在恢复状态" : recoveryPhase === "long-running" ? "任务仍在处理，可稍后回来查看" : recoveryPhase === "background" ? "任务正在后台继续生成" : "";
 
   return <div className="min-w-0 space-y-8">
@@ -200,9 +208,9 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/10 pt-4"><div className="flex min-w-0 flex-wrap gap-2 max-[359px]:w-full max-[359px]:[&>button]:w-full">{active ? <Button disabled={cancelling} onClick={() => void stop()} variant="outline"><Square className="size-4 fill-current" />{cancelling ? "正在请求停止" : "停止头脑风暴"}</Button> : <Button disabled={!configured || !prompt.trim()} onClick={() => void start()}><BrainCircuit className="size-4" />开始头脑风暴</Button>}{state !== "idle" && !active ? <Button onClick={reuse} variant="outline"><RotateCcw className="size-4" />再次头脑风暴</Button> : null}</div><div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">{active && <span>{formatElapsedTime(elapsed)}</span>}{recoveryMessage && <span className="premium-chip max-w-full overflow-wrap-anywhere"><LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />{recoveryMessage}</span>}</div></div>
     </section>
 
-    <section><div><p className="premium-kicker">INDEPENDENT WORKERS</p><h2 className="mt-1 text-section-title">四个 Worker</h2><p className="mt-1 text-supporting">四个角色独立调用，单个失败不会阻止其他角色继续。</p></div><div className="mt-4 grid min-w-0 gap-4 md:grid-cols-2">{workers.map((worker) => { const Icon = icons[worker.role]; const running = active && worker.status === "PENDING" && Boolean(worker.startedAt); return <article className="premium-panel flex min-h-64 min-w-0 flex-col p-4 sm:p-5" key={worker.role}><div className="flex min-w-0 flex-wrap items-start justify-between gap-3"><div className="flex min-w-0 flex-1 items-center gap-3"><span className="premium-icon-tile size-11 shrink-0"><Icon className="size-5" /></span><div className="min-w-0"><p className="font-semibold">{worker.label}</p><p className="mt-1 overflow-wrap-anywhere text-xs text-muted-foreground">{BRAINSTORM_WORKERS.find((item) => item.role === worker.role)?.purpose}</p></div></div><span className={`premium-chip shrink-0 ${statusClass(worker.status, running)}`}>{workerStatus(worker.status, running)}</span></div><div className="premium-result premium-scrollbar mt-4 max-h-[28rem] min-h-36 flex-1 overflow-y-auto p-4">{worker.output ? <MarkdownMessage content={worker.output} /> : worker.status === "ERROR" ? <p className="text-sm text-destructive-foreground">该 Worker 运行失败，没有可展示的输出。</p> : <p className="text-sm text-muted-foreground">{running ? "正在独立分析…" : active ? "等待可用并发位置…" : "运行后将在这里显示真实输出。"}</p>}</div>{worker.output && <Button className="mt-3 self-start" onClick={() => void navigator.clipboard.writeText(worker.output)} size="sm" variant="ghost"><Copy className="size-3.5" />复制</Button>}</article>; })}</div></section>
+    <section><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="premium-kicker">INDEPENDENT WORKERS</p><h2 className="mt-1 text-section-title">四个 Worker</h2><p className="mt-1 text-supporting">四个角色独立调用，单个失败不会阻止其他角色继续。</p></div><span className="premium-chip">{completedWorkerCount} / 4 已完成</span></div><div className="mt-4 grid min-w-0 gap-4 md:grid-cols-2">{workers.map((worker) => { const Icon = icons[worker.role]; const running = active && worker.status === "PENDING" && Boolean(worker.startedAt); return <article className="premium-panel flex min-h-64 min-w-0 flex-col p-4 sm:p-5" key={worker.role}><div className="flex min-w-0 flex-wrap items-start justify-between gap-3"><div className="flex min-w-0 flex-1 items-center gap-3"><span className="premium-icon-tile size-11 shrink-0"><Icon className="size-5" /></span><div className="min-w-0"><p className="font-semibold">{worker.label}</p><p className="mt-1 overflow-wrap-anywhere text-xs text-muted-foreground">{BRAINSTORM_WORKERS.find((item) => item.role === worker.role)?.purpose}</p></div></div><span className={`premium-chip shrink-0 ${statusClass(worker.status, running)}`}>{workerStatus(worker, running)}</span></div><div className="premium-result premium-scrollbar mt-4 max-h-[28rem] min-h-36 flex-1 overflow-y-auto p-4">{worker.output ? <MarkdownMessage content={worker.output} /> : worker.status === "ERROR" ? <p className="text-sm text-destructive-foreground">{worker.errorCode === "TIMEOUT" ? "该 Worker 已超时，没有可展示的输出。" : "该 Worker 运行失败，没有可展示的输出。"}</p> : <p className="text-sm text-muted-foreground">{running ? "正在独立分析…" : active ? "等待可用并发位置…" : "运行后将在这里显示真实输出。"}</p>}</div>{worker.output && <Button className="mt-3 self-start" onClick={() => void navigator.clipboard.writeText(worker.output)} size="sm" variant="ghost"><Copy className="size-3.5" />复制</Button>}</article>; })}</div></section>
 
-    <section className="premium-panel-strong min-w-0 p-4 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/10 pb-4"><div><p className="premium-kicker">COORDINATED SYNTHESIS</p><h2 className="mt-1 text-section-title">综合结论</h2></div>{active && output ? <span className="premium-chip"><LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />协调器正在综合</span> : null}</div><div className="premium-result premium-scrollbar mt-4 min-h-64 overflow-x-auto p-4 sm:p-6">{output ? <MarkdownMessage content={output} /> : <div className="grid min-h-52 place-items-center text-center text-sm text-muted-foreground"><span><Clipboard className="mx-auto size-7" /><span className="mt-3 block">至少两个 Worker 成功后，协调器才会生成综合结论。</span></span></div>}</div>{output && <div className="mt-4 flex flex-wrap gap-2"><Button onClick={() => void navigator.clipboard.writeText(output)} variant="outline"><Copy className="size-4" />复制综合结果</Button><Button onClick={() => download("txt")} variant="ghost"><Download className="size-4" />TXT</Button><Button onClick={() => download("md")} variant="ghost"><Download className="size-4" />Markdown</Button>{runId && !active ? <Button className="text-destructive-foreground" onClick={() => void remove()} variant="ghost"><Trash2 className="size-4" />删除记录</Button> : null}</div>}
+    <section className="premium-panel-strong min-w-0 p-4 sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/10 pb-4"><div><p className="premium-kicker">COORDINATED SYNTHESIS</p><h2 className="mt-1 text-section-title">综合结论</h2></div>{synthesizing ? <span className="premium-chip"><LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />协调器正在综合</span> : null}</div><div className="premium-result premium-scrollbar mt-4 min-h-64 overflow-x-auto p-4 sm:p-6">{output ? <MarkdownMessage content={output} /> : <div className="grid min-h-52 place-items-center text-center text-sm text-muted-foreground"><span><Clipboard className="mx-auto size-7" /><span className="mt-3 block">至少两个 Worker 成功后，协调器才会生成综合结论。</span></span></div>}</div>{output && <div className="mt-4 flex flex-wrap gap-2"><Button onClick={() => void navigator.clipboard.writeText(output)} variant="outline"><Copy className="size-4" />复制综合结果</Button><Button onClick={() => download("txt")} variant="ghost"><Download className="size-4" />TXT</Button><Button onClick={() => download("md")} variant="ghost"><Download className="size-4" />Markdown</Button>{runId && !active ? <Button className="text-destructive-foreground" onClick={() => void remove()} variant="ghost"><Trash2 className="size-4" />删除记录</Button> : null}</div>}
     </section>
   </div>;
 }

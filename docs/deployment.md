@@ -1,5 +1,15 @@
 # 部署设计
 
+## Phase 6B3 发布边界
+
+Phase 6B3 没有新增 Prisma Schema、migration、RLS、Bucket、域名或环境变量。部署前仍按既有文档确认历史 migration、最新版 `prisma/rls.sql` 与 private buckets 已由项目所有者完成；本分支不会自动执行数据库部署或生产部署。
+
+依赖安全补丁为 React/React DOM 19.1.8 与 PostCSS 8.5.16。合并前使用 Node 22 和 pnpm 11.7.0 执行 `pnpm install --frozen-lockfile`、全部质量门禁与 Preview 构建。Next.js 保持 15.5.20，不进行大版本部署迁移。
+
+新的 Admin 角色 Server Action 不需要数据库变更，但上线前必须用专用测试账号验证：非管理员无法进入 `/admin`、管理员不能修改自己的角色、不能降级最后一名管理员、成功更新后导航角色可见性刷新。不要用唯一生产管理员做破坏性测试。
+
+Chat VisualViewport 修复只作用于浏览器显示层。Preview 上必须先完成真实 iPhone Safari 与 Android 验收，再由项目所有者决定是否合并/部署。浏览器模拟结果不能替代硬件验收。
+
 ## Phase 4A3 头像部署
 
 在 Supabase 预先创建 private bucket `persona-avatars`（PNG/JPEG/WebP，最大 15 MB），运行 `pnpm db:deploy`，并仅在服务端配置 `AI_IMAGE_PROVIDER`、`AI_IMAGE_BASE_URL`、`AI_IMAGE_API_KEY`、`AI_IMAGE_MODEL`、`AI_IMAGE_SIZE`、`AI_IMAGE_REQUEST_TIMEOUT_MS`、`SUPABASE_SERVICE_ROLE_KEY` 和 `SUPABASE_PERSONA_AVATAR_BUCKET`。应用不会在图片请求中自动创建 bucket；Service Role Key 禁止使用 `NEXT_PUBLIC_`。

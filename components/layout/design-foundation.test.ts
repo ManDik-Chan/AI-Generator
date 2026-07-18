@@ -9,9 +9,9 @@ import {
 describe("approved premium application shell", () => {
   it("provides reading, standard, wide and full layouts", () =>
     expect(appShellWidthClasses).toEqual({
-      reading: "max-w-[48rem]",
-      standard: "max-w-[65rem]",
-      wide: "max-w-[77.75rem]",
+      reading: "max-w-[52rem]",
+      standard: "max-w-[84rem]",
+      wide: "max-w-[100rem]",
       full: "max-w-none",
     }));
 
@@ -24,13 +24,19 @@ describe("approved premium application shell", () => {
 
     expect(navigationGroups.map((group) => group.label)).toEqual([
       "工作空间",
-      "效率工具",
+      "创作实验室",
+      "系统",
     ]);
     expect(hrefs).toContain("/chat");
     expect(hrefs).toContain("/personas");
     expect(hrefs).toContain("/memories");
     expect(hrefs).toContain("/tools");
     expect(hrefs).toContain("/tools/image");
+    expect(hrefs).toContain("/tools/image-generate");
+    expect(hrefs).toContain("/tools/brainstorm");
+    expect(hrefs).toContain("/tools/history");
+    expect(hrefs).toContain("/account");
+    expect(hrefs).toContain("/admin");
     expect(hrefs).not.toContain("/create");
     expect(hrefs).not.toContain("/settings");
   });

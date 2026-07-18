@@ -28,12 +28,14 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
   const displayName = viewer?.displayName || viewer?.email || "我的空间";
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[14.375rem] flex-col border-r border-border/10 bg-surface-raised/90 px-[1.125rem] py-[1.375rem] backdrop-blur-2xl min-[821px]:flex min-[1181px]:w-[17rem]">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[15.75rem] flex-col border-r border-border/10 bg-background-subtle/88 px-3.5 py-4 backdrop-blur-2xl min-[821px]:flex">
       <div className="px-1.5">
         <Brand />
       </div>
 
-      <Button asChild className="mt-[1.375rem] w-full justify-start">
+      <div className="mt-5 rounded-control border border-border/10 bg-surface/60 p-2.5"><p className="text-xs font-bold">{displayName}</p><p className="mt-1 truncate text-[.625rem] text-muted-foreground">{viewer?.role === "ADMIN" ? "Administrator workspace" : "Private workspace"}</p></div>
+
+      <Button asChild className="mt-3 w-full justify-start">
         <Link href="/chat">
           <MessageSquarePlus aria-hidden="true" className="size-4" />
           新建对话
@@ -42,7 +44,7 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
 
       <nav
         aria-label="主导航"
-        className="premium-scrollbar mt-6 min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-1"
+        className="premium-scrollbar mt-5 min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain pr-1"
       >
         {navigationGroups.map((group) => (
           <section key={group.label}>
@@ -51,7 +53,8 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
             </p>
             <div className="space-y-1">
               {group.items.map((item) => {
-                const active = navigationItemActive(pathname, item.href);
+                if ("adminOnly" in item && item.adminOnly && viewer?.role !== "ADMIN") return null;
+                const active = navigationItemActive(pathname, item.href, "matches" in item ? item.matches : undefined);
                 return (
                   <Link
                     aria-current={active ? "page" : undefined}
