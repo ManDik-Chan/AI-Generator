@@ -19,10 +19,12 @@ interface AgentWorkerPanelProps {
   run: AgentRunView;
   onCancelRun(runId: string): Promise<void>;
   onCancelWorker(runId: string, workerKey: string): Promise<void>;
+  onRequestDetails?(runId: string): Promise<void>;
 }
 
-export function AgentWorkerPanel({ run, onCancelRun, onCancelWorker }: AgentWorkerPanelProps) {
-  const [collapsed, setCollapsed] = useState(false);
+export function AgentWorkerPanel({ run, onCancelRun, onCancelWorker, onRequestDetails }: AgentWorkerPanelProps) {
+  const [collapsed, setCollapsed] = useState(run.detailLevel === "STATUS");
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [expandAll, setExpandAll] = useState(false);
   const [failedOnly, setFailedOnly] = useState(false);
   const [stopping, setStopping] = useState(false);
@@ -35,6 +37,20 @@ export function AgentWorkerPanel({ run, onCancelRun, onCancelWorker }: AgentWork
     return () => window.clearInterval(timer);
   }, [run.status]);
   const workers = failedOnly ? run.workers.filter((worker) => ["BLOCKED", "ERROR", "CANCELLED", "TIMEOUT"].includes(worker.status)) : run.workers;
+  const toggleCollapsed = async () => {
+    if (!collapsed) {
+      setCollapsed(true);
+      return;
+    }
+    if (run.detailLevel === "STATUS" && onRequestDetails) {
+      setLoadingDetails(true);
+      setActionError(undefined);
+      try { await onRequestDetails(run.id); }
+      catch (error) { setActionError(error instanceof Error ? error.message : "Agent 详情暂时无法加载。"); return; }
+      finally { setLoadingDetails(false); }
+    }
+    setCollapsed(false);
+  };
   const copyFinal = async () => {
     if (!run.assistantMessage.content) return;
     try {
@@ -77,7 +93,7 @@ export function AgentWorkerPanel({ run, onCancelRun, onCancelWorker }: AgentWork
           </div>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          <Button aria-expanded={!collapsed} className="min-h-11" onClick={() => setCollapsed((value) => !value)} size="sm" type="button" variant="outline">{collapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}{collapsed ? "展开" : "折叠"}</Button>
+          <Button aria-expanded={!collapsed} className="min-h-11" disabled={loadingDetails} onClick={() => void toggleCollapsed()} size="sm" type="button" variant="outline">{collapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}{loadingDetails ? "正在加载" : collapsed ? "展开" : "折叠"}</Button>
           <Button asChild className="min-h-11" size="sm" variant="outline"><Link href={`/agents/${run.id}`} prefetch={false}>查看详情<ExternalLink className="size-3.5" /></Link></Button>
           {run.status === "PENDING" ? <Button className="min-h-11" disabled={stopping} onClick={() => void cancelRun()} size="sm" type="button" variant="outline"><Square className="size-3.5 fill-current" />{stopping ? "正在确认" : "全部停止"}</Button> : null}
         </div>

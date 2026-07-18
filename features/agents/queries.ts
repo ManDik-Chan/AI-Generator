@@ -5,7 +5,68 @@ import { Prisma } from "@prisma/client";
 import { getAgentModeLimits } from "@/features/agents/constants";
 import { startOfUtcDay } from "@/features/chat/utils";
 import { prisma } from "@/lib/database/prisma";
-import type { AgentModeView, AgentRunListItem, AgentRunStatusView, AgentRunView } from "@/features/agents/client-types";
+import type { AgentModeView, AgentRunListItem, AgentRunStatusSnapshot, AgentRunStatusView, AgentRunView } from "@/features/agents/client-types";
+
+const agentRunStatusSelect = {
+  id: true,
+  conversationId: true,
+  userMessageId: true,
+  assistantMessageId: true,
+  mode: true,
+  status: true,
+  phase: true,
+  planOverview: true,
+  planFallback: true,
+  plannedWorkerCount: true,
+  completedWorkerCount: true,
+  successfulWorkerCount: true,
+  providerCallCount: true,
+  errorCode: true,
+  startedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  assistantMessage: { select: { status: true, createdAt: true } },
+  workers: {
+    orderBy: { position: "asc" as const },
+    select: {
+      key: true,
+      position: true,
+      name: true,
+      title: true,
+      objective: true,
+      expectedDeliverable: true,
+      priority: true,
+      status: true,
+      dependsOnKeys: true,
+      errorCode: true,
+      startedAt: true,
+      completedAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
+} satisfies Prisma.AgentRunSelect;
+
+type SelectedAgentRunStatus = Prisma.AgentRunGetPayload<{ select: typeof agentRunStatusSelect }>;
+
+function serializeAgentRunStatus(run: SelectedAgentRunStatus): AgentRunStatusSnapshot {
+  return {
+    ...run,
+    startedAt: run.startedAt.toISOString(),
+    completedAt: run.completedAt?.toISOString() ?? null,
+    createdAt: run.createdAt.toISOString(),
+    updatedAt: run.updatedAt.toISOString(),
+    assistantMessage: { ...run.assistantMessage, createdAt: run.assistantMessage.createdAt.toISOString() },
+    workers: run.workers.map((worker) => ({
+      ...worker,
+      startedAt: worker.startedAt?.toISOString() ?? null,
+      completedAt: worker.completedAt?.toISOString() ?? null,
+      createdAt: worker.createdAt.toISOString(),
+      updatedAt: worker.updatedAt.toISOString(),
+    })),
+  };
+}
 
 const agentRunSnapshotSelect = {
   id: true,
@@ -78,7 +139,16 @@ function serializeAgentRun(run: SelectedAgentRun, usage?: AgentRunView["usage"])
     })),
     events: run.events.map((event) => ({ ...event, createdAt: event.createdAt.toISOString() })),
     usage,
+    detailLevel: "FULL",
   };
+}
+
+export async function getOwnedAgentRunStatus(userId: string, runId: string) {
+  const run = await prisma.agentRun.findFirst({
+    where: { id: runId, userId },
+    select: agentRunStatusSelect,
+  });
+  return run ? serializeAgentRunStatus(run) : null;
 }
 
 export async function getAgentUsage(userId: string, dailyLimit: number) {

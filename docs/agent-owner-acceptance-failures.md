@@ -46,6 +46,8 @@ however about 6511 ms passed since the start of the transaction.
 
 修复策略：新增轻量 `/status` DTO，不含 Event、完整 deliverable、用户问题、Conversation 标题或 Credits；详情只在明确展开/详情页读取。轮询按 runId 保证单请求/单 timer，前台约 2 秒、网络错误指数退避、隐藏/卸载/终态/401/404 立即停。
 
+实现后的 `GET /api/agents/[runId]/status` 只执行一次 owner-scoped AgentRun 查询，返回 Run 进度、Assistant Message 状态以及 Worker 任务结构/状态；查询 select 不包含 Event、Conversation、User Message、Assistant 正文、Credits、findings 或 finalDeliverable。紧凑状态只合并进已有 SSE/详情数据，不会擦除已经拿到的交付物；刷新后恢复出的紧凑 Worker 面板默认折叠，用户明确展开时才请求完整详情。恢复器使用单飞 Promise 与单 timer，前台 PENDING 间隔 2 秒，网络失败指数退避到最多 30 秒，隐藏页暂停，401/404/终态/卸载停止并清理。
+
 ### 4. 生成与恢复状态是跨 Conversation 的全局标量
 
 `ChatLayout` 以单个 `generating`、`generationKind`、`assistantMessageId`、`agentRunId`、controller 和两个全局 sessionStorage key 控制整个 Chat 客户端生命周期。路由切换后旧 Run snapshot 仍能把新 Conversation 的 Composer 设为 generating，并让停止按钮指向旧任务。

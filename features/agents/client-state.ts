@@ -1,4 +1,4 @@
-import type { AgentModeView, AgentRunView, AgentStreamEvent, AgentWorkerStatusView, AgentWorkerView } from "@/features/agents/client-types";
+import type { AgentModeView, AgentRunStatusSnapshot, AgentRunView, AgentStreamEvent, AgentWorkerStatusView, AgentWorkerView } from "@/features/agents/client-types";
 
 function text(value: unknown, fallback = "") { return typeof value === "string" ? value : fallback; }
 function stringArray(value: unknown) { return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []; }
@@ -29,6 +29,33 @@ export function createPendingAgentRunView(data: Record<string, unknown>): AgentR
     workers: [],
     events: [],
     usage: typeof data.usage === "object" ? data.usage as AgentRunView["usage"] : undefined,
+  };
+}
+
+export function mergeAgentRunStatus(current: AgentRunView | undefined, snapshot: AgentRunStatusSnapshot): AgentRunView {
+  const currentWorkers = new Map(current?.workers.map((worker) => [worker.key, worker]));
+  return {
+    ...snapshot,
+    conversationTitle: current?.conversationTitle,
+    userProblem: current?.userProblem,
+    assistantMessage: {
+      content: current?.assistantMessage.content ?? "",
+      status: snapshot.assistantMessage.status,
+      createdAt: snapshot.assistantMessage.createdAt,
+    },
+    workers: snapshot.workers.map((worker) => ({
+      ...worker,
+      workSummary: currentWorkers.get(worker.key)?.workSummary ?? null,
+      findings: currentWorkers.get(worker.key)?.findings ?? [],
+      assumptions: currentWorkers.get(worker.key)?.assumptions ?? [],
+      risks: currentWorkers.get(worker.key)?.risks ?? [],
+      recommendations: currentWorkers.get(worker.key)?.recommendations ?? [],
+      finalDeliverable: currentWorkers.get(worker.key)?.finalDeliverable ?? null,
+      structured: currentWorkers.get(worker.key)?.structured ?? false,
+    })),
+    events: current?.events ?? [],
+    usage: current?.usage,
+    detailLevel: current?.detailLevel === "FULL" ? "FULL" : "STATUS",
   };
 }
 

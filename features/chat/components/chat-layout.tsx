@@ -18,8 +18,8 @@ import type { ChatMessageView, ChatStreamEvent, ConversationDetail, Conversation
 import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 import { requestDurableCancellation } from "@/features/generation/cancel-client";
 import { useChatVisualViewport } from "@/features/chat/use-chat-visual-viewport";
-import type { AgentRunView, AgentStreamEvent } from "@/features/agents/client-types";
-import { createPendingAgentRunView, reduceAgentStreamEvent } from "@/features/agents/client-state";
+import type { AgentRunStatusSnapshot, AgentRunView, AgentStreamEvent } from "@/features/agents/client-types";
+import { createPendingAgentRunView, mergeAgentRunStatus, reduceAgentStreamEvent } from "@/features/agents/client-state";
 import { readSseEvents } from "@/features/generation/client-sse";
 import type { ChatGenerationMode } from "@/features/chat/types";
 import type { ChatBootstrapPayload } from "@/features/chat/bootstrap-types";
@@ -110,7 +110,26 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
     }
   }, []);
-  useGenerationRecovery({ storageKey: "agent-generation", runId: agentRunId, onRunId: setAgentRunId, statusUrl: "/api/agents/", onSnapshot: recoverAgent });
+  const recoverAgentStatus = useCallback((snapshot: AgentRunStatusSnapshot) => {
+    setAgentRuns((current) => {
+      const existing = current.find((run) => run.id === snapshot.id);
+      const merged = mergeAgentRunStatus(existing, snapshot);
+      return existing ? current.map((run) => run.id === snapshot.id ? merged : run) : [...current, merged];
+    });
+    setMessages((current) => current.map((message) => message.id === snapshot.assistantMessageId ? {
+      ...message,
+      status: snapshot.assistantMessage.status.toLowerCase() as ChatMessageView["status"],
+    } : message));
+    if (snapshot.status === "PENDING") {
+      setGenerationKind("AGENT");
+      setGenerating(true);
+      setError("Agent 正在后台继续运行。");
+    } else {
+      setGenerating(false);
+      setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
+    }
+  }, []);
+  useGenerationRecovery({ storageKey: "agent-generation", runId: agentRunId, onRunId: setAgentRunId, statusUrl: "/api/agents/", statusSuffix: "/status", onSnapshot: recoverAgentStatus });
 
   async function refreshAgentRun(runId: string) {
     const response = await fetch(`/api/agents/${runId}`, { cache: "no-store" });
@@ -427,6 +446,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
           messages={messages}
           onCancelAgentRun={stopAgentRun}
           onCancelAgentWorker={stopAgentWorker}
+          onRequestAgentDetails={async (runId) => { await refreshAgentRun(runId); }}
           onBeginEdit={beginEdit}
           onCancelEdit={() => { setEditingMessage(undefined); setEditValue(""); pendingStopEditRef.current = false; }}
           onEditChange={setEditValue}

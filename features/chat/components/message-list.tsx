@@ -34,6 +34,7 @@ interface MessageListProps {
   agentRuns: AgentRunView[];
   onCancelAgentRun(runId: string): Promise<void>;
   onCancelAgentWorker(runId: string, workerKey: string): Promise<void>;
+  onRequestAgentDetails(runId: string): Promise<void>;
 }
 
 export function MessageList(props: MessageListProps) {
@@ -99,7 +100,7 @@ export function MessageList(props: MessageListProps) {
         {messages.length ? messages.map((message) => {
           const agentRun = message.role === "assistant" ? agentByAssistantId.get(message.id) : undefined;
           return <Fragment key={message.id}>
-            {agentRun ? <AgentWorkerPanel onCancelRun={props.onCancelAgentRun} onCancelWorker={props.onCancelAgentWorker} run={agentRun} /> : null}
+            {agentRun ? <AgentWorkerPanel onCancelRun={props.onCancelAgentRun} onCancelWorker={props.onCancelAgentWorker} onRequestDetails={props.onRequestAgentDetails} run={agentRun} /> : null}
             <MessageItem
             canEdit={message.id === lastUserId}
             editDisabled={props.editDisabled}

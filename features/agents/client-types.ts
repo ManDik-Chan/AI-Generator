@@ -60,6 +60,47 @@ export interface AgentRunView {
   workers: AgentWorkerView[];
   events: AgentEventView[];
   usage?: { limit: number; used: number; remaining: number; unlimited: boolean };
+  detailLevel?: "STATUS" | "FULL";
+}
+
+export interface AgentWorkerStatusSnapshot {
+  key: string;
+  position: number;
+  name: string;
+  title: string;
+  objective: string;
+  expectedDeliverable: string;
+  priority: "HIGH" | "MEDIUM" | "LOW";
+  status: AgentWorkerStatusView;
+  dependsOnKeys: string[];
+  errorCode: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AgentRunStatusSnapshot {
+  id: string;
+  conversationId: string;
+  userMessageId: string;
+  assistantMessageId: string;
+  mode: AgentModeView;
+  status: AgentRunStatusView;
+  phase: AgentRunPhaseView;
+  planOverview: string | null;
+  planFallback: boolean;
+  plannedWorkerCount: number;
+  completedWorkerCount: number;
+  successfulWorkerCount: number;
+  providerCallCount: number;
+  errorCode: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  assistantMessage: { status: AgentRunStatusView | "PENDING"; createdAt: string };
+  workers: AgentWorkerStatusSnapshot[];
 }
 
 export interface AgentRunListItem {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createPendingAgentRunView, reduceAgentStreamEvent } from "@/features/agents/client-state";
+import { createPendingAgentRunView, mergeAgentRunStatus, reduceAgentStreamEvent } from "@/features/agents/client-state";
 
 const identifiers = {
   runId: "11111111-1111-4111-8111-111111111111",
@@ -49,5 +49,46 @@ describe("Agent client stream state", () => {
     run = reduceAgentStreamEvent(run, { event: "done", data: {} });
     expect(run).toMatchObject({ status: "COMPLETE", phase: "FINISHED", providerCallCount: 3 });
     expect(run.assistantMessage).toMatchObject({ content: "最终", status: "COMPLETE" });
+  });
+});
+
+describe("Agent compact status merge", () => {
+  it("updates progress while retaining full deliverables already observed by SSE or detail fetch", () => {
+    const planned = reduceAgentStreamEvent(createPendingAgentRunView({ ...identifiers, mode: "STANDARD" }), {
+      event: "plan_ready",
+      data: { overview: "Plan", workers: [{ key: "worker-a", name: "A", title: "Title", objective: "Objective", expectedDeliverable: "Expected", priority: "HIGH", dependsOn: [] }] },
+    });
+    const current = reduceAgentStreamEvent(planned, {
+      event: "worker_done",
+      data: { workerKey: "worker-a", deliverable: { finalDeliverable: "Keep me", findings: ["Finding"], structured: true } },
+    });
+    const merged = mergeAgentRunStatus(current, {
+      id: identifiers.runId,
+      conversationId: identifiers.conversationId,
+      userMessageId: identifiers.userMessageId,
+      assistantMessageId: identifiers.assistantMessageId,
+      mode: "STANDARD",
+      status: "COMPLETE",
+      phase: "FINISHED",
+      planOverview: "Plan",
+      planFallback: false,
+      plannedWorkerCount: 4,
+      completedWorkerCount: 1,
+      successfulWorkerCount: 1,
+      providerCallCount: 3,
+      errorCode: null,
+      startedAt: current.startedAt,
+      completedAt: current.startedAt,
+      createdAt: current.createdAt,
+      updatedAt: current.updatedAt,
+      assistantMessage: { status: "COMPLETE", createdAt: current.createdAt },
+      workers: [{
+        key: "worker-a", position: 0, name: "A", title: "Title", objective: "Objective", expectedDeliverable: "Expected",
+        priority: "HIGH", status: "COMPLETE", dependsOnKeys: [], errorCode: null,
+        startedAt: current.startedAt, completedAt: current.startedAt, createdAt: current.createdAt, updatedAt: current.updatedAt,
+      }],
+    });
+    expect(merged.workers[0]).toMatchObject({ status: "COMPLETE", finalDeliverable: "Keep me", findings: ["Finding"], structured: true });
+    expect(merged.detailLevel).toBe("STATUS");
   });
 });
