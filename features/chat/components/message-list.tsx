@@ -2,18 +2,23 @@
 
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, MessageSquareText } from "lucide-react";
+import dynamic from "next/dynamic";
 
 import { MessageItem } from "@/features/chat/components/message-item";
 import { AssistantAvatar } from "@/features/chat/components/assistant-avatar";
 import type { ChatMessageView } from "@/features/chat/types";
 import type { PersonaChatIdentity } from "@/features/persona/types";
 import type { AgentRunView } from "@/features/agents/client-types";
-import { AgentWorkerPanel } from "@/features/agents/components/agent-worker-panel";
 import {
   CHAT_VIEWPORT_CHANGE_EVENT,
   getPreservedChatScrollTop,
   isChatScrollerNearBottom,
 } from "@/features/chat/viewport";
+
+const AgentWorkerPanel = dynamic(
+  () => import("@/features/agents/components/agent-worker-panel").then((module) => module.AgentWorkerPanel),
+  { loading: () => <div className="rounded-card border border-primary/18 bg-primary-subtle/24 p-4 text-sm text-muted-foreground">正在载入 Agent Worker 详情…</div> },
+);
 
 interface MessageListProps {
   messages: ChatMessageView[];

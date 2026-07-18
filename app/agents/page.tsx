@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import type { AgentModeView, AgentRunStatusView } from "@/features/agents/client-types";
+import { agentModeLabels, agentRunStatusLabels, getAgentRunProgressLabel } from "@/features/agents/presentation";
 import { getAgentRunList } from "@/features/agents/queries";
 import { requireUser } from "@/lib/auth/session";
 
@@ -32,7 +33,7 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
     </form>
 
     {runs.length ? <div className="mt-5 grid gap-4 lg:grid-cols-2">{runs.map((run) => <article className="premium-panel-strong flex min-w-0 flex-col p-5" key={run.id}>
-      <div className="flex flex-wrap items-center gap-2"><span className="premium-chip">{run.mode === "DEEP" ? "深度" : "标准"}</span><span className="premium-chip">{run.status}</span><span className="premium-chip">{run.phase}</span></div>
+      <div className="flex flex-wrap items-center gap-2"><span className="premium-chip">{agentModeLabels[run.mode]}</span><span className="premium-chip">{agentRunStatusLabels[run.status]}</span><span className="premium-chip">{getAgentRunProgressLabel(run)}</span></div>
       <h2 className="mt-4 line-clamp-3 break-words text-lg font-semibold leading-7">{run.userProblem}</h2>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs"><span className="premium-subpanel p-2.5"><strong className="block text-base">{run.plannedWorkerCount}</strong>Worker</span><span className="premium-subpanel p-2.5"><strong className="block text-base">{run.successfulWorkerCount}</strong>成功</span><span className="premium-subpanel p-2.5"><strong className="block text-base">{run.providerCallCount}</strong>调用</span></div>
       <p className="mt-4 text-xs text-muted-foreground">开始 {new Date(run.startedAt).toLocaleString("zh-CN")}{run.completedAt ? ` · 完成 ${new Date(run.completedAt).toLocaleString("zh-CN")}` : " · 正在后台运行"}</p>

@@ -28,12 +28,25 @@ interface AgentWorkerCardProps {
 export function AgentWorkerCard({ worker, now, forceOpen, onCancel }: AgentWorkerCardProps) {
   const [stopping, setStopping] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [actionError, setActionError] = useState<string>();
   const canCancel = worker.status === "QUEUED" || worker.status === "RUNNING";
   const copyDeliverable = async () => {
     if (!worker.finalDeliverable) return;
-    await navigator.clipboard.writeText(worker.finalDeliverable);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(worker.finalDeliverable);
+      setCopied(true);
+      setActionError(undefined);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setActionError("无法复制交付物，请手动选择文本复制。");
+    }
+  };
+  const cancelWorker = async () => {
+    setStopping(true);
+    setActionError(undefined);
+    try { await onCancel(worker.key); }
+    catch (error) { setActionError(error instanceof Error ? error.message : "Worker 停止请求未确认。"); }
+    finally { setStopping(false); }
   };
 
   return (
@@ -71,8 +84,9 @@ export function AgentWorkerCard({ worker, now, forceOpen, onCancel }: AgentWorke
         {worker.finalDeliverable ? <section><p className="premium-kicker">最终交付物</p><p className="mt-2 whitespace-pre-wrap break-words leading-6 text-muted-foreground">{worker.finalDeliverable}</p></section> : null}
         <div className="flex flex-wrap gap-2">
           {worker.finalDeliverable ? <Button className="min-h-11" onClick={() => void copyDeliverable()} size="sm" type="button" variant="outline">{copied ? <Check className="size-4" /> : <Copy className="size-4" />}{copied ? "已复制" : "复制交付物"}</Button> : null}
-          {canCancel ? <Button className="min-h-11" disabled={stopping} onClick={() => { setStopping(true); void onCancel(worker.key).finally(() => setStopping(false)); }} size="sm" type="button" variant="outline"><Square className="size-3.5 fill-current" />{stopping ? "正在确认" : "停止该 Worker"}</Button> : null}
+          {canCancel ? <Button className="min-h-11" disabled={stopping} onClick={() => void cancelWorker()} size="sm" type="button" variant="outline"><Square className="size-3.5 fill-current" />{stopping ? "正在确认" : "停止该 Worker"}</Button> : null}
         </div>
+        {actionError ? <p className="text-sm text-destructive-foreground" role="alert">{actionError}</p> : null}
       </div>
     </details>
   );

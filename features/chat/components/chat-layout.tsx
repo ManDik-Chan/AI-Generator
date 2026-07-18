@@ -170,7 +170,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   async function sendMessage(messageToEdit?: ChatMessageView) {
     const content = (messageToEdit ? editValue : draft).trim();
     const requestedMode: ChatGenerationMode = messageToEdit ? "CHAT" : generationMode;
-    if (!content || generating || !aiConfigured || (requestedMode !== "CHAT" && !agentConfigured)) return;
+    const configuredForRequest = requestedMode === "CHAT" ? aiConfigured : agentConfigured;
+    if (!content || generating || !configuredForRequest) return;
 
     const editTarget = messageToEdit ? createEditRequestTarget({
       message: messageToEdit,
@@ -187,12 +188,14 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
     let assistantId = `assistant-${crypto.randomUUID()}`;
     const now = new Date().toISOString();
     let assistantContent = "";
+    const priorTitle = activeTitle;
     const editIndex = messageToEdit ? messages.findIndex((message) => message.id === messageToEdit.id) : -1;
     if (messageToEdit && editIndex < 0) return;
     if (messageToEdit) {
       setEditingMessage(undefined);
       setEditValue("");
     } else setDraft("");
+    if (!messageToEdit) setGenerationMode("CHAT");
     setError(undefined);
     setGenerating(true);
     setGenerationKind(requestedMode === "CHAT" ? "CHAT" : "AGENT");
@@ -213,6 +216,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
 
     let detached = false;
     let terminal = false;
+    let confirmedBusinessRun = false;
     let confirmedAgentRunId: string | undefined;
     try {
       const response = await fetch(requestedMode === "CHAT" ? "/api/chat" : "/api/agents", {
@@ -235,6 +239,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             if (firstConfirmation) window.history.replaceState(window.history.state, "", `/chat/${streamEvent.data.conversationId}`);
           }
           if (streamEvent.event === "turn") {
+            confirmedBusinessRun = true;
             const temporaryUserId = userId;
             const temporaryAssistantId = assistantId;
             userId = streamEvent.data.userMessageId;
@@ -269,6 +274,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       } else {
         await readSseEvents<AgentStreamEvent>(response, (streamEvent) => {
           if (streamEvent.event === "run") {
+            confirmedBusinessRun = true;
             const pendingRun = createPendingAgentRunView(streamEvent.data);
             confirmedAgentRunId = pendingRun.id;
             setAgentRunId(pendingRun.id);
@@ -315,9 +321,22 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
         return;
       }
 
-    } catch {
+    } catch (reason) {
       if (requestController.signal.aborted) {
         setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
+      } else if (terminal) {
+        setError(reason instanceof Error ? reason.message : "最终状态刷新失败，请稍后重新打开对话。");
+      } else if (!confirmedBusinessRun) {
+        setMessages(messages);
+        setActiveTitle(priorTitle);
+        setGenerationMode(requestedMode);
+        if (messageToEdit) {
+          setEditingMessage(messageToEdit);
+          setEditValue(content);
+        } else {
+          setDraft(content);
+        }
+        setError(reason instanceof Error ? reason.message : "请求未创建，请稍后重试。");
       } else {
         detached = true;
         setGenerating(true);
@@ -366,7 +385,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
           {!activeConversationId && <button aria-label="选择助手" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground xl:hidden" onClick={() => setAssistantDrawerOpen(true)} title="选择助手" type="button"><Bot className="size-5" /></button>}
           {generating && <span className="premium-chip hidden shrink-0 border-primary/15 bg-primary-subtle text-primary-subtle-foreground sm:inline-flex"><span className="size-1.5 animate-pulse rounded-full bg-primary" />{cancelling ? "正在请求停止" : "正在生成"}</span>}
         </header>
-        {!aiConfigured && <div className="border-b border-warning/16 bg-warning-subtle/72 px-4 py-2.5 text-center text-sm text-warning-foreground">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div>}
+        {generationMode === "CHAT" && !aiConfigured ? <div className="border-b border-warning/16 bg-warning-subtle/72 px-4 py-2.5 text-center text-sm text-warning-foreground">AI 服务尚未配置。请由管理员设置服务端 AI 环境变量。</div> : null}
+        {generationMode !== "CHAT" && !agentConfigured ? <div className="border-b border-warning/16 bg-warning-subtle/72 px-4 py-2.5 text-center text-sm text-warning-foreground">Agent 服务尚未配置。请由管理员设置服务端 Agent 环境变量。</div> : null}
         {error && <div className="border-b border-destructive/16 bg-destructive-subtle/76 px-4 py-2.5 text-center text-sm text-destructive-foreground" role="alert">{error}</div>}
         {conversation?.persona?.archived && <DeletedPersonaNotice personaId={conversation.persona.id} />}
         <div className="flex min-h-0 min-w-0 flex-1"><main className="flex min-w-0 flex-1 flex-col"><MessageList
@@ -386,7 +406,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
         />
         <ChatComposer
           agentConfigured={agentConfigured}
-          disabledReason={getComposerDisabledReason(aiConfigured, Boolean(editingMessage), Boolean(conversation?.persona?.archived))}
+          disabledReason={getComposerDisabledReason(generationMode === "CHAT" ? aiConfigured : agentConfigured, Boolean(editingMessage), Boolean(conversation?.persona?.archived))}
           generating={generating}
           stopping={cancelling}
           maxInputChars={maxInputChars}
