@@ -50,7 +50,7 @@ export async function reserveWorkerProviderCall(userId: string, runId: string, w
       data: { providerCallCount: { increment: 1 } },
     });
     if (!counted.count) throw new Error("Agent Provider call budget changed concurrently.");
-    await appendAgentEvent(transaction, { userId, runId, type: "WORKER_STARTED", workerKey, summaryText: "Worker started one Provider call." });
+    await appendAgentEvent(transaction, { userId, runId, type: "WORKER_STARTED", workerKey, summaryText: "Worker started one Provider call." }, { runLocked: true });
     return true;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
@@ -105,7 +105,7 @@ export async function finishAgentWorker(input: {
       type: eventType,
       workerKey: input.workerKey,
       summaryText: input.status === "COMPLETE" ? "Worker completed with a guarded deliverable." : `Worker finished with ${input.errorCode ?? input.status}.`,
-    });
+    }, { runLocked: true });
     return true;
   });
 }
@@ -137,7 +137,7 @@ export async function finishQueuedAgentWorker(input: {
       type: eventType,
       workerKey: input.workerKey,
       summaryText: `Worker finished with ${input.errorCode}.`,
-    });
+    }, { runLocked: true });
     return true;
   });
 }
@@ -164,7 +164,7 @@ export async function cancelAgentWorker(userId: string, runId: string, workerKey
       where: { id: runId, userId, status: "PENDING" },
       data: { completedWorkerCount: { increment: 1 } },
     });
-    await appendAgentEvent(transaction, { userId, runId, type: "WORKER_CANCELLED", workerKey, summaryText: "Worker cancellation confirmed by the server." });
+    await appendAgentEvent(transaction, { userId, runId, type: "WORKER_CANCELLED", workerKey, summaryText: "Worker cancellation confirmed by the server." }, { runLocked: true });
     return "CANCELLED" as const;
   });
 }

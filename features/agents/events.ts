@@ -7,6 +7,52 @@ import { prisma } from "@/lib/database/prisma";
 
 type Transaction = Prisma.TransactionClient;
 
+export interface AgentEventInput {
+  type: AgentEventType;
+  workerKey?: string;
+  summaryText?: string;
+}
+
+export async function lockAgentEventStream(transaction: Transaction, userId: string, runId: string) {
+  const rows = await transaction.$queryRaw<Array<{ id: string }>>(
+    Prisma.sql`SELECT id FROM public.agent_runs WHERE id = ${runId}::uuid AND user_id = ${userId}::uuid FOR UPDATE`,
+  );
+  return rows.length > 0;
+}
+
+export async function appendAgentEvents(
+  transaction: Transaction,
+  input: {
+    userId: string;
+    runId: string;
+    events: AgentEventInput[];
+  },
+  options: { runLocked?: boolean } = {},
+) {
+  if (!input.events.length) return 0;
+  if (!options.runLocked && !(await lockAgentEventStream(transaction, input.userId, input.runId))) {
+    throw new Error("Agent run not found while appending events.");
+  }
+  const latest = await transaction.agentEvent.findFirst({
+    where: { agentRunId: input.runId, userId: input.userId },
+    orderBy: { sequence: "desc" },
+    select: { sequence: true },
+  });
+  const firstSequence = (latest?.sequence ?? 0) + 1;
+  if (firstSequence + input.events.length - 1 > AGENT_EVENT_LIMIT) throw new Error("Agent event limit exceeded.");
+  const created = await transaction.agentEvent.createMany({
+    data: input.events.map((event, index) => ({
+      agentRunId: input.runId,
+      userId: input.userId,
+      sequence: firstSequence + index,
+      type: event.type,
+      workerKey: event.workerKey,
+      summaryText: event.summaryText?.slice(0, 500),
+    })),
+  });
+  return created.count;
+}
+
 export async function appendAgentEvent(
   transaction: Transaction,
   input: {
@@ -16,31 +62,18 @@ export async function appendAgentEvent(
     workerKey?: string;
     summaryText?: string;
   },
+  options: { runLocked?: boolean } = {},
 ) {
-  await transaction.$queryRaw(
-    Prisma.sql`SELECT id FROM public.agent_runs WHERE id = ${input.runId}::uuid AND user_id = ${input.userId}::uuid FOR UPDATE`,
-  );
-  const latest = await transaction.agentEvent.findFirst({
-    where: { agentRunId: input.runId, userId: input.userId },
-    orderBy: { sequence: "desc" },
-    select: { sequence: true },
-  });
-  const sequence = (latest?.sequence ?? 0) + 1;
-  if (sequence > AGENT_EVENT_LIMIT) throw new Error("Agent event limit exceeded.");
-  return transaction.agentEvent.create({
-    data: {
-      agentRunId: input.runId,
-      userId: input.userId,
-      sequence,
-      type: input.type,
-      workerKey: input.workerKey,
-      summaryText: input.summaryText?.slice(0, 500),
-    },
-  });
+  return appendAgentEvents(transaction, {
+    userId: input.userId,
+    runId: input.runId,
+    events: [{ type: input.type, workerKey: input.workerKey, summaryText: input.summaryText }],
+  }, options);
 }
 
 export async function reservePlannerProviderCall(userId: string, runId: string) {
   return prisma.$transaction(async (transaction) => {
+    if (!(await lockAgentEventStream(transaction, userId, runId))) return false;
     const run = await transaction.agentRun.findFirst({
       where: { id: runId, userId, status: "PENDING", phase: "PLANNING" },
       select: { id: true, mode: true, providerCallCount: true },
@@ -61,16 +94,14 @@ export async function reservePlannerProviderCall(userId: string, runId: string) 
       runId,
       type: "PLANNING_STARTED",
       summaryText: "Planner started with one reserved Provider call.",
-    });
+    }, { runLocked: true });
     return true;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function reserveLeaderProviderCall(userId: string, runId: string) {
   return prisma.$transaction(async (transaction) => {
-    await transaction.$queryRaw(
-      Prisma.sql`SELECT id FROM public.agent_runs WHERE id = ${runId}::uuid AND user_id = ${userId}::uuid FOR UPDATE`,
-    );
+    if (!(await lockAgentEventStream(transaction, userId, runId))) return false;
     const run = await transaction.agentRun.findFirst({
       where: { id: runId, userId, status: "PENDING", phase: "WORKING" },
       select: { mode: true, providerCallCount: true },
@@ -92,7 +123,7 @@ export async function reserveLeaderProviderCall(userId: string, runId: string) {
       runId,
       type: "SYNTHESIS_STARTED",
       summaryText: "Leader started with one reserved Provider call.",
-    });
+    }, { runLocked: true });
     return true;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma, type AgentRunMode } from "@prisma/client";
 
-import { appendAgentEvent } from "@/features/agents/events";
+import { appendAgentEvent, appendAgentEvents, lockAgentEventStream } from "@/features/agents/events";
 import { getAgentModeLimits } from "@/features/agents/constants";
 import type { AgentPlan } from "@/features/agents/types";
 import { createConversationTitle, startOfUtcDay } from "@/features/chat/utils";
@@ -136,6 +136,7 @@ export async function persistAgentPlan(input: {
   fallbackErrorCode?: string;
 }) {
   return prisma.$transaction(async (transaction) => {
+    if (!(await lockAgentEventStream(transaction, input.userId, input.runId))) return false;
     const run = await transaction.agentRun.findFirst({
       where: { id: input.runId, userId: input.userId, status: "PENDING", phase: "PLANNING" },
       select: { id: true, plannedWorkerCount: true, _count: { select: { workers: true } } },
@@ -166,27 +167,18 @@ export async function persistAgentPlan(input: {
         errorCode: input.fallback ? input.fallbackErrorCode?.slice(0, 100) ?? "PLAN_FALLBACK" : null,
       },
     });
-    await appendAgentEvent(transaction, {
+    await appendAgentEvents(transaction, {
       userId: input.userId,
       runId: input.runId,
-      type: input.fallback ? "PLAN_FALLBACK" : "PLAN_CREATED",
-      summaryText: input.fallback ? "Deterministic safe fallback plan selected." : "Planner task graph validated.",
-    });
-    await appendAgentEvent(transaction, {
-      userId: input.userId,
-      runId: input.runId,
-      type: "WORKERS_CREATED",
-      summaryText: `${input.plan.workers.length} Workers created by the trusted server.`,
-    });
-    for (const worker of input.plan.workers) {
-      await appendAgentEvent(transaction, {
-        userId: input.userId,
-        runId: input.runId,
-        type: "WORKER_QUEUED",
-        workerKey: worker.key,
-        summaryText: "Worker queued.",
-      });
-    }
+      events: [
+        {
+          type: input.fallback ? "PLAN_FALLBACK" : "PLAN_CREATED",
+          summaryText: input.fallback ? "Deterministic safe fallback plan selected." : "Planner task graph validated.",
+        },
+        { type: "WORKERS_CREATED", summaryText: `${input.plan.workers.length} Workers created by the trusted server.` },
+        ...input.plan.workers.map((worker) => ({ type: "WORKER_QUEUED" as const, workerKey: worker.key, summaryText: "Worker queued." })),
+      ],
+    }, { runLocked: true });
     return true;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

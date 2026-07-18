@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma, type AgentEventType, type AgentWorkerStatus } from "@prisma/client";
 
-import { appendAgentEvent } from "@/features/agents/events";
+import { appendAgentEvents, lockAgentEventStream } from "@/features/agents/events";
 import { prisma } from "@/lib/database/prisma";
 
 const terminalStatuses = new Set<AgentWorkerStatus>(["BLOCKED", "COMPLETE", "ERROR", "CANCELLED", "TIMEOUT"]);
@@ -36,9 +36,7 @@ export async function finishAgentRun(input: {
   timeout?: boolean;
 }) {
   return prisma.$transaction(async (transaction) => {
-    await transaction.$queryRaw(
-      Prisma.sql`SELECT id FROM public.agent_runs WHERE id = ${input.runId}::uuid AND user_id = ${input.userId}::uuid FOR UPDATE`,
-    );
+    if (!(await lockAgentEventStream(transaction, input.userId, input.runId))) return false;
     const run = await transaction.agentRun.findFirst({
       where: { id: input.runId, userId: input.userId, status: "PENDING" },
       select: { assistantMessageId: true },
@@ -49,17 +47,23 @@ export async function finishAgentRun(input: {
       where: { agentRunId: input.runId, userId: input.userId, status: { in: ["QUEUED", "RUNNING"] } },
       select: { key: true, status: true },
     });
-    for (const worker of unfinished) {
-      const status: AgentWorkerStatus = input.timeout ? "TIMEOUT" : worker.status === "RUNNING" ? "ERROR" : "BLOCKED";
-      const errorCode = input.timeout ? "TIMEOUT" : worker.status === "RUNNING" ? "RUN_ABORTED" : "RUN_FAILED";
-      const changed = await transaction.agentWorker.updateMany({
-        where: { agentRunId: input.runId, userId: input.userId, key: worker.key, status: worker.status },
-        data: { status, errorCode, completedAt: new Date() },
+    const completedAt = new Date();
+    if (input.timeout) {
+      await transaction.agentWorker.updateMany({
+        where: { agentRunId: input.runId, userId: input.userId, status: { in: ["QUEUED", "RUNNING"] } },
+        data: { status: "TIMEOUT", errorCode: "TIMEOUT", completedAt },
       });
-      if (changed.count) {
-        const type: AgentEventType = status === "TIMEOUT" ? "WORKER_TIMEOUT" : status === "BLOCKED" ? "WORKER_BLOCKED" : "WORKER_FAILED";
-        await appendAgentEvent(transaction, { userId: input.userId, runId: input.runId, type, workerKey: worker.key, summaryText: `Worker finished with ${errorCode}.` });
-      }
+    } else {
+      await Promise.all([
+        transaction.agentWorker.updateMany({
+          where: { agentRunId: input.runId, userId: input.userId, status: "RUNNING" },
+          data: { status: "ERROR", errorCode: "RUN_ABORTED", completedAt },
+        }),
+        transaction.agentWorker.updateMany({
+          where: { agentRunId: input.runId, userId: input.userId, status: "QUEUED" },
+          data: { status: "BLOCKED", errorCode: "RUN_FAILED", completedAt },
+        }),
+      ]);
     }
 
     const message = await transaction.message.updateMany({
@@ -67,39 +71,48 @@ export async function finishAgentRun(input: {
       data: { content: input.content, status: input.status === "COMPLETE" ? "COMPLETE" : "ERROR" },
     });
     if (!message.count) return false;
-    const workers = await transaction.agentWorker.findMany({
+    const workers = await transaction.agentWorker.groupBy({
+      by: ["status"],
       where: { agentRunId: input.runId, userId: input.userId },
-      select: { status: true },
+      _count: { _all: true },
     });
-    const completedWorkerCount = workers.filter((worker) => terminalStatuses.has(worker.status)).length;
-    const successfulWorkerCount = workers.filter((worker) => worker.status === "COMPLETE").length;
+    const completedWorkerCount = workers.reduce((total, worker) => total + (terminalStatuses.has(worker.status) ? worker._count._all : 0), 0);
+    const successfulWorkerCount = workers.find((worker) => worker.status === "COMPLETE")?._count._all ?? 0;
     const finished = await transaction.agentRun.updateMany({
       where: { id: input.runId, userId: input.userId, status: "PENDING" },
       data: {
         status: input.status,
         phase: "FINISHED",
-        completedAt: new Date(),
+        completedAt,
         completedWorkerCount,
         successfulWorkerCount,
         errorCode: input.status === "COMPLETE" ? null : input.errorCode?.slice(0, 100) ?? "AGENT_ERROR",
       },
     });
     if (!finished.count) throw new Error("Agent run terminal state changed concurrently.");
-    await appendAgentEvent(transaction, {
+    await appendAgentEvents(transaction, {
       userId: input.userId,
       runId: input.runId,
-      type: input.status === "COMPLETE" ? "RUN_COMPLETED" : input.timeout ? "RUN_TIMEOUT" : "RUN_FAILED",
-      summaryText: input.status === "COMPLETE" ? "Leader answer persisted to the Assistant Message." : `Agent run failed with ${input.errorCode ?? "AGENT_ERROR"}.`,
-    });
+      events: [
+        ...unfinished.map((worker) => {
+          const status: AgentWorkerStatus = input.timeout ? "TIMEOUT" : worker.status === "RUNNING" ? "ERROR" : "BLOCKED";
+          const errorCode = input.timeout ? "TIMEOUT" : worker.status === "RUNNING" ? "RUN_ABORTED" : "RUN_FAILED";
+          const type: AgentEventType = status === "TIMEOUT" ? "WORKER_TIMEOUT" : status === "BLOCKED" ? "WORKER_BLOCKED" : "WORKER_FAILED";
+          return { type, workerKey: worker.key, summaryText: `Worker finished with ${errorCode}.` };
+        }),
+        {
+          type: input.status === "COMPLETE" ? "RUN_COMPLETED" : input.timeout ? "RUN_TIMEOUT" : "RUN_FAILED",
+          summaryText: input.status === "COMPLETE" ? "Leader answer persisted to the Assistant Message." : `Agent run failed with ${input.errorCode ?? "AGENT_ERROR"}.`,
+        },
+      ],
+    }, { runLocked: true });
     return true;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function cancelAgentRun(userId: string, runId: string) {
   return prisma.$transaction(async (transaction) => {
-    await transaction.$queryRaw(
-      Prisma.sql`SELECT id FROM public.agent_runs WHERE id = ${runId}::uuid AND user_id = ${userId}::uuid FOR UPDATE`,
-    );
+    if (!(await lockAgentEventStream(transaction, userId, runId))) return null;
     const run = await transaction.agentRun.findFirst({
       where: { id: runId, userId },
       select: { status: true, assistantMessageId: true },
@@ -114,9 +127,6 @@ export async function cancelAgentRun(userId: string, runId: string) {
       where: { agentRunId: runId, userId, status: { in: ["QUEUED", "RUNNING"] } },
       data: { status: "CANCELLED", errorCode: "CANCELLED", completedAt: new Date() },
     });
-    for (const worker of activeWorkers) {
-      await appendAgentEvent(transaction, { userId, runId, type: "WORKER_CANCELLED", workerKey: worker.key, summaryText: "Worker cancelled with its Agent run." });
-    }
     const workerCounts = await transaction.agentWorker.groupBy({
       by: ["status"],
       where: { agentRunId: runId, userId },
@@ -132,7 +142,14 @@ export async function cancelAgentRun(userId: string, runId: string) {
       where: { id: runId },
       data: { status: "CANCELLED", phase: "FINISHED", errorCode: "CANCELLED", completedAt: new Date(), completedWorkerCount, successfulWorkerCount },
     });
-    await appendAgentEvent(transaction, { userId, runId, type: "RUN_CANCELLED", summaryText: "Agent run cancellation confirmed by the server." });
+    await appendAgentEvents(transaction, {
+      userId,
+      runId,
+      events: [
+        ...activeWorkers.map((worker) => ({ type: "WORKER_CANCELLED" as const, workerKey: worker.key, summaryText: "Worker cancelled with its Agent run." })),
+        { type: "RUN_CANCELLED", summaryText: "Agent run cancellation confirmed by the server." },
+      ],
+    }, { runLocked: true });
     return "CANCELLED" as const;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
