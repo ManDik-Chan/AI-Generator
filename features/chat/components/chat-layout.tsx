@@ -23,6 +23,7 @@ import { createPendingAgentRunView, mergeAgentRunStatus, reduceAgentStreamEvent 
 import { readSseEvents } from "@/features/generation/client-sse";
 import type { ChatGenerationMode } from "@/features/chat/types";
 import type { ChatBootstrapPayload } from "@/features/chat/bootstrap-types";
+import { migrateConversationGeneration, readConversationGeneration, updateConversationGeneration } from "@/features/generation/conversation-registry";
 
 interface ChatLayoutProps {
   conversations: ConversationSummary[];
@@ -35,9 +36,11 @@ interface ChatLayoutProps {
   initialAgentRuns?: AgentRunView[];
   requestedPersonaId?: string;
   bootstrapPersonas?: boolean;
+  initialConversationKey: string;
+  viewerId: string;
 }
 
-export function ChatLayout({ conversations, conversation, aiConfigured, agentConfigured, maxInputChars, personas = [], selectedPersona, initialAgentRuns = [], requestedPersonaId, bootstrapPersonas = true }: ChatLayoutProps) {
+export function ChatLayout({ conversations, conversation, aiConfigured, agentConfigured, maxInputChars, personas = [], selectedPersona, initialAgentRuns = [], requestedPersonaId, bootstrapPersonas = true, initialConversationKey, viewerId }: ChatLayoutProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessageView[]>(conversation?.messages ?? []);
   const [draft, setDraft] = useState("");
@@ -52,6 +55,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const [controller, setController] = useState<AbortController>();
   const [assistantMessageId, setAssistantMessageId] = useState<string>();
   const [agentRunId, setAgentRunId] = useState<string>();
+  const [conversationKey, setConversationKey] = useState(initialConversationKey);
   const [agentRuns, setAgentRuns] = useState<AgentRunView[]>(initialAgentRuns);
   const [generationMode, setGenerationMode] = useState<ChatGenerationMode>("CHAT");
   const [generationKind, setGenerationKind] = useState<"CHAT" | "AGENT">();
@@ -63,7 +67,13 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
   const pendingStopEditRef = useRef(false);
   const pendingCancelRef = useRef(false);
+  const conversationKeyRef = useRef(initialConversationKey);
+  const mountedRef = useRef(true);
   useChatVisualViewport(shellRef);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     setBootstrapLoading(true);
@@ -87,13 +97,31 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       });
     return () => controller.abort();
   }, [bootstrapPersonas, requestedPersonaId]);
+  const readChatGeneration = useCallback(() => readConversationGeneration(sessionStorage, viewerId, conversationKey)?.chatMessageId, [conversationKey, viewerId]);
+  const writeChatGeneration = useCallback((runId?: string) => {
+    updateConversationGeneration(sessionStorage, viewerId, conversationKey, { chatMessageId: runId ?? null });
+  }, [conversationKey, viewerId]);
+  const readAgentGeneration = useCallback(() => readConversationGeneration(sessionStorage, viewerId, conversationKey)?.agentRunId, [conversationKey, viewerId]);
+  const writeAgentGeneration = useCallback((runId?: string) => {
+    updateConversationGeneration(sessionStorage, viewerId, conversationKey, { agentRunId: runId ?? null });
+  }, [conversationKey, viewerId]);
+  const confirmConversationKey = useCallback((conversationId: string) => {
+    const previous = conversationKeyRef.current;
+    if (previous === conversationId) return;
+    migrateConversationGeneration(sessionStorage, viewerId, previous, conversationId);
+    conversationKeyRef.current = conversationId;
+    setConversationKey(conversationId);
+  }, [viewerId]);
+  const clearCurrentGeneration = useCallback((kind: "CHAT" | "AGENT") => {
+    updateConversationGeneration(sessionStorage, viewerId, conversationKeyRef.current, kind === "CHAT" ? { chatMessageId: null } : { agentRunId: null });
+  }, [viewerId]);
   const recover = useCallback((snapshot: { id: string; status: string; content: string }) => {
     const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
     setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
     if (snapshot.status === "PENDING") { setGenerating(true); setError("任务正在后台继续生成。"); }
-    else { setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
-  }, []);
-  useGenerationRecovery({ storageKey: "chat-generation", runId: assistantMessageId, onRunId: setAssistantMessageId, statusUrl: "/api/chat/messages/", statusSuffix: "/status", onSnapshot: recover });
+    else { clearCurrentGeneration("CHAT"); setAssistantMessageId(undefined); setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
+  }, [clearCurrentGeneration]);
+  useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:CHAT`, readRunId: readChatGeneration, writeRunId: writeChatGeneration, runId: assistantMessageId, onRunId: setAssistantMessageId, statusUrl: "/api/chat/messages/", statusSuffix: "/status", onSnapshot: recover });
   const recoverAgent = useCallback((snapshot: AgentRunView) => {
     setAgentRuns((current) => current.some((run) => run.id === snapshot.id) ? current.map((run) => run.id === snapshot.id ? snapshot : run) : [...current, snapshot]);
     setMessages((current) => current.map((message) => message.id === snapshot.assistantMessageId ? {
@@ -106,10 +134,12 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       setGenerating(true);
       setError("Agent 正在后台继续运行。");
     } else {
+      clearCurrentGeneration("AGENT");
+      setAgentRunId(undefined);
       setGenerating(false);
       setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
     }
-  }, []);
+  }, [clearCurrentGeneration]);
   const recoverAgentStatus = useCallback((snapshot: AgentRunStatusSnapshot) => {
     setAgentRuns((current) => {
       const existing = current.find((run) => run.id === snapshot.id);
@@ -125,11 +155,13 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       setGenerating(true);
       setError("Agent 正在后台继续运行。");
     } else {
+      clearCurrentGeneration("AGENT");
+      setAgentRunId(undefined);
       setGenerating(false);
       setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
     }
-  }, []);
-  useGenerationRecovery({ storageKey: "agent-generation", runId: agentRunId, onRunId: setAgentRunId, statusUrl: "/api/agents/", statusSuffix: "/status", onSnapshot: recoverAgentStatus });
+  }, [clearCurrentGeneration]);
+  useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:AGENT`, readRunId: readAgentGeneration, writeRunId: writeAgentGeneration, runId: agentRunId, onRunId: setAgentRunId, statusUrl: "/api/agents/", statusSuffix: "/status", onSnapshot: recoverAgentStatus });
 
   async function refreshAgentRun(runId: string) {
     const response = await fetch(`/api/agents/${runId}`, { cache: "no-store" });
@@ -284,7 +316,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             const firstConfirmation = !activeConversationRef.current.id;
             activeConversationRef.current = { id: streamEvent.data.conversationId, updatedAt: streamEvent.data.updatedAt };
             setActiveConversationId(streamEvent.data.conversationId);
-            if (firstConfirmation) window.history.replaceState(window.history.state, "", `/chat/${streamEvent.data.conversationId}`);
+            confirmConversationKey(streamEvent.data.conversationId);
+            if (firstConfirmation && mountedRef.current) window.history.replaceState(window.history.state, "", `/chat/${streamEvent.data.conversationId}`);
           }
           if (streamEvent.event === "turn") {
             confirmedBusinessRun = true;
@@ -293,6 +326,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             userId = streamEvent.data.userMessageId;
             assistantId = streamEvent.data.assistantMessageId;
             setAssistantMessageId(assistantId);
+            updateConversationGeneration(sessionStorage, viewerId, conversationKeyRef.current, { chatMessageId: assistantId });
             setMessages((current) => confirmOptimisticTurn(current, temporaryUserId, temporaryAssistantId, userId, assistantId));
             setEditingMessage((current) => current?.id === temporaryUserId ? { ...current, id: userId, temporary: false } : current);
             if (pendingStopEditRef.current || pendingCancelRef.current) {
@@ -307,14 +341,20 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
           if (streamEvent.event === "memory") setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, memoryCount: streamEvent.data.count } : message));
           if (streamEvent.event === "done") {
             terminal = true;
+            clearCurrentGeneration("CHAT");
+            setAssistantMessageId(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, id: streamEvent.data.messageId, status: "complete" } : message));
           }
           if (streamEvent.event === "cancelled") {
             terminal = true;
+            clearCurrentGeneration("CHAT");
+            setAssistantMessageId(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
           }
           if (streamEvent.event === "error") {
             terminal = true;
+            clearCurrentGeneration("CHAT");
+            setAssistantMessageId(undefined);
             setError(streamEvent.data.message);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "error" } : message));
           }
@@ -333,9 +373,11 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             const firstConfirmation = !activeConversationRef.current.id;
             activeConversationRef.current = { id: pendingRun.conversationId, updatedAt: String(streamEvent.data.conversationUpdatedAt ?? "") };
             setActiveConversationId(pendingRun.conversationId);
+            confirmConversationKey(pendingRun.conversationId);
+            updateConversationGeneration(sessionStorage, viewerId, pendingRun.conversationId, { agentRunId: pendingRun.id });
             setAgentRuns((current) => [...current.filter((run) => run.id !== pendingRun.id), pendingRun]);
             setMessages((current) => confirmOptimisticTurn(current, temporaryUserId, temporaryAssistantId, userId, assistantId));
-            if (firstConfirmation) window.history.replaceState(window.history.state, "", `/chat/${pendingRun.conversationId}`);
+            if (firstConfirmation && mountedRef.current) window.history.replaceState(window.history.state, "", `/chat/${pendingRun.conversationId}`);
             if (pendingCancelRef.current) void stopAgentRun(pendingRun.id);
             return;
           }
@@ -347,14 +389,20 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
           }
           if (streamEvent.event === "done") {
             terminal = true;
+            clearCurrentGeneration("AGENT");
+            setAgentRunId(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "complete" } : message));
           }
           if (streamEvent.event === "cancelled") {
             terminal = true;
+            clearCurrentGeneration("AGENT");
+            setAgentRunId(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
           }
           if (streamEvent.event === "error") {
             terminal = true;
+            clearCurrentGeneration("AGENT");
+            setAgentRunId(undefined);
             setError(String(streamEvent.data.message ?? "Agent 未能正常完成。"));
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "error" } : message));
           }

@@ -54,6 +54,8 @@ however about 6511 ms passed since the start of the transaction.
 
 修复策略：建立有版本、有限条目且不含正文的 Conversation-scoped session registry；普通 Chat 与 Agent 的活动标识都按 conversationId（新聊天先用临时 token）保存。React 只把当前 Conversation 的状态投影到 Composer；不匹配 snapshot 只更新 registry，不能污染当前消息或输入状态。终态与登出清理对应记录。
 
+实现采用 v1、最多 24 条的单一 session registry，只存 `chatMessageId`、`agentRunId` 与更新时间，并以 viewerId 校验 owner；owner 不一致、损坏数据、终态与登出都会清理。新聊天由服务端生成 `new:<uuid>` 临时键，首个业务 ID 确认后迁移到 conversationId。`/chat` 与 `/chat/[conversationId]` 都以该键强制 Chat 状态边界；A 的旧组件即使仍在接收后台 SSE，也只能更新 A 的 registry，卸载后不得改写 B 的 URL。行为测试覆盖 A/B 标识隔离、临时键迁移、跨账号清理、24 条上限、终态/登出清理。
+
 ## 独立 P0：Chat Route Entry Latency
 
 该故障发生在没有任何生成任务时，不能归因于 Agent polling。当前 `/chat` 在返回 `ChatLayout` 前串行等待认证，再并行等待完整 Conversation 列表和 Persona choices；`/chat/[conversationId]` 还同时等待 Conversation 列表、当前详情以及包含完整 Worker/Event 的全部 AgentRun。`loading.tsx` 只有不可输入骨架，因此慢查询会阻塞可操作 Composer。

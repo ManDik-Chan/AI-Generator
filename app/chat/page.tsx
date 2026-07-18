@@ -6,9 +6,11 @@ import { personaIdSchema } from "@/features/persona/schemas";
 export const dynamic = "force-dynamic";
 
 export default async function ChatPage({ searchParams }: { searchParams: Promise<{ personaId?: string }> }) {
-  const [, requested] = await Promise.all([requireUser(), searchParams]);
+  const [user, requested] = await Promise.all([requireUser(), searchParams]);
   const requestedPersonaId = requested.personaId && personaIdSchema.safeParse(requested.personaId).success ? requested.personaId : undefined;
   const limits = getAiRuntimeLimits();
+  const conversationKey = `new:${randomUUID()}`;
 
-  return <ChatLayout agentConfigured={getAgentConfigurationStatus().configured} aiConfigured={getAiConfigurationStatus().configured} conversation={null} conversations={[]} initialAgentRuns={[]} maxInputChars={limits.maxInputChars} personas={[]} requestedPersonaId={requestedPersonaId} />;
+  return <ChatLayout agentConfigured={getAgentConfigurationStatus().configured} aiConfigured={getAiConfigurationStatus().configured} conversation={null} conversations={[]} initialAgentRuns={[]} initialConversationKey={conversationKey} key={conversationKey} maxInputChars={limits.maxInputChars} personas={[]} requestedPersonaId={requestedPersonaId} viewerId={user.id} />;
 }
+import { randomUUID } from "node:crypto";

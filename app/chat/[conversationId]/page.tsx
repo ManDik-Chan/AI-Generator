@@ -17,5 +17,5 @@ export default async function ConversationPage({ params }: { params: Promise<{ c
   if (!conversation) notFound();
   const limits = getAiRuntimeLimits();
 
-  return <ChatLayout agentConfigured={getAgentConfigurationStatus().configured} aiConfigured={getAiConfigurationStatus().configured} bootstrapPersonas={false} conversation={conversation} conversations={[]} initialAgentRuns={[]} maxInputChars={limits.maxInputChars} />;
+  return <ChatLayout agentConfigured={getAgentConfigurationStatus().configured} aiConfigured={getAiConfigurationStatus().configured} bootstrapPersonas={false} conversation={conversation} conversations={[]} initialAgentRuns={[]} initialConversationKey={conversation.id} key={conversation.id} maxInputChars={limits.maxInputChars} viewerId={user.id} />;
 }

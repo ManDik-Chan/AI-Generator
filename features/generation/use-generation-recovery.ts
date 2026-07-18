@@ -15,7 +15,10 @@ export function createSingleFlight<T>(task: () => Promise<T>) {
 }
 
 interface UseGenerationRecoveryInput<T extends { status: string }> {
-  storageKey: string;
+  storageKey?: string;
+  persistenceKey?: string;
+  readRunId?(): string | undefined;
+  writeRunId?(runId?: string): void;
   runId?: string;
   onRunId(runId: string): void;
   statusUrl: string;
@@ -24,18 +27,25 @@ interface UseGenerationRecoveryInput<T extends { status: string }> {
 }
 
 export function useGenerationRecovery<T extends { status: string }>(input: UseGenerationRecoveryInput<T>) {
-  const { storageKey, runId, onRunId, statusUrl, statusSuffix } = input;
+  const { storageKey, persistenceKey, runId, onRunId, statusUrl, statusSuffix } = input;
   const [phase, setPhase] = useState<RecoveryPhase>("idle");
   const callbackRef = useRef(input.onSnapshot);
+  const readRunIdRef = useRef(input.readRunId);
+  const writeRunIdRef = useRef(input.writeRunId);
   callbackRef.current = input.onSnapshot;
+  readRunIdRef.current = input.readRunId;
+  writeRunIdRef.current = input.writeRunId;
 
   useEffect(() => {
-    if (runId) sessionStorage.setItem(storageKey, runId);
+    if (runId) {
+      if (writeRunIdRef.current) writeRunIdRef.current(runId);
+      else if (storageKey) sessionStorage.setItem(storageKey, runId);
+    }
     else {
-      const restored = sessionStorage.getItem(storageKey);
+      const restored = readRunIdRef.current?.() ?? (storageKey ? sessionStorage.getItem(storageKey) ?? undefined : undefined);
       if (restored) onRunId(restored);
     }
-  }, [runId, storageKey, onRunId]);
+  }, [runId, storageKey, persistenceKey, onRunId]);
 
   useEffect(() => {
     if (!runId) return;
@@ -58,7 +68,8 @@ export function useGenerationRecovery<T extends { status: string }>(input: UseGe
         requestController = new AbortController();
         const response = await fetch(`${statusUrl}${runId}${statusSuffix ?? ""}`, { cache: "no-store", signal: requestController.signal });
         if (response.status === 401 || response.status === 404) {
-          sessionStorage.removeItem(storageKey);
+          if (writeRunIdRef.current) writeRunIdRef.current(undefined);
+          else if (storageKey) sessionStorage.removeItem(storageKey);
           setPhase("settled");
           return;
         }
@@ -72,7 +83,8 @@ export function useGenerationRecovery<T extends { status: string }>(input: UseGe
           setPhase(longRunning ? "long-running" : "background");
           schedule(longRunning ? 10_000 : 2_000);
         } else {
-          sessionStorage.removeItem(storageKey);
+          if (writeRunIdRef.current) writeRunIdRef.current(undefined);
+          else if (storageKey) sessionStorage.removeItem(storageKey);
           setPhase("settled");
         }
       } catch (error) {
@@ -108,7 +120,7 @@ export function useGenerationRecovery<T extends { status: string }>(input: UseGe
       window.removeEventListener("pageshow", resume);
       document.removeEventListener("visibilitychange", resume);
     };
-  }, [runId, storageKey, statusSuffix, statusUrl]);
+  }, [runId, storageKey, persistenceKey, statusSuffix, statusUrl]);
 
   return phase;
 }
