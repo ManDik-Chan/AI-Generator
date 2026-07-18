@@ -85,4 +85,22 @@ describe("Agent event batch persistence", () => {
     expect(rows.map((row) => row.sequence)).toEqual([1, 2, 3, 4]);
     expect(new Set(rows.map((row) => row.sequence)).size).toBe(rows.length);
   });
+
+  it("allows sequence 96 but rejects an event beyond the hard limit before insert", async () => {
+    const finalBatch = eventTransaction({ latest: 94 });
+    await appendAgentEvents(finalBatch as never, {
+      userId: "user-1",
+      runId: "run-1",
+      events: [{ type: "WORKER_COMPLETED" }, { type: "RUN_COMPLETED" }],
+    });
+    expect(finalBatch.agentEvent.createMany.mock.calls[0][0].data).toMatchObject([{ sequence: 95 }, { sequence: 96 }]);
+
+    const overflow = eventTransaction({ latest: 96 });
+    await expect(appendAgentEvents(overflow as never, {
+      userId: "user-1",
+      runId: "run-1",
+      events: [{ type: "RUN_COMPLETED" }],
+    })).rejects.toThrow("Agent event limit exceeded");
+    expect(overflow.agentEvent.createMany).not.toHaveBeenCalled();
+  });
 });

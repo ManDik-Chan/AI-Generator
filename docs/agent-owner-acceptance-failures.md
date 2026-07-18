@@ -74,3 +74,37 @@ however about 6511 ms passed since the start of the transaction.
 - `/chat` 点击 100 ms 内有反馈，预编译环境中 Shell/Composer 目标 1 秒内可见可输入；慢 Sidebar/Persona/Agent 摘要不能阻塞 Composer。
 - Dev Cold、Dev Warm、local production 与 Vercel Preview 分开测量；无认证状态时必须明确列出未验证项。
 - 全部修复继续提交到 Draft PR #20；在真实验收通过前不得标记 Ready 或建议合并。
+
+## 2026-07-19 本地验证与性能记录
+
+### Chat 入口阻塞链前后
+
+| 场景 | 修复前首屏同步等待 | 修复后首屏同步等待 | Shell 后请求 |
+| --- | --- | --- | --- |
+| `/chat` | `requireUser`，然后 Conversation list + Persona choices | 仅 request-local 去重的 `requireUser` 与参数解析 | 1 个 `/api/chat/bootstrap`；Conversation/Persona 两个查询并发 |
+| `/chat/[conversationId]` | `requireUser`，Conversation list、Conversation detail、全部完整 AgentRun/Worker/Event | `requireUser` + 当前 Conversation detail | 1 个 bootstrap（仅 Sidebar）；活动 Run 才轮询紧凑 `/status`，完整详情按展开加载 |
+
+新聊天首屏不会读取 AgentRun、AgentEvent、Credits 或 Worker deliverable。当前对话首屏不会读取全站 Sidebar 或完整 Agent 数据。Chat production build 的 First Load JS 为 179 kB（阻断修复前 PR 记录为 177 kB，增加约 2 kB）；Worker Panel 仍动态加载。
+
+### 可实际取得的数据
+
+| 环境 | 结果 | 限制 |
+| --- | --- | --- |
+| Dev Cold | 公共 `/login` 首次编译/响应约 3034 ms | 这是公开路由 Cold Compile，不是登录态 `/chat` |
+| Dev Warm | 公共 `/login` 约 79–137 ms | 没有本地认证状态，无法给出 Chat Shell/Composer/DB 时间 |
+| Local production | `next start` Ready 845 ms；未认证 `/chat` 首次 307 TTFB 51.8 ms、Warm 4.7 ms；`/login` TTFB 95.6 ms / total 103.2 ms | 只能验证认证重定向边界，不能等价为登录态 Chat 可交互时间 |
+| Vercel Preview | 未验证 | 当前环境无 Preview 登录态；推送后仍需项目所有者测真实 TTFB、Server-Timing、瀑布和 Composer 时间 |
+
+本地没有 `PLAYWRIGHT_AUTH_STATE`、Supabase URL/anon key 或数据库 URL，因此不能诚实报告登录态 Dev Warm、local production 或 Preview 的点击反馈、Shell、Composer、hydration、DB timing 与请求瀑布。修复前 4–5 秒为项目所有者真实观测；修复后的登录态预算必须由项目所有者在现有 Preview 环境复验。新增的认证态性能测试会预热 `/chat`、把 bootstrap 人工延迟 3 秒，并断言导航反馈小于 100 ms、Composer 小于 1.5 秒且只产生一个 bootstrap、无 Agent detail 请求。
+
+### 命令结果
+
+- `pnpm install --frozen-lockfile`：通过，lockfile 无变化。
+- `pnpm test`：124 个文件、648 项通过。
+- `pnpm lint`、`pnpm typecheck`、`pnpm build`：通过。
+- `pnpm exec prisma validate`：使用命令级不可连接占位 URL 通过，仅解析 schema，未连接数据库。
+- `pnpm audit --prod`：No known vulnerabilities。
+- `pnpm test:e2e --workers=1`：15 个公开场景通过，42 个认证态场景因无 auth state 明确跳过；不可声称 Agent/Chat A-B/性能 E2E 已执行通过。
+- `agent-browser` CLI 在当前环境不可用；使用 Playwright 公共矩阵和截图替代，登录页内容完整且无 Next error overlay。
+
+未调用真实 AI Provider，未执行 migration、RLS 或数据库写入，未部署 Production。

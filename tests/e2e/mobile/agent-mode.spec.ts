@@ -51,10 +51,12 @@ interface MockScenario {
   statuses?: WorkerStatus[];
   fallback?: boolean;
   detached?: boolean;
+  conversationId?: string;
 }
 
 async function installAgentMocks(page: Page, scenario: MockScenario) {
   const workerCount = scenario.mode === "DEEP" ? 6 : 4;
+  const conversationId = scenario.conversationId ?? ids.conversation;
   const keys = Array.from({ length: workerCount }, (_, index) => `worker-${index + 1}`);
   const statuses = scenario.statuses ?? keys.map(() => "COMPLETE" as const);
   let runCancelled = false;
@@ -83,7 +85,7 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
     const terminal = !scenario.detached || runCancelled;
     return {
       id: ids.run,
-      conversationId: ids.conversation,
+      conversationId,
       conversationTitle: "Playwright Agent 验证",
       userMessageId: ids.userMessage,
       userProblem: "验证 Agent 编排",
@@ -119,7 +121,7 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
     const chunks = [
       encodeSse("run", {
         runId: ids.run,
-        conversationId: ids.conversation,
+        conversationId,
         conversationUpdatedAt: startedAt,
         userMessageId: ids.userMessage,
         assistantMessageId: ids.assistantMessage,
@@ -158,6 +160,9 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
   await page.route(`**/api/agents/${ids.run}`, async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
   });
+  await page.route(`**/api/agents/${ids.run}/status`, async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
+  });
   await page.route(`**/api/agents/${ids.run}/cancel`, async (route) => {
     runCancelled = true;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "CANCELLED" }) });
@@ -175,6 +180,25 @@ async function submitAgent(page: Page, label: "Agent 标准" | "Agent 深度") {
   await page.getByRole("button", { name: label, exact: true }).click();
   await page.getByLabel("消息内容").fill("验证 Agent 编排");
   await page.getByRole("button", { name: "发送消息" }).click();
+}
+
+async function installCompletedChatMock(page: Page) {
+  const conversationId = "55555555-5555-4555-8555-555555555555";
+  const userMessageId = "66666666-6666-4666-8666-666666666666";
+  const assistantMessageId = "77777777-7777-4777-8777-777777777777";
+  await page.route("**/api/chat", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream; charset=utf-8",
+      body: [
+        encodeSse("conversation", { conversationId, updatedAt: startedAt }),
+        encodeSse("turn", { conversationId, userMessageId, assistantMessageId }),
+        encodeSse("delta", { text: "Chat B completed" }),
+        encodeSse("done", { messageId: assistantMessageId }),
+      ].join(""),
+    });
+  });
 }
 
 test.describe("authenticated Agent Mode", () => {
@@ -210,6 +234,25 @@ test.describe("authenticated Agent Mode", () => {
     await expect(page.getByText("这是 Leader 的最终回答。")).toBeVisible();
   });
 
+  test("a Planner failure becomes a terminal safe error without a stale Stop button", async ({ page }) => {
+    await page.route("**/api/agents", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      await route.fulfill({
+        status: 200,
+        contentType: "text/event-stream; charset=utf-8",
+        body: [
+          encodeSse("run", { runId: ids.run, conversationId: ids.conversation, conversationUpdatedAt: startedAt, userMessageId: ids.userMessage, assistantMessageId: ids.assistantMessage, startedAt, mode: "STANDARD" }),
+          encodeSse("error", { code: "PLANNER_ERROR", message: "Agent 未能完成。" }),
+        ].join(""),
+      });
+    });
+    await submitAgent(page, "Agent 标准");
+    await expect(page.locator("[data-agent-worker-panel]")).toContainText("失败");
+    await expect(page.getByText("本次生成未正常完成")).toBeVisible();
+    await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "全部停止" })).toHaveCount(0);
+  });
+
   test("single-worker and global cancellation reconcile through durable status", async ({ page }) => {
     await installAgentMocks(page, { mode: "STANDARD", detached: true, statuses: ["RUNNING", "QUEUED", "QUEUED", "QUEUED"] });
     await submitAgent(page, "Agent 标准");
@@ -223,6 +266,30 @@ test.describe("authenticated Agent Mode", () => {
     await panel.getByRole("button", { name: "全部停止" }).click();
     await expect(panel).toContainText("已停止");
     await expect(panel.getByRole("button", { name: "全部停止" })).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => sessionStorage.getItem("agent-generation"))).toBeNull();
+    await expect.poll(() => page.evaluate(() => {
+      const raw = sessionStorage.getItem("chat-generation-registry");
+      if (!raw) return true;
+      const entries = Object.values((JSON.parse(raw) as { entries?: Record<string, { agentRunId?: string }> }).entries ?? {});
+      return entries.every((entry) => !entry.agentRunId);
+    })).toBe(true);
+  });
+
+  test("Chat A background Agent does not lock Chat B Composer or change its Stop target", async ({ page }) => {
+    await installAgentMocks(page, { mode: "STANDARD", detached: true, statuses: ["RUNNING", "QUEUED", "QUEUED", "QUEUED"] });
+    await installCompletedChatMock(page);
+    await submitAgent(page, "Agent 标准");
+    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
+
+    await page.goto("/chat");
+    await expect(page.getByLabel("消息内容")).toBeEditable();
+    await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+    await page.getByLabel("消息内容").fill("Chat B can send independently");
+    await page.getByRole("button", { name: "发送消息" }).click();
+    await expect(page.getByText("Chat B completed")).toBeVisible();
+
+    await page.goBack({ waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
+    await page.getByRole("button", { name: "停止生成" }).click();
+    await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
   });
 });

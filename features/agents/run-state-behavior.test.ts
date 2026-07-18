@@ -9,8 +9,8 @@ vi.mock("@/lib/database/prisma", () => ({
   prisma: { $transaction: mocks.transaction },
 }));
 
-import { cancelAgentRun, reconcileStaleAgentRun } from "@/features/agents/run-state";
-import { finishAgentWorker } from "@/features/agents/worker-state";
+import { cancelAgentRun, finishAgentRun, reconcileStaleAgentRun } from "@/features/agents/run-state";
+import { cancelAgentWorker, finishAgentWorker } from "@/features/agents/worker-state";
 
 function transactionClient(run: { status: "PENDING" | "CANCELLED"; startedAt?: Date }) {
   const client = {
@@ -69,16 +69,17 @@ describe("Agent cancellation and stale reconciliation behavior", () => {
 
   it("cancels all active Workers and the Run with one event batch, then stays idempotent", async () => {
     const client = transactionClient({ status: "PENDING" });
+    client.agentWorker.findMany.mockResolvedValue(Array.from({ length: 6 }, (_, index) => ({ key: `worker-${index}` })));
     client.agentWorker.groupBy.mockResolvedValue([
-      { status: "CANCELLED", _count: { _all: 2 } },
-      { status: "COMPLETE", _count: { _all: 1 } },
+      { status: "CANCELLED", _count: { _all: 6 } },
     ]);
     mocks.client = client;
 
     expect(await cancelAgentRun("user-1", "run-1")).toBe("CANCELLED");
-    expect(client.agentRun.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED", completedWorkerCount: 3, successfulWorkerCount: 1 }) }));
+    expect(client.agentRun.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "CANCELLED", completedWorkerCount: 6, successfulWorkerCount: 0 }) }));
     expect(client.agentEvent.createMany).toHaveBeenCalledOnce();
-    expect(client.agentEvent.createMany.mock.calls[0][0].data).toHaveLength(3);
+    expect(client.agentEvent.findFirst).toHaveBeenCalledOnce();
+    expect(client.agentEvent.createMany.mock.calls[0][0].data).toHaveLength(7);
 
     vi.clearAllMocks();
     client.$queryRaw.mockResolvedValue([{ id: "run-1" }]);
@@ -98,5 +99,35 @@ describe("Agent cancellation and stale reconciliation behavior", () => {
     expect(finished).toBe(false);
     expect(client.agentRun.updateMany).not.toHaveBeenCalled();
     expect(client.agentEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it("finishes six unfinished Workers with collection updates and one event batch", async () => {
+    const client = transactionClient({ status: "PENDING" });
+    client.agentWorker.findMany.mockResolvedValue(Array.from({ length: 6 }, (_, index) => ({ key: `worker-${index}`, status: index < 3 ? "RUNNING" : "QUEUED" })));
+    client.agentWorker.groupBy.mockResolvedValue([
+      { status: "ERROR", _count: { _all: 3 } },
+      { status: "BLOCKED", _count: { _all: 3 } },
+    ]);
+    mocks.client = client;
+
+    expect(await finishAgentRun({ userId: "user-1", runId: "run-1", status: "ERROR", content: "Safe failure", errorCode: "AGENT_ERROR" })).toBe(true);
+    expect(client.agentWorker.updateMany).toHaveBeenCalledTimes(2);
+    expect(client.agentEvent.findFirst).toHaveBeenCalledOnce();
+    expect(client.agentEvent.createMany).toHaveBeenCalledOnce();
+    expect(client.agentEvent.createMany.mock.calls[0][0].data).toHaveLength(7);
+  });
+
+  it("cancels only the requested Worker and records one event", async () => {
+    const client = transactionClient({ status: "PENDING" });
+    client.agentWorker.findFirst.mockResolvedValue({ status: "RUNNING" });
+    client.agentWorker.updateMany.mockResolvedValue({ count: 1 });
+    mocks.client = client;
+
+    expect(await cancelAgentWorker("user-1", "run-1", "worker-a")).toBe("CANCELLED");
+    expect(client.agentWorker.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ agentRunId: "run-1", userId: "user-1", key: "worker-a" }),
+    }));
+    expect(client.agentRun.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { completedWorkerCount: { increment: 1 } } }));
+    expect(client.agentEvent.createMany.mock.calls[0][0].data).toHaveLength(1);
   });
 });

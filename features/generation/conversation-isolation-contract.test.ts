@@ -20,6 +20,10 @@ describe("Conversation generation isolation wiring", () => {
     expect(layout.match(/firstConfirmation && mountedRef\.current/g)).toHaveLength(2);
   });
 
+  it("rejects recovery snapshots that belong to another Conversation", () => {
+    expect(layout.match(/snapshot\.conversationId !== currentConversationId/g)).toHaveLength(3);
+  });
+
   it("clears the bounded registry before logout", () => {
     expect(signOut).toContain("clearChatGenerationRegistry()");
   });

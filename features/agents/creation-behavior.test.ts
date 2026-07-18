@@ -9,10 +9,10 @@ vi.mock("@/lib/database/prisma", () => ({
 import { persistAgentPlan } from "@/features/agents/creation";
 import type { AgentPlan } from "@/features/agents/types";
 
-function standardPlan(): AgentPlan {
+function planWithWorkers(workerCount: number): AgentPlan {
   return {
     overview: "Plan",
-    workers: Array.from({ length: 4 }, (_, index) => ({
+    workers: Array.from({ length: workerCount }, (_, index) => ({
       key: `worker-${index}`,
       name: `Worker ${index}`,
       title: "Title",
@@ -27,7 +27,7 @@ function standardPlan(): AgentPlan {
 describe("Agent plan transaction behavior", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("persists a Standard plan in six database statements regardless of Worker count", async () => {
+  it.each([["Standard", 4], ["Deep", 6]])("persists a %s plan in six database statements", async (_mode, workerCount) => {
     const calls: string[] = [];
     const delayed = <T>(name: string, value: T) => async () => {
       calls.push(name);
@@ -37,10 +37,10 @@ describe("Agent plan transaction behavior", () => {
     const transaction = {
       $queryRaw: vi.fn(delayed("lock", [{ id: "run-1" }])),
       agentRun: {
-        findFirst: vi.fn(delayed("run.find", { id: "run-1", plannedWorkerCount: 4, _count: { workers: 0 } })),
+        findFirst: vi.fn(delayed("run.find", { id: "run-1", plannedWorkerCount: workerCount, _count: { workers: 0 } })),
         update: vi.fn(delayed("run.update", {})),
       },
-      agentWorker: { createMany: vi.fn(delayed("workers.createMany", { count: 4 })) },
+      agentWorker: { createMany: vi.fn(delayed("workers.createMany", { count: workerCount })) },
       agentEvent: {
         findFirst: vi.fn(delayed("events.latest", null)),
         createMany: vi.fn(async ({ data }: { data: unknown[] }) => {
@@ -53,13 +53,13 @@ describe("Agent plan transaction behavior", () => {
     mocks.transaction.mockImplementation(async (work: (client: unknown) => Promise<unknown>) => work(transaction));
 
     const startedAt = performance.now();
-    const persisted = await persistAgentPlan({ userId: "user-1", runId: "run-1", plan: standardPlan(), fallback: false });
+    const persisted = await persistAgentPlan({ userId: "user-1", runId: "run-1", plan: planWithWorkers(workerCount), fallback: false });
 
     expect(persisted).toBe(true);
     expect(calls).toEqual(["lock", "run.find", "workers.createMany", "run.update", "events.latest", "events.createMany"]);
     expect(transaction.agentWorker.createMany).toHaveBeenCalledOnce();
     expect(transaction.agentEvent.createMany).toHaveBeenCalledOnce();
-    expect(transaction.agentEvent.createMany.mock.calls[0][0].data).toHaveLength(6);
+    expect(transaction.agentEvent.createMany.mock.calls[0][0].data).toHaveLength(workerCount + 2);
     expect(performance.now() - startedAt).toBeLessThan(1_500);
   });
 });

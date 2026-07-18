@@ -115,14 +115,24 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const clearCurrentGeneration = useCallback((kind: "CHAT" | "AGENT") => {
     updateConversationGeneration(sessionStorage, viewerId, conversationKeyRef.current, kind === "CHAT" ? { chatMessageId: null } : { agentRunId: null });
   }, [viewerId]);
-  const recover = useCallback((snapshot: { id: string; status: string; content: string }) => {
+  const recover = useCallback((snapshot: { id: string; conversationId: string; status: string; content: string }) => {
+    const currentConversationId = activeConversationRef.current.id;
+    if (currentConversationId && snapshot.conversationId !== currentConversationId) {
+      updateConversationGeneration(sessionStorage, viewerId, snapshot.conversationId, { chatMessageId: snapshot.status === "PENDING" ? snapshot.id : null });
+      return;
+    }
     const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
     setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
     if (snapshot.status === "PENDING") { setGenerating(true); setError("任务正在后台继续生成。"); }
     else { clearCurrentGeneration("CHAT"); setAssistantMessageId(undefined); setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
-  }, [clearCurrentGeneration]);
+  }, [clearCurrentGeneration, viewerId]);
   useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:CHAT`, readRunId: readChatGeneration, writeRunId: writeChatGeneration, runId: assistantMessageId, onRunId: setAssistantMessageId, statusUrl: "/api/chat/messages/", statusSuffix: "/status", onSnapshot: recover });
   const recoverAgent = useCallback((snapshot: AgentRunView) => {
+    const currentConversationId = activeConversationRef.current.id;
+    if (currentConversationId && snapshot.conversationId !== currentConversationId) {
+      updateConversationGeneration(sessionStorage, viewerId, snapshot.conversationId, { agentRunId: snapshot.status === "PENDING" ? snapshot.id : null });
+      return;
+    }
     setAgentRuns((current) => current.some((run) => run.id === snapshot.id) ? current.map((run) => run.id === snapshot.id ? snapshot : run) : [...current, snapshot]);
     setMessages((current) => current.map((message) => message.id === snapshot.assistantMessageId ? {
       ...message,
@@ -139,8 +149,13 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       setGenerating(false);
       setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
     }
-  }, [clearCurrentGeneration]);
+  }, [clearCurrentGeneration, viewerId]);
   const recoverAgentStatus = useCallback((snapshot: AgentRunStatusSnapshot) => {
+    const currentConversationId = activeConversationRef.current.id;
+    if (currentConversationId && snapshot.conversationId !== currentConversationId) {
+      updateConversationGeneration(sessionStorage, viewerId, snapshot.conversationId, { agentRunId: snapshot.status === "PENDING" ? snapshot.id : null });
+      return;
+    }
     setAgentRuns((current) => {
       const existing = current.find((run) => run.id === snapshot.id);
       const merged = mergeAgentRunStatus(existing, snapshot);
@@ -160,7 +175,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       setGenerating(false);
       setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
     }
-  }, [clearCurrentGeneration]);
+  }, [clearCurrentGeneration, viewerId]);
   useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:AGENT`, readRunId: readAgentGeneration, writeRunId: writeAgentGeneration, runId: agentRunId, onRunId: setAgentRunId, statusUrl: "/api/agents/", statusSuffix: "/status", onSnapshot: recoverAgentStatus });
 
   async function refreshAgentRun(runId: string) {
@@ -185,9 +200,12 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       if (status === "CANCELLED") {
         pendingCancelRef.current = false;
         controller?.abort();
-        await refreshAgentRun(runId);
+        clearCurrentGeneration("AGENT");
+        setAgentRunId(undefined);
         setGenerating(false);
         setError(undefined);
+        try { await refreshAgentRun(runId); }
+        catch { setError("Agent 已停止，完整详情暂时无法刷新。"); }
       } else await refreshAgentRun(runId);
     } catch (reason) {
       setGenerating(true);
@@ -225,13 +243,15 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       if (status === "CANCELLED") {
         pendingCancelRef.current = false;
         controller?.abort();
+        clearCurrentGeneration("CHAT");
+        setAssistantMessageId(undefined);
         setGenerating(false);
         setMessages((current) => current.map((message) => message.id === messageId ? { ...message, status: "cancelled" } : message));
         setError(undefined);
       } else {
         const response = await fetch(`/api/chat/messages/${messageId}/status`, { cache: "no-store" });
         if (!response.ok) throw new Error("停止请求未确认，任务可能仍在后台处理。");
-        recover(await response.json() as { id: string; status: string; content: string });
+        recover(await response.json() as { id: string; conversationId: string; status: string; content: string });
       }
     } catch (reason) {
       setGenerating(true);
