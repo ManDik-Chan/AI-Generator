@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bot, House, Menu, Sparkles, X } from "lucide-react";
 
@@ -22,6 +22,7 @@ import type { AgentRunView, AgentStreamEvent } from "@/features/agents/client-ty
 import { createPendingAgentRunView, reduceAgentStreamEvent } from "@/features/agents/client-state";
 import { readSseEvents } from "@/features/generation/client-sse";
 import type { ChatGenerationMode } from "@/features/chat/types";
+import type { ChatBootstrapPayload } from "@/features/chat/bootstrap-types";
 
 interface ChatLayoutProps {
   conversations: ConversationSummary[];
@@ -32,9 +33,11 @@ interface ChatLayoutProps {
   personas?: PersonaChatIdentity[];
   selectedPersona?: PersonaChatIdentity;
   initialAgentRuns?: AgentRunView[];
+  requestedPersonaId?: string;
+  bootstrapPersonas?: boolean;
 }
 
-export function ChatLayout({ conversations, conversation, aiConfigured, agentConfigured, maxInputChars, personas = [], selectedPersona, initialAgentRuns = [] }: ChatLayoutProps) {
+export function ChatLayout({ conversations, conversation, aiConfigured, agentConfigured, maxInputChars, personas = [], selectedPersona, initialAgentRuns = [], requestedPersonaId, bootstrapPersonas = true }: ChatLayoutProps) {
   const shellRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessageView[]>(conversation?.messages ?? []);
   const [draft, setDraft] = useState("");
@@ -42,6 +45,9 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const [error, setError] = useState<string>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [assistantDrawerOpen, setAssistantDrawerOpen] = useState(false);
+  const [conversationItems, setConversationItems] = useState(conversations);
+  const [personaItems, setPersonaItems] = useState(personas);
+  const [bootstrapLoading, setBootstrapLoading] = useState(true);
   const [activePersona, setActivePersona] = useState(selectedPersona);
   const [controller, setController] = useState<AbortController>();
   const [assistantMessageId, setAssistantMessageId] = useState<string>();
@@ -58,6 +64,29 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const pendingStopEditRef = useRef(false);
   const pendingCancelRef = useRef(false);
   useChatVisualViewport(shellRef);
+  useEffect(() => {
+    const controller = new AbortController();
+    setBootstrapLoading(true);
+    fetch(`/api/chat/bootstrap${bootstrapPersonas ? "" : "?personas=0"}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Chat bootstrap unavailable");
+        return response.json() as Promise<ChatBootstrapPayload>;
+      })
+      .then((payload) => {
+        setConversationItems(payload.conversations);
+        if (bootstrapPersonas) {
+          setPersonaItems(payload.personas);
+          if (requestedPersonaId) setActivePersona(payload.personas.find((persona) => persona.id === requestedPersonaId));
+        }
+      })
+      .catch((reason: unknown) => {
+        if (!(reason instanceof DOMException && reason.name === "AbortError")) setError("对话历史暂时无法加载，仍可继续当前对话。");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setBootstrapLoading(false);
+      });
+    return () => controller.abort();
+  }, [bootstrapPersonas, requestedPersonaId]);
   const recover = useCallback((snapshot: { id: string; status: string; content: string }) => {
     const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
     setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
@@ -224,7 +253,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content,
-          ...(editTarget ?? { conversationId: activeConversationRef.current.id, ...(!activeConversationRef.current.id && activePersona ? { personaId: activePersona.id } : {}) }),
+          ...(editTarget ?? { conversationId: activeConversationRef.current.id, ...(!activeConversationRef.current.id && (activePersona?.id || requestedPersonaId) ? { personaId: activePersona?.id || requestedPersonaId } : {}) }),
           ...(requestedMode === "CHAT" ? {} : { mode: requestedMode === "AGENT_DEEP" ? "DEEP" : "STANDARD" }),
         }),
         signal: requestController.signal,
@@ -367,12 +396,12 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
 
   return (
     <div className="surface-grid app-viewport flex w-full overflow-hidden bg-background" data-chat-shell ref={shellRef}>
-      <aside className="hidden w-[17.5rem] shrink-0 border-r border-border/10 bg-background-subtle/82 backdrop-blur-xl md:block"><ConversationList activeId={activeConversationId} conversations={conversations} /></aside>
+      <aside className="hidden w-[17.5rem] shrink-0 border-r border-border/10 bg-background-subtle/82 backdrop-blur-xl md:block"><ConversationList activeId={activeConversationId} conversations={conversationItems} loading={bootstrapLoading} /></aside>
       {drawerOpen && (
         <div className="absolute inset-0 z-50 overflow-hidden bg-overlay/55 backdrop-blur-sm md:hidden" onClick={() => setDrawerOpen(false)}>
           <aside className="flex h-full w-[min(88vw,21rem)] max-w-[calc(100vw-var(--safe-area-right)-.5rem)] flex-col border-r border-border/10 bg-background-subtle pb-[var(--safe-area-bottom)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex min-h-[calc(var(--mobile-header-height)+var(--safe-area-top))] items-center justify-between border-b border-border/10 px-4 pb-2 pt-[max(.5rem,var(--safe-area-top))]"><div><span className="premium-kicker">CONVERSATIONS</span><p className="text-sm font-semibold">对话历史</p></div><button aria-label="关闭历史" className="grid size-11 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground" onClick={() => setDrawerOpen(false)} type="button"><X className="size-5" /></button></div>
-            <ConversationList activeId={activeConversationId} conversations={conversations} onNavigate={() => setDrawerOpen(false)} />
+            <ConversationList activeId={activeConversationId} conversations={conversationItems} loading={bootstrapLoading} onNavigate={() => setDrawerOpen(false)} />
           </aside>
         </div>
       )}
@@ -417,8 +446,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
           onStop={() => void stopGeneration()}
           value={draft}
         />
-        </main>{!activeConversationId && <AssistantSelectorPanel onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}</div>
-        {!activeConversationId && assistantDrawerOpen && <AssistantSelectorPanel mobile onClose={() => setAssistantDrawerOpen(false)} onSelect={selectAssistant} personas={personas} selectedId={activePersona?.id} />}
+        </main>{!activeConversationId && <AssistantSelectorPanel loading={bootstrapLoading} onSelect={selectAssistant} personas={personaItems} selectedId={activePersona?.id || requestedPersonaId} />}</div>
+        {!activeConversationId && assistantDrawerOpen && <AssistantSelectorPanel loading={bootstrapLoading} mobile onClose={() => setAssistantDrawerOpen(false)} onSelect={selectAssistant} personas={personaItems} selectedId={activePersona?.id || requestedPersonaId} />}
       </section>
     </div>
   );
