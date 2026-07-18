@@ -1,6 +1,6 @@
 # AI-Generator V2 架构设计
 
-> 当前状态为 Phase 6B3 Draft。本文保留早期阶段的迁移决策作为历史记录；现行全栈架构、最终发现与验证结果以 `application-foundation-audit.md` 和文末 “Phase 6B3 Lumen 应用壳与 Chat 视口” 为准。Phase 7A2 尚未开始。
+> Phase 6B3 已由项目所有者真实验收通过；Phase 7A1.1 Agent Mode 为 Draft。本文保留早期阶段的迁移决策作为历史记录；Phase 7A1.2 与 Phase 7A2 尚未开始。正式域名为 <https://www.ai-mdc.com>。
 
 ## Phase 4A3 图片边界
 
@@ -197,3 +197,13 @@ Chat 不使用普通 AppShell。`ChatLayout` 挂载唯一的 `useChatVisualViewp
 Admin 读取真实全局聚合和 Provider 配置布尔状态，不读取 Prompt、完整输出或 Storage path。角色 Server Action 把 FormData 当作不可信输入，重新执行 `requireAdmin`、UUID/角色白名单、自降权禁止和最后管理员保护，并在 Serializable 事务内更新。
 
 React 19.1.1 在审计时命中官方 RSC 安全公告，已补丁升级到 19.1.8；PostCSS 经 workspace override 统一到 8.5.16。Next.js 保持 15.5.20（高于 15.5 官方修复线），避免在视觉阶段进行大版本迁移。
+
+## Phase 7A1.1 Chat Agent Mode
+
+Agent Mode 是 Chat 的服务端编排分支，不是经典 Brainstorm 改名。`POST /api/agents` 在 Serializable transaction 中创建或确认 Conversation、User/Assistant Message、AgentRun、RUN_CREATED 与 Credit 记录；Provider 只在提交后调用。Planner 生成严格任务结构，DAG 校验通过后 trusted server 创建固定 4/6 个 AgentWorker。
+
+`features/agents` 分离 creation、planner/graph、worker context/output/pool/state、leader、event、deadline、run-state、query 与 UI DTO。每个 Worker 只有最小 Context Envelope，依赖输出标记为不可信数据；至少两个 Worker COMPLETE 才可调用 Leader。最终安全流写入现有 Assistant Message，因此普通后续追问与 Memory 生命周期不读取 Worker 私有数据。
+
+运行复用 `SseObserver`、`registerGenerationTask`、Vercel `waitUntil`、durable cancellation 与 `useGenerationRecovery`。SSE/request abort 只断观察；全局和单 Worker 取消都由 owner-scoped 持久化状态驱动。`/agents` 是 route-scoped Server Component；Chat 中完整 Worker Panel 使用动态 chunk，不进入无 AgentRun 的普通 Chat 初始组件图。
+
+数据库通过 AgentRun/Worker/Event 的复合所有权外键、固定 Worker/调用约束、1–96 事件序列、消息角色 trigger 与 RLS 提供 defense in depth。Worker Tool Policy 默认拒绝，当前只有 `REASONING` 且没有工具。完整流程见 `agent-mode.md` 与 `worker-orchestration.md`。

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BrainCircuit, Clipboard, Copy, Download, Lightbulb, ListChecks, LoaderCircle, RotateCcw, Search, ShieldAlert, Square, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 import { useElapsedTime, formatElapsedTime } from "@/components/ai/use-elapsed-time";
 import { Button } from "@/components/ui/button";
@@ -203,6 +204,7 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/10 pb-4"><div><p className="premium-kicker">ONE QUESTION · FIVE CALLS MAX</p><h2 className="mt-1 text-section-title">输入需要并行思考的问题</h2></div><span className="premium-chip">{formatBrainstormUsage(usage)}</span></div>
       <label className="mt-5 grid gap-2"><span className="text-sm font-medium">问题</span><textarea className="premium-field min-h-40 resize-y p-3 leading-6" disabled={active || !configured} maxLength={BRAINSTORM_PROMPT_MAX_CHARS} onChange={(event) => setPrompt(event.target.value)} placeholder="例如：我们应该如何在三个月内验证一个面向独立开发者的 AI 产品方向？" value={prompt} /><span className="text-right text-xs text-muted-foreground">{prompt.length} / {BRAINSTORM_PROMPT_MAX_CHARS}</span></label>
       <label className="premium-subpanel mt-4 flex items-start gap-3 p-3 text-sm"><input checked={saveHistory} className="mt-0.5 size-4 accent-[hsl(var(--primary))]" disabled={active} onChange={(event) => setSaveHistory(event.target.checked)} type="checkbox" /><span><strong>保存到头脑风暴历史</strong><span className="mt-1 block text-xs leading-5 text-muted-foreground">关闭后仅在短期恢复窗口保留问题和结果，到期自动清理正文。</span></span></label>
+      <p className="mt-3 text-xs leading-5 text-muted-foreground">需要在完整对话线程中继续追问或使用动态 Worker？<Link className="font-medium text-primary hover:underline" href="/chat">切换到 Chat Agent Mode</Link>。</p>
       {!configured && <p className="mt-4 rounded-control bg-warning-subtle p-3 text-sm text-warning-foreground">多 Agent 头脑风暴服务尚未配置，请联系管理员。</p>}
       {error && <p className="mt-4 rounded-control bg-warning-subtle p-3 text-sm text-warning-foreground" role="status">{error}</p>}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/10 pt-4"><div className="flex min-w-0 flex-wrap gap-2 max-[359px]:w-full max-[359px]:[&>button]:w-full">{active ? <Button disabled={cancelling} onClick={() => void stop()} variant="outline"><Square className="size-4 fill-current" />{cancelling ? "正在请求停止" : "停止头脑风暴"}</Button> : <Button disabled={!configured || !prompt.trim()} onClick={() => void start()}><BrainCircuit className="size-4" />开始头脑风暴</Button>}{state !== "idle" && !active ? <Button onClick={reuse} variant="outline"><RotateCcw className="size-4" />再次头脑风暴</Button> : null}</div><div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">{active && <span>{formatElapsedTime(elapsed)}</span>}{recoveryMessage && <span className="premium-chip max-w-full overflow-wrap-anywhere"><LoaderCircle className="size-3 animate-spin motion-reduce:animate-none" />{recoveryMessage}</span>}</div></div>

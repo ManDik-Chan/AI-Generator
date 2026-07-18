@@ -1,4 +1,4 @@
-# Phase 6B3 移动端与 Chat 键盘架构
+# Phase 6B3 移动端与 Chat 键盘架构（项目所有者已验收）
 
 > 状态：Draft。自动 Chromium、移动 Chromium 与 WebKit 模拟已执行；真实 iPhone Safari、Android Chrome、微信 WebView 与 PWA 仍需项目所有者验收。
 

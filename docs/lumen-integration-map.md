@@ -1,6 +1,6 @@
 # Lumen integration map
 
-> Phase 6B3 — Draft. This map was created before implementation and finalized after all six checkpoints. It treats the production repository as the only source of business truth and the Lumen ZIP as a visual reference only.
+> Phase 6B3 已由项目所有者验收。This map was created before implementation and finalized after all six checkpoints. It treats the production repository as the only source of business truth and the Lumen ZIP as a visual reference only.
 
 ## 1. Source and safety audit
 

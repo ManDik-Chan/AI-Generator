@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") {
       return jsonError("并发请求较多，请稍后重试。", 429, "RATE_LIMITED");
     }
-    console.error("agent_run_creation_failed", { userId, errorCode: error instanceof Error ? error.name : "UNKNOWN" });
+    console.error("agent_run_creation_failed", { errorCode: error instanceof Error ? error.name : "UNKNOWN" });
     return jsonError("无法创建 Agent 运行，请稍后重试。", 500, "UNKNOWN");
   }
 
