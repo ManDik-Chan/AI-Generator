@@ -17,6 +17,9 @@ export async function appendAgentEvent(
     summaryText?: string;
   },
 ) {
+  await transaction.$queryRaw(
+    Prisma.sql`SELECT id FROM public.agent_runs WHERE id = ${input.runId}::uuid AND user_id = ${input.userId}::uuid FOR UPDATE`,
+  );
   const latest = await transaction.agentEvent.findFirst({
     where: { agentRunId: input.runId, userId: input.userId },
     orderBy: { sequence: "desc" },
