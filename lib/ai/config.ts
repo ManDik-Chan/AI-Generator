@@ -152,8 +152,12 @@ export function getAgentGenerationConfig(env: Environment = process.env): AgentG
     leaderMaxOutputTokens: numberFromEnvironment(env.AI_AGENT_LEADER_MAX_OUTPUT_TOKENS, 3200, 400, 12_000),
     requestTimeoutMs: numberFromEnvironment(env.AI_AGENT_REQUEST_TIMEOUT_MS, 120_000, 1_000, 285_000),
     totalTimeoutMs: numberFromEnvironment(env.AI_AGENT_TOTAL_TIMEOUT_MS, 285_000, 1_000, 285_000),
-    dailyCredits: numberFromEnvironment(env.AI_DAILY_AGENT_CREDITS, 6, 1, 1000),
+    dailyCredits: getAgentDailyCreditLimit(env),
   };
+}
+
+export function getAgentDailyCreditLimit(env: Environment = process.env) {
+  return numberFromEnvironment(env.AI_DAILY_AGENT_CREDITS, 6, 1, 1000);
 }
 
 export function requireAgentProviderConfig(env: Environment = process.env): AiProviderConfig {

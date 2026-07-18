@@ -61,6 +61,7 @@ export async function runAgentWorkerPool(input: {
   config: AgentGenerationConfig;
   signal?: AbortSignal;
   didTimeout?(): boolean;
+  send?(event: string, data: unknown): boolean;
 }) {
   const run = await prisma.agentRun.findFirst({
     where: { id: input.runId, userId: input.userId, status: "PENDING", phase: "DISPATCHING" },
@@ -72,6 +73,11 @@ export async function runAgentWorkerPool(input: {
     data: { phase: "WORKING" },
   });
   const concurrency = getAgentModeLimits(run.mode).maxConcurrency;
+  const notifiedTerminal = new Set<string>();
+  const notifyTerminal = (workerKey: string, event: string, data: unknown) => {
+    notifiedTerminal.add(workerKey);
+    input.send?.(event, data);
+  };
 
   const runOne = async (workerKey: string) => {
     const workerStartedAt = Date.now();
@@ -101,13 +107,17 @@ export async function runAgentWorkerPool(input: {
         memorySummary: input.memorySummary,
       });
       const deliverable = await collectWorkerDeliverable({ provider: input.provider, config: input.config, context, signal });
-      await finishAgentWorker({ userId: input.userId, runId: input.runId, workerKey, status: "COMPLETE", deliverable });
+      const finished = await finishAgentWorker({ userId: input.userId, runId: input.runId, workerKey, status: "COMPLETE", deliverable });
+      if (finished) notifyTerminal(workerKey, "worker_done", { workerKey, deliverable });
       console.info("agent_worker_completed", { runId: input.runId, workerKey, status: "COMPLETE", durationMs: Date.now() - workerStartedAt });
     } catch (error) {
       const code = input.didTimeout?.() || error instanceof AiProviderError && error.code === "TIMEOUT" ? "TIMEOUT" : safeWorkerErrorCode(error);
       const status = code === "TIMEOUT" ? "TIMEOUT" : "ERROR";
       const finished = await finishAgentWorker({ userId: input.userId, runId: input.runId, workerKey, status, errorCode: code });
-      if (finished) console.warn("agent_worker_finished", { runId: input.runId, workerKey, status, errorCode: code, durationMs: Date.now() - workerStartedAt });
+      if (finished) {
+        notifyTerminal(workerKey, status === "TIMEOUT" ? "worker_timeout" : "worker_error", { workerKey, code });
+        console.warn("agent_worker_finished", { runId: input.runId, workerKey, status, errorCode: code, durationMs: Date.now() - workerStartedAt });
+      }
     } finally {
       cancellation.dispose();
     }
@@ -119,31 +129,45 @@ export async function runAgentWorkerPool(input: {
       orderBy: { position: "asc" },
       select: { key: true, status: true, dependsOnKeys: true },
     });
+    for (const worker of workers) {
+      if (worker.status === "CANCELLED" && !notifiedTerminal.has(worker.key)) {
+        notifyTerminal(worker.key, "worker_cancelled", { workerKey: worker.key, code: "CANCELLED" });
+      }
+    }
     if (workers.every((worker) => (AGENT_WORKER_TERMINAL_STATUSES as readonly AgentWorkerStatus[]).includes(worker.status))) break;
     if (input.signal?.aborted) {
       if (input.didTimeout?.()) {
         for (const worker of workers.filter((item) => item.status === "QUEUED")) {
-          await finishQueuedAgentWorker({ userId: input.userId, runId: input.runId, workerKey: worker.key, status: "TIMEOUT", errorCode: "TIMEOUT" });
+          if (await finishQueuedAgentWorker({ userId: input.userId, runId: input.runId, workerKey: worker.key, status: "TIMEOUT", errorCode: "TIMEOUT" })) {
+            notifyTerminal(worker.key, "worker_timeout", { workerKey: worker.key, code: "TIMEOUT" });
+          }
         }
       }
       break;
     }
     const blocked = getBlockedWorkers(workers);
     for (const worker of blocked) {
-      await finishQueuedAgentWorker({ userId: input.userId, runId: input.runId, workerKey: worker.key, status: "BLOCKED", errorCode: "DEPENDENCY_FAILED" });
+      if (await finishQueuedAgentWorker({ userId: input.userId, runId: input.runId, workerKey: worker.key, status: "BLOCKED", errorCode: "DEPENDENCY_FAILED" })) {
+        notifyTerminal(worker.key, "worker_blocked", { workerKey: worker.key, code: "DEPENDENCY_FAILED" });
+      }
     }
     if (blocked.length) continue;
 
     const runnable = getRunnableWorkers(workers);
     if (!runnable.length) {
       for (const worker of workers.filter((item) => item.status === "QUEUED")) {
-        await finishQueuedAgentWorker({ userId: input.userId, runId: input.runId, workerKey: worker.key, status: "BLOCKED", errorCode: "DEPENDENCY_DEADLOCK" });
+        if (await finishQueuedAgentWorker({ userId: input.userId, runId: input.runId, workerKey: worker.key, status: "BLOCKED", errorCode: "DEPENDENCY_DEADLOCK" })) {
+          notifyTerminal(worker.key, "worker_blocked", { workerKey: worker.key, code: "DEPENDENCY_DEADLOCK" });
+        }
       }
       break;
     }
     const reserved: string[] = [];
     for (const worker of runnable) {
-      if (await reserveWorkerProviderCall(input.userId, input.runId, worker.key)) reserved.push(worker.key);
+      if (await reserveWorkerProviderCall(input.userId, input.runId, worker.key)) {
+        reserved.push(worker.key);
+        input.send?.("worker_started", { workerKey: worker.key });
+      }
     }
     if (!reserved.length) continue;
     await runWorkerPool(reserved.map((workerKey) => () => runOne(workerKey)), concurrency);

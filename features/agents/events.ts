@@ -65,3 +65,34 @@ export async function reservePlannerProviderCall(userId: string, runId: string) 
     return true;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
+
+export async function reserveLeaderProviderCall(userId: string, runId: string) {
+  return prisma.$transaction(async (transaction) => {
+    await transaction.$queryRaw(
+      Prisma.sql`SELECT id FROM public.agent_runs WHERE id = ${runId}::uuid AND user_id = ${userId}::uuid FOR UPDATE`,
+    );
+    const run = await transaction.agentRun.findFirst({
+      where: { id: runId, userId, status: "PENDING", phase: "WORKING" },
+      select: { mode: true, providerCallCount: true },
+    });
+    if (!run || run.providerCallCount >= getAgentModeLimits(run.mode).maxProviderCalls) return false;
+    const workers = await transaction.agentWorker.findMany({
+      where: { agentRunId: runId, userId },
+      select: { status: true },
+    });
+    const terminal = new Set(["BLOCKED", "COMPLETE", "ERROR", "CANCELLED", "TIMEOUT"]);
+    if (workers.filter((worker) => worker.status === "COMPLETE").length < 2 || workers.some((worker) => !terminal.has(worker.status))) return false;
+    const reserved = await transaction.agentRun.updateMany({
+      where: { id: runId, userId, status: "PENDING", phase: "WORKING", providerCallCount: run.providerCallCount },
+      data: { phase: "SYNTHESIZING", providerCallCount: { increment: 1 } },
+    });
+    if (!reserved.count) return false;
+    await appendAgentEvent(transaction, {
+      userId,
+      runId,
+      type: "SYNTHESIS_STARTED",
+      summaryText: "Leader started with one reserved Provider call.",
+    });
+    return true;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
