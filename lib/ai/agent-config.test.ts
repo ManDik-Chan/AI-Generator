@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getAgentConfigurationStatus, getAgentGenerationConfig } from "@/lib/ai/config";
+import { getAgentConfigurationStatus, getAgentGenerationConfig, getAgentStaleAfterMs } from "@/lib/ai/config";
 
 const base = { AI_BASE_URL: "https://example.com/v1", AI_API_KEY: "secret", AI_MODEL: "base" };
 
@@ -19,5 +19,6 @@ describe("Agent AI configuration", () => {
 
   it("is build-safe when the service is not configured", () => {
     expect(getAgentConfigurationStatus({})).toMatchObject({ configured: false });
+    expect(getAgentStaleAfterMs({})).toBe(300_000);
   });
 });

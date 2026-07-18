@@ -5,7 +5,7 @@ import { reserveLeaderProviderCall } from "@/features/agents/events";
 import { buildAgentLeaderPrompt, streamAgentLeader } from "@/features/agents/leader";
 import { runAgentPlanningPhase } from "@/features/agents/planning-service";
 import { loadAgentRuntimeContext } from "@/features/agents/runtime-context";
-import { finishAgentRun, isAgentRunPending, persistAgentAssistantPartial } from "@/features/agents/run-state";
+import { finishAgentRun, getAgentRunTerminalState, isAgentRunPending, persistAgentAssistantPartial } from "@/features/agents/run-state";
 import { runAgentWorkerPool } from "@/features/agents/worker-pool";
 import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 import { AiProviderError, toPublicAiError } from "@/lib/ai/errors";
@@ -26,6 +26,23 @@ function safeErrorCode(error: unknown) {
   return "AGENT_ERROR";
 }
 
+async function sendObservedAgentState(input: Pick<AgentServiceInput, "userId" | "runId" | "send">) {
+  const terminal = await getAgentRunTerminalState(input.userId, input.runId).catch(() => null);
+  if (terminal?.status === "CANCELLED") {
+    input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+    return;
+  }
+  if (terminal?.status === "COMPLETE") {
+    input.send("done", { runId: input.runId, status: "COMPLETE" });
+    return;
+  }
+  if (terminal?.status === "ERROR") {
+    input.send("error", { code: terminal.errorCode ?? "AGENT_ERROR", message: "Agent 运行已由服务器收敛到失败终态。" });
+    return;
+  }
+  input.send("error", { code: "PERSISTENCE_ERROR", message: "Agent 终态尚未持久化，请稍后刷新运行状态。" });
+}
+
 export async function runAgentService(input: AgentServiceInput) {
   const cancellation = await createDurableCancellationController({
     isPending: () => isAgentRunPending(input.userId, input.runId),
@@ -37,12 +54,12 @@ export async function runAgentService(input: AgentServiceInput) {
   let leaderContent = "";
   try {
     if (cancellation.signal.aborted) {
-      input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+      await sendObservedAgentState(input);
       return;
     }
     const context = await loadAgentRuntimeContext(input.userId, input.runId);
     if (!context) {
-      input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+      await sendObservedAgentState(input);
       return;
     }
 
@@ -93,11 +110,12 @@ export async function runAgentService(input: AgentServiceInput) {
     if (deadline.didTimeout()) {
       const content = "Agent 运行已达到总时限。已完成的 Worker 结果仍保留在运行详情中。";
       const finished = await finishAgentRun({ userId: input.userId, runId: input.runId, status: "ERROR", content, errorCode: "TIMEOUT", timeout: true });
-      input.send(finished ? "error" : "cancelled", finished ? { code: "TIMEOUT", message: content } : { runId: input.runId, status: "CANCELLED" });
+      if (finished) input.send("error", { code: "TIMEOUT", message: content });
+      else await sendObservedAgentState(input);
       return;
     }
     if (!await isAgentRunPending(input.userId, input.runId)) {
-      input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+      await sendObservedAgentState(input);
       return;
     }
 
@@ -106,13 +124,13 @@ export async function runAgentService(input: AgentServiceInput) {
       const content = "成功完成的 Worker 少于两个，Leader 未启动。请在运行详情中查看各 Worker 的状态与安全交付物。";
       const finished = await finishAgentRun({ userId: input.userId, runId: input.runId, status: "ERROR", content, errorCode: "INSUFFICIENT_WORKERS" });
       if (finished) input.send("error", { code: "INSUFFICIENT_WORKERS", message: content });
-      else input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+      else await sendObservedAgentState(input);
       return;
     }
 
     if (!await reserveLeaderProviderCall(input.userId, input.runId)) {
       if (!await isAgentRunPending(input.userId, input.runId)) {
-        input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+        await sendObservedAgentState(input);
         return;
       }
       throw new Error("Leader Provider call could not be reserved.");
@@ -149,7 +167,7 @@ export async function runAgentService(input: AgentServiceInput) {
     if (deadline.signal.aborted) throw new AiProviderError(deadline.didTimeout() ? "TIMEOUT" : "ABORTED", "Agent Leader stopped before persistence.");
     const completed = await finishAgentRun({ userId: input.userId, runId: input.runId, status: "COMPLETE", content: leaderContent });
     if (!completed) {
-      input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+      await sendObservedAgentState(input);
       return;
     }
     if (context.selectedMemoryIds.length) {
@@ -164,19 +182,21 @@ export async function runAgentService(input: AgentServiceInput) {
     if (deadline.didTimeout() && await isAgentRunPending(input.userId, input.runId)) {
       const content = leaderContent || "Agent 运行已达到总时限。已完成的 Worker 结果仍保留在运行详情中。";
       const finished = await finishAgentRun({ userId: input.userId, runId: input.runId, status: "ERROR", content, errorCode: "TIMEOUT", timeout: true }).catch(() => false);
-      input.send(finished ? "error" : "cancelled", finished ? { code: "TIMEOUT", message: "Agent 运行已达到总时限。" } : { runId: input.runId, status: "CANCELLED" });
+      if (finished) input.send("error", { code: "TIMEOUT", message: "Agent 运行已达到总时限。" });
+      else await sendObservedAgentState(input);
       return;
     }
     if (!await isAgentRunPending(input.userId, input.runId)) {
-      input.send("cancelled", { runId: input.runId, status: "CANCELLED" });
+      await sendObservedAgentState(input);
       return;
     }
     const code = safeErrorCode(error);
     const publicError = toPublicAiError(error);
     const content = leaderContent || "Agent 运行未能完成。已完成的 Worker 结果仍保留在运行详情中。";
     const failed = await finishAgentRun({ userId: input.userId, runId: input.runId, status: "ERROR", content, errorCode: code }).catch(() => false);
-    input.send(failed ? "error" : "cancelled", failed ? { code, message: publicError } : { runId: input.runId, status: "CANCELLED" });
-    console.error("agent_run_failed", { runId: input.runId, status: failed ? "ERROR" : "CANCELLED", errorCode: failed ? code : "CANCELLED", durationMs: Date.now() - startedAt });
+    if (failed) input.send("error", { code, message: publicError });
+    else await sendObservedAgentState(input);
+    console.error("agent_run_failed", { runId: input.runId, status: failed ? "ERROR" : "PERSISTENCE_UNCONFIRMED", errorCode: failed ? code : "PERSISTENCE_ERROR", durationMs: Date.now() - startedAt });
   } finally {
     deadline.dispose();
     cancellation.dispose();

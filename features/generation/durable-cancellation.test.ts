@@ -5,18 +5,21 @@ import { createDurableCancellationController } from "@/features/generation/durab
 describe("durable cancellation controller", () => {
   afterEach(() => vi.useRealTimers());
 
-  it("aborts the provider signal after durable state leaves PENDING", async () => {
+  it("aborts a Provider signal after the persisted state stops being PENDING", async () => {
     vi.useFakeTimers();
-    const isPending = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    const cancellation = await createDurableCancellationController({ isPending, intervalMs: 750, taskType: "TEST", taskId: "run" });
+    const isPending = vi.fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
+    const cancellation = await createDurableCancellationController({ isPending, intervalMs: 250, taskType: "AGENT", taskId: "run-1" });
+
     expect(cancellation.signal.aborted).toBe(false);
-    await vi.advanceTimersByTimeAsync(750);
+    await vi.advanceTimersByTimeAsync(250);
     expect(cancellation.signal.aborted).toBe(true);
     expect(isPending).toHaveBeenCalledTimes(2);
     cancellation.dispose();
   });
 
-  it("checks durable state before provider work starts", async () => {
+  it("checks durable state before Provider work starts", async () => {
     const cancellation = await createDurableCancellationController({ isPending: async () => false, taskType: "TEST", taskId: "run" });
     expect(cancellation.signal.aborted).toBe(true);
     cancellation.dispose();

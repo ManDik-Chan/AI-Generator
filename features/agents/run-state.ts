@@ -14,6 +14,13 @@ export async function isAgentRunPending(userId: string, runId: string) {
   }));
 }
 
+export async function getAgentRunTerminalState(userId: string, runId: string) {
+  return prisma.agentRun.findFirst({
+    where: { id: runId, userId },
+    select: { status: true, errorCode: true },
+  });
+}
+
 export async function persistAgentAssistantPartial(userId: string, runId: string, content: string) {
   const run = await prisma.agentRun.findFirst({
     where: { id: runId, userId, status: "PENDING", phase: "SYNTHESIZING" },
@@ -151,5 +158,62 @@ export async function cancelAgentRun(userId: string, runId: string) {
       ],
     }, { runLocked: true });
     return "CANCELLED" as const;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+export async function reconcileStaleAgentRun(userId: string, runId: string, staleBefore: Date) {
+  return prisma.$transaction(async (transaction) => {
+    if (!(await lockAgentEventStream(transaction, userId, runId))) return null;
+    const run = await transaction.agentRun.findFirst({
+      where: { id: runId, userId },
+      select: { status: true, startedAt: true, assistantMessageId: true },
+    });
+    if (!run) return null;
+    if (run.status !== "PENDING" || run.startedAt > staleBefore) return run.status;
+
+    const completedAt = new Date();
+    const activeWorkers = await transaction.agentWorker.findMany({
+      where: { agentRunId: runId, userId, status: { in: ["QUEUED", "RUNNING"] } },
+      select: { key: true },
+    });
+    await transaction.agentWorker.updateMany({
+      where: { agentRunId: runId, userId, status: { in: ["QUEUED", "RUNNING"] } },
+      data: { status: "TIMEOUT", errorCode: "STALE_RUN", completedAt },
+    });
+    await transaction.message.updateMany({
+      where: { id: run.assistantMessageId, status: "PENDING", supersededAt: null },
+      data: {
+        status: "ERROR",
+        content: "Agent 运行超过安全时限，已由服务器收敛到终态。已完成的 Worker 结果仍保留在运行详情中。",
+      },
+    });
+    const workerCounts = await transaction.agentWorker.groupBy({
+      by: ["status"],
+      where: { agentRunId: runId, userId },
+      _count: { _all: true },
+    });
+    const completedWorkerCount = workerCounts.reduce((total, row) => total + (terminalStatuses.has(row.status) ? row._count._all : 0), 0);
+    const successfulWorkerCount = workerCounts.find((row) => row.status === "COMPLETE")?._count._all ?? 0;
+    const finished = await transaction.agentRun.updateMany({
+      where: { id: runId, userId, status: "PENDING", startedAt: { lte: staleBefore } },
+      data: {
+        status: "ERROR",
+        phase: "FINISHED",
+        errorCode: "STALE_RUN",
+        completedAt,
+        completedWorkerCount,
+        successfulWorkerCount,
+      },
+    });
+    if (!finished.count) return "PENDING" as const;
+    await appendAgentEvents(transaction, {
+      userId,
+      runId,
+      events: [
+        ...activeWorkers.map((worker) => ({ type: "WORKER_TIMEOUT" as const, workerKey: worker.key, summaryText: "Stale Worker reconciled after the Agent run deadline." })),
+        { type: "RUN_TIMEOUT", summaryText: "Stale Agent run reconciled after total timeout plus grace." },
+      ],
+    }, { runLocked: true });
+    return "ERROR" as const;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

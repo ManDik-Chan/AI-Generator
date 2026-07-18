@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getOwnedAgentRunSnapshot } from "@/features/agents/queries";
-import { getAgentDailyCreditLimit } from "@/lib/ai/config";
+import { reconcileStaleAgentRun } from "@/features/agents/run-state";
+import { getAgentDailyCreditLimit, getAgentStaleAfterMs } from "@/lib/ai/config";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
 
@@ -13,7 +14,12 @@ export async function GET(_request: Request, context: { params: Promise<{ agentR
   if (!userId) return NextResponse.json({ message: "请先登录。" }, { status: 401 });
   const { agentRunId } = await context.params;
   if (!runIdSchema.safeParse(agentRunId).success) return NextResponse.json({ message: "Agent 运行不存在或无权访问。" }, { status: 404 });
-  const result = await getOwnedAgentRunSnapshot(userId, agentRunId, getAgentDailyCreditLimit());
+  let result = await getOwnedAgentRunSnapshot(userId, agentRunId, getAgentDailyCreditLimit());
+  const staleBefore = new Date(Date.now() - getAgentStaleAfterMs());
+  if (result?.status === "PENDING" && new Date(result.startedAt) <= staleBefore) {
+    await reconcileStaleAgentRun(userId, agentRunId, staleBefore);
+    result = await getOwnedAgentRunSnapshot(userId, agentRunId, getAgentDailyCreditLimit());
+  }
   return result ? NextResponse.json(result) : NextResponse.json({ message: "Agent 运行不存在或无权访问。" }, { status: 404 });
 }
 

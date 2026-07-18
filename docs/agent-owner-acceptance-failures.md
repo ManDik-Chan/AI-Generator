@@ -38,6 +38,8 @@ however about 6511 ms passed since the start of the transaction.
 
 修复策略：Run/Message/活动 Worker/批量事件在短事务内按顺序提交；Provider 只根据已提交的持久终态收到 AbortSignal；所有迟到写继续以 PENDING/RUNNING 条件保护。增加超过 total timeout + grace 的 owner-scoped stale reconciliation，将 Run、Message 与活动 Worker原子收敛到安全 ERROR/TIMEOUT，并停止轮询。
 
+实现采用 Agent 总时限（默认 285 秒）加独立 grace（默认 15 秒）作为 stale 边界，不依赖 Provider 密钥是否配置。详情/状态读取发现过期 PENDING 时，会在 Run 行锁内把活动 Worker 标记为 `TIMEOUT/STALE_RUN`、Message 标记为 ERROR、Run 标记为 `ERROR/FINISHED/STALE_RUN`，再一次批写审计事件。取消状态按持久化结果驱动 AbortSignal；终态写入失败时 SSE 明确返回 `PERSISTENCE_ERROR`，不再伪装为 CANCELLED。行为测试覆盖全局取消幂等、stale 收敛、Provider 信号中止及 CANCELLED 后迟到 Worker 结果被拒绝。
+
 ### 3. 详情 DTO 被当作轮询 DTO，且轮询可重入
 
 `GET /api/agents/[id]` 每次同时读取 Conversation 标题、用户问题、Assistant 内容、完整 Worker deliverable、全部 AgentEvent，并统计当天 Agent Credits。`useGenerationRecovery` 没有 in-flight 去重；focus、pageshow、visibilitychange 与 timer 可以并发进入 `check()`，各自继续安排下一轮，造成 GET 风暴。

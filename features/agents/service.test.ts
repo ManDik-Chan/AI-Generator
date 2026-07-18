@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   reserveLeader: vi.fn(),
   finishRun: vi.fn(),
   pending: vi.fn(),
+  terminalState: vi.fn(),
   partial: vi.fn(),
   cancellation: undefined as AbortController | undefined,
   dispose: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock("@/features/agents/runtime-context", () => ({ loadAgentRuntimeContext: m
 vi.mock("@/features/agents/events", () => ({ reserveLeaderProviderCall: mocks.reserveLeader }));
 vi.mock("@/features/agents/run-state", () => ({
   finishAgentRun: mocks.finishRun,
+  getAgentRunTerminalState: mocks.terminalState,
   isAgentRunPending: mocks.pending,
   persistAgentAssistantPartial: mocks.partial,
 }));
@@ -60,6 +62,7 @@ describe("Agent orchestration service", () => {
     });
     mocks.planning.mockResolvedValue({ plan, fallback: false });
     mocks.pending.mockResolvedValue(true);
+    mocks.terminalState.mockResolvedValue({ status: "PENDING", errorCode: null });
     mocks.reserveLeader.mockResolvedValue(true);
     mocks.finishRun.mockResolvedValue(true);
     mocks.partial.mockResolvedValue(true);
@@ -100,5 +103,17 @@ describe("Agent orchestration service", () => {
     await runAgentService({ userId: "user", runId: "run", provider: { streamText } as unknown as AiProvider, config: { ...config, totalTimeoutMs: 5 }, send: vi.fn(() => true) });
     expect(streamText).not.toHaveBeenCalled();
     expect(mocks.finishRun).toHaveBeenCalledWith(expect.objectContaining({ status: "ERROR", errorCode: "TIMEOUT", timeout: true }));
+  });
+
+  it("does not report cancellation when terminal persistence fails", async () => {
+    mocks.workerPool.mockResolvedValue([worker("a", "COMPLETE"), worker("b", "ERROR")]);
+    mocks.finishRun.mockRejectedValue(new Error("database unavailable"));
+    mocks.terminalState.mockResolvedValue({ status: "PENDING", errorCode: null });
+    const send = vi.fn(() => true);
+
+    await runAgentService({ userId: "user", runId: "run", provider: { streamText: vi.fn() } as unknown as AiProvider, config, send });
+
+    expect(send).toHaveBeenCalledWith("error", expect.objectContaining({ code: "PERSISTENCE_ERROR" }));
+    expect(send).not.toHaveBeenCalledWith("cancelled", expect.anything());
   });
 });
