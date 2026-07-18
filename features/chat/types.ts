@@ -1,5 +1,6 @@
 export type ChatMessageRole = "user" | "assistant";
 export type ChatMessageStatus = "pending" | "complete" | "error" | "cancelled";
+export type ChatGenerationMode = "CHAT" | "AGENT_STANDARD" | "AGENT_DEEP";
 
 export interface ChatMessageView {
   id: string;

@@ -65,7 +65,8 @@ export async function runAgentService(input: AgentServiceInput) {
       runId: input.runId,
       overview: planning.plan.overview,
       workers: planning.plan.workers.map((worker) => ({
-        key: worker.key, name: worker.name, title: worker.title, priority: worker.priority, dependsOn: worker.dependsOn,
+        key: worker.key, name: worker.name, title: worker.title, objective: worker.objective,
+        expectedDeliverable: worker.expectedDeliverable, priority: worker.priority, dependsOn: worker.dependsOn,
       })),
       ...(planning.errorCode ? { code: planning.errorCode } : {}),
     });

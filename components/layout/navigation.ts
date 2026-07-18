@@ -1,4 +1,4 @@
-import { Brain, BrainCircuit, History, Home, Image, ImagePlus, MessageSquareText, Shapes, ShieldCheck, UserRound, Wrench } from "lucide-react";
+import { Brain, BrainCircuit, History, Home, Image, ImagePlus, MessageSquareText, Shapes, ShieldCheck, UserRound, Workflow, Wrench } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface NavigationItem {
@@ -19,7 +19,7 @@ export function navigationItemActive(pathname: string, href: string, matches?: r
 export const navigationGroups: ReadonlyArray<{ label: string; items: readonly NavigationItem[] }> = [
   { label: "工作空间", items: [
     { label: "控制中心", href: "/", icon: Home }, { label: "AI 对话", href: "/chat", icon: MessageSquareText },
-    { label: "AI 助手", href: "/personas", icon: Shapes }, { label: "长期记忆", href: "/memories", icon: Brain },
+    { label: "Agent 运行", href: "/agents", icon: Workflow }, { label: "AI 助手", href: "/personas", icon: Shapes }, { label: "长期记忆", href: "/memories", icon: Brain },
   ] },
   { label: "创作实验室", items: [
     { label: "文本工具", href: "/tools", icon: Wrench, matches: ["/tools", "/tools/summarize", "/tools/rewrite", "/tools/translate"] },
