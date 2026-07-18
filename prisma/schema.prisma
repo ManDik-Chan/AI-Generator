@@ -73,6 +73,62 @@ enum BrainstormWorkerStatus {
   CANCELLED
 }
 
+enum AgentRunMode {
+  STANDARD
+  DEEP
+}
+
+enum AgentRunStatus {
+  PENDING
+  COMPLETE
+  ERROR
+  CANCELLED
+}
+
+enum AgentRunPhase {
+  PLANNING
+  DISPATCHING
+  WORKING
+  SYNTHESIZING
+  FINISHED
+}
+
+enum AgentWorkerStatus {
+  QUEUED
+  BLOCKED
+  RUNNING
+  COMPLETE
+  ERROR
+  CANCELLED
+  TIMEOUT
+}
+
+enum AgentPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum AgentEventType {
+  RUN_CREATED
+  PLANNING_STARTED
+  PLAN_CREATED
+  PLAN_FALLBACK
+  WORKERS_CREATED
+  WORKER_QUEUED
+  WORKER_BLOCKED
+  WORKER_STARTED
+  WORKER_COMPLETED
+  WORKER_FAILED
+  WORKER_CANCELLED
+  WORKER_TIMEOUT
+  SYNTHESIS_STARTED
+  RUN_COMPLETED
+  RUN_FAILED
+  RUN_CANCELLED
+  RUN_TIMEOUT
+}
+
 enum GeneratedImageKind {
   PERSONA_AVATAR
   TOOL_GENERATION
@@ -99,15 +155,18 @@ model Profile {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  personas         Persona[]
-  conversations    Conversation[]
-  memories         Memory[]
-  memoryEmbeddings MemoryEmbedding[]
-  images           GeneratedImage[]
-  toolRuns         ToolRun[]
-  toolAssets       ToolAsset[]
-  generationRuns   GenerationRun[]
+  personas          Persona[]
+  conversations     Conversation[]
+  memories          Memory[]
+  memoryEmbeddings  MemoryEmbedding[]
+  images            GeneratedImage[]
+  toolRuns          ToolRun[]
+  toolAssets        ToolAsset[]
+  generationRuns    GenerationRun[]
   brainstormWorkers BrainstormWorker[]
+  agentRuns         AgentRun[]
+  agentWorkers      AgentWorker[]
+  agentEvents       AgentEvent[]
 
   @@map("profiles")
 }
@@ -127,9 +186,9 @@ model ToolRun {
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user           Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  assets         ToolAsset[]
-  generatedImage GeneratedImage?
+  user              Profile            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assets            ToolAsset[]
+  generatedImage    GeneratedImage?
   brainstormWorkers BrainstormWorker[]
 
   @@unique([id, userId])
@@ -245,11 +304,13 @@ model Conversation {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user     Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  persona  Persona?  @relation(fields: [personaId], references: [id], onDelete: SetNull)
-  messages Message[]
-  memories Memory[]
+  user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona   Persona?   @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  messages  Message[]
+  memories  Memory[]
+  agentRuns AgentRun[]
 
+  @@unique([id, userId])
   @@index([userId, updatedAt(sort: Desc)])
   @@map("conversations")
 }
@@ -265,12 +326,108 @@ model Message {
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   supersededAt   DateTime?     @map("superseded_at") @db.Timestamptz(6)
 
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sourceMemories Memory[]     @relation("MemorySourceMessage")
+  conversation        Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMemories      Memory[]     @relation("MemorySourceMessage")
+  agentRunAsUser      AgentRun?    @relation("AgentRunUserMessage")
+  agentRunAsAssistant AgentRun?    @relation("AgentRunAssistantMessage")
 
+  @@unique([id, conversationId])
   @@index([conversationId, createdAt])
   @@index([conversationId, supersededAt, createdAt])
   @@map("messages")
+}
+
+model AgentRun {
+  id                    String         @id @default(uuid()) @db.Uuid
+  userId                String         @map("user_id") @db.Uuid
+  conversationId        String         @map("conversation_id") @db.Uuid
+  userMessageId         String         @map("user_message_id") @db.Uuid
+  assistantMessageId    String         @map("assistant_message_id") @db.Uuid
+  mode                  AgentRunMode
+  status                AgentRunStatus @default(PENDING)
+  phase                 AgentRunPhase  @default(PLANNING)
+  planOverview          String?        @map("plan_overview") @db.Text
+  planFallback          Boolean        @default(false) @map("plan_fallback")
+  plannedWorkerCount    Int            @map("planned_worker_count")
+  completedWorkerCount  Int            @default(0) @map("completed_worker_count")
+  successfulWorkerCount Int            @default(0) @map("successful_worker_count")
+  providerCallCount     Int            @default(0) @map("provider_call_count")
+  errorCode             String?        @map("error_code") @db.VarChar(100)
+  startedAt             DateTime       @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt           DateTime?      @map("completed_at") @db.Timestamptz(6)
+  createdAt             DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user             Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation     Conversation  @relation(fields: [conversationId, userId], references: [id, userId], onDelete: Cascade)
+  userMessage      Message       @relation("AgentRunUserMessage", fields: [userMessageId, conversationId], references: [id, conversationId], onDelete: Cascade)
+  assistantMessage Message       @relation("AgentRunAssistantMessage", fields: [assistantMessageId, conversationId], references: [id, conversationId], onDelete: Cascade)
+  workers          AgentWorker[]
+  events           AgentEvent[]
+
+  @@unique([id, userId])
+  @@unique([userMessageId, conversationId])
+  @@unique([assistantMessageId, conversationId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, mode, status, createdAt(sort: Desc)])
+  @@index([conversationId, createdAt])
+  @@map("agent_runs")
+}
+
+model AgentWorker {
+  id                  String            @id @default(uuid()) @db.Uuid
+  agentRunId          String            @map("agent_run_id") @db.Uuid
+  userId              String            @map("user_id") @db.Uuid
+  key                 String            @db.VarChar(64)
+  position            Int
+  name                String            @db.VarChar(80)
+  title               String            @db.VarChar(160)
+  objective           String            @db.VarChar(1200)
+  expectedDeliverable String            @map("expected_deliverable") @db.VarChar(1200)
+  priority            AgentPriority
+  status              AgentWorkerStatus @default(QUEUED)
+  dependsOnKeys       String[]          @default([]) @map("depends_on_keys")
+  workSummary         String?           @map("work_summary") @db.VarChar(1200)
+  findings            String[]          @default([])
+  assumptions         String[]          @default([])
+  risks               String[]          @default([])
+  recommendations     String[]          @default([])
+  finalDeliverable    String?           @map("final_deliverable") @db.Text
+  structured          Boolean           @default(false)
+  providerCallCount   Int               @default(0) @map("provider_call_count")
+  errorCode           String?           @map("error_code") @db.VarChar(100)
+  startedAt           DateTime?         @map("started_at") @db.Timestamptz(6)
+  completedAt         DateTime?         @map("completed_at") @db.Timestamptz(6)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  agentRun AgentRun @relation(fields: [agentRunId, userId], references: [id, userId], onDelete: Cascade)
+  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([agentRunId, key])
+  @@unique([agentRunId, position])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([agentRunId, status])
+  @@map("agent_workers")
+}
+
+model AgentEvent {
+  id          String         @id @default(uuid()) @db.Uuid
+  agentRunId  String         @map("agent_run_id") @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  sequence    Int
+  type        AgentEventType
+  workerKey   String?        @map("worker_key") @db.VarChar(64)
+  summaryText String?        @map("summary_text") @db.VarChar(500)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  agentRun AgentRun @relation(fields: [agentRunId, userId], references: [id, userId], onDelete: Cascade)
+  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([agentRunId, sequence])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([agentRunId, type, createdAt])
+  @@map("agent_events")
 }
 
 model Memory {

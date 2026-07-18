@@ -12,6 +12,9 @@ alter table public.tool_runs enable row level security;
 alter table public.tool_assets enable row level security;
 alter table public.generation_runs enable row level security;
 alter table public.brainstorm_workers enable row level security;
+alter table public.agent_runs enable row level security;
+alter table public.agent_workers enable row level security;
+alter table public.agent_events enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
@@ -107,6 +110,27 @@ drop policy if exists "brainstorm_workers_insert_own" on public.brainstorm_worke
 drop policy if exists "brainstorm_workers_update_own" on public.brainstorm_workers;
 drop policy if exists "brainstorm_workers_delete_own" on public.brainstorm_workers;
 create policy "brainstorm_workers_select_own" on public.brainstorm_workers
+  for select using (user_id = auth.uid());
+
+drop policy if exists "agent_runs_select_own" on public.agent_runs;
+drop policy if exists "agent_runs_insert_own" on public.agent_runs;
+drop policy if exists "agent_runs_update_own" on public.agent_runs;
+drop policy if exists "agent_runs_delete_own" on public.agent_runs;
+create policy "agent_runs_select_own" on public.agent_runs
+  for select using (user_id = auth.uid());
+
+drop policy if exists "agent_workers_select_own" on public.agent_workers;
+drop policy if exists "agent_workers_insert_own" on public.agent_workers;
+drop policy if exists "agent_workers_update_own" on public.agent_workers;
+drop policy if exists "agent_workers_delete_own" on public.agent_workers;
+create policy "agent_workers_select_own" on public.agent_workers
+  for select using (user_id = auth.uid());
+
+drop policy if exists "agent_events_select_own" on public.agent_events;
+drop policy if exists "agent_events_insert_own" on public.agent_events;
+drop policy if exists "agent_events_update_own" on public.agent_events;
+drop policy if exists "agent_events_delete_own" on public.agent_events;
+create policy "agent_events_select_own" on public.agent_events
   for select using (user_id = auth.uid());
 
 drop policy if exists "messages_via_conversation" on public.messages;
