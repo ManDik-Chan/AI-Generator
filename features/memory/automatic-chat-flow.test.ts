@@ -28,7 +28,8 @@ describe("non-blocking automatic memory chat flow", () => {
   });
 
   it("uses a stable Chat-shaped loading boundary instead of a blocking spinner", () => {
-    expect(loading).toContain("grid-rows-[auto_minmax(0,1fr)_auto]");
+    expect(loading).toContain("data-chat-loading-shell");
+    expect(loading).toContain("premium-panel-strong");
     expect(loading).toContain('aria-label="正在加载对话"');
     expect(loading).not.toContain("router.refresh");
     expect(loading).not.toContain("window.location");

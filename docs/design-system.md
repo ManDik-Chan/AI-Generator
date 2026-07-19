@@ -1,6 +1,6 @@
 # Lumen 视觉设计系统
 
-> Phase 6B3 — Draft。视觉源为项目所有者提供的 `ai-generator-lumen-preview.zip`；生产仓库仍是组件、路由、数据与行为的唯一来源。
+> Phase 6B3 已由项目所有者验收；Phase 7A1.1 Agent surfaces 为 Draft。视觉源为项目所有者提供的 `ai-generator-lumen-preview.zip`；生产仓库仍是组件、路由、数据与行为的唯一来源。
 
 ## 视觉基准与边界
 
@@ -81,7 +81,10 @@ Token 集中在 `app/globals.css`，Tailwind 映射集中在 `tailwind.config.ts
 - Persona / Memory：保留全部 CRUD、AI 草稿/头像、回收站、自动记忆与语义状态。
 - Tools / Image / History：真实 ToolRun、图片私有资产、生成状态、复制/下载/再次创作/删除。
 - Brainstorm：四个固定 Worker、真实完成数、超时/失败/取消、协调阶段与综合结果。
+- Agent：Chat 内当前次模式选择与按需加载的 Worker Panel；`/agents` 提供运行历史，`/agents/[agentRunId]` 提供进度、依赖、deliverable、失败原因、复制与取消。
 - Admin：真实用户、角色、用量、系统状态和受保护操作；不伪造图表。
+
+Agent Worker Panel 在普通 Chat 首屏之外动态加载，避免把 Worker 详情组件静态加入每次聊天。桌面按 Worker 图并列展示，手机退化为单列卡片；状态同时使用图标、文案与语义色，区分等待依赖、运行中、部分完成、超时、失败、已取消和成功。卡片的 deliverable 可独立滚动和复制，运行中的全局停止与单 Worker 取消都保留至少 44 px 触控目标。
 
 ## 主题、动效与无障碍
 

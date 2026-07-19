@@ -1,5 +1,5 @@
 import { AiProviderError } from "@/lib/ai/errors";
-import type { AiProviderConfig, AiRuntimeLimits, BrainstormGenerationConfig, MemoryGenerationConfig, PersonaGenerationConfig, ToolGenerationConfig } from "@/lib/ai/types";
+import type { AgentGenerationConfig, AiProviderConfig, AiRuntimeLimits, BrainstormGenerationConfig, MemoryGenerationConfig, PersonaGenerationConfig, ToolGenerationConfig } from "@/lib/ai/types";
 
 type Environment = Record<string, string | undefined>;
 
@@ -104,6 +104,83 @@ export function requireBrainstormProviderConfig(env: Environment = process.env):
     model: generation.workerModel,
     temperature: generation.temperature,
     maxOutputTokens: generation.workerMaxOutputTokens,
+    requestTimeoutMs: generation.requestTimeoutMs,
+  };
+}
+
+function agentModelSelection(env: Environment) {
+  const brainstorm = env.AI_BRAINSTORM_MODEL?.trim();
+  const tool = env.AI_TOOL_MODEL?.trim();
+  const base = env.AI_MODEL?.trim();
+  const planner = env.AI_AGENT_PLANNER_MODEL?.trim();
+  const worker = env.AI_AGENT_WORKER_MODEL?.trim();
+  const leader = env.AI_AGENT_LEADER_MODEL?.trim();
+  const brainstormSynthesis = env.AI_BRAINSTORM_SYNTHESIS_MODEL?.trim();
+  const plannerModel = planner || brainstorm || tool || base || "";
+  const workerModel = worker || brainstorm || tool || base || "";
+  const leaderModel = leader || worker || brainstormSynthesis || tool || base || "";
+  return {
+    plannerModel,
+    workerModel,
+    leaderModel,
+    plannerModelSource: (planner ? "agent-planner" : brainstorm ? "brainstorm" : tool ? "tool" : "base") as AgentGenerationConfig["plannerModelSource"],
+    workerModelSource: (worker ? "agent-worker" : brainstorm ? "brainstorm" : tool ? "tool" : "base") as AgentGenerationConfig["workerModelSource"],
+    leaderModelSource: (leader ? "agent-leader" : worker ? "agent-worker" : brainstormSynthesis ? "brainstorm-synthesis" : tool ? "tool" : "base") as AgentGenerationConfig["leaderModelSource"],
+  };
+}
+
+export function getAgentConfigurationStatus(env: Environment = process.env) {
+  const models = agentModelSelection(env);
+  const missing = [
+    ...(["AI_BASE_URL", "AI_API_KEY"] as const).filter((key) => !env[key]?.trim()),
+    ...(!models.plannerModel ? ["AI_AGENT_PLANNER_MODEL / fallback"] : []),
+    ...(!models.workerModel ? ["AI_AGENT_WORKER_MODEL / fallback"] : []),
+    ...(!models.leaderModel ? ["AI_AGENT_LEADER_MODEL / fallback"] : []),
+  ];
+  return { configured: missing.length === 0 && (!env.AI_PROVIDER || env.AI_PROVIDER === "openai-compatible"), missing };
+}
+
+export function getAgentGenerationConfig(env: Environment = process.env): AgentGenerationConfig {
+  if (!getAgentConfigurationStatus(env).configured) {
+    throw new AiProviderError("CONFIGURATION", "Agent provider configuration is incomplete.");
+  }
+  return {
+    ...agentModelSelection(env),
+    temperature: numberFromEnvironment(env.AI_AGENT_TEMPERATURE, 0.5, 0, 1),
+    plannerMaxOutputTokens: numberFromEnvironment(env.AI_AGENT_PLANNER_MAX_OUTPUT_TOKENS, 1200, 200, 4000),
+    workerMaxOutputTokens: numberFromEnvironment(env.AI_AGENT_WORKER_MAX_OUTPUT_TOKENS, 1800, 200, 8000),
+    leaderMaxOutputTokens: numberFromEnvironment(env.AI_AGENT_LEADER_MAX_OUTPUT_TOKENS, 3200, 400, 12_000),
+    requestTimeoutMs: numberFromEnvironment(env.AI_AGENT_REQUEST_TIMEOUT_MS, 120_000, 1_000, 285_000),
+    totalTimeoutMs: getAgentTotalTimeoutMs(env),
+    dailyCredits: getAgentDailyCreditLimit(env),
+  };
+}
+
+export function getAgentTotalTimeoutMs(env: Environment = process.env) {
+  return numberFromEnvironment(env.AI_AGENT_TOTAL_TIMEOUT_MS, 285_000, 1_000, 285_000);
+}
+
+export function getAgentStaleGraceMs(env: Environment = process.env) {
+  return numberFromEnvironment(env.AI_AGENT_STALE_GRACE_MS, 15_000, 5_000, 120_000);
+}
+
+export function getAgentStaleAfterMs(env: Environment = process.env) {
+  return getAgentTotalTimeoutMs(env) + getAgentStaleGraceMs(env);
+}
+
+export function getAgentDailyCreditLimit(env: Environment = process.env) {
+  return numberFromEnvironment(env.AI_DAILY_AGENT_CREDITS, 6, 1, 1000);
+}
+
+export function requireAgentProviderConfig(env: Environment = process.env): AiProviderConfig {
+  const generation = getAgentGenerationConfig(env);
+  return {
+    provider: "openai-compatible",
+    baseUrl: env.AI_BASE_URL!.trim(),
+    apiKey: env.AI_API_KEY!.trim(),
+    model: generation.plannerModel,
+    temperature: generation.temperature,
+    maxOutputTokens: generation.plannerMaxOutputTokens,
     requestTimeoutMs: generation.requestTimeoutMs,
   };
 }

@@ -17,7 +17,6 @@ export function registerGenerationTask(task: Promise<void>, context: BackgroundT
     console.error("generation_background_task_rejected", {
       taskType: context.taskType,
       taskId: context.taskId,
-      userId: context.userId,
       errorCode: safeErrorCode(error),
     });
   });

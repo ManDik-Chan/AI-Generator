@@ -1,8 +1,12 @@
 # AI-Generator V2
 
-> Phase 6B3 — Lumen 全站前端集成与应用基础架构审计已进入 Draft：Lumen 的紫罗兰/青色/薄荷视觉语言、完整桌面与移动导航、真实首页指标、账户隐私和管理员控制台已接入既有业务。普通页面继续自然文档滚动；VisualViewport 不再写全站根节点，只由手机 Chat 固定窗口消费，消息区是唯一主滚动区，Composer 与历史阅读位置在键盘开合时分别保持。首页仍是 Server Component，First Load JS 为 124 kB，低于 132 kB 预算。React 已从 19.1.1 安全补丁升级至 19.1.8，PostCSS 统一为 8.5.16，`pnpm audit --prod` 无已知漏洞。自动 Chromium/WebKit 与完整尺寸矩阵已通过；真实 iPhone Safari、Android、微信 WebView、PWA 和登录态键盘仍需项目所有者设备验收。详见 `docs/lumen-integration-map.md`、`docs/application-foundation-audit.md` 与 `docs/mobile-experience.md`。Phase 7A2 尚未开始。
+> Phase 6B3 — Lumen 全站前端集成与应用基础架构审计已由项目所有者真实验收通过：Lumen 视觉、完整桌面/移动导航、真实数据表面、账户隐私、管理员控制台与 Chat-only VisualViewport 均已接入既有业务。详见 `docs/lumen-integration-map.md`、`docs/application-foundation-audit.md` 与 `docs/mobile-experience.md`。
 
 > Phase 7A1 多 Agent 头脑风暴已进入 Draft：一次明确点击固定创建四个独立 Worker，并在至少两个成功后调用一次协调器，总模型调用最多五次。任务复用 ToolRun、waitUntil、durable cancellation 与恢复机制，不读取聊天、Persona、Memory，不联网或调用工具。当前等待项目所有者部署独立 migration/RLS 并完成真实模型、后台恢复和响应式验收；Phase 7A2 Vibe Coding 尚未开始。详见 `docs/multi-agent-brainstorm.md`。
+
+> Phase 7A1.1 — Chat Agent Mode + Codex 风格 Worker 编排底座为 Draft：Chat 可针对当前一次发送选择标准 4 Worker 或深度 6 Worker，服务端完成 Planner、DAG、隔离 Worker Pool、单 Worker/全局取消、Leader、SSE、waitUntil、恢复、Credits、`/agents` 历史与最终 Assistant Message 持久化。当前 Worker 只有 `REASONING`，没有搜索、文件、代码执行、Shell、Git、Browser 或 MCP。Phase 7A1.2 与 Phase 7A2 均未开始。详见 `docs/agent-mode.md`、`docs/worker-orchestration.md`、`docs/agent-threat-model.md` 与 `docs/agent-data-model.md`。
+
+正式域名为 <https://www.ai-mdc.com>。
 
 > Phase 6A3 通用 AI 图片生成工作台已完成项目所有者真实验收：单图文生图、private `generated-images`、停止与 durable recovery、移动后台继续、Prompt/Storage 隔离和响应式均已通过。当前不包含图片编辑、多图、视频、OCR 或 RAG。详见 `docs/image-generation-tool.md`。
 

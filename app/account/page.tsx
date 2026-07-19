@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Brain, History, LockKeyhole, LogOut, MessageSquareText, ShieldCheck, Sparkles, UserRound } from "lucide-react";
-import { signOut } from "@/features/auth/actions";
+import { Brain, History, LockKeyhole, MessageSquareText, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { SignOutForm } from "@/features/auth/components/sign-out-form";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
 import { AppShell } from "@/components/layout/app-shell";
@@ -102,11 +102,7 @@ export default async function AccountPage() {
           </Surface>
         ) : null}
 
-        <form action={signOut}>
-          <Button type="submit" variant="outline">
-            <LogOut className="size-4" />退出登录
-          </Button>
-        </form>
+        <SignOutForm />
       </div>
     </AppShell>
   );

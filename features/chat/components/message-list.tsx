@@ -1,17 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ArrowDown, MessageSquareText } from "lucide-react";
+import dynamic from "next/dynamic";
 
 import { MessageItem } from "@/features/chat/components/message-item";
 import { AssistantAvatar } from "@/features/chat/components/assistant-avatar";
 import type { ChatMessageView } from "@/features/chat/types";
 import type { PersonaChatIdentity } from "@/features/persona/types";
+import type { AgentRunView } from "@/features/agents/client-types";
 import {
   CHAT_VIEWPORT_CHANGE_EVENT,
   getPreservedChatScrollTop,
   isChatScrollerNearBottom,
 } from "@/features/chat/viewport";
+
+const AgentWorkerPanel = dynamic(
+  () => import("@/features/agents/components/agent-worker-panel").then((module) => module.AgentWorkerPanel),
+  { loading: () => <div className="rounded-card border border-primary/18 bg-primary-subtle/24 p-4 text-sm text-muted-foreground">正在载入 Agent Worker 详情…</div> },
+);
 
 interface MessageListProps {
   messages: ChatMessageView[];
@@ -24,6 +31,10 @@ interface MessageListProps {
   onEditChange(value: string): void;
   onSubmitEdit(): void;
   persona?: PersonaChatIdentity;
+  agentRuns: AgentRunView[];
+  onCancelAgentRun(runId: string): Promise<void>;
+  onCancelAgentWorker(runId: string, workerKey: string): Promise<void>;
+  onRequestAgentDetails(runId: string): Promise<void>;
 }
 
 export function MessageList(props: MessageListProps) {
@@ -69,6 +80,7 @@ export function MessageList(props: MessageListProps) {
   }, [preserveScrollPosition]);
 
   const lastUserId = [...messages].reverse().find((item) => item.role === "user")?.id;
+  const agentByAssistantId = new Map(props.agentRuns.map((run) => [run.assistantMessageId, run]));
 
   return (
     <div className="relative min-h-0 flex-1">
@@ -86,12 +98,14 @@ export function MessageList(props: MessageListProps) {
     >
       <div className="mx-auto w-full max-w-[52rem] space-y-8 px-3 pb-8 pt-6 sm:px-7 sm:py-9 lg:px-9" ref={contentRef}>
         {messages.length ? messages.map((message) => {
-          return <MessageItem
+          const agentRun = message.role === "assistant" ? agentByAssistantId.get(message.id) : undefined;
+          return <Fragment key={message.id}>
+            {agentRun ? <AgentWorkerPanel onCancelRun={props.onCancelAgentRun} onCancelWorker={props.onCancelAgentWorker} onRequestDetails={props.onRequestAgentDetails} run={agentRun} /> : null}
+            <MessageItem
             canEdit={message.id === lastUserId}
             editDisabled={props.editDisabled}
             editing={message.id === props.editingMessageId}
             editValue={props.editValue}
-            key={message.id}
             maxInputChars={props.maxInputChars}
             message={message}
             onBeginEdit={() => props.onBeginEdit(message)}
@@ -99,7 +113,8 @@ export function MessageList(props: MessageListProps) {
             onEditChange={props.onEditChange}
             onSubmitEdit={props.onSubmitEdit}
             persona={props.persona}
-          />;
+            />
+          </Fragment>;
         }) : (
           <div className="grid min-h-[55vh] place-items-center py-10 text-center">
             <div className="relative max-w-lg">

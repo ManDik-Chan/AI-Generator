@@ -1,8 +1,30 @@
 # 重构进度
 
-## Phase 6B3 — Lumen 全站前端集成与应用基础架构审计（Draft）
+## Phase 7A1.1 — Chat Agent Mode + Worker 编排底座（Draft）
 
 实施时间：2026-07-18
+
+- [x] 新增 AgentRun / AgentWorker / AgentEvent、复合所有权外键、Assistant Message 一对一绑定、独立 migration `20260718160000_add_agent_workers` 与 select-own/server-write RLS。
+- [x] Standard 固定 4 Worker / 6 次调用，Deep 固定 6 Worker / 8 次调用；Planner/Leader 各最多一次，每个 Worker 最多一次。
+- [x] Planner 严格 Zod、唯一 key、DAG/深度校验、无重试与 deterministic fallback；fallback 不增加 Provider 调用。
+- [x] dependency-aware Worker Pool、独立 Context Envelope、结构化安全交付、OutputGuard、BLOCKED/ERROR/CANCELLED/TIMEOUT 与单 Worker 取消。
+- [x] Leader 至少两个成功 Worker 后综合；最终答案写入正常 Assistant Message，partial persistence、SSE、waitUntil、durable cancellation、总 deadline 与恢复复用既有底座。
+- [x] Chat Composer 增加当前发送动作的常规/Agent 标准/Agent 深度选择；Inline Worker Panel 按需拆包，支持折叠、失败筛选、复制、单 Worker/全局停止与详情。
+- [x] 新增 `/agents` 与 `/agents/[agentRunId]`，动态详情 `prefetch={false}`；运行中禁止删除，终态删除保留 Conversation/Message。
+- [x] 经典 `/tools/brainstorm`、旧 BrainstormWorker/ToolRun/历史/额度/migration 保持独立兼容。
+- [x] 114 个测试文件、615 项测试通过；lint、typecheck、Prisma validate、生产依赖 audit 与使用占位数据库连接串的 production build 通过，构建期间没有调用 AI Provider。
+- [x] 当前构建：首页 125 kB、Chat 177 kB、`/agents` 125 kB、Agent 详情 130 kB、Shared 103 kB；Worker Panel 按需 chunk 约 11.1 kB raw。
+- [x] Playwright 新增 12 个登录态 Agent 场景（Standard/Deep、fallback、timeout、依赖阻塞、单 Worker/全局取消、持久状态对账），并纳入 Desktop Chromium、Mobile Chromium 与 WebKit iPhone 项目；本机未提供 `PLAYWRIGHT_AUTH_STATE`，因此本次 15 个公共场景通过、33 个登录态场景明确跳过。
+- [ ] 项目所有者部署 migration、执行最新版 RLS、配置 Agent 服务端变量并在 Preview 验收真实 Provider、Credits、取消、后台恢复与所有权隔离。
+- [ ] 项目所有者在真实 iPhone Safari、Android Chrome、微信 WebView/PWA 验收登录态 Composer、Worker Panel 与后台恢复。
+
+当前 Worker 固定 `allowedCapabilities=["REASONING"]`、`allowedTools=[]`。本阶段没有联网搜索、文件操作、RAG、MCP、代码执行、Shell、Git 写入、浏览器自动化、递归 Worker、自动重试或 Vibe Coding。Phase 7A1.2 与 Phase 7A2 尚未开始。正式域名为 <https://www.ai-mdc.com>。
+
+## Phase 6B3 — Lumen 全站前端集成与应用基础架构审计（项目所有者真实验收通过）
+
+实施时间：2026-07-18
+
+项目所有者已确认本阶段真实验收通过；下列登录态自动化/设备项保留为本地执行记录，不改变该验收结论。
 
 - [x] 从 PR #18 Head `d8f5c092422102d586a6537d1585df2bcc69de44` 创建独立分支，保留首页 Server Component、动态列表预取限制、桌面自然滚动和导航反馈。
 - [x] 只读审计 `ai-generator-lumen-preview.zip`；确认它是静态 HTML + 两张截图，无 package、脚本、字体、密钥或可复制业务代码；ZIP 与解压目录未进入仓库。

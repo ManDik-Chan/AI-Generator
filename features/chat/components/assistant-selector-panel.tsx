@@ -11,12 +11,13 @@ import type { PersonaChatIdentity } from "@/features/persona/types";
 interface AssistantSelectorPanelProps {
   personas: PersonaChatIdentity[];
   selectedId?: string;
+  loading?: boolean;
   mobile?: boolean;
   onClose?(): void;
   onSelect(persona?: PersonaChatIdentity): void;
 }
 
-export function AssistantSelectorPanel({ personas, selectedId, mobile = false, onClose, onSelect }: AssistantSelectorPanelProps) {
+export function AssistantSelectorPanel({ personas, selectedId, loading = false, mobile = false, onClose, onSelect }: AssistantSelectorPanelProps) {
   useEffect(() => { if (!mobile) return; const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose?.(); }; window.addEventListener("keydown", closeOnEscape); return () => window.removeEventListener("keydown", closeOnEscape); }, [mobile, onClose]);
   const itemClass = (selected: boolean) => `flex min-h-16 w-full min-w-0 items-center gap-3 rounded-control border p-3 text-left transition-[background-color,border-color,transform] ${selected ? "border-primary/22 bg-primary-subtle text-primary-subtle-foreground" : "border-border/10 bg-surface/58 hover:-translate-y-0.5 hover:border-primary/20 hover:bg-surface-raised"}`;
   const content = <>
@@ -25,7 +26,7 @@ export function AssistantSelectorPanel({ personas, selectedId, mobile = false, o
     </div>
     <div className="premium-scrollbar min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
       <button aria-current={!selectedId ? "true" : undefined} className={itemClass(!selectedId)} onClick={() => { onSelect(); onClose?.(); }} type="button"><span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground"><Bot className="size-5" /></span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">默认 AI 助手</span><span className="block text-xs text-muted-foreground">通用对话助手</span></span>{!selectedId && <Check className="size-4 shrink-0 text-primary" />}</button>
-      {personas.map((persona) => { const selected = selectedId === persona.id; return <button aria-current={selected ? "true" : undefined} className={itemClass(selected)} key={persona.id} onClick={() => { onSelect(persona); onClose?.(); }} type="button"><PersonaAvatar className="size-10 shrink-0" name={persona.name} src={persona.avatarUrl} /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{persona.name}</span><span className="line-clamp-2 block text-xs leading-4 text-muted-foreground">{persona.description || "AI 人格助手"}</span></span>{selected && <Check className="size-4 shrink-0 text-primary" />}</button>; })}
+      {loading ? <div aria-label="正在加载人格列表" className="space-y-2"><div className="h-16 animate-pulse rounded-control bg-surface-muted motion-reduce:animate-none" /><div className="h-16 animate-pulse rounded-control bg-surface-muted motion-reduce:animate-none" /></div> : personas.map((persona) => { const selected = selectedId === persona.id; return <button aria-current={selected ? "true" : undefined} className={itemClass(selected)} key={persona.id} onClick={() => { onSelect(persona); onClose?.(); }} type="button"><PersonaAvatar className="size-10 shrink-0" name={persona.name} src={persona.avatarUrl} /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{persona.name}</span><span className="line-clamp-2 block text-xs leading-4 text-muted-foreground">{persona.description || "AI 人格助手"}</span></span>{selected && <Check className="size-4 shrink-0 text-primary" />}</button>; })}
     </div>
     <div className="grid shrink-0 gap-2 border-t border-border/10 p-4"><Button asChild size="sm"><Link href="/personas/new"><Plus className="size-4" />创建新人格</Link></Button><Button asChild size="sm" variant="outline"><Link href="/personas"><Settings className="size-4" />管理人格</Link></Button></div>
   </>;

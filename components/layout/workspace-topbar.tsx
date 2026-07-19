@@ -11,6 +11,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Dialog } from "@/components/ui/dialog";
 
 const routeMeta = [
+  { path: "/agents", title: "Agent 运行", subtitle: "动态 Worker、依赖、事件与最终回答" },
   { path: "/chat", title: "AI 对话", subtitle: "连续上下文 · 流式生成 · 长期记忆" },
   { path: "/personas", title: "专属人格", subtitle: "创建、编辑与管理不同的 AI 助手" },
   { path: "/memories", title: "长期记忆", subtitle: "你决定 AI 记住什么" },

@@ -11,7 +11,7 @@ import { DeleteConversationDialog } from "@/features/chat/components/delete-conv
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ConversationSummary } from "@/features/chat/types";
 
-export function ConversationList({ conversations, activeId, onNavigate }: { conversations: ConversationSummary[]; activeId?: string; onNavigate?(): void }) {
+export function ConversationList({ conversations, activeId, loading = false, onNavigate }: { conversations: ConversationSummary[]; activeId?: string; loading?: boolean; onNavigate?(): void }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState<ConversationSummary | null>(null);
   const [error, setError] = useState<string>();
@@ -33,7 +33,7 @@ export function ConversationList({ conversations, activeId, onNavigate }: { conv
       <div className="premium-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4">
         <p className="premium-kicker mb-2 px-2">RECENT</p>
         {error && <p className="mx-1 mb-2 rounded-control bg-destructive-subtle px-3 py-2 text-xs text-destructive-foreground">{error}</p>}
-        {conversations.length ? (
+        {loading ? <div aria-label="正在加载对话历史" className="space-y-2"><div className="h-12 animate-pulse rounded-control bg-surface-muted motion-reduce:animate-none" /><div className="h-12 animate-pulse rounded-control bg-surface-muted motion-reduce:animate-none" /><div className="h-12 animate-pulse rounded-control bg-surface-muted motion-reduce:animate-none" /></div> : conversations.length ? (
           <nav aria-label="对话历史" className="space-y-1">
             {conversations.map((conversation) => (
               <div className={conversation.id === activeId ? "group flex items-center rounded-control border border-primary/14 bg-primary-subtle text-primary-subtle-foreground shadow-sm" : "group flex items-center rounded-control border border-transparent text-muted-foreground hover:border-border/10 hover:bg-surface/60 hover:text-foreground"} key={conversation.id}>

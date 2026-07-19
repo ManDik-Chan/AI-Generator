@@ -1,6 +1,6 @@
 # Application foundation audit
 
-> Phase 6B3 — Draft. Baseline commit: `d8f5c092422102d586a6537d1585df2bcc69de44`. This document is updated as findings are fixed.
+> Phase 6B3 已由项目所有者验收；Phase 7A1.1 为 Draft。Phase 6B3 baseline commit: `d8f5c092422102d586a6537d1585df2bcc69de44`。正式域名：`https://www.ai-mdc.com`。
 
 ## 1. Architecture overview
 
@@ -265,3 +265,28 @@ Executed from the repository root on 2026-07-18:
 No Prisma Schema, migration, RLS, bucket, environment variable, domain or production deployment was changed. No ZIP, extracted prototype, `.env`, credential, `node_modules`, `.next`, prompt/output dump or private Storage path was committed.
 
 The remaining blocker is hardware/credential acceptance, not an unimplemented code path: real iPhone Safari, Android Chrome, WeChat WebView, PWA, and authenticated Chat/Admin mutation flows remain unverified locally. WebKit emulation is explicitly not claimed as real iPhone Safari.
+
+## 16. Phase 7A1.1 Agent foundation audit
+
+- `AgentRun`、`AgentWorker` 与 `AgentWorkerEvent` 构成独立的通用推理运行模型；Classic `/tools/brainstorm` 及其 `ToolRun` / `BrainstormWorker` 数据与 API 保持不变。
+- 所有创建、查询、取消与删除路径均从服务端会话取得用户身份，并以 `userId` 约束；RLS 只允许 authenticated 用户读取自己的 Agent 数据，写操作由 trusted server 执行。
+- Standard 固定最多 4 个 Worker / 6 次 Provider 调用，Deep 固定最多 6 个 Worker / 8 次调用；Planner 失败或输出非法 DAG 时使用确定性 fallback，不自动重试或递归派生 Worker。
+- Worker 只接收用户问题、模式、自己的任务、显式依赖 deliverable 与最小对话/Persona/Memory 上下文；不会读取其他 Worker 的隐藏推理、任意聊天历史或完整长期记忆库。
+- Planner、Worker 与 Leader 输出都经过结构校验和 `OutputGuard`；仅持久化用户可见 deliverable，不保存或展示 chain-of-thought。
+- SSE 只是实时观察通道。运行在创建事务提交后启动，并通过 `waitUntil` / `after` 绑定请求生命周期；断线后以持久状态恢复，不以浏览器连接状态决定业务终态。
+- Worker Panel 从 Chat 的普通初始图中动态拆分；最终构建为 Home 125 kB、Chat 177 kB、`/agents` 125 kB、`/agents/[agentRunId]` 130 kB、Shared 103 kB，Agent Panel 相关可加载 chunk 约 11.1 kB（raw）。
+- 运行中的 AgentRun 不允许删除，避免留下永久 `PENDING` 的 Assistant Message；显式取消、单 Worker 取消、全局 deadline、恢复与迟到写保护都有持久化契约。
+- Phase 7A1.1 的 Tool Policy 固定为 `REASONING`：无网络搜索、网页抓取、文件读写、Shell、代码执行、MCP、浏览器自动化或自动部署。
+
+Phase 7A1.1 当前保持 Draft，等待项目所有者 Preview 验收。Phase 7A1.2 与 Phase 7A2 尚未开始；本任务未执行生产 migration、RLS 或部署。
+
+### Phase 7A1.1 本地验证
+
+- `pnpm install --frozen-lockfile`：通过。
+- `pnpm test`：114 个测试文件 / 615 项测试通过。
+- `pnpm lint`、`pnpm typecheck`：通过。
+- `pnpm build`：使用占位 `DATABASE_URL` / `DIRECT_URL` 通过，未连接数据库或调用 AI Provider；最终路由体积记录在本节上方。
+- `pnpm exec prisma validate`：使用占位连接串通过，未连接或修改数据库。
+- `pnpm audit --prod`：无已知漏洞。
+- `pnpm test:e2e --workers=1`：15 passed / 33 explicitly skipped。公共 Desktop Chromium、Mobile Chromium 与 WebKit iPhone 场景通过；12 个新增 Agent 场景和其他登录态场景因未提供 `PLAYWRIGHT_AUTH_STATE` 而明确跳过。
+- 本地 dev server 通过 browser smoke check：登录页与首页均有实际内容、无框架错误覆盖层、未捕获 console error，主导航包含 Agent 运行入口。

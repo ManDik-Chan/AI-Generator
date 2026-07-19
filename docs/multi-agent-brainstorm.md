@@ -6,6 +6,8 @@
 
 本阶段不包含 Vibe Coding、代码或 Shell 执行、Git 写操作、MCP、浏览器自动化、联网搜索、网页抓取、文件上传、RAG、自定义 system prompt、递归 Worker、多轮自动循环或自动部署。Phase 7A2 尚未开始。
 
+这是保留的 Classic Brainstorm 工具，固定四个角色与一次协调器调用，继续使用 `/tools/brainstorm`。需要在完整 Conversation 中继续追问、选择 Standard/Deep 或查看动态 Worker DAG 时，使用 `/chat` 的 Agent Mode；两者不共享运行记录，也不会互相迁移历史。
+
 ## 调用与成本边界
 
 - 一次点击只创建一个 `ToolRun(type=BRAINSTORM)`。

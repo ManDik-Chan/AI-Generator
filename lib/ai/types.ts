@@ -54,6 +54,22 @@ export interface BrainstormGenerationConfig {
   synthesisModelSource: "synthesis" | "brainstorm" | "tool" | "base";
 }
 
+export interface AgentGenerationConfig {
+  plannerModel: string;
+  workerModel: string;
+  leaderModel: string;
+  temperature: number;
+  plannerMaxOutputTokens: number;
+  workerMaxOutputTokens: number;
+  leaderMaxOutputTokens: number;
+  requestTimeoutMs: number;
+  totalTimeoutMs: number;
+  dailyCredits: number;
+  plannerModelSource: "agent-planner" | "brainstorm" | "tool" | "base";
+  workerModelSource: "agent-worker" | "brainstorm" | "tool" | "base";
+  leaderModelSource: "agent-leader" | "agent-worker" | "brainstorm-synthesis" | "tool" | "base";
+}
+
 export interface AiProviderConfig {
   provider: "openai-compatible";
   baseUrl: string;

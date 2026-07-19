@@ -15,7 +15,7 @@ test.describe("authenticated mobile shell", () => {
   test.skip(!hasAuthState, "Set PLAYWRIGHT_AUTH_STATE to an existing signed-in storage state.");
 
   test("navigation, tools and common overlays remain inside the viewport", async ({ page }) => {
-    for (const route of ["/", "/tools", "/tools/image", "/tools/image-generate", "/tools/brainstorm", "/tools/history", "/personas", "/memories", "/account"] as const) {
+    for (const route of ["/", "/agents", "/tools", "/tools/image", "/tools/image-generate", "/tools/brainstorm", "/tools/history", "/personas", "/memories", "/account"] as const) {
       await page.goto(route);
       await expect(page.locator("main")).toBeVisible();
       await expectNoHorizontalOverflow(page);

@@ -110,3 +110,13 @@ data: {"message":"..."}
 - 总记忆开关关闭时不查询 Memory、不生成 query embedding，也不自动提取。
 - 同一非空 topicKey 每轮最多注入一条；topicKey 为空时按规范化内容抑制重复。
 - 助手成功 COMPLETE 后，仅对实际注入项原子增加 useCount 并更新 lastUsedAt；停止和 ERROR 不更新。
+
+## Phase 7A1.1 Agent Mode
+
+- Chat Composer 提供「普通对话 / 标准 Agent / 深度 Agent」选择。Agent 模式只作用于当前一次发送，提交后立即重置为普通对话，避免后续消息被意外按 Agent 计费。
+- 创建请求在 Serializable 事务中原子写入用户消息、`PENDING` Assistant Message、`AgentRun`、初始 Worker/事件与 credits；Provider 调用只在事务提交后开始。
+- Standard 最多 4 个 Worker / 6 次模型调用，Deep 最多 6 个 Worker / 8 次；Worker 依赖由服务端 DAG 控制，Leader 至少需要两个成功 Worker 才生成最终回答。
+- Worker 的中间产物进入独立 Worker Panel；Leader 最终结果写回普通 Assistant Message，因此后续普通追问继续使用同一 Conversation，不需要创建第二套聊天线程。
+- SSE 只负责实时事件。浏览器断线、切后台或刷新不会取消 AgentRun；页面根据持久化 runId 恢复 Worker 与最终消息状态。
+- 用户可取消单个尚未完成的 Worker，也可停止整个 AgentRun。取消、超时、部分完成和依赖不可满足都显示真实状态；迟到 Provider 响应不能覆盖终态。
+- Agent Mode 不执行搜索、文件操作、Shell、代码或浏览器工具。详细边界见 `agent-mode.md` 与 `worker-orchestration.md`。
