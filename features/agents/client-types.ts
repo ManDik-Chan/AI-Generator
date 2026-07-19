@@ -63,6 +63,8 @@ export interface AgentRunView {
   detailLevel?: "STATUS" | "FULL";
 }
 
+export type AgentRunTerminalSnapshot = Omit<AgentRunView, "conversationTitle" | "userProblem" | "events" | "usage" | "detailLevel">;
+
 export interface AgentWorkerStatusSnapshot {
   key: string;
   position: number;
@@ -113,6 +115,7 @@ export interface AgentRunListItem {
   plannedWorkerCount: number;
   successfulWorkerCount: number;
   providerCallCount: number;
+  planFallback: boolean;
   errorCode: string | null;
   startedAt: string;
   completedAt: string | null;

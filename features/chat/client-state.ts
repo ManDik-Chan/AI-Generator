@@ -1,4 +1,5 @@
 import type { ChatMessageView } from "@/features/chat/types";
+import type { AgentRunTerminalSnapshot } from "@/features/agents/client-types";
 
 interface EditTargetInput {
   message: ChatMessageView;
@@ -32,4 +33,12 @@ export function confirmOptimisticTurn(
     return message;
   });
   return confirmed.filter((message, index) => confirmed.findIndex((candidate) => candidate.id === message.id) === index);
+}
+
+export function applyAgentTerminalMessage(messages: ChatMessageView[], terminal: AgentRunTerminalSnapshot) {
+  return messages.map((message) => message.id === terminal.assistantMessageId ? {
+    ...message,
+    content: terminal.assistantMessage.content,
+    status: terminal.assistantMessage.status.toLowerCase() as ChatMessageView["status"],
+  } : message);
 }

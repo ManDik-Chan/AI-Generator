@@ -11,15 +11,15 @@ import { AssistantSelectorPanel } from "@/features/chat/components/assistant-sel
 import { DeletedPersonaNotice } from "@/features/chat/components/deleted-persona-notice";
 import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import type { PersonaChatIdentity } from "@/features/persona/types";
-import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
+import { applyAgentTerminalMessage, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
-import { useGenerationRecovery } from "@/features/generation/use-generation-recovery";
+import { RecoveryStopError, useGenerationRecovery } from "@/features/generation/use-generation-recovery";
 import { requestDurableCancellation } from "@/features/generation/cancel-client";
 import { useChatVisualViewport } from "@/features/chat/use-chat-visual-viewport";
-import type { AgentRunStatusSnapshot, AgentRunView, AgentStreamEvent } from "@/features/agents/client-types";
-import { createPendingAgentRunView, mergeAgentRunStatus, reduceAgentStreamEvent } from "@/features/agents/client-state";
+import type { AgentRunStatusSnapshot, AgentRunTerminalSnapshot, AgentRunView, AgentStreamEvent } from "@/features/agents/client-types";
+import { createPendingAgentRunView, mergeAgentRunStatus, mergeAgentRunTerminal, reduceAgentStreamEvent } from "@/features/agents/client-state";
 import { readSseEvents } from "@/features/generation/client-sse";
 import type { ChatGenerationMode } from "@/features/chat/types";
 import type { ChatBootstrapPayload } from "@/features/chat/bootstrap-types";
@@ -67,12 +67,16 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const activeConversationRef = useRef<{ id?: string; updatedAt?: string }>({ id: conversation?.id });
   const pendingStopEditRef = useRef(false);
   const pendingCancelRef = useRef(false);
+  const generationControllerRef = useRef<AbortController | undefined>(undefined);
   const conversationKeyRef = useRef(initialConversationKey);
   const mountedRef = useRef(true);
   useChatVisualViewport(shellRef);
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+      generationControllerRef.current?.abort();
+    };
   }, []);
   useEffect(() => {
     const controller = new AbortController();
@@ -150,10 +154,30 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
     }
   }, [clearCurrentGeneration, viewerId]);
-  const recoverAgentStatus = useCallback((snapshot: AgentRunStatusSnapshot) => {
+  const recoverAgentStatus = useCallback(async (snapshot: AgentRunStatusSnapshot, context: { signal: AbortSignal }) => {
     const currentConversationId = activeConversationRef.current.id;
     if (currentConversationId && snapshot.conversationId !== currentConversationId) {
-      updateConversationGeneration(sessionStorage, viewerId, snapshot.conversationId, { agentRunId: snapshot.status === "PENDING" ? snapshot.id : null });
+      updateConversationGeneration(sessionStorage, viewerId, snapshot.conversationId, { agentRunId: snapshot.id });
+      throw new DOMException("Conversation changed during Agent recovery.", "AbortError");
+    }
+    if (snapshot.status !== "PENDING") {
+      const response = await fetch(`/api/agents/${snapshot.id}/terminal`, { cache: "no-store", signal: context.signal });
+      if (response.status === 401 || response.status === 404) throw new RecoveryStopError();
+      if (!response.ok) throw new Error("Agent 终态暂时无法同步。");
+      const terminal = await response.json() as AgentRunTerminalSnapshot;
+      const activeConversationId = activeConversationRef.current.id;
+      if (activeConversationId && terminal.conversationId !== activeConversationId) {
+        updateConversationGeneration(sessionStorage, viewerId, terminal.conversationId, { agentRunId: terminal.id });
+        throw new DOMException("Conversation changed during Agent terminal synchronization.", "AbortError");
+      }
+      setAgentRuns((current) => {
+        const existing = current.find((run) => run.id === terminal.id);
+        const merged = mergeAgentRunTerminal(existing, terminal);
+        return existing ? current.map((run) => run.id === terminal.id ? merged : run) : [...current, merged];
+      });
+      setMessages((current) => applyAgentTerminalMessage(current, terminal));
+      setGenerating(false);
+      setError(terminal.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
       return;
     }
     setAgentRuns((current) => {
@@ -165,18 +189,15 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       ...message,
       status: snapshot.assistantMessage.status.toLowerCase() as ChatMessageView["status"],
     } : message));
-    if (snapshot.status === "PENDING") {
-      setGenerationKind("AGENT");
-      setGenerating(true);
-      setError("Agent 正在后台继续运行。");
-    } else {
-      clearCurrentGeneration("AGENT");
-      setAgentRunId(undefined);
-      setGenerating(false);
-      setError(snapshot.status === "ERROR" ? "Agent 未能正常完成，请查看 Worker 状态。" : undefined);
-    }
-  }, [clearCurrentGeneration, viewerId]);
-  useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:AGENT`, readRunId: readAgentGeneration, writeRunId: writeAgentGeneration, runId: agentRunId, onRunId: setAgentRunId, statusUrl: "/api/agents/", statusSuffix: "/status", onSnapshot: recoverAgentStatus });
+    setGenerationKind("AGENT");
+    setGenerating(true);
+    setError("Agent 正在后台继续运行。");
+  }, [viewerId]);
+  const settleAgentRecovery = useCallback(() => {
+    setAgentRunId(undefined);
+    setGenerating(false);
+  }, []);
+  useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:AGENT`, readRunId: readAgentGeneration, writeRunId: writeAgentGeneration, runId: agentRunId, onRunId: setAgentRunId, statusUrl: "/api/agents/", statusSuffix: "/status", onSnapshot: recoverAgentStatus, onSettled: settleAgentRecovery });
 
   async function refreshAgentRun(runId: string) {
     const response = await fetch(`/api/agents/${runId}`, { cache: "no-store" });
@@ -301,6 +322,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
     setGenerationKind(requestedMode === "CHAT" ? "CHAT" : "AGENT");
     if (requestedMode === "CHAT") setAgentRunId(undefined);
     else setAssistantMessageId(undefined);
+    generationControllerRef.current = requestController;
     setController(requestController);
     pendingCancelRef.current = false;
     setCancelling(false);
@@ -438,6 +460,10 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       }
 
     } catch (reason) {
+      if (!mountedRef.current) {
+        detached = true;
+        return;
+      }
       if (requestController.signal.aborted) {
         setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
       } else if (terminal) {
@@ -460,9 +486,10 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
         return;
       }
     } finally {
-      if (!detached) setGenerating(false);
-      if (!detached) setGenerationKind(undefined);
-      setController(undefined);
+      if (generationControllerRef.current === requestController) generationControllerRef.current = undefined;
+      if (mountedRef.current && !detached) setGenerating(false);
+      if (mountedRef.current && !detached) setGenerationKind(undefined);
+      if (mountedRef.current) setController(undefined);
       pendingStopEditRef.current = false;
     }
   }

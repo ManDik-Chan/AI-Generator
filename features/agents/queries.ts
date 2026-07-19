@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { getAgentModeLimits } from "@/features/agents/constants";
 import { startOfUtcDay } from "@/features/chat/utils";
 import { prisma } from "@/lib/database/prisma";
-import type { AgentModeView, AgentRunListItem, AgentRunStatusSnapshot, AgentRunStatusView, AgentRunView } from "@/features/agents/client-types";
+import type { AgentModeView, AgentRunListItem, AgentRunStatusSnapshot, AgentRunStatusView, AgentRunTerminalSnapshot, AgentRunView } from "@/features/agents/client-types";
 
 const agentRunStatusSelect = {
   id: true,
@@ -51,6 +51,57 @@ const agentRunStatusSelect = {
 type SelectedAgentRunStatus = Prisma.AgentRunGetPayload<{ select: typeof agentRunStatusSelect }>;
 
 function serializeAgentRunStatus(run: SelectedAgentRunStatus): AgentRunStatusSnapshot {
+  return {
+    ...run,
+    startedAt: run.startedAt.toISOString(),
+    completedAt: run.completedAt?.toISOString() ?? null,
+    createdAt: run.createdAt.toISOString(),
+    updatedAt: run.updatedAt.toISOString(),
+    assistantMessage: { ...run.assistantMessage, createdAt: run.assistantMessage.createdAt.toISOString() },
+    workers: run.workers.map((worker) => ({
+      ...worker,
+      startedAt: worker.startedAt?.toISOString() ?? null,
+      completedAt: worker.completedAt?.toISOString() ?? null,
+      createdAt: worker.createdAt.toISOString(),
+      updatedAt: worker.updatedAt.toISOString(),
+    })),
+  };
+}
+
+const agentRunTerminalSelect = {
+  id: true,
+  conversationId: true,
+  userMessageId: true,
+  assistantMessageId: true,
+  mode: true,
+  status: true,
+  phase: true,
+  planOverview: true,
+  planFallback: true,
+  plannedWorkerCount: true,
+  completedWorkerCount: true,
+  successfulWorkerCount: true,
+  providerCallCount: true,
+  errorCode: true,
+  startedAt: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+  assistantMessage: { select: { content: true, status: true, createdAt: true } },
+  workers: {
+    orderBy: { position: "asc" as const },
+    select: {
+      key: true, position: true, name: true, title: true, objective: true, expectedDeliverable: true,
+      priority: true, status: true, dependsOnKeys: true, workSummary: true, findings: true,
+      assumptions: true, risks: true, recommendations: true, finalDeliverable: true, structured: true,
+      errorCode: true, startedAt: true, completedAt: true, createdAt: true, updatedAt: true,
+    },
+  },
+} satisfies Prisma.AgentRunSelect;
+
+type SelectedAgentRunTerminal = Prisma.AgentRunGetPayload<{ select: typeof agentRunTerminalSelect }>;
+
+function serializeAgentRunTerminal(run: SelectedAgentRunTerminal): AgentRunTerminalSnapshot {
   return {
     ...run,
     startedAt: run.startedAt.toISOString(),
@@ -151,6 +202,14 @@ export async function getOwnedAgentRunStatus(userId: string, runId: string) {
   return run ? serializeAgentRunStatus(run) : null;
 }
 
+export async function getOwnedAgentRunTerminal(userId: string, runId: string) {
+  const run = await prisma.agentRun.findFirst({
+    where: { id: runId, userId, status: { not: "PENDING" } },
+    select: agentRunTerminalSelect,
+  });
+  return run ? serializeAgentRunTerminal(run) : null;
+}
+
 export async function getAgentUsage(userId: string, dailyLimit: number) {
   const [profile, runs] = await Promise.all([
     prisma.profile.findUnique({ where: { id: userId }, select: { role: true } }),
@@ -199,7 +258,7 @@ export async function getAgentRunList(input: {
     take: 100,
     select: {
       id: true, conversationId: true, mode: true, status: true, phase: true, plannedWorkerCount: true,
-      successfulWorkerCount: true, providerCallCount: true, errorCode: true, startedAt: true, completedAt: true,
+      successfulWorkerCount: true, providerCallCount: true, planFallback: true, errorCode: true, startedAt: true, completedAt: true,
       userMessage: { select: { content: true } },
     },
   });
@@ -213,6 +272,7 @@ export async function getAgentRunList(input: {
     plannedWorkerCount: run.plannedWorkerCount,
     successfulWorkerCount: run.successfulWorkerCount,
     providerCallCount: run.providerCallCount,
+    planFallback: run.planFallback,
     errorCode: run.errorCode,
     startedAt: run.startedAt.toISOString(),
     completedAt: run.completedAt?.toISOString() ?? null,
