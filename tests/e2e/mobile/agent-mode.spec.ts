@@ -52,6 +52,7 @@ interface MockScenario {
   fallback?: boolean;
   detached?: boolean;
   conversationId?: string;
+  recoverAfterStatusPolls?: number;
 }
 
 async function installAgentMocks(page: Page, scenario: MockScenario) {
@@ -62,6 +63,9 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
   let runCancelled = false;
   let cancelledWorkerKey: string | undefined;
   let requestBody: Record<string, unknown> | undefined;
+  let recoveryComplete = false;
+  let statusPollCount = 0;
+  let terminalFetchCount = 0;
 
   const plannedWorkers = keys.map((key, index) => ({
     key,
@@ -82,7 +86,7 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
 
   const snapshot = () => {
     const workers = currentWorkers();
-    const terminal = !scenario.detached || runCancelled;
+    const terminal = !scenario.detached || runCancelled || recoveryComplete;
     return {
       id: ids.run,
       conversationId,
@@ -161,6 +165,12 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
   });
   await page.route(`**/api/agents/${ids.run}/status`, async (route) => {
+    statusPollCount += 1;
+    if (scenario.recoverAfterStatusPolls && statusPollCount >= scenario.recoverAfterStatusPolls) recoveryComplete = true;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
+  });
+  await page.route(`**/api/agents/${ids.run}/terminal`, async (route) => {
+    terminalFetchCount += 1;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
   });
   await page.route(`**/api/agents/${ids.run}/cancel`, async (route) => {
@@ -172,7 +182,12 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "CANCELLED" }) });
   });
 
-  return { getRequestBody: () => requestBody };
+  return {
+    completeRun: () => { recoveryComplete = true; },
+    getRequestBody: () => requestBody,
+    getStatusPollCount: () => statusPollCount,
+    getTerminalFetchCount: () => terminalFetchCount,
+  };
 }
 
 async function submitAgent(page: Page, label: "Agent 标准" | "Agent 深度") {
@@ -291,5 +306,36 @@ test.describe("authenticated Agent Mode", () => {
     await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
     await page.getByRole("button", { name: "停止生成" }).click();
     await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+  });
+
+  test("detached Standard Agent hydrates its final answer without refresh and stops polling", async ({ page }) => {
+    const mock = await installAgentMocks(page, { mode: "STANDARD", detached: true, recoverAfterStatusPolls: 2 });
+    await submitAgent(page, "Agent 标准");
+
+    const completedAt = Date.now();
+    await expect(page.getByText("这是 Leader 的最终回答。")).toBeVisible({ timeout: 10_000 });
+    expect(Date.now() - completedAt).toBeLessThan(5_000);
+    await expect(page.getByLabel("消息内容")).toBeEditable();
+    await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+    expect(mock.getTerminalFetchCount()).toBe(1);
+
+    const pollsAtCompletion = mock.getStatusPollCount();
+    await page.waitForTimeout(2_500);
+    expect(mock.getStatusPollCount()).toBe(pollsAtCompletion);
+  });
+
+  test("Conversation A completion never writes B and restores A through its scoped registry", async ({ page }) => {
+    const mock = await installAgentMocks(page, { mode: "STANDARD", detached: true });
+    await submitAgent(page, "Agent 标准");
+    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
+
+    await page.goto("/chat");
+    mock.completeRun();
+    await expect(page.getByLabel("消息内容")).toBeEditable();
+    await expect(page.getByText("这是 Leader 的最终回答。")).toHaveCount(0);
+
+    await page.goBack({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("这是 Leader 的最终回答。")).toBeVisible({ timeout: 10_000 });
+    expect(mock.getTerminalFetchCount()).toBe(1);
   });
 });
