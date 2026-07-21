@@ -18,6 +18,7 @@ import { prisma } from "@/lib/database/prisma";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
+import { InvalidUsageIdempotencyKeyError, isUsageIdempotencyConflict, readUsageIdempotencyKey } from "@/features/usage/ledger";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -27,6 +28,12 @@ export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient(); const { data } = await supabase.auth.getUser();
   if (!data.user) return jsonError("请先登录后再分析图片。", 401, "AUTHENTICATION");
   const userId = data.user.id;
+  let idempotencyKey: string | undefined;
+  try { idempotencyKey = readUsageIdempotencyKey(request); }
+  catch (error) {
+    if (error instanceof InvalidUsageIdempotencyKeyError) return jsonError(error.message, 400, "INVALID_IDEMPOTENCY_KEY");
+    throw error;
+  }
   const contentLength = Number(request.headers.get("content-length") || 0);
   if (contentLength > 11 * 1024 * 1024) return jsonError("图片不能超过 10 MB。", 413, "TOO_LARGE");
   let form: FormData; try { form = await request.formData(); } catch { return jsonError("上传请求格式无效。", 400, "INVALID_INPUT"); }
@@ -52,9 +59,10 @@ export async function POST(request: Request) {
   catch { return jsonError("图片分析服务尚未配置，请联系管理员。", 503, "CONFIGURATION"); }
 
   let usage: Awaited<ReturnType<typeof createPendingVisionToolRun>>;
-  try { usage = await createPendingVisionToolRun({ userId, title: `图片分析${parsed.data.question ? `：${parsed.data.question}` : ""}`.slice(0,100), inputText: parsed.data.question || "图片分析", options: parsed.data.options, retainContent: parsed.data.saveHistory, dailyLimit: config.dailyLimit }); }
+  try { usage = await createPendingVisionToolRun({ userId, title: `图片分析${parsed.data.question ? `：${parsed.data.question}` : ""}`.slice(0,100), inputText: parsed.data.question || "图片分析", options: parsed.data.options, retainContent: parsed.data.saveHistory, dailyLimit: config.dailyLimit, idempotencyKey }); }
   catch (error) {
     if (error instanceof DailyToolLimitError) return jsonError(`今日图片分析次数已用完（${error.limit} 次）。`, 429, "DAILY_LIMIT", { limit: error.limit, used: error.used, remaining: 0 });
+    if (isUsageIdempotencyConflict(error)) return jsonError("该请求已经提交，请勿重复发送。", 409, "DUPLICATE_REQUEST");
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return jsonError("并发请求较多，请稍后重试。", 429, "RATE_LIMITED");
     return jsonError("无法创建图片分析任务，请稍后重试。", 500, "UNKNOWN");
   }

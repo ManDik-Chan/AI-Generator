@@ -124,7 +124,7 @@ export function BrainstormWorkspace({ configured, initialUsage }: { configured: 
       let terminal = false;
       const response = await fetch("/api/tools/brainstorm", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({ prompt: cleanPrompt, saveHistory }),
         signal: controller.signal,
       });

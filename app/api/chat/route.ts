@@ -34,7 +34,13 @@ import {
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
-import { usageIdempotencyKey, usageUnits } from "@/features/usage/ledger";
+import {
+  InvalidUsageIdempotencyKeyError,
+  isUsageIdempotencyConflict,
+  readUsageIdempotencyKey,
+  usageIdempotencyKey,
+  usageUnits,
+} from "@/features/usage/ledger";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -57,6 +63,14 @@ export async function POST(request: Request) {
   }
 
   if (!user) return errorResponse("请先登录后再发送消息。", 401);
+
+  let idempotencyKey: string | undefined;
+  try {
+    idempotencyKey = readUsageIdempotencyKey(request);
+  } catch (error) {
+    if (error instanceof InvalidUsageIdempotencyKeyError) return errorResponse(error.message, 400);
+    throw error;
+  }
 
   const limits = getAiRuntimeLimits();
   let requestBody: unknown;
@@ -173,7 +187,7 @@ export async function POST(request: Request) {
           capability: "CHAT_MESSAGE",
           units: 1,
           runId: userMessage.id,
-          idempotencyKey: usageIdempotencyKey("CHAT_MESSAGE", userMessage.id),
+          idempotencyKey: usageIdempotencyKey("CHAT_MESSAGE", userMessage.id, idempotencyKey),
         },
       });
       const assistantMessage = await transaction.message.create({
@@ -204,6 +218,9 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof DailyMessageLimitError) {
       return errorResponse(`今日消息次数已用完（${limits.dailyMessageLimit} 次），请在 UTC 次日重试。`, 429);
+    }
+    if (isUsageIdempotencyConflict(error)) {
+      return errorResponse("该请求已经提交，请勿重复发送。", 409);
     }
     if (error instanceof ChatEditConflictError || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")) {
       return errorResponse(error instanceof ChatEditConflictError ? error.message : "对话内容已发生变化，请刷新后重试。", 409);

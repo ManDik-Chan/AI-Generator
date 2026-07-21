@@ -26,6 +26,7 @@ export async function createPendingToolRun(input: {
   options: Prisma.InputJsonValue;
   retainContent: boolean;
   dailyLimit: number;
+  idempotencyKey?: string;
 }) {
   return prisma.$transaction(async (transaction) => {
     const profile = await transaction.profile.findUnique({ where: { id: input.userId }, select: { role: true } });
@@ -50,7 +51,7 @@ export async function createPendingToolRun(input: {
       select: { id: true },
     });
     await transaction.usageLedger.create({
-      data: { userId: input.userId, capability, units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey(capability, run.id) },
+      data: { userId: input.userId, capability, units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey(capability, run.id, input.idempotencyKey) },
     });
     return { runId: run.id, limit: input.dailyLimit, used: used + 1, remaining: canBypassToolDailyLimit(profile?.role ?? "USER") ? input.dailyLimit : Math.max(0, input.dailyLimit - used - 1) };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -64,7 +65,7 @@ export async function createPendingVisionToolRun(input: Omit<Parameters<typeof c
     const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
     if (!unlimited && used >= input.dailyLimit) throw new DailyToolLimitError(input.dailyLimit, used);
     const run = await transaction.toolRun.create({ data: { userId: input.userId, type: "IMAGE_ANALYZE", title: input.retainContent ? input.title : null, inputText: input.retainContent ? input.inputText : null, options: input.options, retainContent: input.retainContent }, select: { id: true } });
-    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "IMAGE_ANALYZE", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("IMAGE_ANALYZE", run.id) } });
+    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "IMAGE_ANALYZE", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("IMAGE_ANALYZE", run.id, input.idempotencyKey) } });
     return { runId: run.id, limit: input.dailyLimit, used: used + 1, remaining: unlimited ? input.dailyLimit : Math.max(0, input.dailyLimit - used - 1), unlimited };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
@@ -85,6 +86,7 @@ export async function createPendingImageGenerationToolRun(input: {
   inputText: string;
   options: Prisma.InputJsonValue;
   dailyLimit: number;
+  idempotencyKey?: string;
 }) {
   return prisma.$transaction(async (transaction) => {
     const profile = await transaction.profile.findUnique({
@@ -108,7 +110,7 @@ export async function createPendingImageGenerationToolRun(input: {
       },
       select: { id: true },
     });
-    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "IMAGE_GENERATE", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("IMAGE_GENERATE", run.id) } });
+    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "IMAGE_GENERATE", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("IMAGE_GENERATE", run.id, input.idempotencyKey) } });
     return {
       runId: run.id,
       limit: input.dailyLimit,
@@ -146,6 +148,7 @@ export async function createPendingBrainstormToolRun(input: {
   retainContent: boolean;
   dailyLimit: number;
   options: Prisma.InputJsonValue;
+  idempotencyKey?: string;
 }) {
   await cleanupExpiredToolRunRecovery().catch(() => undefined);
   return prisma.$transaction(async (transaction) => {
@@ -167,7 +170,7 @@ export async function createPendingBrainstormToolRun(input: {
       },
       select: { id: true },
     });
-    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "BRAINSTORM", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("BRAINSTORM", run.id) } });
+    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "BRAINSTORM", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("BRAINSTORM", run.id, input.idempotencyKey) } });
     await transaction.brainstormWorker.createMany({
       data: BRAINSTORM_WORKERS.map((worker) => ({
         toolRunId: run.id,

@@ -201,7 +201,7 @@ model UsageLedger {
 
   user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, capability, runId])
+  @@unique([userId, runId])
   @@unique([userId, idempotencyKey])
   @@index([userId, capability, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])

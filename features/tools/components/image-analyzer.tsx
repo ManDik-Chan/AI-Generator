@@ -86,7 +86,7 @@ export function ImageAnalyzer({ configured, initialRemaining, initialLimit, init
     form.set("question", question); form.set("options", JSON.stringify(options)); form.set("saveHistory", String(saveHistory));
     let terminal = false;
     try {
-      const response = await fetch("/api/tools/image/run", { method: "POST", body: form, signal: controller.signal });
+      const response = await fetch("/api/tools/image/run", { method: "POST", headers: { "Idempotency-Key": crypto.randomUUID() }, body: form, signal: controller.signal });
       await readSseEvents(response, (event, data) => {
         const payload = data as Record<string, unknown>;
         if (event === "start") { const id = String(payload.runId); setRunId(id); setUsage({ limit: Number(payload.limit), used: Number(payload.used), remaining: Number(payload.remaining), unlimited: payload.unlimited === true }); setState("streaming"); if (pendingCancelRef.current) void confirmStop(id); }

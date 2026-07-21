@@ -11,6 +11,7 @@ import { createObservedSseResponse, SseObserver } from "@/features/generation/ss
 import { getBrainstormConfigurationStatus } from "@/lib/ai/config";
 import { getBrainstormAiProvider } from "@/lib/ai/registry";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
+import { InvalidUsageIdempotencyKeyError, isUsageIdempotencyConflict, readUsageIdempotencyKey } from "@/features/usage/ledger";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -20,6 +21,12 @@ const jsonError = (message: string, status: number, code: string, details?: Reco
 export async function POST(request: Request) {
   const userId = (await (await createSupabaseServerClient()).auth.getUser()).data.user?.id;
   if (!userId) return jsonError("请先登录后再使用多 Agent 头脑风暴。", 401, "AUTHENTICATION");
+  let idempotencyKey: string | undefined;
+  try { idempotencyKey = readUsageIdempotencyKey(request); }
+  catch (error) {
+    if (error instanceof InvalidUsageIdempotencyKeyError) return jsonError(error.message, 400, "INVALID_IDEMPOTENCY_KEY");
+    throw error;
+  }
   let body: unknown;
   try { body = await request.json(); } catch { return jsonError("请求格式无效。", 400, "INVALID_INPUT"); }
   const parsed = brainstormRequestSchema.safeParse(body);
@@ -37,9 +44,11 @@ export async function POST(request: Request) {
       retainContent: parsed.data.saveHistory,
       dailyLimit: config.dailyLimit,
       options: { workerVersion: BRAINSTORM_WORKER_VERSION, workerModelSource: config.workerModelSource, synthesisModelSource: config.synthesisModelSource, maxConcurrency: config.maxConcurrency },
+      idempotencyKey,
     });
   } catch (error) {
     if (error instanceof DailyToolLimitError) return jsonError(`今日头脑风暴次数已用完（${error.limit} 次）。`, 429, "DAILY_LIMIT", { limit: error.limit, used: error.used, remaining: 0 });
+    if (isUsageIdempotencyConflict(error)) return jsonError("该请求已经提交，请勿重复发送。", 409, "DUPLICATE_REQUEST");
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return jsonError("并发请求较多，请稍后重试。", 429, "RATE_LIMITED");
     return jsonError("无法创建头脑风暴任务，请稍后重试。", 500, "UNKNOWN");
   }

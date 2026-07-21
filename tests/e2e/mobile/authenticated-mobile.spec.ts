@@ -14,6 +14,12 @@ const hasAuthState = Boolean(authState && existsSync(authState));
 test.describe("authenticated mobile shell", () => {
   test.skip(!hasAuthState, "Set PLAYWRIGHT_AUTH_STATE to an existing signed-in storage state.");
 
+  test("a regular authenticated user cannot open the administrator page", async ({ page }) => {
+    await page.goto("/admin");
+    await expect(page).not.toHaveURL(/\/admin(?:\/|$)/);
+    await expect(page.getByText("管理控制台")).toHaveCount(0);
+  });
+
   test("navigation, tools and common overlays remain inside the viewport", async ({ page }) => {
     const routes = [
       { path: "/", heading: /让你的 AI，.*真正成为一个工作室。/ },

@@ -107,7 +107,7 @@ export function ImageGenerationWorkspace({ configured, imageSize, initialUsage, 
       let terminal = false;
       const response = await fetch("/api/tools/image-generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({ prompt: cleanPrompt, style }),
         signal: controller.signal,
       });

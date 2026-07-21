@@ -26,6 +26,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
+import { InvalidUsageIdempotencyKeyError, isUsageIdempotencyConflict, readUsageIdempotencyKey } from "@/features/usage/ledger";
 import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
 
 export const runtime = "nodejs";
@@ -50,6 +51,13 @@ export async function POST(request: Request) {
   const supabase = await createSupabaseServerClient();
   const userId = (await supabase.auth.getUser()).data.user?.id;
   if (!userId) return jsonError("请先登录后再生成图片。", 401, "AUTHENTICATION");
+
+  let idempotencyKey: string | undefined;
+  try { idempotencyKey = readUsageIdempotencyKey(request); }
+  catch (error) {
+    if (error instanceof InvalidUsageIdempotencyKeyError) return jsonError(error.message, 400, "INVALID_IDEMPOTENCY_KEY");
+    throw error;
+  }
 
   let body: unknown;
   try {
@@ -83,6 +91,7 @@ export async function POST(request: Request) {
       inputText: parsed.data.prompt,
       options: { style: parsed.data.style, size: config.size },
       dailyLimit,
+      idempotencyKey,
     });
   } catch (error) {
     if (error instanceof DailyToolLimitError) {
@@ -96,6 +105,9 @@ export async function POST(request: Request) {
         },
         { status: 429 },
       );
+    }
+    if (isUsageIdempotencyConflict(error)) {
+      return jsonError("该请求已经提交，请勿重复发送。", 409, "DUPLICATE_REQUEST");
     }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&

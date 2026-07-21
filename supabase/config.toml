@@ -1,4 +1,4 @@
-project_id = "ai-generator-pr21-acceptance"
+project_id = "ai-generator-security-acceptance"
 
 [api]
 enabled = true

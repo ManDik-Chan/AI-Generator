@@ -14,6 +14,7 @@ import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
+import { InvalidUsageIdempotencyKeyError, isUsageIdempotencyConflict, readUsageIdempotencyKey } from "@/features/usage/ledger";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -33,6 +34,13 @@ export async function POST(request: Request) {
     return jsonError("身份验证服务暂时不可用，请稍后重试。", 503, "UNKNOWN");
   }
 
+  let idempotencyKey: string | undefined;
+  try { idempotencyKey = readUsageIdempotencyKey(request); }
+  catch (error) {
+    if (error instanceof InvalidUsageIdempotencyKeyError) return jsonError(error.message, 400, "INVALID_IDEMPOTENCY_KEY");
+    throw error;
+  }
+
   let body: unknown;
   try { body = await request.json(); } catch { return jsonError("请求格式无效。", 400, "INVALID_INPUT"); }
   const parsed = toolRunRequestSchema.safeParse(body);
@@ -50,9 +58,11 @@ export async function POST(request: Request) {
       options: parsed.data.options,
       retainContent: parsed.data.saveHistory,
       dailyLimit: config.dailyLimit,
+      idempotencyKey,
     });
   } catch (error) {
     if (error instanceof DailyToolLimitError) return jsonError(`今日工具次数已用完（${error.limit} 次），请在 UTC 次日重试。`, 429, "DAILY_LIMIT", { limit: error.limit, used: error.used, remaining: 0 });
+    if (isUsageIdempotencyConflict(error)) return jsonError("该请求已经提交，请勿重复发送。", 409, "DUPLICATE_REQUEST");
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return jsonError("并发请求较多，请稍后重试。", 429, "RATE_LIMITED", { limit: config.dailyLimit, used: config.dailyLimit, remaining: 0 });
     console.error("tool_run_create_failed", { requestId, userId, toolType: parsed.data.tool, stage: "persist", errorCode: "UNKNOWN", status: 500, durationMs: Date.now() - startedAt });
     return jsonError("工具运行记录创建失败，请稍后重试。", 500, "UNKNOWN");

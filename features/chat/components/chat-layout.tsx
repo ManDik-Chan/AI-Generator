@@ -347,7 +347,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
     try {
       const response = await fetch(requestedMode === "CHAT" ? "/api/chat" : "/api/agents", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() },
         body: JSON.stringify({
           content,
           ...(editTarget ?? { conversationId: activeConversationRef.current.id, ...(!activeConversationRef.current.id && (activePersona?.id || requestedPersonaId) ? { personaId: activePersona?.id || requestedPersonaId } : {}) }),

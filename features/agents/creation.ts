@@ -30,6 +30,7 @@ export async function createPendingAgentRun(input: {
   personaId?: string;
   mode: AgentRunMode;
   dailyCredits: number;
+  idempotencyKey?: string;
 }) {
   const limits = getAgentModeLimits(input.mode);
   return prisma.$transaction(async (transaction) => {
@@ -107,7 +108,7 @@ export async function createPendingAgentRun(input: {
         capability,
         units: limits.creditCost,
         runId: run.id,
-        idempotencyKey: usageIdempotencyKey(capability, run.id),
+        idempotencyKey: usageIdempotencyKey(capability, run.id, input.idempotencyKey),
       },
     });
     await appendAgentEvent(transaction, {
