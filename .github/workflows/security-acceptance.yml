@@ -81,6 +81,23 @@ jobs:
       - name: Run real quota, concurrency, and idempotency tests
         run: pnpm test:integration
 
+      - name: Verify old-database upgrade and transaction rollback
+        run: node scripts/verify-security-migrations.mjs incremental
+
+      - name: Restore a clean migrated database for browser tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db reset --no-seed >"$RUNNER_TEMP/supabase-browser-reset.log" 2>&1
+          pnpm exec prisma migrate deploy
+
+      - name: Run static quality gates
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm exec vitest run --exclude "tests/integration/**"
+          pnpm exec prisma validate
+
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium webkit
 
@@ -89,16 +106,6 @@ jobs:
 
       - name: Run authenticated Chromium and mobile WebKit E2E
         run: pnpm test:e2e
-
-      - name: Verify old-database upgrade and transaction rollback
-        run: node scripts/verify-security-migrations.mjs incremental
-
-      - name: Run static quality gates
-        run: |
-          pnpm lint
-          pnpm typecheck
-          pnpm exec vitest run --exclude "tests/integration/**"
-          pnpm exec prisma validate
 
       - name: Stop isolated Supabase
         if: always()
