@@ -159,7 +159,8 @@ async function verifyCleanDatabase() {
     assert(policies.every((row) => row.cmd === "SELECT" || (row.tablename === "profiles" && row.cmd === "UPDATE")));
 
     const grants = await db.$queryRawUnsafe(`
-      SELECT table_name, array_agg(privilege_type ORDER BY privilege_type) AS privileges
+      SELECT table_name::text AS table_name,
+             array_agg(privilege_type::text ORDER BY privilege_type::text)::text[] AS privileges
       FROM information_schema.role_table_grants
       WHERE table_schema = 'public' AND grantee = 'authenticated' AND table_name = ANY($1::text[])
       GROUP BY table_name
