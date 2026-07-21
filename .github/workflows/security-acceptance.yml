@@ -84,6 +84,9 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium webkit
 
+      - name: Build the application for authenticated E2E
+        run: pnpm build
+
       - name: Run authenticated Chromium and mobile WebKit E2E
         run: pnpm test:e2e
 
@@ -95,7 +98,6 @@ jobs:
           pnpm lint
           pnpm typecheck
           pnpm exec vitest run --exclude "tests/integration/**"
-          pnpm build
           pnpm exec prisma validate
 
       - name: Stop isolated Supabase
