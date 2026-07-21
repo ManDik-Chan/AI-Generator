@@ -8,10 +8,10 @@
 
 | ID | 等级 | 状态 | 摘要 |
 | --- | --- | --- | --- |
-| P0-1 | Critical | 已修复，待真实 RLS 执行 | Profile 全列 UPDATE 允许 role 自提权 |
-| P0-2 | Critical | 已修复，待真实 RLS 执行 | 浏览器可伪造/删除 Message、ToolRun、ToolAsset、Embedding 状态 |
-| P0-3 | Critical | 已修复，真实并发测试未执行 | 可删除历史是唯一额度依据，聊天检查还位于事务外 |
-| P0-4 | Critical | 已修复，迁移未在数据库执行 | RLS/grants 依赖手工 SQL，结构与授权可漂移 |
+| P0-1 | Critical | 隔离 Supabase 真实 JWT 已通过；Production 未核对 | Profile 全列 UPDATE 允许 role 自提权 |
+| P0-2 | Critical | 隔离 Supabase 真实 JWT 已通过；Production 未核对 | 浏览器可伪造/删除 Message、ToolRun、ToolAsset、Embedding 状态 |
+| P0-3 | Critical | 隔离 PostgreSQL 删除/并发测试已通过 | 可删除历史是唯一额度依据，聊天检查还位于事务外 |
+| P0-4 | Critical | 干净库、旧库增量与事务回滚已通过；Production 未执行 | RLS/grants 依赖手工 SQL，结构与授权可漂移 |
 | P1-1 | High | 未修复 | `waitUntil`/`after` 不提供跨实例任务恢复 |
 | P1-2 | High | 未修复 | Provider 调用与数据库 reserve/finalize 之间存在不确定窗口 |
 | P1-3 | High | 未修复 | 10 MB 上传超过 Vercel Function 4.5 MB 请求体上限 |
@@ -141,9 +141,9 @@
 
 ## 测试分类与本机实际结果
 
-按文件互斥分类，当前 126 个 Vitest 文件包括：73 个纯函数/模块行为单元测试，32 个读取源码字符串的契约测试，19 个 Prisma/mock 行为测试，1 个真实 PostgreSQL usage/concurrency 套件，1 个真实 PostgreSQL authenticated-role/RLS 套件。后两类共 7 个测试需要一次性、已完成 migration 的测试数据库。
+按文件互斥分类，当前 127 个 Vitest 文件包括：74 个纯函数/模块行为单元测试，32 个读取源码字符串的契约测试，19 个 Prisma/mock 行为测试，1 个真实 PostgreSQL usage/concurrency 套件，1 个真实 Supabase Auth JWT/PostgREST RLS 套件。后两类共 10 个测试需要一次性、已完成 migration 的隔离数据库。
 
-Playwright 有 5 个 spec，覆盖 Chromium desktop、Chromium mobile 和 WebKit iPhone；其中 3 个 spec 依赖登录 storage state，2 个覆盖公开/响应式页面。没有真实 Provider 或进程级故障注入套件。
+Playwright 有 5 个 spec、60 个跨项目用例，覆盖 Chromium desktop、Chromium mobile 和 WebKit iPhone；其中 3 个 spec 依赖登录 storage state，2 个覆盖公开/响应式页面。CI global setup 通过隔离 Supabase Auth 创建一次性用户并生成 storage state；缺少环境时 CI 直接失败。没有真实 Provider 或进程级 Function 中断套件。
 
 本机执行结果：
 
@@ -152,20 +152,21 @@ Playwright 有 5 个 spec，覆盖 Chromium desktop、Chromium mobile 和 WebKit
 | `pnpm install --frozen-lockfile` | 通过，lockfile 无变化 |
 | `pnpm lint` | 通过，0 warning |
 | `pnpm typecheck` | 通过 |
-| `pnpm test` | 648 passed；7 skipped（真实 DB/RLS），因此安全集成测试未执行 |
+| `pnpm test` | 651 passed；10 skipped（本机无隔离 DB/RLS），不能把 skipped 计为通过 |
 | `pnpm build` | 通过，Next.js 生产构建成功 |
 | `pnpm exec prisma validate` | 通过；只验证 schema，不连接数据库 |
 | `pnpm audit --prod` | 通过，0 known vulnerabilities |
-| `pnpm test:integration` | 未执行：1 file / 3 tests 全部 skipped，无 `TEST_DATABASE_URL` |
-| `pnpm test:rls` | 未执行：1 file / 4 tests 全部 skipped，无 `TEST_DATABASE_URL` |
-| `pnpm test:e2e` | 15 个公开场景通过，42 skipped；所有登录态场景未执行 |
-| CI 缺前置条件负向门禁 | 已验证：缺 storage state 或一次性数据库均以 exit 1 失败，不再静默跳过 |
+| `pnpm test:integration` | 本机未执行：1 file / 5 tests 全部 skipped，无一次性 `TEST_DATABASE_URL`；CI 隔离 PostgreSQL 为 5 passed |
+| `pnpm test:rls` | 本机未执行：1 file / 5 tests 全部 skipped，无隔离 Supabase；CI 真实 Auth JWT/PostgREST 为 5 passed |
+| `pnpm test:e2e` | 本机 15 个公开场景 passed / 45 skipped；CI 会创建登录态并运行完整 60 用例，精确结果以 PR 当前 head 的 workflow 为准 |
+| 干净库与旧库迁移 | CI 隔离 Supabase 已通过完整链、合成旧数据增量升级和注入失败事务回滚；Production 规模耗时仍未知 |
+| CI 缺前置条件负向门禁 | 已验证：缺 Supabase/Auth 前置条件即 exit 1，不再静默跳过 |
 
 ## 尚未验证
 
-- 新 migration 未在干净 Supabase 或已有完整 migration 链上执行，SQL 事务、回填耗时、grants 与 RLS 行为尚无真实数据库证据。
-- 未使用真实 authenticated JWT 经 Supabase REST/SDK 发起攻击请求；新增 RLS 测试模拟相同 PostgreSQL role/claims，但未执行。
-- 登录态 Playwright、移动 WebKit 登录态、真实并发额度、Agent 重复投递/扣费、进程 kill/Function timeout、真实 Provider 和图片平台边界均未执行。
+- Production 当前 grants/RLS、历史异常数据、真实回填耗时与锁窗口未知；隔离环境的小规模合成数据结果不能外推为 Production 容量结论。
+- PR #21 尚未合并，PR #22 尚未 rebase 到它的 Agent terminal sync；两者重叠的 Agent/Chat/E2E 文件必须在 #21 合并后重新验收。
+- 真实 Provider、进程 kill/Function timeout、Vercel 实例回收与图片平台请求体边界尚未执行；这些不在本 P0 PR 的改动范围内。
 - 没有连接 Production、执行 Production migration、修改 Production 环境变量或部署 Production。
 
 ## 建议后续 PR 拆分
