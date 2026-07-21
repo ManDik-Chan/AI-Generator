@@ -89,12 +89,13 @@ describe.skipIf(!integrationDatabaseEnabled)("real PostgreSQL usage ledger", () 
     expect(await db.toolRun.count({ where: { id: toolRunId } })).toBe(0);
     expect(await db.generatedImage.count({ where: { id: generatedImageId } })).toBe(0);
     expect(await db.agentRun.count({ where: { id: agentRunId } })).toBe(0);
-    expect(await db.usageLedger.groupBy({
+    const retainedUsage = await db.usageLedger.groupBy({
       by: ["capability"],
       where: { userId, runId: { in: [messageId, toolRunId, imageToolRunId, agentRunId] } },
       _sum: { units: true },
-      orderBy: { capability: "asc" },
-    })).toEqual([
+    });
+    retainedUsage.sort((left, right) => left.capability.localeCompare(right.capability));
+    expect(retainedUsage).toEqual([
       { capability: "AGENT_STANDARD", _sum: { units: 1 } },
       { capability: "CHAT_MESSAGE", _sum: { units: 1 } },
       { capability: "IMAGE_GENERATE", _sum: { units: 1 } },

@@ -270,8 +270,8 @@ async function verifyIncrementalUpgrade() {
         by: ["capability"],
         where: { userId: fixture.ids.userId },
         _sum: { units: true },
-        orderBy: { capability: "asc" },
       });
+      usage.sort((left, right) => left.capability.localeCompare(right.capability));
       assert.deepEqual(usage, [
         { capability: "AGENT_STANDARD", _sum: { units: 1 } },
         { capability: "CHAT_MESSAGE", _sum: { units: 1 } },
