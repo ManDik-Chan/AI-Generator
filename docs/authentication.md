@@ -22,7 +22,7 @@
 pnpm db:migrate
 ```
 
-将 Prisma 生成的 migration 纳入 Git。随后在 Supabase SQL Editor 执行 `prisma/rls.sql`，启用用户数据 RLS、Message 关联策略以及新用户 Profile trigger。
+将 Prisma 生成的 migration 纳入 Git。正常发布使用 `pnpm db:deploy` 一次性部署表结构、RLS、grants、trigger 与约束。`prisma/rls.sql` 是可重复执行的灾难恢复基准，不得依赖人工复制它来完成生产发布。
 
 ## 4. 配置 Auth URL
 
@@ -36,4 +36,4 @@ pnpm db:migrate
 update public.profiles set role = 'ADMIN' where email = 'owner@example.com';
 ```
 
-客户端不能修改 role；`/admin` 同时经过 Supabase 会话校验和服务端 Profile 角色校验。
+authenticated 客户端只有 `display_name`、`avatar_url`、`memory_enabled` 的列级 UPDATE 权限，不能修改 `role`、`id`、`email` 或系统时间字段；`/admin` 同时经过 Supabase 会话校验和服务端 Profile 角色校验。

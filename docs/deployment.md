@@ -1,5 +1,7 @@
 # 部署设计
 
+> 自 `20260722120000_security_hardening_rls_usage` 起，RLS、SQL grants 和触发器均由版本化 migration 发布。下文历史阶段中“在 SQL Editor 再执行 `prisma/rls.sql`”的说明只保留为历史记录，已被本规则取代。当前安全发布与回滚步骤见 `security-hardening-deployment.md`。
+
 ## Phase 6B3 发布边界
 
 Phase 6B3 没有新增 Prisma Schema、migration、RLS、Bucket、域名或环境变量。部署前仍按既有文档确认历史 migration、最新版 `prisma/rls.sql` 与 private buckets 已由项目所有者完成；本分支不会自动执行数据库部署或生产部署。

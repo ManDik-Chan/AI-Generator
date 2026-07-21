@@ -68,7 +68,7 @@ Supabase `auth.users` 是身份源。应用层 `Profile` 保存 `id`（等于 au
 
 ## 所有权与 RLS
 
-Supabase 表启用 RLS：`user_id = auth.uid()` 才能读取/写入。Message 通过 Conversation 的 user_id 使用 `exists` 策略。服务端仍做授权校验，RLS 是第二道防线而不是唯一防线。管理员能力通过受保护的服务端路径执行，不向浏览器暴露 service role key。
+Supabase 表启用 RLS。除 Profile 的白名单资料列外，authenticated 对应用数据表只能读取 `user_id = auth.uid()` 的行；Persona、Conversation、Memory、Message、ToolRun、Generation/Brainstorm/Agent 状态、Embedding、GeneratedImage 与 UsageLedger 的 mutation 全部只走可信服务端。服务端仍做授权校验，RLS 是第二道防线而不是唯一防线。管理员能力通过受保护的服务端路径执行，不向浏览器暴露 service role key。
 
 ## 迁移顺序
 

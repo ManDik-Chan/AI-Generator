@@ -29,7 +29,7 @@ pnpm dev
 
 访问 `http://localhost:3000`。环境变量参考 `.env.example`，真实密钥只写入 `.env.local`。
 
-数据库与认证配置见 `docs/authentication.md`。配置 Supabase 后运行 `pnpm db:migrate`，并在 Supabase SQL Editor 执行 `prisma/rls.sql`。
+数据库与认证配置见 `docs/authentication.md`。RLS、grants、trigger 与约束必须随版本化 Prisma migration 部署；`prisma/rls.sql` 只用于灾难恢复基准，不能作为正常发布步骤。
 
 ## AI 聊天
 

@@ -34,6 +34,7 @@ import {
 import { registerGenerationTask } from "@/features/generation/background-task";
 import { createObservedSseResponse, SseObserver } from "@/features/generation/sse-observer";
 import { createDurableCancellationController } from "@/features/generation/durable-cancellation";
+import { usageIdempotencyKey, usageUnits } from "@/features/usage/ledger";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -41,6 +42,8 @@ export const maxDuration = 300;
 function errorResponse(message: string, status: number) {
   return NextResponse.json({ message }, { status });
 }
+
+class DailyMessageLimitError extends Error {}
 
 export async function POST(request: Request) {
   const requestId = request.headers.get("x-request-id")?.slice(0, 100) || crypto.randomUUID();
@@ -74,17 +77,6 @@ export async function POST(request: Request) {
   }
 
   const profile = await prisma.profile.findUnique({ where: { id: user.id }, select: { role: true, memoryEnabled: true } });
-  const dailyCount = await prisma.message.count({
-    where: {
-      role: "USER",
-      createdAt: { gte: startOfUtcDay() },
-      conversation: { userId: user.id },
-    },
-  });
-
-  if (hasReachedDailyMessageLimit(profile?.role ?? "USER", dailyCount, limits.dailyMessageLimit)) {
-    return errorResponse(`今日消息次数已用完（${limits.dailyMessageLimit} 次），请在 UTC 次日重试。`, 429);
-  }
 
   let conversationId = parsed.data.conversationId;
   let runtimePersona: RuntimePersonaPrompt | null = null;
@@ -110,15 +102,6 @@ export async function POST(request: Request) {
       runtimePersona = persona;
       runtimePersonaId = persona.id;
     }
-    const conversation = await prisma.conversation.create({
-      data: {
-        userId: user.id,
-        ...newConversationPersonaData(parsed.data.personaId),
-        title: createConversationTitle(parsed.data.content),
-      },
-      select: { id: true },
-    });
-    conversationId = conversation.id;
   }
 
   let assistantMessageId: string;
@@ -127,19 +110,39 @@ export async function POST(request: Request) {
   let conversationUpdatedAt: Date;
   try {
     const result = await prisma.$transaction(async (transaction) => {
+      const aggregate = await transaction.usageLedger.aggregate({
+        where: { userId: user.id, capability: "CHAT_MESSAGE", createdAt: { gte: startOfUtcDay() } },
+        _sum: { units: true },
+      });
+      const dailyCount = usageUnits(aggregate);
+      if (hasReachedDailyMessageLimit(profile?.role ?? "USER", dailyCount, limits.dailyMessageLimit)) {
+        throw new DailyMessageLimitError();
+      }
+      let resolvedConversationId = conversationId;
+      if (!resolvedConversationId) {
+        const conversation = await transaction.conversation.create({
+          data: {
+            userId: user.id,
+            ...newConversationPersonaData(parsed.data.personaId),
+            title: createConversationTitle(parsed.data.content),
+          },
+          select: { id: true },
+        });
+        resolvedConversationId = conversation.id;
+      }
       let updateTitle = false;
       let resolvedEditMessageId = parsed.data.editMessageId;
       if (parsed.data.editMessageId || parsed.data.editLastMessage) {
         if (parsed.data.editLastMessage) {
           const currentConversation = await transaction.conversation.findUnique({
-            where: { id: conversationId },
+            where: { id: resolvedConversationId },
             select: { updatedAt: true },
           });
           if (!currentConversation) throw new ChatEditConflictError();
           assertConversationVersion(currentConversation.updatedAt, parsed.data.editConversationUpdatedAt!);
         }
         const activeMessages = await transaction.message.findMany({
-          where: { conversationId, supersededAt: null },
+          where: { conversationId: resolvedConversationId, supersededAt: null },
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           select: { id: true, role: true, status: true, content: true, supersededAt: true },
         });
@@ -153,7 +156,7 @@ export async function POST(request: Request) {
         if (target?.content === parsed.data.content) throw new ChatEditConflictError("编辑内容没有变化。");
         const plan = planLastUserMessageEdit(activeMessages, resolvedEditMessageId);
         const superseded = await transaction.message.updateMany({
-          where: { id: { in: plan.supersedeIds }, conversationId, supersededAt: null },
+          where: { id: { in: plan.supersedeIds }, conversationId: resolvedConversationId, supersededAt: null },
           data: { supersededAt: new Date() },
         });
         assertSupersedeCount(plan.supersedeIds.length, superseded.count);
@@ -161,15 +164,24 @@ export async function POST(request: Request) {
       }
 
       const userMessage = await transaction.message.create({
-        data: { conversationId, role: "USER", content: parsed.data.content, status: "COMPLETE" },
+        data: { conversationId: resolvedConversationId, role: "USER", content: parsed.data.content, status: "COMPLETE" },
         select: { id: true },
       });
+      await transaction.usageLedger.create({
+        data: {
+          userId: user.id,
+          capability: "CHAT_MESSAGE",
+          units: 1,
+          runId: userMessage.id,
+          idempotencyKey: usageIdempotencyKey("CHAT_MESSAGE", userMessage.id),
+        },
+      });
       const assistantMessage = await transaction.message.create({
-        data: { conversationId, role: "ASSISTANT", content: "", status: "PENDING" },
+        data: { conversationId: resolvedConversationId, role: "ASSISTANT", content: "", status: "PENDING" },
         select: { id: true },
       });
       const updatedConversation = await transaction.conversation.update({
-        where: { id: conversationId },
+        where: { id: resolvedConversationId },
         data: {
           updatedAt: new Date(),
           ...(updateTitle ? { title: createConversationTitle(parsed.data.content) } : {}),
@@ -177,17 +189,22 @@ export async function POST(request: Request) {
         select: { updatedAt: true },
       });
       return {
+        conversationId: resolvedConversationId,
         assistantMessageId: assistantMessage.id,
         userMessageId: userMessage.id,
         editedMessageId: resolvedEditMessageId,
         conversationUpdatedAt: updatedConversation.updatedAt,
       };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    conversationId = result.conversationId;
     assistantMessageId = result.assistantMessageId;
     userMessageId = result.userMessageId;
     editedMessageId = result.editedMessageId;
     conversationUpdatedAt = result.conversationUpdatedAt;
   } catch (error) {
+    if (error instanceof DailyMessageLimitError) {
+      return errorResponse(`今日消息次数已用完（${limits.dailyMessageLimit} 次），请在 UTC 次日重试。`, 429);
+    }
     if (error instanceof ChatEditConflictError || (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034")) {
       return errorResponse(error instanceof ChatEditConflictError ? error.message : "对话内容已发生变化，请刷新后重试。", 409);
     }

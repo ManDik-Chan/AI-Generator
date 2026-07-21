@@ -18,9 +18,12 @@ describe("pgvector memory contract", () => {
     expect(schema).toContain('memory Memory  @relation(fields: [memoryId], references: [id], onDelete: Cascade)');
   });
 
-  it("contains repeatable owner and relation RLS policies", () => {
+  it("contains a repeatable read-only owner RLS policy", () => {
     expect(rls).toContain('drop policy if exists "memory_embeddings_select_own"');
-    expect(rls).toContain("m.id = memory_id and m.user_id = auth.uid()");
+    expect(rls).toContain('create policy "memory_embeddings_select_own"');
+    expect(rls).not.toContain('create policy "memory_embeddings_insert_own_memory"');
+    expect(rls).not.toContain('create policy "memory_embeddings_update_own_memory"');
+    expect(rls).not.toContain('create policy "memory_embeddings_delete_own"');
     expect(migration).toContain('"memory_embeddings_user_id_model_dimensions_idx"');
   });
 

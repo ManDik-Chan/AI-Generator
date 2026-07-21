@@ -1,5 +1,5 @@
--- Apply after `pnpm db:deploy`. Prisma connects on the trusted server; these
--- policies protect direct Supabase client access as a second authorization layer.
+-- Disaster-recovery baseline. Production releases apply the same controls through
+-- versioned Prisma migrations; this file is safe to repeat after a restore.
 
 alter table public.profiles enable row level security;
 alter table public.personas enable row level security;
@@ -15,6 +15,7 @@ alter table public.brainstorm_workers enable row level security;
 alter table public.agent_runs enable row level security;
 alter table public.agent_workers enable row level security;
 alter table public.agent_events enable row level security;
+alter table public.usage_ledger enable row level security;
 
 drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own" on public.profiles
@@ -24,37 +25,27 @@ create policy "profiles_update_own" on public.profiles
   for update using (id = auth.uid()) with check (id = auth.uid());
 
 drop policy if exists "personas_own_all" on public.personas;
-create policy "personas_own_all" on public.personas
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "personas_select_own" on public.personas;
+create policy "personas_select_own" on public.personas
+  for select using (user_id = auth.uid());
 drop policy if exists "conversations_own_all" on public.conversations;
-create policy "conversations_own_all" on public.conversations
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+drop policy if exists "conversations_select_own" on public.conversations;
+create policy "conversations_select_own" on public.conversations
+  for select using (user_id = auth.uid());
+
 drop policy if exists "memories_select_own" on public.memories;
-create policy "memories_select_own" on public.memories for select using (user_id = auth.uid());
 drop policy if exists "memories_insert_own_relations" on public.memories;
-create policy "memories_insert_own_relations" on public.memories for insert with check (user_id = auth.uid() and (persona_id is null or exists (select 1 from public.personas p where p.id = persona_id and p.user_id = auth.uid())) and (source_conversation_id is null or exists (select 1 from public.conversations c where c.id = source_conversation_id and c.user_id = auth.uid())) and (source_message_id is null or exists (select 1 from public.messages m join public.conversations c on c.id = m.conversation_id where m.id = source_message_id and c.user_id = auth.uid() and (source_conversation_id is null or m.conversation_id = source_conversation_id))));
 drop policy if exists "memories_update_own_relations" on public.memories;
-create policy "memories_update_own_relations" on public.memories for update using (user_id = auth.uid()) with check (user_id = auth.uid() and (persona_id is null or exists (select 1 from public.personas p where p.id = persona_id and p.user_id = auth.uid())) and (source_conversation_id is null or exists (select 1 from public.conversations c where c.id = source_conversation_id and c.user_id = auth.uid())) and (source_message_id is null or exists (select 1 from public.messages m join public.conversations c on c.id = m.conversation_id where m.id = source_message_id and c.user_id = auth.uid() and (source_conversation_id is null or m.conversation_id = source_conversation_id))));
 drop policy if exists "memories_delete_own" on public.memories;
-create policy "memories_delete_own" on public.memories for delete using (user_id = auth.uid());
+create policy "memories_select_own" on public.memories for select using (user_id = auth.uid());
+
 drop policy if exists "memory_embeddings_select_own" on public.memory_embeddings;
+drop policy if exists "memory_embeddings_insert_own_memory" on public.memory_embeddings;
+drop policy if exists "memory_embeddings_update_own_memory" on public.memory_embeddings;
+drop policy if exists "memory_embeddings_delete_own" on public.memory_embeddings;
 create policy "memory_embeddings_select_own" on public.memory_embeddings
   for select using (user_id = auth.uid());
-drop policy if exists "memory_embeddings_insert_own_memory" on public.memory_embeddings;
-create policy "memory_embeddings_insert_own_memory" on public.memory_embeddings
-  for insert with check (
-    user_id = auth.uid()
-    and exists (select 1 from public.memories m where m.id = memory_id and m.user_id = auth.uid())
-  );
-drop policy if exists "memory_embeddings_update_own_memory" on public.memory_embeddings;
-create policy "memory_embeddings_update_own_memory" on public.memory_embeddings
-  for update using (user_id = auth.uid()) with check (
-    user_id = auth.uid()
-    and exists (select 1 from public.memories m where m.id = memory_id and m.user_id = auth.uid())
-  );
-drop policy if exists "memory_embeddings_delete_own" on public.memory_embeddings;
-create policy "memory_embeddings_delete_own" on public.memory_embeddings
-  for delete using (user_id = auth.uid());
+
 drop policy if exists "generated_images_own_all" on public.generated_images;
 drop policy if exists "generated_images_select_own" on public.generated_images;
 drop policy if exists "generated_images_insert_own_run" on public.generated_images;
@@ -66,36 +57,18 @@ create policy "generated_images_select_own" on public.generated_images
   for select using (user_id = auth.uid());
 
 drop policy if exists "tool_runs_select_own" on public.tool_runs;
+drop policy if exists "tool_runs_insert_own" on public.tool_runs;
+drop policy if exists "tool_runs_update_own" on public.tool_runs;
+drop policy if exists "tool_runs_delete_own" on public.tool_runs;
 create policy "tool_runs_select_own" on public.tool_runs
   for select using (user_id = auth.uid());
-drop policy if exists "tool_runs_insert_own" on public.tool_runs;
-create policy "tool_runs_insert_own" on public.tool_runs
-  for insert with check (user_id = auth.uid());
-drop policy if exists "tool_runs_update_own" on public.tool_runs;
-create policy "tool_runs_update_own" on public.tool_runs
-  for update using (user_id = auth.uid()) with check (user_id = auth.uid());
-drop policy if exists "tool_runs_delete_own" on public.tool_runs;
-create policy "tool_runs_delete_own" on public.tool_runs
-  for delete using (user_id = auth.uid());
 
 drop policy if exists "tool_assets_select_own" on public.tool_assets;
+drop policy if exists "tool_assets_insert_own_run" on public.tool_assets;
+drop policy if exists "tool_assets_update_own_run" on public.tool_assets;
+drop policy if exists "tool_assets_delete_own" on public.tool_assets;
 create policy "tool_assets_select_own" on public.tool_assets
   for select using (user_id = auth.uid());
-drop policy if exists "tool_assets_insert_own_run" on public.tool_assets;
-create policy "tool_assets_insert_own_run" on public.tool_assets
-  for insert with check (
-    user_id = auth.uid()
-    and exists (select 1 from public.tool_runs r where r.id = tool_run_id and r.user_id = auth.uid())
-  );
-drop policy if exists "tool_assets_update_own_run" on public.tool_assets;
-create policy "tool_assets_update_own_run" on public.tool_assets
-  for update using (user_id = auth.uid()) with check (
-    user_id = auth.uid()
-    and exists (select 1 from public.tool_runs r where r.id = tool_run_id and r.user_id = auth.uid())
-  );
-drop policy if exists "tool_assets_delete_own" on public.tool_assets;
-create policy "tool_assets_delete_own" on public.tool_assets
-  for delete using (user_id = auth.uid());
 
 drop policy if exists "generation_runs_own_all" on public.generation_runs;
 drop policy if exists "generation_runs_select_own" on public.generation_runs;
@@ -133,19 +106,18 @@ drop policy if exists "agent_events_delete_own" on public.agent_events;
 create policy "agent_events_select_own" on public.agent_events
   for select using (user_id = auth.uid());
 
+drop policy if exists "usage_ledger_select_own" on public.usage_ledger;
+create policy "usage_ledger_select_own" on public.usage_ledger
+  for select using (user_id = auth.uid());
+
 drop policy if exists "messages_via_conversation" on public.messages;
-create policy "messages_via_conversation" on public.messages
-  for all using (
+drop policy if exists "messages_select_via_conversation" on public.messages;
+create policy "messages_select_via_conversation" on public.messages
+  for select using (
     exists (
-      select 1 from public.conversations
-      where conversations.id = messages.conversation_id
-        and conversations.user_id = auth.uid()
-    )
-  ) with check (
-    exists (
-      select 1 from public.conversations
-      where conversations.id = messages.conversation_id
-        and conversations.user_id = auth.uid()
+      select 1 from public.conversations c
+      where c.id = messages.conversation_id
+        and c.user_id = auth.uid()
     )
   );
 
@@ -172,4 +144,70 @@ $$;
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute procedure public.handle_new_auth_user();
+  for each row execute function public.handle_new_auth_user();
+
+create or replace function public.protect_profile_system_fields()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if current_user in ('anon', 'authenticated') and (
+    new.id is distinct from old.id
+    or new.email is distinct from old.email
+    or new.role is distinct from old.role
+    or new.created_at is distinct from old.created_at
+    or new.updated_at is distinct from old.updated_at
+  ) then
+    raise exception 'profile system fields are server-managed' using errcode = '42501';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_protect_system_fields on public.profiles;
+create trigger profiles_protect_system_fields
+  before update on public.profiles
+  for each row execute function public.protect_profile_system_fields();
+
+revoke all privileges on table public.profiles from public, anon, authenticated;
+grant select on table public.profiles to authenticated;
+grant update (display_name, avatar_url, memory_enabled) on table public.profiles to authenticated;
+
+revoke all privileges on table public.personas, public.conversations, public.memories
+from public, anon, authenticated;
+grant select on table public.personas, public.conversations, public.memories
+to authenticated;
+
+revoke all privileges on table
+  public.messages,
+  public.memory_embeddings,
+  public.generated_images,
+  public.tool_runs,
+  public.tool_assets,
+  public.generation_runs,
+  public.brainstorm_workers,
+  public.agent_runs,
+  public.agent_workers,
+  public.agent_events,
+  public.usage_ledger
+from public, anon, authenticated;
+
+grant select on table
+  public.messages,
+  public.memory_embeddings,
+  public.generated_images,
+  public.tool_runs,
+  public.tool_assets,
+  public.generation_runs,
+  public.brainstorm_workers,
+  public.agent_runs,
+  public.agent_workers,
+  public.agent_events,
+  public.usage_ledger
+to authenticated;
+
+revoke all privileges on table public.model_configs, public.app_settings
+from public, anon, authenticated;
+revoke execute on function public.protect_profile_system_fields() from public, anon, authenticated;
+revoke execute on function public.handle_new_auth_user() from public, anon, authenticated;
