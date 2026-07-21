@@ -44,7 +44,6 @@ function makeMigrationTree(filter, mutate) {
   const temporaryPrisma = join(temporaryRoot, "prisma");
   mkdirSync(temporaryPrisma, { recursive: true });
   cpSync(join(root, "prisma", "schema.prisma"), join(temporaryPrisma, "schema.prisma"), { recursive: false });
-  cpSync(join(root, "prisma", "migration_lock.toml"), join(temporaryPrisma, "migration_lock.toml"), { recursive: false });
   const migrationsSource = join(root, "prisma", "migrations");
   const migrationsTarget = join(temporaryPrisma, "migrations");
   cpSync(migrationsSource, migrationsTarget, {
@@ -53,7 +52,7 @@ function makeMigrationTree(filter, mutate) {
       if (source === migrationsSource) return true;
       const relative = source.slice(migrationsSource.length + 1).replaceAll("\\", "/");
       const topLevel = relative.split("/")[0];
-      return filter(topLevel);
+      return topLevel === "migration_lock.toml" || filter(topLevel);
     },
   });
   mutate?.(temporaryPrisma);
