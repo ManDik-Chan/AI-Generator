@@ -111,7 +111,7 @@ export function ToolRunner({ tool, aiConfigured }: Props) {
     pendingCancelRef.current = false; setCancelling(false); setState("submitting"); setError(undefined); setOutput(""); setRunId(undefined); setElapsed(0); setStartedAt(Date.now());
     let terminalEvent = false;
     try {
-      const response = await fetch("/api/tools/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ tool, input, options, saveHistory }), signal: controller.signal });
+      const response = await fetch("/api/tools/run", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ tool, input, options, saveHistory }), signal: controller.signal });
       await readSseEvents(response, (event, data) => {
         if (!mountedRef.current) return;
         const payload = data as Record<string, unknown>;

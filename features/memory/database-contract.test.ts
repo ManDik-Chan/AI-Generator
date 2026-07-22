@@ -21,12 +21,13 @@ describe("memory database contract", () => {
     expect(migration).toContain("memories_scope_persona_check");
   });
 
-  it("hardens insert and update RLS for every associated owner", () => {
-    expect(rls).toContain('policy "memories_insert_own_relations"');
-    expect(rls).toContain('policy "memories_update_own_relations"');
-    expect(rls).toContain("p.user_id = auth.uid()");
-    expect(rls).toContain("c.user_id = auth.uid()");
-    expect(rls).toContain("m.conversation_id = source_conversation_id");
+  it("keeps browser memory access owner-scoped and read-only", () => {
+    expect(rls).toContain('create policy "memories_select_own"');
+    expect(rls).toContain('drop policy if exists "memories_insert_own_relations"');
+    expect(rls).toContain('drop policy if exists "memories_update_own_relations"');
+    expect(rls).not.toContain('create policy "memories_insert_own_relations"');
+    expect(rls).not.toContain('create policy "memories_update_own_relations"');
+    expect(rls).toContain("grant select on table public.personas, public.conversations, public.memories");
   });
 
   it("makes every policy creation structurally repeatable", () => {

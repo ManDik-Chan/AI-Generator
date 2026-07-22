@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "22.x || 24.x"
+    "node": "22.x"
   },
   "packageManager": "pnpm@11.7.0",
   "scripts": {
@@ -14,6 +14,8 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:integration": "vitest run tests/integration/usage-ledger.integration.test.ts",
+    "test:rls": "vitest run tests/integration/rls.security.integration.test.ts",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",

@@ -145,6 +145,18 @@ enum ToolRunStatus {
   CANCELLED
 }
 
+enum UsageCapability {
+  CHAT_MESSAGE
+  TOOL_SUMMARIZE
+  TOOL_REWRITE
+  TOOL_TRANSLATE
+  IMAGE_ANALYZE
+  IMAGE_GENERATE
+  BRAINSTORM
+  AGENT_STANDARD
+  AGENT_DEEP
+}
+
 model Profile {
   id            String   @id @db.Uuid
   email         String   @unique
@@ -167,8 +179,33 @@ model Profile {
   agentRuns         AgentRun[]
   agentWorkers      AgentWorker[]
   agentEvents       AgentEvent[]
+  usageLedger       UsageLedger[]
 
   @@map("profiles")
+}
+
+model UsageLedger {
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  capability     UsageCapability
+  units          Int             @default(1)
+  runId          String          @map("run_id") @db.Uuid
+  idempotencyKey String          @map("idempotency_key") @db.VarChar(200)
+  provider       String?         @db.VarChar(100)
+  model          String?         @db.VarChar(200)
+  inputTokens    Int?            @map("input_tokens")
+  outputTokens   Int?            @map("output_tokens")
+  estimatedCost  Decimal?        @map("estimated_cost") @db.Decimal(18, 8)
+  pricingVersion String?         @map("pricing_version") @db.VarChar(50)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, runId])
+  @@unique([userId, idempotencyKey])
+  @@index([userId, capability, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("usage_ledger")
 }
 
 model ToolRun {

@@ -26,7 +26,7 @@ Embedding Base URL / Key 为空时回退文本 Provider 的 `AI_BASE_URL` / `AI_
 
 ## pgvector 与数据边界
 
-Migration `20260713150000_add_memory_embeddings` 启用 `vector` extension 并创建独立 `memory_embeddings`：Memory 一对一主键、userId、model、dimensions、contentHash、`extensions.vector(512)` 和时间。Memory/Profile 删除都 Cascade。RLS 限制当前 `auth.uid()`，写入还必须引用同一用户 Memory；服务端查询仍显式传入 userId。
+Migration `20260713150000_add_memory_embeddings` 启用 `vector` extension 并创建独立 `memory_embeddings`：Memory 一对一主键、userId、model、dimensions、contentHash、`extensions.vector(512)` 和时间。Memory/Profile 删除都 Cascade。RLS 只允许 authenticated 读取自己的 embedding，写入权限已由安全 migration 收回并只走可信服务端；服务端查询仍显式传入 userId。
 
 每用户上限 300 条，当前使用 userId/model/dimensions 普通索引和精确余弦扫描，不创建 HNSW/IVFFlat。SQL 参数化，只返回 Memory 业务字段与服务端 similarity，不读取或返回原始向量。
 

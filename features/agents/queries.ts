@@ -2,8 +2,8 @@ import "server-only";
 
 import { Prisma } from "@prisma/client";
 
-import { getAgentModeLimits } from "@/features/agents/constants";
 import { startOfUtcDay } from "@/features/chat/utils";
+import { AGENT_USAGE_CAPABILITIES, usageUnits } from "@/features/usage/ledger";
 import { prisma } from "@/lib/database/prisma";
 import type { AgentModeView, AgentRunListItem, AgentRunStatusSnapshot, AgentRunStatusView, AgentRunTerminalSnapshot, AgentRunView } from "@/features/agents/client-types";
 
@@ -211,11 +211,11 @@ export async function getOwnedAgentRunTerminal(userId: string, runId: string) {
 }
 
 export async function getAgentUsage(userId: string, dailyLimit: number) {
-  const [profile, runs] = await Promise.all([
+  const [profile, aggregate] = await Promise.all([
     prisma.profile.findUnique({ where: { id: userId }, select: { role: true } }),
-    prisma.agentRun.findMany({ where: { userId, createdAt: { gte: startOfUtcDay() } }, select: { mode: true } }),
+    prisma.usageLedger.aggregate({ where: { userId, capability: { in: [...AGENT_USAGE_CAPABILITIES] }, createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } }),
   ]);
-  const used = runs.reduce((total, run) => total + getAgentModeLimits(run.mode).creditCost, 0);
+  const used = usageUnits(aggregate);
   const unlimited = profile?.role === "ADMIN";
   return { limit: dailyLimit, used, remaining: unlimited ? dailyLimit : Math.max(0, dailyLimit - used), unlimited };
 }

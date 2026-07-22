@@ -18,7 +18,9 @@ describe("Agent atomic creation and credits contract", () => {
   });
 
   it("charges one Standard or two Deep credits at run creation", () => {
-    expect(creation).toContain("getAgentModeLimits(run.mode).creditCost");
+    expect(creation).toContain("transaction.usageLedger.aggregate");
+    expect(creation).toContain("transaction.usageLedger.create");
+    expect(creation).toContain("agentUsageCapability(input.mode)");
     expect(creation).toContain("used + limits.creditCost > input.dailyCredits");
     expect(creation).toContain("charged: limits.creditCost");
   });

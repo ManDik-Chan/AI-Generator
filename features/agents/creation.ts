@@ -7,6 +7,7 @@ import { getAgentModeLimits } from "@/features/agents/constants";
 import type { AgentPlan } from "@/features/agents/types";
 import { createConversationTitle, startOfUtcDay } from "@/features/chat/utils";
 import { personaConversationUnavailableMessage } from "@/features/persona/chat";
+import { AGENT_USAGE_CAPABILITIES, agentUsageCapability, usageIdempotencyKey, usageUnits } from "@/features/usage/ledger";
 import { prisma } from "@/lib/database/prisma";
 
 export type AgentCreationErrorCode = "DAILY_CREDITS" | "CONVERSATION_NOT_FOUND" | "PERSONA_NOT_FOUND" | "PERSONA_UNAVAILABLE" | "CONFLICT";
@@ -29,6 +30,7 @@ export async function createPendingAgentRun(input: {
   personaId?: string;
   mode: AgentRunMode;
   dailyCredits: number;
+  idempotencyKey?: string;
 }) {
   const limits = getAgentModeLimits(input.mode);
   return prisma.$transaction(async (transaction) => {
@@ -38,11 +40,11 @@ export async function createPendingAgentRun(input: {
     });
     if (!profile) throw new AgentCreationError("CONVERSATION_NOT_FOUND", "用户资料不存在。");
 
-    const todayRuns = await transaction.agentRun.findMany({
-      where: { userId: input.userId, createdAt: { gte: startOfUtcDay() } },
-      select: { mode: true },
+    const aggregate = await transaction.usageLedger.aggregate({
+      where: { userId: input.userId, capability: { in: [...AGENT_USAGE_CAPABILITIES] }, createdAt: { gte: startOfUtcDay() } },
+      _sum: { units: true },
     });
-    const used = todayRuns.reduce((total, run) => total + getAgentModeLimits(run.mode).creditCost, 0);
+    const used = usageUnits(aggregate);
     const unlimited = profile.role === "ADMIN";
     if (!unlimited && used + limits.creditCost > input.dailyCredits) {
       throw new AgentCreationError(
@@ -98,6 +100,16 @@ export async function createPendingAgentRun(input: {
         plannedWorkerCount: limits.workerCount,
       },
       select: { id: true, startedAt: true },
+    });
+    const capability = agentUsageCapability(input.mode);
+    await transaction.usageLedger.create({
+      data: {
+        userId: input.userId,
+        capability,
+        units: limits.creditCost,
+        runId: run.id,
+        idempotencyKey: usageIdempotencyKey(capability, run.id, input.idempotencyKey),
+      },
     });
     await appendAgentEvent(transaction, {
       userId: input.userId,

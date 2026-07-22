@@ -4,6 +4,12 @@ import { canBypassToolDailyLimit } from "@/features/tools/access";
 import { startOfUtcDay } from "@/features/tools/utils";
 import { prisma } from "@/lib/database/prisma";
 import { BRAINSTORM_WORKERS } from "@/features/tools/brainstorm/constants";
+import {
+  TEXT_TOOL_USAGE_CAPABILITIES,
+  toolUsageCapability,
+  usageIdempotencyKey,
+  usageUnits,
+} from "@/features/usage/ledger";
 
 export class DailyToolLimitError extends Error {
   constructor(public readonly limit: number, public readonly used: number) {
@@ -20,10 +26,16 @@ export async function createPendingToolRun(input: {
   options: Prisma.InputJsonValue;
   retainContent: boolean;
   dailyLimit: number;
+  idempotencyKey?: string;
 }) {
   return prisma.$transaction(async (transaction) => {
     const profile = await transaction.profile.findUnique({ where: { id: input.userId }, select: { role: true } });
-    const used = await transaction.toolRun.count({ where: { userId: input.userId, createdAt: { gte: startOfUtcDay() } } });
+    const capability = toolUsageCapability(input.tool);
+    const aggregate = await transaction.usageLedger.aggregate({
+      where: { userId: input.userId, capability: { in: [...TEXT_TOOL_USAGE_CAPABILITIES] }, createdAt: { gte: startOfUtcDay() } },
+      _sum: { units: true },
+    });
+    const used = usageUnits(aggregate);
     if (!canBypassToolDailyLimit(profile?.role ?? "USER") && used >= input.dailyLimit) {
       throw new DailyToolLimitError(input.dailyLimit, used);
     }
@@ -38,6 +50,9 @@ export async function createPendingToolRun(input: {
       },
       select: { id: true },
     });
+    await transaction.usageLedger.create({
+      data: { userId: input.userId, capability, units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey(capability, run.id, input.idempotencyKey) },
+    });
     return { runId: run.id, limit: input.dailyLimit, used: used + 1, remaining: canBypassToolDailyLimit(profile?.role ?? "USER") ? input.dailyLimit : Math.max(0, input.dailyLimit - used - 1) };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
@@ -45,19 +60,22 @@ export async function createPendingToolRun(input: {
 export async function createPendingVisionToolRun(input: Omit<Parameters<typeof createPendingToolRun>[0], "tool">) {
   return prisma.$transaction(async (transaction) => {
     const profile = await transaction.profile.findUnique({ where: { id: input.userId }, select: { role: true } });
-    const used = await transaction.toolRun.count({ where: { userId: input.userId, type: "IMAGE_ANALYZE", createdAt: { gte: startOfUtcDay() } } });
+    const aggregate = await transaction.usageLedger.aggregate({ where: { userId: input.userId, capability: "IMAGE_ANALYZE", createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } });
+    const used = usageUnits(aggregate);
     const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
     if (!unlimited && used >= input.dailyLimit) throw new DailyToolLimitError(input.dailyLimit, used);
     const run = await transaction.toolRun.create({ data: { userId: input.userId, type: "IMAGE_ANALYZE", title: input.retainContent ? input.title : null, inputText: input.retainContent ? input.inputText : null, options: input.options, retainContent: input.retainContent }, select: { id: true } });
+    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "IMAGE_ANALYZE", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("IMAGE_ANALYZE", run.id, input.idempotencyKey) } });
     return { runId: run.id, limit: input.dailyLimit, used: used + 1, remaining: unlimited ? input.dailyLimit : Math.max(0, input.dailyLimit - used - 1), unlimited };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function getVisionUsage(userId: string, dailyLimit: number) {
-  const [profile, used] = await Promise.all([
+  const [profile, aggregate] = await Promise.all([
     prisma.profile.findUnique({ where: { id: userId }, select: { role: true } }),
-    prisma.toolRun.count({ where: { userId, type: "IMAGE_ANALYZE", createdAt: { gte: startOfUtcDay() } } }),
+    prisma.usageLedger.aggregate({ where: { userId, capability: "IMAGE_ANALYZE", createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } }),
   ]);
+  const used = usageUnits(aggregate);
   const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
   return { limit: dailyLimit, used, remaining: unlimited ? dailyLimit : Math.max(0, dailyLimit - used), unlimited };
 }
@@ -68,19 +86,15 @@ export async function createPendingImageGenerationToolRun(input: {
   inputText: string;
   options: Prisma.InputJsonValue;
   dailyLimit: number;
+  idempotencyKey?: string;
 }) {
   return prisma.$transaction(async (transaction) => {
     const profile = await transaction.profile.findUnique({
       where: { id: input.userId },
       select: { role: true },
     });
-    const used = await transaction.toolRun.count({
-      where: {
-        userId: input.userId,
-        type: "IMAGE_GENERATE",
-        createdAt: { gte: startOfUtcDay() },
-      },
-    });
+    const aggregate = await transaction.usageLedger.aggregate({ where: { userId: input.userId, capability: "IMAGE_GENERATE", createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } });
+    const used = usageUnits(aggregate);
     const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
     if (!unlimited && used >= input.dailyLimit) {
       throw new DailyToolLimitError(input.dailyLimit, used);
@@ -96,6 +110,7 @@ export async function createPendingImageGenerationToolRun(input: {
       },
       select: { id: true },
     });
+    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "IMAGE_GENERATE", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("IMAGE_GENERATE", run.id, input.idempotencyKey) } });
     return {
       runId: run.id,
       limit: input.dailyLimit,
@@ -112,16 +127,11 @@ export async function getImageGenerationUsage(
   userId: string,
   dailyLimit: number,
 ) {
-  const [profile, used] = await Promise.all([
+  const [profile, aggregate] = await Promise.all([
     prisma.profile.findUnique({ where: { id: userId }, select: { role: true } }),
-    prisma.toolRun.count({
-      where: {
-        userId,
-        type: "IMAGE_GENERATE",
-        createdAt: { gte: startOfUtcDay() },
-      },
-    }),
+    prisma.usageLedger.aggregate({ where: { userId, capability: "IMAGE_GENERATE", createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } }),
   ]);
+  const used = usageUnits(aggregate);
   const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
   return {
     limit: dailyLimit,
@@ -138,11 +148,13 @@ export async function createPendingBrainstormToolRun(input: {
   retainContent: boolean;
   dailyLimit: number;
   options: Prisma.InputJsonValue;
+  idempotencyKey?: string;
 }) {
   await cleanupExpiredToolRunRecovery().catch(() => undefined);
   return prisma.$transaction(async (transaction) => {
     const profile = await transaction.profile.findUnique({ where: { id: input.userId }, select: { role: true } });
-    const used = await transaction.toolRun.count({ where: { userId: input.userId, type: "BRAINSTORM", createdAt: { gte: startOfUtcDay() } } });
+    const aggregate = await transaction.usageLedger.aggregate({ where: { userId: input.userId, capability: "BRAINSTORM", createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } });
+    const used = usageUnits(aggregate);
     const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
     if (!unlimited && used >= input.dailyLimit) throw new DailyToolLimitError(input.dailyLimit, used);
     const recoveryExpiresAt = input.retainContent ? null : new Date(Date.now() + RECOVERY_TTL_MS);
@@ -158,6 +170,7 @@ export async function createPendingBrainstormToolRun(input: {
       },
       select: { id: true },
     });
+    await transaction.usageLedger.create({ data: { userId: input.userId, capability: "BRAINSTORM", units: 1, runId: run.id, idempotencyKey: usageIdempotencyKey("BRAINSTORM", run.id, input.idempotencyKey) } });
     await transaction.brainstormWorker.createMany({
       data: BRAINSTORM_WORKERS.map((worker) => ({
         toolRunId: run.id,
@@ -172,10 +185,11 @@ export async function createPendingBrainstormToolRun(input: {
 }
 
 export async function getBrainstormUsage(userId: string, dailyLimit: number) {
-  const [profile, used] = await Promise.all([
+  const [profile, aggregate] = await Promise.all([
     prisma.profile.findUnique({ where: { id: userId }, select: { role: true } }),
-    prisma.toolRun.count({ where: { userId, type: "BRAINSTORM", createdAt: { gte: startOfUtcDay() } } }),
+    prisma.usageLedger.aggregate({ where: { userId, capability: "BRAINSTORM", createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } }),
   ]);
+  const used = usageUnits(aggregate);
   const unlimited = canBypassToolDailyLimit(profile?.role ?? "USER");
   return { limit: dailyLimit, used, remaining: unlimited ? dailyLimit : Math.max(0, dailyLimit - used), unlimited };
 }

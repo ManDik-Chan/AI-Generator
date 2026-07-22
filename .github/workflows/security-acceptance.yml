@@ -1,0 +1,115 @@
+name: Security Acceptance
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-acceptance-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  supabase-security-acceptance:
+    name: Supabase Security Acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      REQUIRE_SECURITY_TEST_DATABASE: "true"
+    steps:
+      - name: Check out the exact PR commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@6ffe784b57613e98e0c04651e5fde0cec28cb1c9
+        with:
+          version: 2.109.1
+
+      - name: Start isolated local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase start >"$RUNNER_TEMP/supabase-start.log" 2>&1
+          status_env="$(supabase status -o env)"
+          eval "$status_env"
+          for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do
+            echo "::add-mask::$value"
+          done
+          {
+            printf 'DATABASE_URL=%s\n' "$DB_URL"
+            printf 'DIRECT_URL=%s\n' "$DB_URL"
+            printf 'TEST_DATABASE_URL=%s\n' "$DB_URL"
+            printf 'ALLOW_TEST_DATABASE_MUTATIONS=true\n'
+            printf 'TEST_DATABASE_CONFIRMED_NON_PRODUCTION=true\n'
+            printf 'SUPABASE_TEST_URL=%s\n' "$API_URL"
+            printf 'SUPABASE_TEST_ANON_KEY=%s\n' "$ANON_KEY"
+            printf 'SUPABASE_TEST_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$ANON_KEY"
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+            printf 'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000\n'
+            printf 'PLAYWRIGHT_AUTH_STATE=%s/playwright-auth.json\n' "$RUNNER_TEMP"
+            printf 'AI_BASE_URL=http://127.0.0.1:9/v1\n'
+            printf 'AI_API_KEY=isolated-test-provider-key\n'
+            printf 'AI_MODEL=isolated-test-model\n'
+          } >> "$GITHUB_ENV"
+
+      - name: Apply all migrations to a clean database
+        run: pnpm exec prisma migrate deploy
+
+      - name: Verify clean migration metadata
+        run: node scripts/verify-security-migrations.mjs clean
+
+      - name: Run real authenticated JWT and PostgREST attacks
+        run: pnpm test:rls
+
+      - name: Run real quota, concurrency, and idempotency tests
+        run: pnpm test:integration
+
+      - name: Verify old-database upgrade and transaction rollback
+        run: node scripts/verify-security-migrations.mjs incremental
+
+      - name: Restore a clean migrated database for browser tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db reset --no-seed >"$RUNNER_TEMP/supabase-browser-reset.log" 2>&1
+          pnpm exec prisma migrate deploy
+
+      - name: Run static quality gates
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm exec vitest run --exclude "tests/integration/**"
+          pnpm exec prisma validate
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
+
+      - name: Build the application for authenticated E2E
+        run: pnpm build
+
+      - name: Run authenticated Chromium and mobile WebKit E2E
+        run: pnpm test:e2e
+
+      - name: Stop isolated Supabase
+        if: always()
+        shell: bash
+        run: supabase stop --no-backup >"$RUNNER_TEMP/supabase-stop.log" 2>&1 || true
