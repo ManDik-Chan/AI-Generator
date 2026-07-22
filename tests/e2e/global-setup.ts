@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { chromium, type FullConfig } from "@playwright/test";
+import { PrismaClient } from "@prisma/client";
 import { createClient } from "@supabase/supabase-js";
 
 import { agentFixtureIds } from "./fixtures/agent";
@@ -22,36 +23,39 @@ export default async function globalSetup(config: FullConfig) {
   const created = await service.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("Unable to create the isolated authenticated E2E account.");
 
-  const removed = await service
-    .from("conversations")
-    .delete()
-    .eq("id", agentFixtureIds.conversation);
-  if (removed.error) throw new Error("Unable to reset the synthetic Agent E2E conversation.");
-
-  const conversation = await service.from("conversations").insert({
-    id: agentFixtureIds.conversation,
-    user_id: created.data.user.id,
-    title: "Playwright Agent fixture",
-  });
-  if (conversation.error) throw new Error("Unable to seed the synthetic Agent E2E conversation.");
-
-  const messages = await service.from("messages").insert([
-    {
-      id: agentFixtureIds.userMessage,
-      conversation_id: agentFixtureIds.conversation,
-      role: "USER",
-      content: "Verify Agent orchestration",
-      status: "COMPLETE",
-    },
-    {
-      id: agentFixtureIds.assistantMessage,
-      conversation_id: agentFixtureIds.conversation,
-      role: "ASSISTANT",
-      content: "",
-      status: "PENDING",
-    },
-  ]);
-  if (messages.error) throw new Error("Unable to seed the synthetic Agent E2E messages.");
+  const prisma = new PrismaClient();
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.conversation.deleteMany({ where: { id: agentFixtureIds.conversation } });
+      await tx.conversation.create({
+        data: {
+          id: agentFixtureIds.conversation,
+          userId: created.data.user.id,
+          title: "Playwright Agent fixture",
+          messages: {
+            create: [
+              {
+                id: agentFixtureIds.userMessage,
+                role: "USER",
+                content: "Verify Agent orchestration",
+                status: "COMPLETE",
+              },
+              {
+                id: agentFixtureIds.assistantMessage,
+                role: "ASSISTANT",
+                content: "",
+                status: "PENDING",
+              },
+            ],
+          },
+        },
+      });
+    });
+  } catch {
+    throw new Error("Unable to seed the synthetic Agent E2E conversation.");
+  } finally {
+    await prisma.$disconnect();
+  }
 
   await mkdir(dirname(authState), { recursive: true });
   const browser = await chromium.launch();
