@@ -191,6 +191,20 @@ async function submitAgent(page: Page, label: "Agent 标准" | "Agent 深度") {
   await page.getByRole("button", { name: "发送消息" }).click();
 }
 
+async function startNewConversationViaUi(page: Page) {
+  const openHistory = page.getByRole("button", { name: "打开对话历史" });
+  if (await openHistory.isVisible()) {
+    await openHistory.click();
+    await expect(page.getByRole("button", { name: "关闭历史" })).toBeVisible();
+  }
+
+  const newConversation = page.locator('a[href="/chat"]:visible').filter({ hasText: "新建对话" }).first();
+  await expect(newConversation).toBeVisible();
+  await newConversation.click();
+  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page.getByLabel("消息内容")).toBeEditable();
+}
+
 async function installCompletedChatMock(page: Page) {
   const conversationId = "55555555-5555-4555-8555-555555555555";
   const userMessageId = "66666666-6666-4666-8666-666666666666";
@@ -291,8 +305,7 @@ test.describe("authenticated Agent Mode", () => {
     await submitAgent(page, "Agent 标准");
     await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
 
-    await page.goto("/chat");
-    await expect(page.getByLabel("消息内容")).toBeEditable();
+    await startNewConversationViaUi(page);
     await expect(page.getByRole("button", { name: "停止生成", exact: true })).toHaveCount(0);
     await page.getByLabel("消息内容").fill("Chat B can send independently");
     const send = page.getByRole("button", { name: "发送消息" });
@@ -328,9 +341,8 @@ test.describe("authenticated Agent Mode", () => {
     await submitAgent(page, "Agent 标准");
     await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
 
-    await page.goto("/chat");
+    await startNewConversationViaUi(page);
     mock.completeRun();
-    await expect(page.getByLabel("消息内容")).toBeEditable();
     await expect(page.getByText("这是 Leader 的最终回答。")).toHaveCount(0);
 
     await page.goBack({ waitUntil: "domcontentloaded" });

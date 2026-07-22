@@ -99,6 +99,7 @@ test.describe("authenticated mobile shell", () => {
     await page.goto("/chat");
     const shell = page.locator("[data-chat-shell]");
     const scroller = page.locator("[data-chat-message-scroll]");
+    await expect(page.getByLabel("消息内容")).toBeEditable();
     await scroller.evaluate((element) => {
       const fixture = document.createElement("div");
       fixture.style.height = "1800px";
@@ -107,6 +108,7 @@ test.describe("authenticated mobile shell", () => {
       element.scrollTop = 420;
       element.dispatchEvent(new Event("scroll"));
     });
+    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
 
     await expectSinglePrimaryScroller(page);
     await expectScrollPositionPreserved(page, async () => {
