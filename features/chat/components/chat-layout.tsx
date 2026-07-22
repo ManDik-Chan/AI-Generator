@@ -24,6 +24,7 @@ import { readSseEvents } from "@/features/generation/client-sse";
 import type { ChatGenerationMode } from "@/features/chat/types";
 import type { ChatBootstrapPayload } from "@/features/chat/bootstrap-types";
 import { migrateConversationGeneration, readConversationGeneration, updateConversationGeneration } from "@/features/generation/conversation-registry";
+import { useChatPopstateSync } from "@/features/chat/use-chat-popstate-sync";
 
 interface ChatLayoutProps {
   conversations: ConversationSummary[];
@@ -72,6 +73,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const conversationKeyRef = useRef(initialConversationKey);
   const mountedRef = useRef(true);
   useChatVisualViewport(shellRef);
+  useChatPopstateSync(activeConversationRef);
   useEffect(() => {
     mountedRef.current = true;
     setClientReady(true);
