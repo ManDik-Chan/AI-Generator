@@ -4,6 +4,8 @@ import { dirname } from "node:path";
 import { chromium, type FullConfig } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 
+import { agentFixtureIds } from "./fixtures/agent";
+
 export default async function globalSetup(config: FullConfig) {
   const authState = process.env.PLAYWRIGHT_AUTH_STATE;
   const supabaseUrl = process.env.SUPABASE_TEST_URL;
@@ -19,6 +21,37 @@ export default async function globalSetup(config: FullConfig) {
   });
   const created = await service.auth.admin.createUser({ email, password, email_confirm: true });
   if (created.error || !created.data.user) throw new Error("Unable to create the isolated authenticated E2E account.");
+
+  const removed = await service
+    .from("conversations")
+    .delete()
+    .eq("id", agentFixtureIds.conversation);
+  if (removed.error) throw new Error("Unable to reset the synthetic Agent E2E conversation.");
+
+  const conversation = await service.from("conversations").insert({
+    id: agentFixtureIds.conversation,
+    user_id: created.data.user.id,
+    title: "Playwright Agent fixture",
+  });
+  if (conversation.error) throw new Error("Unable to seed the synthetic Agent E2E conversation.");
+
+  const messages = await service.from("messages").insert([
+    {
+      id: agentFixtureIds.userMessage,
+      conversation_id: agentFixtureIds.conversation,
+      role: "USER",
+      content: "Verify Agent orchestration",
+      status: "COMPLETE",
+    },
+    {
+      id: agentFixtureIds.assistantMessage,
+      conversation_id: agentFixtureIds.conversation,
+      role: "ASSISTANT",
+      content: "",
+      status: "PENDING",
+    },
+  ]);
+  if (messages.error) throw new Error("Unable to seed the synthetic Agent E2E messages.");
 
   await mkdir(dirname(authState), { recursive: true });
   const browser = await chromium.launch();

@@ -1,18 +1,11 @@
 import { existsSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
+import { agentFixtureIds as ids, agentFixtureStartedAt as startedAt } from "../fixtures/agent";
 import { expectNoHorizontalOverflow } from "./helpers";
 
 const authState = process.env.PLAYWRIGHT_AUTH_STATE;
 const hasAuthState = Boolean(authState && existsSync(authState));
-const ids = {
-  run: "44444444-4444-4444-8444-444444444444",
-  conversation: "11111111-1111-4111-8111-111111111111",
-  userMessage: "22222222-2222-4222-8222-222222222222",
-  assistantMessage: "33333333-3333-4333-8333-333333333333",
-};
-const startedAt = "2026-07-18T08:00:00.000Z";
-
 type WorkerStatus = "QUEUED" | "BLOCKED" | "RUNNING" | "COMPLETE" | "ERROR" | "CANCELLED" | "TIMEOUT";
 
 function worker(key: string, position: number, status: WorkerStatus = "COMPLETE", dependsOnKeys: string[] = []) {
@@ -330,7 +323,7 @@ test.describe("authenticated Agent Mode", () => {
   test("Conversation A completion never writes B and restores A through its scoped registry", async ({ page }) => {
     const mock = await installAgentMocks(page, { mode: "STANDARD", detached: true });
     await submitAgent(page, "Agent 标准");
-    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
 
     await page.goto("/chat");
     mock.completeRun();
