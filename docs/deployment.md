@@ -6,7 +6,7 @@
 
 Phase 6B3 没有新增 Prisma Schema、migration、RLS、Bucket、域名或环境变量。部署前仍按既有文档确认历史 migration、最新版 `prisma/rls.sql` 与 private buckets 已由项目所有者完成；本分支不会自动执行数据库部署或生产部署。
 
-依赖安全补丁为 React/React DOM 19.1.8 与 PostCSS 8.5.16。规范运行时为 Node 22.x 与 pnpm 11.7.0；合并前必须在 Node 22 执行 `pnpm install --frozen-lockfile`、全部质量门禁与 Preview 构建。Vercel Project Settings 必须人工选择 Node 22.x；在该设置被所有者确认前，CI 还会在 Node 24.x 执行 install、lint、typecheck、test 与 build，Node 24 未跑绿时不得声称兼容。Next.js 保持 15.5.20，不进行大版本部署迁移。
+依赖安全补丁为 React/React DOM 19.1.8 与 PostCSS 8.5.16。唯一受支持的运行时为 Node 22.x 与 pnpm 11.7.0；`package.json` engines、本地开发、主要 CI、Vercel Preview 与 Production 必须统一使用 Node 22.x，合并前也必须在 Node 22 执行 `pnpm install --frozen-lockfile`、全部质量门禁与 Preview 构建。已有不可变 Deployment 显示的 Node 24 Production Override 不代表新部署配置，也不能直接编辑；Vercel Project Settings 的 Node 22.x 与 `package.json` engines 共同约束后续部署。现有 Node 24 CI 只作为额外前向兼容信号，不扩大受支持运行时范围。Next.js 保持 15.5.20，不进行大版本部署迁移。
 
 新的 Admin 角色 Server Action 不需要数据库变更，但上线前必须用专用测试账号验证：非管理员无法进入 `/admin`、管理员不能修改自己的角色、不能降级最后一名管理员、成功更新后导航角色可见性刷新。不要用唯一生产管理员做破坏性测试。
 
