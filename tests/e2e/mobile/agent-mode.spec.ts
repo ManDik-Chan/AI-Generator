@@ -274,6 +274,8 @@ test.describe("authenticated Agent Mode", () => {
 
     const panel = page.locator("[data-agent-worker-panel]");
     await expect(panel).toContainText("后台继续");
+    const expandDetails = panel.getByRole("button", { name: "展开", exact: true });
+    if (await expandDetails.count() > 0 && await expandDetails.isVisible()) await expandDetails.click();
     await panel.getByRole("button", { name: "展开全部" }).click();
     await panel.getByRole("button", { name: "停止该 Worker" }).first().click();
     await expect(panel.getByText("已停止", { exact: true }).first()).toBeVisible();
@@ -293,19 +295,20 @@ test.describe("authenticated Agent Mode", () => {
     await installAgentMocks(page, { mode: "STANDARD", detached: true, statuses: ["RUNNING", "QUEUED", "QUEUED", "QUEUED"] });
     await installCompletedChatMock(page);
     await submitAgent(page, "Agent 标准");
-    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
 
     await page.goto("/chat");
     await expect(page.getByLabel("消息内容")).toBeEditable();
-    await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toHaveCount(0);
     await page.getByLabel("消息内容").fill("Chat B can send independently");
     await page.getByRole("button", { name: "发送消息" }).click();
     await expect(page.getByText("Chat B completed")).toBeVisible();
 
     await page.goBack({ waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
-    await page.getByRole("button", { name: "停止生成" }).click();
-    await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+    await expect(page).toHaveURL(new RegExp(`/chat/${ids.conversation}$`));
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "停止生成", exact: true }).click();
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toHaveCount(0);
   });
 
   test("detached Standard Agent hydrates its final answer without refresh and stops polling", async ({ page }) => {
@@ -335,6 +338,7 @@ test.describe("authenticated Agent Mode", () => {
     await expect(page.getByText("这是 Leader 的最终回答。")).toHaveCount(0);
 
     await page.goBack({ waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(new RegExp(`/chat/${ids.conversation}$`));
     await expect(page.getByText("这是 Leader 的最终回答。")).toBeVisible({ timeout: 10_000 });
     expect(mock.getTerminalFetchCount()).toBe(1);
   });

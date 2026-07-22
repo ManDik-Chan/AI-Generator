@@ -85,7 +85,7 @@ export function MessageList(props: MessageListProps) {
   return (
     <div className="relative min-h-0 flex-1">
     <div
-      className="premium-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain"
+      className="premium-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none]"
       data-chat-message-scroll
       onScroll={(event) => {
         const element = event.currentTarget;

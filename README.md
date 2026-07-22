@@ -20,7 +20,7 @@
 
 ## 本地开发
 
-要求 Node.js 22 LTS 与 pnpm。
+规范开发运行时为 Node.js 22.x LTS 与 pnpm 11.7.0；仓库同时在 Node.js 24.x 执行兼容性门禁，直到 Vercel Project Settings 已人工切回 22.x。建议使用仓库的 `.nvmrc`，不要依赖系统默认 Node 版本。
 
 ```bash
 pnpm install
