@@ -294,7 +294,9 @@ test.describe("authenticated Agent Mode", () => {
     await expect(page.getByLabel("消息内容")).toBeEditable();
     await expect(page.getByRole("button", { name: "停止生成", exact: true })).toHaveCount(0);
     await page.getByLabel("消息内容").fill("Chat B can send independently");
-    await page.getByRole("button", { name: "发送消息" }).click();
+    const send = page.getByRole("button", { name: "发送消息" });
+    await expect(send).toBeEnabled();
+    await send.click();
     await expect(page.getByText("Chat B completed")).toBeVisible();
 
     await page.goBack({ waitUntil: "domcontentloaded" });

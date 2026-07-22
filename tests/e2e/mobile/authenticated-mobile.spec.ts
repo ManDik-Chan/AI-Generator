@@ -15,9 +15,24 @@ test.describe("authenticated mobile shell", () => {
   test.skip(!hasAuthState, "Set PLAYWRIGHT_AUTH_STATE to an existing signed-in storage state.");
 
   test("navigation, tools and common overlays remain inside the viewport", async ({ page }) => {
-    for (const route of ["/", "/agents", "/tools", "/tools/image", "/tools/image-generate", "/tools/brainstorm", "/tools/history", "/personas", "/memories", "/account"] as const) {
-      await page.goto(route);
-      await expect(page.locator("main")).toBeVisible();
+    const routes = [
+      { path: "/", heading: /让你的 AI，.*真正成为一个工作室。/ },
+      { path: "/agents", heading: "Agent 运行" },
+      { path: "/tools", heading: "实用 AI 工具" },
+      { path: "/tools/image", heading: "图片分析" },
+      { path: "/tools/image-generate", heading: "AI 图片创作" },
+      { path: "/tools/brainstorm", heading: "多 Agent 头脑风暴" },
+      { path: "/tools/history", heading: "工具历史" },
+      { path: "/personas", heading: "我的私人助手" },
+      { path: "/memories", heading: "AI 记忆库" },
+      { path: "/account", heading: "账号与设置" },
+    ] as const;
+
+    for (const route of routes) {
+      await page.goto(route.path);
+      await expect(page.getByRole("heading", { level: 1, name: route.heading })).toBeVisible();
+      await expect(page.locator("[data-app-scroll-region]")).toHaveCount(1);
+      await expect(page.locator("[data-app-scroll-region]")).toBeVisible();
       await expectNoHorizontalOverflow(page);
     }
     const nav = page.locator("[data-mobile-navigation]");
@@ -121,13 +136,15 @@ test.describe("authenticated mobile shell", () => {
     await page.goto("/chat", { waitUntil: "networkidle" });
     expect(new Set(detailRequests).size).toBeLessThanOrEqual(1);
 
-    const conversationLinks = page.locator('nav[aria-label="对话历史"] a[href^="/chat/"]');
-    const count = await conversationLinks.count();
-    if (count > 0) {
-      const target = conversationLinks.nth(0);
-      const href = await target.getAttribute("href");
-      await target.click();
-      await expect(page).toHaveURL(new RegExp(`${href}$`));
-    }
+    const openHistory = page.getByRole("button", { name: "打开对话历史" });
+    if (await openHistory.isVisible()) await openHistory.click();
+
+    const history = page.locator('nav[aria-label="对话历史"]:visible');
+    const target = history.locator('a[href^="/chat/"]').first();
+    await expect(target).toBeVisible();
+    const href = await target.getAttribute("href");
+    expect(href).not.toBeNull();
+    await target.click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
   });
 });
