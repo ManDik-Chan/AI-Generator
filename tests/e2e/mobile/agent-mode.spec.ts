@@ -185,6 +185,7 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
 
 async function submitAgent(page: Page, label: "Agent 标准" | "Agent 深度") {
   await page.goto("/chat");
+  await expect(page.getByLabel("消息内容")).toBeEditable();
   await page.getByRole("button", { name: label, exact: true }).click();
   await page.getByLabel("消息内容").fill("验证 Agent 编排");
   await page.getByRole("button", { name: "发送消息" }).click();

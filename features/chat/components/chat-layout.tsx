@@ -44,6 +44,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const shellRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessageView[]>(conversation?.messages ?? []);
   const [draft, setDraft] = useState("");
+  const [clientReady, setClientReady] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string>();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -73,6 +74,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   useChatVisualViewport(shellRef);
   useEffect(() => {
     mountedRef.current = true;
+    setClientReady(true);
     return () => {
       mountedRef.current = false;
       generationControllerRef.current?.abort();
@@ -550,7 +552,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
         />
         <ChatComposer
           agentConfigured={agentConfigured}
-          disabledReason={getComposerDisabledReason(generationMode === "CHAT" ? aiConfigured : agentConfigured, Boolean(editingMessage), Boolean(conversation?.persona?.archived))}
+          disabledReason={getComposerDisabledReason(generationMode === "CHAT" ? aiConfigured : agentConfigured, Boolean(editingMessage), Boolean(conversation?.persona?.archived), clientReady)}
           generating={generating}
           stopping={cancelling}
           maxInputChars={maxInputChars}

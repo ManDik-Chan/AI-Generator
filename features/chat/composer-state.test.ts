@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { getComposerDisabledReason, getComposerPlaceholder } from "@/features/chat/composer-state";
 
 describe("chat composer disabled reasons", () => {
+  it("keeps the controlled composer inert until client hydration completes", () => {
+    const reason = getComposerDisabledReason(true, false, false, false);
+    expect(reason).toBe("hydrating");
+    expect(getComposerPlaceholder(reason)).toBe("正在准备对话");
+  });
+
   it("shows the normal prompt when AI is configured and no edit is active", () => {
     expect(getComposerDisabledReason(true, false)).toBeUndefined();
     expect(getComposerPlaceholder(getComposerDisabledReason(true, false))).toContain("输入消息");
