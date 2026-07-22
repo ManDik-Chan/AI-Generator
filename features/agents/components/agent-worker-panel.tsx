@@ -7,7 +7,7 @@ import { Check, ChevronDown, ChevronUp, Copy, ExternalLink, Layers3, Square } fr
 import { Button } from "@/components/ui/button";
 import type { AgentRunView } from "@/features/agents/client-types";
 import { AgentWorkerCard } from "@/features/agents/components/agent-worker-card";
-import { getAgentRunProgressLabel } from "@/features/agents/presentation";
+import { getAgentRunNotice, getAgentRunProgressLabel } from "@/features/agents/presentation";
 
 function runElapsed(run: AgentRunView, now: number) {
   const end = run.completedAt ? new Date(run.completedAt).getTime() : now;
@@ -37,6 +37,7 @@ export function AgentWorkerPanel({ run, onCancelRun, onCancelWorker, onRequestDe
     return () => window.clearInterval(timer);
   }, [run.status]);
   const workers = failedOnly ? run.workers.filter((worker) => ["BLOCKED", "ERROR", "CANCELLED", "TIMEOUT"].includes(worker.status)) : run.workers;
+  const runNotice = getAgentRunNotice(run);
   const toggleCollapsed = async () => {
     if (!collapsed) {
       setCollapsed(true);
@@ -98,6 +99,7 @@ export function AgentWorkerPanel({ run, onCancelRun, onCancelWorker, onRequestDe
           {run.status === "PENDING" ? <Button className="min-h-11" disabled={stopping} onClick={() => void cancelRun()} size="sm" type="button" variant="outline"><Square className="size-3.5 fill-current" />{stopping ? "正在确认" : "全部停止"}</Button> : null}
         </div>
       </div>
+      {runNotice ? <p className={`mt-4 rounded-control p-3 text-sm ${runNotice.tone === "error" ? "bg-destructive-subtle/76 text-destructive-foreground" : runNotice.tone === "warning" ? "bg-warning-subtle text-warning-foreground" : "bg-surface-muted text-muted-foreground"}`} role={runNotice.tone === "error" ? "alert" : "status"}>{runNotice.message}</p> : null}
       {!collapsed ? (
         <div className="mt-5">
           {run.planOverview ? <p className="mb-4 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">{run.planOverview}{run.planFallback ? "（安全回退计划）" : ""}</p> : null}
@@ -108,7 +110,6 @@ export function AgentWorkerPanel({ run, onCancelRun, onCancelWorker, onRequestDe
           </div>
           {workers.length ? <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">{workers.map((worker) => <AgentWorkerCard forceOpen={expandAll} key={worker.key} now={now} onCancel={cancelWorker} worker={worker} />)}</div> : <p className="rounded-control border border-border/10 p-4 text-sm text-muted-foreground">当前筛选下没有 Worker。</p>}
           {actionError ? <p className="mt-4 text-sm text-destructive-foreground" role="alert">{actionError}</p> : null}
-          {run.errorCode ? <p className="mt-4 text-xs text-destructive-foreground">运行错误码：{run.errorCode}</p> : null}
         </div>
       ) : null}
     </section>

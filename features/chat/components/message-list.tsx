@@ -43,6 +43,7 @@ export function MessageList(props: MessageListProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const shouldFollowRef = useRef(true);
   const readingTopRef = useRef(0);
+  const viewportRestoreFrameRef = useRef<number | undefined>(undefined);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   const preserveScrollPosition = useCallback(() => {
@@ -59,6 +60,20 @@ export function MessageList(props: MessageListProps) {
     setShowScrollToBottom(!shouldFollowRef.current && container.scrollHeight > container.clientHeight);
   }, []);
 
+  const preserveScrollAcrossViewportChange = useCallback(() => {
+    if (viewportRestoreFrameRef.current !== undefined) {
+      window.cancelAnimationFrame(viewportRestoreFrameRef.current);
+    }
+
+    preserveScrollPosition();
+    viewportRestoreFrameRef.current = window.requestAnimationFrame(() => {
+      preserveScrollPosition();
+      viewportRestoreFrameRef.current = window.requestAnimationFrame(() => {
+        viewportRestoreFrameRef.current = undefined;
+      });
+    });
+  }, [preserveScrollPosition]);
+
   useLayoutEffect(() => {
     preserveScrollPosition();
   }, [messages, preserveScrollPosition]);
@@ -71,13 +86,17 @@ export function MessageList(props: MessageListProps) {
     const observer = new ResizeObserver(preserveScrollPosition);
     observer.observe(container);
     observer.observe(content);
-    shell?.addEventListener(CHAT_VIEWPORT_CHANGE_EVENT, preserveScrollPosition);
+    shell?.addEventListener(CHAT_VIEWPORT_CHANGE_EVENT, preserveScrollAcrossViewportChange);
     preserveScrollPosition();
     return () => {
       observer.disconnect();
-      shell?.removeEventListener(CHAT_VIEWPORT_CHANGE_EVENT, preserveScrollPosition);
+      shell?.removeEventListener(CHAT_VIEWPORT_CHANGE_EVENT, preserveScrollAcrossViewportChange);
+      if (viewportRestoreFrameRef.current !== undefined) {
+        window.cancelAnimationFrame(viewportRestoreFrameRef.current);
+        viewportRestoreFrameRef.current = undefined;
+      }
     };
-  }, [preserveScrollPosition]);
+  }, [preserveScrollAcrossViewportChange, preserveScrollPosition]);
 
   const lastUserId = [...messages].reverse().find((item) => item.role === "user")?.id;
   const agentByAssistantId = new Map(props.agentRuns.map((run) => [run.assistantMessageId, run]));
@@ -85,9 +104,10 @@ export function MessageList(props: MessageListProps) {
   return (
     <div className="relative min-h-0 flex-1">
     <div
-      className="premium-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain"
+      className="premium-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain [overflow-anchor:none]"
       data-chat-message-scroll
       onScroll={(event) => {
+        if (viewportRestoreFrameRef.current !== undefined) return;
         const element = event.currentTarget;
         const nearBottom = isChatScrollerNearBottom(element.scrollHeight, element.scrollTop, element.clientHeight);
         shouldFollowRef.current = nearBottom;

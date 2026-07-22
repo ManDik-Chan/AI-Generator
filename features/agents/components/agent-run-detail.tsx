@@ -92,7 +92,6 @@ export function AgentRunDetail({ initialRun }: AgentRunDetailProps) {
       <section className="premium-panel p-5 sm:p-6">
         <p className="premium-kicker">最终回答 · Assistant Message</p>
         <div className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-muted-foreground">{run.assistantMessage.content || "尚无最终回答。"}</div>
-        {run.errorCode ? <p className="mt-4 text-xs text-destructive-foreground">错误码：{run.errorCode}</p> : null}
       </section>
 
       <section className="premium-panel p-5 sm:p-6">

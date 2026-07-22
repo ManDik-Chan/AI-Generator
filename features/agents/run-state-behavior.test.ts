@@ -12,11 +12,11 @@ vi.mock("@/lib/database/prisma", () => ({
 import { cancelAgentRun, finishAgentRun, reconcileStaleAgentRun } from "@/features/agents/run-state";
 import { cancelAgentWorker, finishAgentWorker } from "@/features/agents/worker-state";
 
-function transactionClient(run: { status: "PENDING" | "CANCELLED"; startedAt?: Date }) {
+function transactionClient(run: { status: "PENDING" | "CANCELLED"; startedAt?: Date; planFallback?: boolean; errorCode?: string | null }) {
   const client = {
     $queryRaw: vi.fn().mockResolvedValue([{ id: "run-1" }]),
     agentRun: {
-      findFirst: vi.fn().mockResolvedValue({ status: run.status, startedAt: run.startedAt ?? new Date(0), assistantMessageId: "message-1" }),
+      findFirst: vi.fn().mockResolvedValue({ status: run.status, startedAt: run.startedAt ?? new Date(0), assistantMessageId: "message-1", planFallback: run.planFallback ?? false, errorCode: run.errorCode ?? null }),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       update: vi.fn().mockResolvedValue({}),
     },
@@ -115,6 +115,18 @@ describe("Agent cancellation and stale reconciliation behavior", () => {
     expect(client.agentEvent.findFirst).toHaveBeenCalledOnce();
     expect(client.agentEvent.createMany).toHaveBeenCalledOnce();
     expect(client.agentEvent.createMany.mock.calls[0][0].data).toHaveLength(7);
+  });
+
+  it("preserves a safe Planner fallback code when a run completes successfully", async () => {
+    const client = transactionClient({ status: "PENDING", planFallback: true, errorCode: "PLAN_INVALID" });
+    client.agentWorker.findMany.mockResolvedValue([]);
+    client.agentWorker.groupBy.mockResolvedValue([{ status: "COMPLETE", _count: { _all: 4 } }]);
+    mocks.client = client;
+
+    expect(await finishAgentRun({ userId: "user-1", runId: "run-1", status: "COMPLETE", content: "Final answer" })).toBe(true);
+    expect(client.agentRun.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: "COMPLETE", errorCode: "PLAN_INVALID" }),
+    }));
   });
 
   it("cancels only the requested Worker and records one event", async () => {

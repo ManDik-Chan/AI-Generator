@@ -1,4 +1,4 @@
-import type { AgentModeView, AgentRunStatusSnapshot, AgentRunView, AgentStreamEvent, AgentWorkerStatusView, AgentWorkerView } from "@/features/agents/client-types";
+import type { AgentModeView, AgentRunStatusSnapshot, AgentRunTerminalSnapshot, AgentRunView, AgentStreamEvent, AgentWorkerStatusView, AgentWorkerView } from "@/features/agents/client-types";
 
 function text(value: unknown, fallback = "") { return typeof value === "string" ? value : fallback; }
 function stringArray(value: unknown) { return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []; }
@@ -56,6 +56,17 @@ export function mergeAgentRunStatus(current: AgentRunView | undefined, snapshot:
     events: current?.events ?? [],
     usage: current?.usage,
     detailLevel: current?.detailLevel === "FULL" ? "FULL" : "STATUS",
+  };
+}
+
+export function mergeAgentRunTerminal(current: AgentRunView | undefined, snapshot: AgentRunTerminalSnapshot): AgentRunView {
+  return {
+    ...snapshot,
+    conversationTitle: current?.conversationTitle,
+    userProblem: current?.userProblem,
+    events: current?.events ?? [],
+    usage: current?.usage,
+    detailLevel: "FULL",
   };
 }
 

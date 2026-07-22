@@ -1,0 +1,151 @@
+name: Merge Gates
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: merge-gates-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: ${{ matrix.gate.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        gate:
+          - name: lint
+            command: pnpm lint
+          - name: typecheck
+            command: pnpm typecheck
+          - name: unit tests
+            command: pnpm test
+          - name: build
+            command: pnpm build
+    steps:
+      - name: Check out the exact PR commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 11.7.0
+          run_install: false
+      - name: Install Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run ${{ matrix.gate.name }}
+        run: ${{ matrix.gate.command }}
+
+  node24-compatibility:
+    name: Node 24 compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the exact PR commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 11.7.0
+          run_install: false
+      - name: Install Node.js 24
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run Node 24 compatibility gates
+        run: |
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm build
+
+  authenticated-playwright:
+    name: authenticated Playwright
+    needs: [quality, node24-compatibility]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the exact PR commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 11.7.0
+          run_install: false
+      - name: Install Node.js 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@6ffe784b57613e98e0c04651e5fde0cec28cb1c9
+        with:
+          version: 2.109.1
+      - name: Start isolated local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase start >"$RUNNER_TEMP/supabase-start.log" 2>&1
+          status_env="$(supabase status -o env)"
+          eval "$status_env"
+          for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do
+            echo "::add-mask::$value"
+          done
+          {
+            printf 'DATABASE_URL=%s\n' "$DB_URL"
+            printf 'DIRECT_URL=%s\n' "$DB_URL"
+            printf 'SUPABASE_TEST_URL=%s\n' "$API_URL"
+            printf 'SUPABASE_TEST_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$ANON_KEY"
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+            printf 'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000\n'
+            printf 'PLAYWRIGHT_AUTH_STATE=%s/playwright-auth.json\n' "$RUNNER_TEMP"
+            printf 'AI_BASE_URL=http://127.0.0.1:9/v1\n'
+            printf 'AI_API_KEY=isolated-test-provider-key\n'
+            printf 'AI_MODEL=isolated-test-model\n'
+          } >> "$GITHUB_ENV"
+      - name: Apply migrations and isolated-test RLS baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec prisma migrate deploy
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/rls.sql
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Build the application
+        run: pnpm build
+      - name: Run focused Agent E2E
+        run: pnpm exec playwright test tests/e2e/mobile/agent-mode.spec.ts
+      - name: Run complete authenticated E2E
+        run: pnpm test:e2e
+      - name: Upload synthetic failure screenshots and videos
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: authenticated-playwright-evidence-${{ github.run_attempt }}
+          path: |
+            test-results/**/test-failed-*.png
+            test-results/**/video.webm
+            test-results/**/error-context.md
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Stop isolated Supabase
+        if: always()
+        shell: bash
+        run: supabase stop --no-backup >"$RUNNER_TEMP/supabase-stop.log" 2>&1 || true

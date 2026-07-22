@@ -20,6 +20,27 @@ export const agentRunPhaseLabels: Record<AgentRunPhaseView, string> = {
   FINISHED: "已完成",
 };
 
+const plannerFallbackCodes = new Set(["PLAN_INVALID", "PLAN_UNSAFE", "PLAN_PROVIDER_ERROR"]);
+
+export const agentFallbackWarning = "Planner 计划未通过校验，已自动采用安全回退计划。";
+
+export function getAgentRunNotice(run: {
+  status: AgentRunStatusView;
+  planFallback: boolean;
+  errorCode: string | null;
+}) {
+  if (run.status !== "ERROR" && run.planFallback && run.errorCode && plannerFallbackCodes.has(run.errorCode)) {
+    return { tone: "warning" as const, message: agentFallbackWarning };
+  }
+  if (run.status === "ERROR" && run.errorCode) {
+    return { tone: "error" as const, message: `运行错误码：${run.errorCode}` };
+  }
+  if (run.status === "CANCELLED") {
+    return { tone: "neutral" as const, message: "Agent 运行已停止。" };
+  }
+  return null;
+}
+
 export function getAgentRunProgressLabel(run: {
   status: AgentRunStatusView;
   phase: AgentRunPhaseView;

@@ -1,18 +1,11 @@
 import { existsSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
+import { agentFixtureIds as ids, agentFixtureStartedAt as startedAt } from "../fixtures/agent";
 import { expectNoHorizontalOverflow } from "./helpers";
 
 const authState = process.env.PLAYWRIGHT_AUTH_STATE;
 const hasAuthState = Boolean(authState && existsSync(authState));
-const ids = {
-  run: "44444444-4444-4444-8444-444444444444",
-  conversation: "11111111-1111-4111-8111-111111111111",
-  userMessage: "22222222-2222-4222-8222-222222222222",
-  assistantMessage: "33333333-3333-4333-8333-333333333333",
-};
-const startedAt = "2026-07-18T08:00:00.000Z";
-
 type WorkerStatus = "QUEUED" | "BLOCKED" | "RUNNING" | "COMPLETE" | "ERROR" | "CANCELLED" | "TIMEOUT";
 
 function worker(key: string, position: number, status: WorkerStatus = "COMPLETE", dependsOnKeys: string[] = []) {
@@ -52,6 +45,7 @@ interface MockScenario {
   fallback?: boolean;
   detached?: boolean;
   conversationId?: string;
+  recoverAfterStatusPolls?: number;
 }
 
 async function installAgentMocks(page: Page, scenario: MockScenario) {
@@ -62,6 +56,9 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
   let runCancelled = false;
   let cancelledWorkerKey: string | undefined;
   let requestBody: Record<string, unknown> | undefined;
+  let recoveryComplete = false;
+  let statusPollCount = 0;
+  let terminalFetchCount = 0;
 
   const plannedWorkers = keys.map((key, index) => ({
     key,
@@ -82,7 +79,7 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
 
   const snapshot = () => {
     const workers = currentWorkers();
-    const terminal = !scenario.detached || runCancelled;
+    const terminal = !scenario.detached || runCancelled || recoveryComplete;
     return {
       id: ids.run,
       conversationId,
@@ -161,6 +158,12 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
   });
   await page.route(`**/api/agents/${ids.run}/status`, async (route) => {
+    statusPollCount += 1;
+    if (scenario.recoverAfterStatusPolls && statusPollCount >= scenario.recoverAfterStatusPolls) recoveryComplete = true;
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
+  });
+  await page.route(`**/api/agents/${ids.run}/terminal`, async (route) => {
+    terminalFetchCount += 1;
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(snapshot()) });
   });
   await page.route(`**/api/agents/${ids.run}/cancel`, async (route) => {
@@ -172,14 +175,34 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ status: "CANCELLED" }) });
   });
 
-  return { getRequestBody: () => requestBody };
+  return {
+    completeRun: () => { recoveryComplete = true; },
+    getRequestBody: () => requestBody,
+    getStatusPollCount: () => statusPollCount,
+    getTerminalFetchCount: () => terminalFetchCount,
+  };
 }
 
 async function submitAgent(page: Page, label: "Agent 标准" | "Agent 深度") {
   await page.goto("/chat");
+  await expect(page.getByLabel("消息内容")).toBeEditable();
   await page.getByRole("button", { name: label, exact: true }).click();
   await page.getByLabel("消息内容").fill("验证 Agent 编排");
   await page.getByRole("button", { name: "发送消息" }).click();
+}
+
+async function startNewConversationViaUi(page: Page) {
+  const openHistory = page.getByRole("button", { name: "打开对话历史" });
+  if (await openHistory.isVisible()) {
+    await openHistory.click();
+    await expect(page.getByRole("button", { name: "关闭历史" })).toBeVisible();
+  }
+
+  const newConversation = page.locator('a[href="/chat"]:visible').filter({ hasText: "新建对话" }).first();
+  await expect(newConversation).toBeVisible();
+  await newConversation.click();
+  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page.getByLabel("消息内容")).toBeEditable();
 }
 
 async function installCompletedChatMock(page: Page) {
@@ -259,6 +282,8 @@ test.describe("authenticated Agent Mode", () => {
 
     const panel = page.locator("[data-agent-worker-panel]");
     await expect(panel).toContainText("后台继续");
+    const expandDetails = panel.getByRole("button", { name: "展开", exact: true });
+    if (await expandDetails.count() > 0 && await expandDetails.isVisible()) await expandDetails.click();
     await panel.getByRole("button", { name: "展开全部" }).click();
     await panel.getByRole("button", { name: "停止该 Worker" }).first().click();
     await expect(panel.getByText("已停止", { exact: true }).first()).toBeVisible();
@@ -278,18 +303,51 @@ test.describe("authenticated Agent Mode", () => {
     await installAgentMocks(page, { mode: "STANDARD", detached: true, statuses: ["RUNNING", "QUEUED", "QUEUED", "QUEUED"] });
     await installCompletedChatMock(page);
     await submitAgent(page, "Agent 标准");
-    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
 
-    await page.goto("/chat");
-    await expect(page.getByLabel("消息内容")).toBeEditable();
-    await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+    await startNewConversationViaUi(page);
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toHaveCount(0);
     await page.getByLabel("消息内容").fill("Chat B can send independently");
-    await page.getByRole("button", { name: "发送消息" }).click();
+    const send = page.getByRole("button", { name: "发送消息" });
+    await expect(send).toBeEnabled();
+    await send.click();
     await expect(page.getByText("Chat B completed")).toBeVisible();
 
     await page.goBack({ waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("button", { name: "停止生成" })).toBeVisible();
-    await page.getByRole("button", { name: "停止生成" }).click();
+    await expect(page).toHaveURL(new RegExp(`/chat/${ids.conversation}$`));
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "停止生成", exact: true }).click();
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toHaveCount(0);
+  });
+
+  test("detached Standard Agent hydrates its final answer without refresh and stops polling", async ({ page }) => {
+    const mock = await installAgentMocks(page, { mode: "STANDARD", detached: true, recoverAfterStatusPolls: 2 });
+    await submitAgent(page, "Agent 标准");
+
+    const completedAt = Date.now();
+    await expect(page.getByText("这是 Leader 的最终回答。")).toBeVisible({ timeout: 10_000 });
+    expect(Date.now() - completedAt).toBeLessThan(5_000);
+    await expect(page.getByLabel("消息内容")).toBeEditable();
     await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
+    expect(mock.getTerminalFetchCount()).toBe(1);
+
+    const pollsAtCompletion = mock.getStatusPollCount();
+    await page.waitForTimeout(2_500);
+    expect(mock.getStatusPollCount()).toBe(pollsAtCompletion);
+  });
+
+  test("Conversation A completion never writes B and restores A through its scoped registry", async ({ page }) => {
+    const mock = await installAgentMocks(page, { mode: "STANDARD", detached: true });
+    await submitAgent(page, "Agent 标准");
+    await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
+
+    await startNewConversationViaUi(page);
+    mock.completeRun();
+    await expect(page.getByText("这是 Leader 的最终回答。")).toHaveCount(0);
+
+    await page.goBack({ waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(new RegExp(`/chat/${ids.conversation}$`));
+    await expect(page.getByText("这是 Leader 的最终回答。")).toBeVisible({ timeout: 10_000 });
+    expect(mock.getTerminalFetchCount()).toBe(1);
   });
 });

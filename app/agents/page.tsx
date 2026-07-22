@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import type { AgentModeView, AgentRunStatusView } from "@/features/agents/client-types";
-import { agentModeLabels, agentRunStatusLabels, getAgentRunProgressLabel } from "@/features/agents/presentation";
+import { agentModeLabels, agentRunStatusLabels, getAgentRunNotice, getAgentRunProgressLabel } from "@/features/agents/presentation";
 import { getAgentRunList } from "@/features/agents/queries";
 import { requireUser } from "@/lib/auth/session";
 
@@ -32,13 +32,13 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
       <Button type="submit" variant="outline">筛选</Button>
     </form>
 
-    {runs.length ? <div className="mt-5 grid gap-4 lg:grid-cols-2">{runs.map((run) => <article className="premium-panel-strong flex min-w-0 flex-col p-5" key={run.id}>
+    {runs.length ? <div className="mt-5 grid gap-4 lg:grid-cols-2">{runs.map((run) => { const runNotice = getAgentRunNotice(run); return <article className="premium-panel-strong flex min-w-0 flex-col p-5" key={run.id}>
       <div className="flex flex-wrap items-center gap-2"><span className="premium-chip">{agentModeLabels[run.mode]}</span><span className="premium-chip">{agentRunStatusLabels[run.status]}</span><span className="premium-chip">{getAgentRunProgressLabel(run)}</span></div>
       <h2 className="mt-4 line-clamp-3 break-words text-lg font-semibold leading-7">{run.userProblem}</h2>
       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs"><span className="premium-subpanel p-2.5"><strong className="block text-base">{run.plannedWorkerCount}</strong>Worker</span><span className="premium-subpanel p-2.5"><strong className="block text-base">{run.successfulWorkerCount}</strong>成功</span><span className="premium-subpanel p-2.5"><strong className="block text-base">{run.providerCallCount}</strong>调用</span></div>
       <p className="mt-4 text-xs text-muted-foreground">开始 {new Date(run.startedAt).toLocaleString("zh-CN")}{run.completedAt ? ` · 完成 ${new Date(run.completedAt).toLocaleString("zh-CN")}` : " · 正在后台运行"}</p>
-      {run.errorCode ? <p className="mt-2 text-xs text-destructive-foreground">{run.errorCode}</p> : null}
+      {runNotice ? <p className={`mt-2 text-xs ${runNotice.tone === "error" ? "text-destructive-foreground" : runNotice.tone === "warning" ? "text-warning-foreground" : "text-muted-foreground"}`}>{runNotice.message}</p> : null}
       <div className="mt-auto flex flex-wrap gap-2 pt-5"><Button asChild size="sm" variant="outline"><Link href={`/chat/${run.conversationId}`}><MessageSquareText className="size-3.5" />进入 Chat</Link></Button><Button asChild size="sm"><Link href={`/agents/${run.id}`} prefetch={false}>查看 Worker 与事件<ArrowRight className="size-3.5" /></Link></Button></div>
-    </article>)}</div> : <EmptyState action={<Button asChild><Link href="/chat">开始第一次 Agent 对话</Link></Button>} className="mt-5" description="调整筛选条件，或在 Chat Composer 中选择 Agent 标准/深度。" icon={<BrainCircuit className="size-6" />} title="暂无匹配的 Agent 运行" />}
+    </article>; })}</div> : <EmptyState action={<Button asChild><Link href="/chat">开始第一次 Agent 对话</Link></Button>} className="mt-5" description="调整筛选条件，或在 Chat Composer 中选择 Agent 标准/深度。" icon={<BrainCircuit className="size-6" />} title="暂无匹配的 Agent 运行" />}
   </AppShell>;
 }

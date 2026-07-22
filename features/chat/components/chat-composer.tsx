@@ -93,7 +93,7 @@ export function ChatComposer(props: ChatComposerProps) {
             ]).map((item) => <button
               aria-pressed={props.mode === item.value}
               className={`inline-flex min-h-11 items-center gap-1.5 rounded-control px-2.5 text-xs font-semibold transition-colors ${props.mode === item.value ? "bg-primary-subtle text-primary-subtle-foreground" : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"}`}
-              disabled={props.generating || Boolean(props.disabledReason === "editing") || (item.value !== "CHAT" && !props.agentConfigured)}
+              disabled={props.generating || Boolean(props.disabledReason === "editing" || props.disabledReason === "hydrating") || (item.value !== "CHAT" && !props.agentConfigured)}
               key={item.value}
               onClick={() => props.onModeChange(item.value)}
               title={item.value !== "CHAT" && !props.agentConfigured ? "Agent 服务尚未配置" : item.title}

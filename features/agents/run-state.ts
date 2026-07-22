@@ -46,7 +46,7 @@ export async function finishAgentRun(input: {
     if (!(await lockAgentEventStream(transaction, input.userId, input.runId))) return false;
     const run = await transaction.agentRun.findFirst({
       where: { id: input.runId, userId: input.userId, status: "PENDING" },
-      select: { assistantMessageId: true },
+      select: { assistantMessageId: true, planFallback: true, errorCode: true },
     });
     if (!run) return false;
 
@@ -93,7 +93,9 @@ export async function finishAgentRun(input: {
         completedAt,
         completedWorkerCount,
         successfulWorkerCount,
-        errorCode: input.status === "COMPLETE" ? null : input.errorCode?.slice(0, 100) ?? "AGENT_ERROR",
+        errorCode: input.status === "COMPLETE"
+          ? run.planFallback ? run.errorCode : null
+          : input.errorCode?.slice(0, 100) ?? "AGENT_ERROR",
       },
     });
     if (!finished.count) throw new Error("Agent run terminal state changed concurrently.");
