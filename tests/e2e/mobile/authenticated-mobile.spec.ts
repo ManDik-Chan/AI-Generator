@@ -105,10 +105,13 @@ test.describe("authenticated mobile shell", () => {
       fixture.style.height = "1800px";
       fixture.setAttribute("aria-hidden", "true");
       element.firstElementChild?.append(fixture);
-      element.scrollTop = 420;
-      element.dispatchEvent(new Event("scroll"));
     });
-    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect.poll(() => scroller.evaluate((element) => element.scrollHeight - element.clientHeight)).toBeGreaterThan(1000);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await scroller.evaluate((element) => { element.scrollTop = 420; });
+    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(420);
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    expect(await scroller.evaluate((element) => element.scrollTop)).toBe(420);
 
     await expectSinglePrimaryScroller(page);
     await expectScrollPositionPreserved(page, async () => {
