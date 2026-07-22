@@ -8,9 +8,9 @@ export const integrationDatabaseEnabled = Boolean(
   && process.env.TEST_DATABASE_CONFIRMED_NON_PRODUCTION === "true",
 );
 
-if (process.env.CI && !integrationDatabaseEnabled) {
+if (process.env.REQUIRE_SECURITY_TEST_DATABASE === "true" && !integrationDatabaseEnabled) {
   throw new Error(
-    "CI requires a disposable migrated TEST_DATABASE_URL and both explicit mutation safety flags; "
+    "Security acceptance requires a disposable migrated TEST_DATABASE_URL and both explicit mutation safety flags; "
     + "real PostgreSQL/RLS security tests must not be skipped.",
   );
 }

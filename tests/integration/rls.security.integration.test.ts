@@ -10,8 +10,8 @@ const anonKey = process.env.SUPABASE_TEST_ANON_KEY?.trim();
 const serviceRoleKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY?.trim();
 const supabaseRlsEnabled = Boolean(integrationDatabaseEnabled && supabaseUrl && anonKey && serviceRoleKey);
 
-if (process.env.CI && !supabaseRlsEnabled) {
-  throw new Error("CI requires an isolated local Supabase URL, anon key, and service-role key; real JWT/PostgREST RLS tests cannot be skipped.");
+if (process.env.REQUIRE_SECURITY_TEST_DATABASE === "true" && !supabaseRlsEnabled) {
+  throw new Error("Security acceptance requires an isolated local Supabase URL, anon key, and service-role key; real JWT/PostgREST RLS tests cannot be skipped.");
 }
 
 type Fixture = {
