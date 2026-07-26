@@ -168,9 +168,6 @@ describe.skipIf(!integrationDatabaseEnabled)(
         where: { id: a.message.id },
         data: { conversationId: b.conversation.id },
       })).rejects.toBeTruthy();
-      await expect(db.memory.delete({
-        where: { id: a.memory!.id },
-      })).rejects.toBeTruthy();
       await expect(db.persona.delete({
         where: { id: a.persona.id },
       })).rejects.toBeTruthy();
@@ -201,7 +198,7 @@ describe.skipIf(!integrationDatabaseEnabled)(
       });
     });
 
-    it("accepts only active COMPLETE USER source messages and makes the source immutable", async () => {
+    it("accepts only active COMPLETE USER sources and cancels pending proposals on chat supersede", async () => {
       const owner = await seedUser("source-validation");
       const otherConversation = await db.conversation.create({
         data: { userId: owner.userId, title: "other source conversation" },
@@ -268,6 +265,69 @@ describe.skipIf(!integrationDatabaseEnabled)(
         where: { id: owner.message.id },
         data: { status: "ERROR" },
       })).rejects.toBeTruthy();
+
+      const supersededAt = new Date();
+      await db.message.update({
+        where: { id: owner.message.id },
+        data: { supersededAt },
+      });
+      expect(await db.memoryProposal.findUnique({
+        where: { id: proposal.id },
+        select: {
+          status: true,
+          resolvedAt: true,
+          sourceMessageId: true,
+          sourceConversationId: true,
+        },
+      })).toEqual({
+        status: "CANCELLED",
+        resolvedAt: expect.any(Date),
+        sourceMessageId: owner.message.id,
+        sourceConversationId: owner.conversation.id,
+      });
+      expect(await acceptMemoryProposal(owner.userId, proposal.id)).toMatchObject({
+        success: false,
+        finalStatus: "CANCELLED",
+        code: "NOT_PENDING",
+      });
+      expect(await db.memory.count({
+        where: { userId: owner.userId, content: proposal.content },
+      })).toBe(0);
+
+      const replacementMessage = await db.message.create({
+        data: {
+          conversationId: owner.conversation.id,
+          role: "USER",
+          status: "COMPLETE",
+          content: "replacement source after edit",
+        },
+      });
+      const replacement = await db.memoryProposal.create({
+        data: proposalData(owner, "replacement-source", {
+          sourceMessageId: replacementMessage.id,
+        }),
+      });
+      const terminal = await db.memoryProposal.create({
+        data: proposalData(owner, "terminal-source", {
+          sourceMessageId: replacementMessage.id,
+        }),
+      });
+      await db.memoryProposal.update({
+        where: { id: terminal.id },
+        data: { status: "REJECTED", resolvedAt: new Date() },
+      });
+      await db.message.update({
+        where: { id: replacementMessage.id },
+        data: { supersededAt: new Date() },
+      });
+      expect(await db.memoryProposal.findMany({
+        where: { id: { in: [replacement.id, terminal.id] } },
+        orderBy: { id: "asc" },
+        select: { id: true, status: true, sourceMessageId: true },
+      })).toEqual([
+        { id: replacement.id, status: "CANCELLED", sourceMessageId: replacementMessage.id },
+        { id: terminal.id, status: "REJECTED", sourceMessageId: replacementMessage.id },
+      ].sort((left, right) => left.id.localeCompare(right.id)));
 
       await db.message.delete({ where: { id: owner.message.id } });
       expect(await db.memoryProposal.findUnique({
@@ -356,6 +416,37 @@ describe.skipIf(!integrationDatabaseEnabled)(
           resolvedMemoryId: owner.memory!.id,
         },
       })).rejects.toBeTruthy();
+      const acceptedAudit = await db.memoryProposal.create({
+        data: proposalData(owner, "accepted-audit"),
+      });
+      await db.memoryProposal.update({
+        where: { id: acceptedAudit.id },
+        data: {
+          status: "ACCEPTED",
+          resolvedAt: new Date(),
+          resolvedMemoryId: owner.memory!.id,
+        },
+      });
+      await expect(db.memoryProposal.update({
+        where: { id: acceptedAudit.id },
+        data: { resolvedMemoryId: null },
+      })).rejects.toBeTruthy();
+      const terminalUpdate = await db.memoryProposal.create({
+        data: proposalData(owner, "terminal-update-target", {
+          action: "UPDATE",
+          targetMemoryId: owner.memory!.id,
+          targetMemoryUpdatedAt: owner.memory!.updatedAt,
+          targetMemoryRevision: owner.memory!.revision,
+        }),
+      });
+      await db.memoryProposal.update({
+        where: { id: terminalUpdate.id },
+        data: { status: "REJECTED", resolvedAt: new Date() },
+      });
+      await expect(db.memoryProposal.update({
+        where: { id: terminalUpdate.id },
+        data: { targetMemoryId: null },
+      })).rejects.toBeTruthy();
       const earlyResolution = await db.memoryProposal.create({
         data: proposalData(owner, "early-resolution"),
       });
@@ -366,6 +457,189 @@ describe.skipIf(!integrationDatabaseEnabled)(
           resolvedAt: new Date(earlyResolution.createdAt.getTime() - 1),
         },
       })).rejects.toBeTruthy();
+    });
+
+    it("lets users delete formal memories while preserving non-restoring Proposal audit state", async () => {
+      const createOwner = await seedUser("delete-accepted-create", false);
+      const createProposal = await db.memoryProposal.create({
+        data: proposalData(createOwner, "delete-accepted-create", {
+          content: "accepted CREATE that will be deleted",
+          topicKey: "delete.accepted-create",
+        }),
+      });
+      const createAccepted = await acceptMemoryProposal(
+        createOwner.userId,
+        createProposal.id,
+      );
+      expect(createAccepted).toMatchObject({
+        success: true,
+        finalStatus: "ACCEPTED",
+      });
+      const createdMemoryId = createAccepted.memoryId!;
+      const vector = `[${Array.from(
+        { length: 512 },
+        (_, index) => index === 0 ? 1 : 0,
+      ).join(",")}]`;
+      await db.$executeRawUnsafe(
+        `INSERT INTO public.memory_embeddings
+           (memory_id, user_id, model, dimensions, content_hash, embedding)
+         VALUES ($1::uuid, $2::uuid, 'integration-delete', 512, 'fixture-hash', $3::extensions.vector)`,
+        createdMemoryId,
+        createOwner.userId,
+        vector,
+      );
+      await db.memory.delete({ where: { id: createdMemoryId } });
+      expect(await db.memoryEmbedding.count({
+        where: { memoryId: createdMemoryId },
+      })).toBe(0);
+      expect(await db.memoryProposal.findUnique({
+        where: { id: createProposal.id },
+        select: {
+          status: true,
+          targetMemoryId: true,
+          resolvedMemoryId: true,
+          resolvedAt: true,
+        },
+      })).toEqual({
+        status: "ACCEPTED",
+        targetMemoryId: null,
+        resolvedMemoryId: null,
+        resolvedAt: expect.any(Date),
+      });
+      expect(await acceptMemoryProposal(
+        createOwner.userId,
+        createProposal.id,
+      )).toMatchObject({
+        success: true,
+        stateChanged: false,
+        finalStatus: "ACCEPTED",
+        idempotent: true,
+      });
+      expect(await db.memory.count({
+        where: {
+          userId: createOwner.userId,
+          content: createProposal.content,
+        },
+      })).toBe(0);
+
+      const updateOwner = await seedUser("delete-accepted-update");
+      const updateProposal = await db.memoryProposal.create({
+        data: proposalData(updateOwner, "delete-accepted-update", {
+          action: "UPDATE",
+          targetMemoryId: updateOwner.memory!.id,
+          targetMemoryUpdatedAt: updateOwner.memory!.updatedAt,
+          targetMemoryRevision: updateOwner.memory!.revision,
+          content: "accepted UPDATE that will be deleted",
+          topicKey: updateOwner.memory!.topicKey,
+        }),
+      });
+      expect(await acceptMemoryProposal(
+        updateOwner.userId,
+        updateProposal.id,
+      )).toMatchObject({
+        success: true,
+        finalStatus: "ACCEPTED",
+        memoryId: updateOwner.memory!.id,
+      });
+      await db.memory.delete({ where: { id: updateOwner.memory!.id } });
+      expect(await db.memoryProposal.findUnique({
+        where: { id: updateProposal.id },
+        select: {
+          status: true,
+          targetMemoryId: true,
+          targetMemoryUpdatedAt: true,
+          targetMemoryRevision: true,
+          resolvedMemoryId: true,
+        },
+      })).toEqual({
+        status: "ACCEPTED",
+        targetMemoryId: null,
+        targetMemoryUpdatedAt: updateOwner.memory!.updatedAt,
+        targetMemoryRevision: updateOwner.memory!.revision,
+        resolvedMemoryId: null,
+      });
+      expect(await acceptMemoryProposal(
+        updateOwner.userId,
+        updateProposal.id,
+      )).toMatchObject({
+        success: true,
+        stateChanged: false,
+        finalStatus: "ACCEPTED",
+      });
+      expect(await db.memory.count({
+        where: { userId: updateOwner.userId },
+      })).toBe(0);
+
+      const terminalOwner = await seedUser("delete-terminal-updates");
+      const terminalStatuses = ["REJECTED", "EXPIRED", "CANCELLED"] as const;
+      const terminalProposals = await Promise.all(
+        terminalStatuses.map(async (status) => {
+          const proposal = await db.memoryProposal.create({
+            data: proposalData(terminalOwner, `delete-${status.toLowerCase()}`, {
+              action: "UPDATE",
+              targetMemoryId: terminalOwner.memory!.id,
+              targetMemoryUpdatedAt: terminalOwner.memory!.updatedAt,
+              targetMemoryRevision: terminalOwner.memory!.revision,
+              topicKey: terminalOwner.memory!.topicKey,
+            }),
+          });
+          return db.memoryProposal.update({
+            where: { id: proposal.id },
+            data: { status, resolvedAt: new Date() },
+          });
+        }),
+      );
+      const pendingTarget = await db.memoryProposal.create({
+        data: proposalData(terminalOwner, "delete-pending-update", {
+          action: "UPDATE",
+          targetMemoryId: terminalOwner.memory!.id,
+          targetMemoryUpdatedAt: terminalOwner.memory!.updatedAt,
+          targetMemoryRevision: terminalOwner.memory!.revision,
+          topicKey: terminalOwner.memory!.topicKey,
+        }),
+      });
+      await db.memory.delete({ where: { id: terminalOwner.memory!.id } });
+      const terminalRows = await db.memoryProposal.findMany({
+        where: {
+          id: {
+            in: [
+              ...terminalProposals.map((proposal) => proposal.id),
+              pendingTarget.id,
+            ],
+          },
+        },
+        select: {
+          id: true,
+          status: true,
+          targetMemoryId: true,
+          resolvedAt: true,
+        },
+      });
+      expect(terminalRows).toHaveLength(4);
+      expect(terminalRows.every(
+        (proposal) => proposal.targetMemoryId === null && proposal.resolvedAt != null,
+      )).toBe(true);
+      expect(
+        new Map(terminalRows.map((proposal) => [proposal.id, proposal.status])),
+      ).toEqual(new Map([
+        ...terminalProposals.map(
+          (proposal) => [proposal.id, proposal.status] as const,
+        ),
+        [pendingTarget.id, "CANCELLED" as const],
+      ]));
+      for (const proposal of terminalRows) {
+        expect(await acceptMemoryProposal(
+          terminalOwner.userId,
+          proposal.id,
+        )).toMatchObject({
+          success: false,
+          stateChanged: false,
+          finalStatus: proposal.status,
+        });
+      }
+      expect(await db.memory.count({
+        where: { userId: terminalOwner.userId },
+      })).toBe(0);
     });
 
     it("calls the production service for CREATE, UPDATE, edited accept, reject, expiry, and conflicts", async () => {

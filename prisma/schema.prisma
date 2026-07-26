@@ -553,8 +553,8 @@ model MemoryProposal {
 
   user               Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
   persona            Persona?      @relation(fields: [personaId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
-  targetMemory       Memory?       @relation("MemoryProposalTarget", fields: [targetMemoryId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
-  resolvedMemory     Memory?       @relation("MemoryProposalResolved", fields: [resolvedMemoryId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  targetMemory       Memory?       @relation("MemoryProposalTarget", fields: [targetMemoryId, userId], references: [id, userId], onDelete: NoAction, onUpdate: Restrict)
+  resolvedMemory     Memory?       @relation("MemoryProposalResolved", fields: [resolvedMemoryId, userId], references: [id, userId], onDelete: NoAction, onUpdate: Restrict)
   sourceConversation Conversation? @relation(fields: [sourceConversationId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
   sourceMessage      Message?      @relation("MemoryProposalSourceMessage", fields: [sourceMessageId, sourceConversationId], references: [id, conversationId], onDelete: NoAction, onUpdate: NoAction)
 

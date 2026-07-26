@@ -74,14 +74,6 @@ function deploy(schema) {
   safeRun(commandName, ["exec", "prisma", "migrate", "deploy", "--schema", schema], { label: "Prisma migration deploy" });
 }
 
-function resetToMigrationTree(schema) {
-  safeRun(
-    commandName,
-    ["exec", "prisma", "migrate", "reset", "--force", "--skip-seed", "--schema", schema],
-    { label: "Prisma disposable database reset" },
-  );
-}
-
 async function seedOldDatabase(db) {
   const userId = randomUUID();
   const adminId = randomUUID();
@@ -212,6 +204,7 @@ async function verifyCleanDatabase() {
         to_regprocedure('public.protect_profile_system_fields()')::text AS profile_guard,
         to_regprocedure('public.validate_memory_proposal()')::text AS proposal_guard,
         to_regprocedure('public.protect_memory_proposal_source_message()')::text AS source_guard,
+        to_regprocedure('public.prepare_memory_proposal_memory_delete()')::text AS memory_delete_guard,
         to_regprocedure('public.bump_memory_revision()')::text AS revision_guard,
         EXISTS (
           SELECT 1 FROM pg_trigger
@@ -231,6 +224,11 @@ async function verifyCleanDatabase() {
         EXISTS (
           SELECT 1 FROM pg_trigger
           WHERE tgrelid = 'public.memories'::regclass
+            AND tgname = 'memories_prepare_memory_proposal_delete' AND NOT tgisinternal
+        ) AS memory_delete_trigger,
+        EXISTS (
+          SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'public.memories'::regclass
             AND tgname = 'memories_bump_revision' AND NOT tgisinternal
         ) AS revision_trigger,
         EXISTS (
@@ -245,10 +243,12 @@ async function verifyCleanDatabase() {
       profile_guard: "protect_profile_system_fields()",
       proposal_guard: "validate_memory_proposal()",
       source_guard: "protect_memory_proposal_source_message()",
+      memory_delete_guard: "prepare_memory_proposal_memory_delete()",
       revision_guard: "bump_memory_revision()",
       profile_trigger: true,
       proposal_trigger: true,
       source_trigger: true,
+      memory_delete_trigger: true,
       revision_trigger: true,
       auth_trigger: true,
     });
@@ -317,7 +317,10 @@ async function verifyIncrementalUpgrade() {
   resetSupabase();
   const old = makeMigrationTree((name) => name < securityMigration);
   try {
-    resetToMigrationTree(old.schema);
+    // Supabase reset already leaves an empty disposable application schema.
+    // Deploying the historical tree exercises the production migration path
+    // without a second platform-specific destructive reset.
+    deploy(old.schema);
     const db = new PrismaClient({ datasourceUrl: databaseUrl });
     try {
       const fixture = await seedOldDatabase(db);
@@ -367,14 +370,19 @@ async function verifyProposalTransactionalRollback(mode) {
     resetSupabase();
     let fixture;
     if (mode === "incremental") {
-      resetToMigrationTree(base.schema);
+      deploy(base.schema);
     }
     const db = new PrismaClient({ datasourceUrl: databaseUrl });
     try {
       if (mode === "incremental") fixture = await seedOldDatabase(db);
-      const args = mode === "clean"
-        ? ["exec", "prisma", "migrate", "reset", "--force", "--skip-seed", "--schema", failing.schema]
-        : ["exec", "prisma", "migrate", "deploy", "--schema", failing.schema];
+      const args = [
+        "exec",
+        "prisma",
+        "migrate",
+        "deploy",
+        "--schema",
+        failing.schema,
+      ];
       const failed = spawnSync(commandName, args, {
         cwd: root,
         env: process.env,
@@ -390,6 +398,7 @@ async function verifyProposalTransactionalRollback(mode) {
           to_regtype('public."MemoryProposalAction"')::text AS proposal_action,
           to_regprocedure('public.validate_memory_proposal()')::text AS proposal_guard,
           to_regprocedure('public.protect_memory_proposal_source_message()')::text AS source_guard,
+          to_regprocedure('public.prepare_memory_proposal_memory_delete()')::text AS memory_delete_guard,
           to_regprocedure('public.bump_memory_revision()')::text AS revision_guard,
           to_regclass('public.usage_ledger')::text AS ledger,
           to_regprocedure('public.protect_profile_system_fields()')::text AS profile_guard,
@@ -397,7 +406,13 @@ async function verifyProposalTransactionalRollback(mode) {
             SELECT 1 FROM information_schema.columns
             WHERE table_schema = 'public' AND table_name = 'memories'
               AND column_name = 'revision'
-          ) AS memory_revision
+          ) AS memory_revision,
+          EXISTS (
+            SELECT 1 FROM pg_trigger
+            WHERE tgrelid = 'public.memories'::regclass
+              AND tgname = 'memories_prepare_memory_proposal_delete'
+              AND NOT tgisinternal
+          ) AS memory_delete_trigger
       `);
       assert.deepEqual(state[0], {
         proposals: null,
@@ -405,10 +420,12 @@ async function verifyProposalTransactionalRollback(mode) {
         proposal_action: null,
         proposal_guard: null,
         source_guard: null,
+        memory_delete_guard: null,
         revision_guard: null,
         ledger: "usage_ledger",
         profile_guard: "protect_profile_system_fields()",
         memory_revision: false,
+        memory_delete_trigger: false,
       });
       const leakedSecurity = await db.$queryRawUnsafe(`
         SELECT

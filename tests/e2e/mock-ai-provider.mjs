@@ -24,7 +24,7 @@ function textBetween(value, tag) {
 function operationFor(messages) {
   const input = String(messages.at(-1)?.content ?? "");
   const message = textBetween(input, "current_user_message");
-  const token = message.match(/E2E_(?:IMPLICIT|UPDATE|EDIT|REJECT|CONFLICT|EXPIRED|DISABLED|EXPLICIT):([a-z0-9_-]+)/i)?.[1];
+  const token = message.match(/E2E_(?:IMPLICIT|UPDATE|EDIT|REJECT|CONFLICT|EXPIRED|DISABLED|EXPLICIT|SOURCE|RESUBMIT):([a-z0-9_-]+)/i)?.[1];
   if (!token) return { operations: [] };
   const normalized = token.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
   const marker = message.match(/E2E_([A-Z]+):/i)?.[1]?.toUpperCase();
@@ -37,6 +37,8 @@ function operationFor(messages) {
     EXPIRED: `E2E expired candidate ${normalized}`,
     DISABLED: `E2E disabled candidate ${normalized}`,
     EXPLICIT: `E2E explicit fact ${normalized}`,
+    SOURCE: `E2E source before edit ${normalized}`,
+    RESUBMIT: `E2E source after edit ${normalized}`,
   };
   const content = contents[marker] ?? `E2E implicit fact ${normalized}`;
   const topicKey = `e2e.chat.${normalized}.${marker?.toLowerCase() ?? "implicit"}`;

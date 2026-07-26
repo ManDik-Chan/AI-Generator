@@ -41,6 +41,25 @@ async function sendChat(page: import("@playwright/test").Page, message: string) 
   await expect(page.getByRole("button", { name: "发送消息" })).toBeVisible();
 }
 
+async function editLastChatMessage(
+  page: Page,
+  originalMessage: string,
+  replacementMessage: string,
+) {
+  const message = page.locator("article").filter({ hasText: originalMessage }).last();
+  await message.hover();
+  await message.getByRole("button", { name: "编辑最后一条消息" }).click();
+  await page.getByLabel("编辑消息").fill(replacementMessage);
+  await page.getByRole("button", { name: "提交编辑" }).click();
+  await expect(page.getByText("已收到这条测试消息。").last()).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0, {
+    timeout: 30_000,
+  });
+  await expect(page.getByRole("button", { name: "发送消息" })).toBeVisible();
+}
+
 async function waitForProposalRefresh(page: Page) {
   await page.waitForLoadState("networkidle");
 }
@@ -62,7 +81,17 @@ test.describe("trusted memory proposal workflow", () => {
     await createCard.getByRole("button", { name: "接受", exact: true }).click();
     await expect(createCard).toHaveCount(0);
     await waitForProposalRefresh(page);
-    await expect(page.getByText(`${fixture} accept CREATE`, { exact: true })).toBeVisible();
+    const createdMemoryCard = page.locator("article").filter({
+      hasText: `${fixture} accept CREATE`,
+    });
+    await expect(createdMemoryCard.getByText(
+      `${fixture} accept CREATE`,
+      { exact: true },
+    )).toBeVisible();
+    await createdMemoryCard.getByRole("button", { name: "删除", exact: true }).click();
+    const deleteDialog = page.getByRole("dialog", { name: "删除这条记忆？" });
+    await deleteDialog.getByRole("button", { name: "删除记忆" }).click();
+    await expect(createdMemoryCard).toHaveCount(0);
 
     const updateCard = page.locator("[data-memory-proposal-id]").filter({
       hasText: `${fixture} accepted UPDATE`,
@@ -103,6 +132,77 @@ test.describe("trusted memory proposal workflow", () => {
       { exact: true },
     )).toBeVisible();
     await expectNoHorizontalOverflow(page);
+  });
+
+  test("edits and resubmits a Proposal source without leaving the old Proposal acceptable", async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const db = new PrismaClient();
+    const token = testInfo.project.name.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+    const originalMessage = `E2E_SOURCE:${token} 是编辑前的隐式稳定事实。`;
+    const replacementMessage = `E2E_RESUBMIT:${token} 是编辑后的隐式稳定事实。`;
+    const oldContent = `E2E source before edit ${token}`;
+    const newContent = `E2E source after edit ${token}`;
+    try {
+      const profile = await db.profile.findFirst({
+        where: { email: { startsWith: "playwright-" } },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      });
+      expect(profile).not.toBeNull();
+      const userId = profile!.id;
+
+      await sendChat(page, originalMessage);
+      await expect.poll(
+        () => db.memoryProposal.findFirst({
+          where: { userId, content: oldContent, status: "PENDING" },
+          select: { id: true, sourceMessageId: true },
+        }),
+        { timeout: 30_000 },
+      ).not.toBeNull();
+      const oldProposal = await db.memoryProposal.findFirstOrThrow({
+        where: { userId, content: oldContent, status: "PENDING" },
+        select: { id: true, sourceMessageId: true },
+      });
+
+      await editLastChatMessage(page, originalMessage, replacementMessage);
+      await expect.poll(
+        () => db.memoryProposal.findUnique({
+          where: { id: oldProposal.id },
+          select: { status: true, resolvedAt: true },
+        }),
+        { timeout: 30_000 },
+      ).toEqual({
+        status: "CANCELLED",
+        resolvedAt: expect.any(Date),
+      });
+      await expect.poll(
+        () => db.memoryProposal.findFirst({
+          where: { userId, content: newContent, status: "PENDING" },
+          select: { id: true, sourceMessageId: true },
+        }),
+        { timeout: 30_000 },
+      ).not.toBeNull();
+      const newProposal = await db.memoryProposal.findFirstOrThrow({
+        where: { userId, content: newContent, status: "PENDING" },
+        select: { id: true, sourceMessageId: true },
+      });
+      expect(newProposal.sourceMessageId).not.toBe(oldProposal.sourceMessageId);
+      expect(await db.memory.count({
+        where: { userId, content: { in: [oldContent, newContent] } },
+      })).toBe(0);
+
+      await page.goto("/memories");
+      await expect(page.locator(
+        `[data-memory-proposal-id="${oldProposal.id}"]`,
+      )).toHaveCount(0);
+      await expect(page.locator(
+        `[data-memory-proposal-id="${newProposal.id}"]`,
+      )).toBeVisible();
+    } finally {
+      await db.$disconnect();
+    }
   });
 
   test("runs deterministic Chat → extraction → Proposal → resolution against real data", async ({

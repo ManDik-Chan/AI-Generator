@@ -113,10 +113,13 @@ CREATE TABLE "public"."memory_proposals" (
         AND "target_memory_revision" IS NULL)
       OR
       ("action" = 'UPDATE'
-        AND "target_memory_id" IS NOT NULL
         AND "target_memory_updated_at" IS NOT NULL
         AND "target_memory_revision" IS NOT NULL
-        AND "target_memory_revision" > 0)
+        AND "target_memory_revision" > 0
+        AND (
+          "target_memory_id" IS NOT NULL
+          OR "status" <> 'PENDING'
+        ))
     ),
   CONSTRAINT "memory_proposals_expiry_check"
     CHECK (
@@ -131,8 +134,7 @@ CREATE TABLE "public"."memory_proposals" (
         AND "resolved_memory_id" IS NULL)
       OR
       ("status" = 'ACCEPTED'
-        AND "resolved_at" IS NOT NULL
-        AND "resolved_memory_id" IS NOT NULL)
+        AND "resolved_at" IS NOT NULL)
       OR
       ("status" IN ('REJECTED', 'EXPIRED', 'CANCELLED')
         AND "resolved_at" IS NOT NULL
@@ -150,11 +152,11 @@ CREATE TABLE "public"."memory_proposals" (
   CONSTRAINT "memory_proposals_target_owner_fkey"
     FOREIGN KEY ("target_memory_id", "user_id")
     REFERENCES "public"."memories"("id", "user_id")
-    ON DELETE RESTRICT ON UPDATE RESTRICT,
+    ON DELETE SET NULL ("target_memory_id") ON UPDATE RESTRICT,
   CONSTRAINT "memory_proposals_resolved_owner_fkey"
     FOREIGN KEY ("resolved_memory_id", "user_id")
     REFERENCES "public"."memories"("id", "user_id")
-    ON DELETE RESTRICT ON UPDATE RESTRICT,
+    ON DELETE SET NULL ("resolved_memory_id") ON UPDATE RESTRICT,
   CONSTRAINT "memory_proposals_source_conversation_owner_fkey"
     FOREIGN KEY ("source_conversation_id", "user_id")
     REFERENCES "public"."conversations"("id", "user_id")
@@ -197,6 +199,9 @@ DECLARE
   target_updated_at TIMESTAMPTZ;
   target_revision INTEGER;
   source_fk_cleanup BOOLEAN := false;
+  target_fk_cleanup BOOLEAN := false;
+  resolution_fk_cleanup BOOLEAN := false;
+  validate_active_source BOOLEAN := true;
 BEGIN
   IF TG_OP = 'INSERT' THEN
     IF NEW."status" <> 'PENDING' THEN
@@ -208,6 +213,22 @@ BEGIN
         USING ERRCODE = '23514';
     END IF;
   ELSE
+    validate_active_source := OLD."status" = 'PENDING' OR NEW."status" = 'PENDING';
+    target_fk_cleanup := (
+      NEW."target_memory_id" IS DISTINCT FROM OLD."target_memory_id"
+      AND OLD."target_memory_id" IS NOT NULL
+      AND NEW."target_memory_id" IS NULL
+      AND pg_trigger_depth() > 1
+    );
+    resolution_fk_cleanup := (
+      NEW."resolved_memory_id" IS DISTINCT FROM OLD."resolved_memory_id"
+      AND OLD."status" = 'ACCEPTED'
+      AND NEW."status" = 'ACCEPTED'
+      AND OLD."resolved_memory_id" IS NOT NULL
+      AND NEW."resolved_memory_id" IS NULL
+      AND pg_trigger_depth() > 1
+    );
+
     IF NEW."status" IS DISTINCT FROM OLD."status"
        AND NOT (
          OLD."status" = 'PENDING'
@@ -230,12 +251,37 @@ BEGIN
        OR NEW."target_memory_id" IS DISTINCT FROM OLD."target_memory_id"
        OR NEW."target_memory_updated_at" IS DISTINCT FROM OLD."target_memory_updated_at"
        OR NEW."target_memory_revision" IS DISTINCT FROM OLD."target_memory_revision" THEN
-      RAISE EXCEPTION 'memory proposal target snapshot is immutable'
+      IF NOT target_fk_cleanup
+         OR NEW."target_memory_updated_at" IS DISTINCT FROM OLD."target_memory_updated_at"
+         OR NEW."target_memory_revision" IS DISTINCT FROM OLD."target_memory_revision"
+         OR NEW."action" IS DISTINCT FROM OLD."action" THEN
+        RAISE EXCEPTION 'memory proposal target snapshot is immutable'
+          USING ERRCODE = '23514';
+      END IF;
+    END IF;
+
+    IF NEW."resolved_memory_id" IS DISTINCT FROM OLD."resolved_memory_id"
+       AND NOT (
+         OLD."status" = 'PENDING'
+         AND NEW."status" = 'ACCEPTED'
+         AND NEW."resolved_memory_id" IS NOT NULL
+       )
+       AND NOT resolution_fk_cleanup THEN
+      RAISE EXCEPTION 'memory proposal resolution is immutable'
+        USING ERRCODE = '23514';
+    END IF;
+
+    IF OLD."status" = 'PENDING'
+       AND NEW."status" = 'ACCEPTED'
+       AND NEW."resolved_memory_id" IS NULL THEN
+      RAISE EXCEPTION 'accepted memory proposal requires a resolved memory'
         USING ERRCODE = '23514';
     END IF;
   END IF;
 
-  IF NEW."source_message_id" IS NOT NULL AND NOT source_fk_cleanup THEN
+  IF NEW."source_message_id" IS NOT NULL
+     AND NOT source_fk_cleanup
+     AND validate_active_source THEN
     SELECT m."role", m."status", m."superseded_at"
     INTO source_role, source_status, source_superseded_at
     FROM "public"."messages" m
@@ -283,12 +329,27 @@ LANGUAGE plpgsql
 SET search_path = public
 AS $$
 BEGIN
+  IF NEW."conversation_id" IS NOT DISTINCT FROM OLD."conversation_id"
+     AND NEW."role" IS NOT DISTINCT FROM OLD."role"
+     AND NEW."status" IS NOT DISTINCT FROM OLD."status"
+     AND OLD."superseded_at" IS NULL
+     AND NEW."superseded_at" IS NOT NULL THEN
+    UPDATE "public"."memory_proposals"
+    SET
+      "status" = 'CANCELLED',
+      "resolved_at" = CURRENT_TIMESTAMP,
+      "updated_at" = CURRENT_TIMESTAMP
+    WHERE "source_message_id" = OLD."id"
+      AND "status" = 'PENDING';
+    RETURN NEW;
+  END IF;
+
   IF (
-    NEW."conversation_id" IS DISTINCT FROM OLD."conversation_id"
-    OR NEW."role" IS DISTINCT FROM OLD."role"
-    OR NEW."status" IS DISTINCT FROM OLD."status"
-    OR NEW."superseded_at" IS DISTINCT FROM OLD."superseded_at"
-  ) AND EXISTS (
+      NEW."conversation_id" IS DISTINCT FROM OLD."conversation_id"
+      OR NEW."role" IS DISTINCT FROM OLD."role"
+      OR NEW."status" IS DISTINCT FROM OLD."status"
+      OR NEW."superseded_at" IS DISTINCT FROM OLD."superseded_at"
+    ) AND EXISTS (
     SELECT 1
     FROM "public"."memory_proposals" p
     WHERE p."source_message_id" = OLD."id"
@@ -300,10 +361,31 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION "public"."prepare_memory_proposal_memory_delete"()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE "public"."memory_proposals"
+  SET
+    "status" = 'CANCELLED',
+    "resolved_at" = CURRENT_TIMESTAMP,
+    "updated_at" = CURRENT_TIMESTAMP
+  WHERE "target_memory_id" = OLD."id"
+    AND "status" = 'PENDING';
+  RETURN OLD;
+END;
+$$;
+
 CREATE TRIGGER "messages_protect_memory_proposal_source"
   BEFORE UPDATE OF "conversation_id", "role", "status", "superseded_at"
   ON "public"."messages"
   FOR EACH ROW EXECUTE FUNCTION "public"."protect_memory_proposal_source_message"();
+
+CREATE TRIGGER "memories_prepare_memory_proposal_delete"
+  BEFORE DELETE ON "public"."memories"
+  FOR EACH ROW EXECUTE FUNCTION "public"."prepare_memory_proposal_memory_delete"();
 
 ALTER TABLE "public"."memory_proposals" ENABLE ROW LEVEL SECURITY;
 
@@ -317,6 +399,8 @@ GRANT SELECT ON TABLE "public"."memory_proposals" TO authenticated;
 REVOKE EXECUTE ON FUNCTION "public"."validate_memory_proposal"()
 FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION "public"."protect_memory_proposal_source_message"()
+FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION "public"."prepare_memory_proposal_memory_delete"()
 FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION "public"."bump_memory_revision"()
 FROM PUBLIC, anon, authenticated;

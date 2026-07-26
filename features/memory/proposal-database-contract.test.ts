@@ -22,7 +22,7 @@ describe("trusted memory proposal database contract", () => {
     expect(migration).toContain('"memory_proposals_expiry_check"');
   });
 
-  it("cascades with Profile, nulls deleted sources, and restricts target deletion", () => {
+  it("cascades with Profile and safely nulls deleted sources and memories", () => {
     expect(migration).toMatch(
       /"memory_proposals_user_id_fkey"[\s\S]+ON DELETE CASCADE/,
     );
@@ -33,8 +33,13 @@ describe("trusted memory proposal database contract", () => {
       /"memory_proposals_source_message_conversation_fkey"[\s\S]+ON DELETE SET NULL/,
     );
     expect(migration).toMatch(
-      /"memory_proposals_target_owner_fkey"[\s\S]+ON DELETE RESTRICT/,
+      /"memory_proposals_target_owner_fkey"[\s\S]+ON DELETE SET NULL \("target_memory_id"\)/,
     );
+    expect(migration).toMatch(
+      /"memory_proposals_resolved_owner_fkey"[\s\S]+ON DELETE SET NULL \("resolved_memory_id"\)/,
+    );
+    expect(migration).toContain('"prepare_memory_proposal_memory_delete"');
+    expect(migration).toContain('"memories_prepare_memory_proposal_delete"');
   });
 
   it("enforces same-owner Persona, source, target, and resolution relationships", () => {
@@ -45,6 +50,7 @@ describe("trusted memory proposal database contract", () => {
     expect(migration).toContain('"memory_proposals_source_message_conversation_fkey"');
     expect(migration).toContain("memory proposal source is immutable");
     expect(migration).toContain("active complete USER message");
+    expect(migration).toContain('"status" = \'CANCELLED\'');
   });
 
   it("enforces a strict 30-day TTL and one-way terminal state machine", () => {
@@ -53,6 +59,8 @@ describe("trusted memory proposal database contract", () => {
     expect(migration).toMatch(/"status" = 'ACCEPTED'[\s\S]+resolved_memory_id/);
     expect(migration).toContain('"memory_proposals_resolved_at_check"');
     expect(migration).toContain("target snapshot is immutable");
+    expect(migration).toContain("accepted memory proposal requires a resolved memory");
+    expect(migration).toContain("memory proposal resolution is immutable");
     expect(migration).toContain('"bump_memory_revision"');
     expect(migration).toContain("memory revision is database controlled");
   });

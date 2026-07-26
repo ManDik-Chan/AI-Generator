@@ -221,4 +221,5 @@ revoke execute on function public.protect_profile_system_fields() from public, a
 revoke execute on function public.handle_new_auth_user() from public, anon, authenticated;
 revoke execute on function public.validate_memory_proposal() from public, anon, authenticated;
 revoke execute on function public.protect_memory_proposal_source_message() from public, anon, authenticated;
+revoke execute on function public.prepare_memory_proposal_memory_delete() from public, anon, authenticated;
 revoke execute on function public.bump_memory_revision() from public, anon, authenticated;

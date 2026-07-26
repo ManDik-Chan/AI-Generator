@@ -14,6 +14,10 @@ const mockProvider = readFileSync(
   "tests/e2e/mock-ai-provider.mjs",
   "utf8",
 );
+const migrationVerifier = readFileSync(
+  "scripts/verify-security-migrations.mjs",
+  "utf8",
+);
 
 describe("Proposal Security Acceptance wiring", () => {
   it("runs the real Proposal production-transaction suite fail-closed", () => {
@@ -27,6 +31,9 @@ describe("Proposal Security Acceptance wiring", () => {
     expect(workflow).toContain("pnpm exec prisma migrate deploy");
     expect(workflow).toContain("node scripts/verify-security-migrations.mjs clean");
     expect(workflow).toContain("node scripts/verify-security-migrations.mjs incremental");
+    expect(migrationVerifier).toContain("deploy(old.schema)");
+    expect(migrationVerifier).toContain("deploy(base.schema)");
+    expect(migrationVerifier).not.toContain('"migrate", "reset"');
   });
 
   it("uses a deterministic provider through the real chat route", () => {
@@ -45,6 +52,9 @@ describe("Proposal Security Acceptance wiring", () => {
     expect(e2e).toContain("E2E_EXPIRED");
     expect(e2e).toContain("E2E_DISABLED");
     expect(e2e).toContain("E2E_EXPLICIT");
+    expect(e2e).toContain("E2E_SOURCE");
+    expect(e2e).toContain("E2E_RESUBMIT");
+    expect(e2e).toContain("CANCELLED");
   });
 
   it("keeps the requested responsive matrix executable", () => {

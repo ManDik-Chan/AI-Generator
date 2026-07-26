@@ -2,6 +2,7 @@
 
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/database/prisma";
 import { requireUser } from "@/lib/auth/session";
@@ -36,6 +37,21 @@ const failure = (
   fieldErrors?: Record<string, string[]>,
   code?: string,
 ): MemoryActionResult => ({ success: false, message, fieldErrors, code });
+
+function isMemoryDeleteConflict(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError
+    && (error.code === "P2003" || error.code === "P2014");
+}
+
+function safeDeleteErrorCode(error: unknown) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code.slice(0, 100);
+  }
+  if (error instanceof Error && /^[A-Za-z][A-Za-z0-9_.-]{0,99}$/.test(error.name)) {
+    return error.name;
+  }
+  return "UNKNOWN";
+}
 
 function trustedFailure(error: unknown): MemoryActionResult {
   if (!(error instanceof TrustedMemoryWriteError)) {
@@ -255,12 +271,16 @@ export async function deleteMemoryAction(id: string): Promise<MemoryActionResult
     }
     revalidatePath("/memories");
     return { success: true, message: "记忆已删除。" };
-  } catch {
-    return failure(
-      "该记忆仍被待确认或已接受的建议引用，暂时不能删除。",
-      undefined,
-      "CONFLICT",
-    );
+  } catch (error) {
+    if (isMemoryDeleteConflict(error)) {
+      return failure("该记忆仍被其他受保护的数据引用，无法删除。", undefined, "CONFLICT");
+    }
+    console.error("memory_delete_failed", {
+      userId: user.id,
+      memoryId: id,
+      errorCode: safeDeleteErrorCode(error),
+    });
+    return failure("记忆删除失败，请稍后重试。", undefined, "FAILED");
   }
 }
 

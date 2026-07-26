@@ -31,11 +31,11 @@
 
 `(userId, dedupeKey)` 唯一。重放指纹包含来源 USER Message、动作、作用域/Persona、目标 Memory 版本或 topic、NFKC/大小写/空白/标点规范化 content 和稳定排序 keywords，因此相同后台任务不会重复写入，不同事实仍可来自同一消息。`suppressionKey` 不含 sourceMessageId；用户拒绝后 30 天内，后续消息的等价建议也被抑制。同批模型输出会在 INSERT 前再次去重。
 
-Profile 删除 Cascade Proposal。来源 Conversation/Message 删除时只由复合 FK 的受控 `SET NULL` 清除来源。Persona、目标 Memory 与最终 resolved Memory 采用所有权复合 FK 和 Restrict，避免 Proposal 被静默改写或失去 ACCEPTED resolution；删除动作会收到明确冲突。
+Profile 删除 Cascade Proposal。来源 Conversation/Message 删除时只由复合 FK 的受控 `SET NULL` 清除来源。Persona 继续使用所有权复合 FK 和 Restrict。目标与最终 resolved Memory 使用只清空 Memory ID 的复合所有权 FK：删除目标会先把仍为 PENDING 的 UPDATE Proposal 原子转为 CANCELLED，再将 `targetMemoryId` 置空；删除已接受的正式 Memory 会将 `resolvedMemoryId` 置空，但 Proposal 保持 ACCEPTED 审计状态。
 
-数据库复合 FK 永久保证 Proposal 与 Persona、Conversation、Message、目标 Memory、最终 Memory 属于同一用户。`validate_memory_proposal` 额外要求 INSERT 来源是同一 Conversation 中 role=USER、status=COMPLETE、未 superseded 的 Message，目标 scope/Persona 和 revision 快照一致，并禁止普通 UPDATE 替换来源或目标快照。`bump_memory_revision` 在正式 Memory 的语义字段变化时由数据库单调递增版本，并拒绝单独伪造 revision。父记录 owner 或 Message 关键归属/有效性在存在 Proposal 时不能改到非法状态。
+数据库复合 FK 永久保证 Proposal 与 Persona、Conversation、Message、目标 Memory、最终 Memory 属于同一用户。`validate_memory_proposal` 额外要求 INSERT 来源是同一 Conversation 中 role=USER、status=COMPLETE、未 superseded 的 Message，目标 scope/Persona 和 revision 快照一致，并禁止普通 UPDATE 替换来源或目标快照。聊天正常编辑把来源 USER Message 写为 superseded 时，同一数据库事务自动取消其 PENDING Proposal；已处理 Proposal 保留来源审计。普通 UPDATE 仍不能替换或伪造来源。`bump_memory_revision` 在正式 Memory 的语义字段变化时由数据库单调递增版本，并拒绝单独伪造 revision。
 
-数据库只允许新 Proposal 为 PENDING，随后单向进入 ACCEPTED、REJECTED、EXPIRED 或 CANCELLED。ACCEPTED 必须有同 owner `resolvedMemoryId`；其他终态禁止有 resolution Memory。`resolvedAt` 不得早于 `createdAt`，`expiresAt` 必须等于 `createdAt + 30 days`（仅允许数据库时间精度误差）。
+数据库只允许新 Proposal 为 PENDING，随后单向进入 ACCEPTED、REJECTED、EXPIRED 或 CANCELLED。转入 ACCEPTED 时必须写入同 owner `resolvedMemoryId`；正式 Memory 后续被用户删除时，该 ID 可由 FK 置空而 ACCEPTED 审计状态保持不变。其他终态禁止有 resolution Memory。`resolvedAt` 不得早于 `createdAt`，`expiresAt` 必须等于 `createdAt + 30 days`（仅允许数据库时间精度误差）。
 
 ## 自动提取
 
@@ -67,7 +67,7 @@ Server Actions：
 
 > 原记忆已发生变化，请重新检查后再确认。
 
-Proposal 保持 PENDING。目标删除由数据库 Restrict 阻止，绝不降级为 CREATE。
+Proposal 保持 PENDING。若目标被用户删除，数据库会原子转为 CANCELLED 并清空目标 ID，绝不降级为 CREATE，也不能重新接受或恢复 Memory。
 
 ### 编辑后接受
 
