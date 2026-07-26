@@ -38,6 +38,7 @@ export function MobileHeader({
           aria-label="打开账号"
           className="grid size-11 place-items-center rounded-control border border-border/12 bg-surface/75"
           href="/account"
+          prefetch={false}
         >
           <Avatar
             className="size-7 rounded-[.55rem] border-0"

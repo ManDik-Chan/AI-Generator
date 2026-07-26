@@ -67,7 +67,7 @@ export function WorkspaceTopbar({ viewer }: { viewer?: ShellViewer }) {
           <input autoFocus className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground" onChange={(event) => setQuery(event.target.value)} placeholder="输入页面名称…" value={query} />
         </label>
         <div className="mt-3 space-y-1">
-          {commands.map((item) => <Link className="flex min-h-12 items-center gap-3 rounded-control px-3 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground" href={item.href} key={item.href} onClick={() => setOpen(false)}><span className="premium-icon-tile size-9"><item.icon className="size-4" /></span><span className="min-w-0 flex-1 truncate">{item.label}</span><Command className="size-3.5 opacity-35" /></Link>)}
+          {commands.map((item) => <Link className="flex min-h-12 items-center gap-3 rounded-control px-3 text-sm text-muted-foreground hover:bg-surface-muted hover:text-foreground" href={item.href} key={item.href} onClick={() => setOpen(false)} prefetch={false}><span className="premium-icon-tile size-9"><item.icon className="size-4" /></span><span className="min-w-0 flex-1 truncate">{item.label}</span><Command className="size-3.5 opacity-35" /></Link>)}
           {!commands.length ? <p className="px-3 py-8 text-center text-sm text-muted-foreground">没有匹配的真实功能。</p> : null}
         </div>
       </Dialog>

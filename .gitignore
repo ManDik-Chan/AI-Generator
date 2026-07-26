@@ -27,6 +27,8 @@ secrets.toml
 /playwright-report
 /test-results
 /.playwright
+/playwright-auth*.json
+/supabase/.branches
 .DS_Store
 Thumbs.db
 

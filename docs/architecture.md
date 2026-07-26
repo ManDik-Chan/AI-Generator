@@ -30,6 +30,14 @@ Phase 5A3-1 的基础召回是确定性算法：内容、关键词、topic 可�
 
 Embedding 配置、Provider、响应维度或 pgvector 查询失败只记录脱敏阶段诊断，并返回确定性结果；不会重新调用文本模型、增加聊天计数、刷新页面或把向量/相似度交给浏览器。此阶段只向量化长期 Memory，不处理 Message、文件、网页或外部知识库，因此不是文件 RAG。Phase 6 未开始。
 
+## Phase 5B1 可信记忆提案边界
+
+隐式自动提取不再直接创建或更新 `Memory`，而是写入独立 `MemoryProposal`。Proposal 是模型输出形成的待审建议；只有正式 `Memory` 可以进入确定性选择、Semantic Retrieval、Hybrid RRF、Chat/Persona Prompt、Agent compact context、使用统计和 `MemoryEmbedding` 生命周期。
+
+接受 Proposal 通过 owner-scoped Server Action 进入 Serializable 事务，并复用 `persistTrustedMemoryChange` 完成 Schema、凭据、关系所有权、容量、精确去重与 topic 治理。所有正式 CREATE 都先锁定当前 Profile 行，再在同一事务内执行容量 count 与 INSERT。UPDATE Proposal 固化目标 `updatedAt` 和单调 `revision`；接受时版本不一致或目标停用均保持 Proposal 待检查。CREATE Proposal 接受时只允许新增或命中已启用的精确重复，不会覆盖建议生成后出现的同 topic Memory。事务提交后才安排正式 Memory embedding 同步。
+
+浏览器对 `memory_proposals` 只有 owner-scoped SELECT。数据库触发器复核 Persona、Conversation、USER Message、目标 Memory 和 resolved Memory 的同用户关系；服务端查询仍显式携带 `userId`。完整边界见 `docs/trusted-memory-proposals.md`。
+
 新聊天在 `xl` 桌面断点使用固定右侧助手栏，窄屏使用无第三方依赖的可访问抽屉；两者共享同一选择组件。选择状态保留在现有 `ChatLayout`，通过 History API 更新 `/chat?personaId=`，不创建数据库记录、不清空 Composer 草稿。已有 Conversation 不渲染选择栏，服务端继续拥有 Persona 绑定的最终决定权。
 
 ## 1. 现状审计

@@ -9,7 +9,9 @@ import {
 } from "./helpers";
 
 const authState = process.env.PLAYWRIGHT_AUTH_STATE;
-const hasAuthState = Boolean(authState && existsSync(authState));
+const hasAuthState = Boolean(
+  authState && (process.env.CI || existsSync(authState)),
+);
 
 test.describe("authenticated mobile shell", () => {
   test.skip(!hasAuthState, "Set PLAYWRIGHT_AUTH_STATE to an existing signed-in storage state.");
@@ -43,6 +45,15 @@ test.describe("authenticated mobile shell", () => {
     }
     const nav = page.locator("[data-mobile-navigation]");
     if (await nav.isVisible()) await expect(nav.getByLabel("新建对话")).toBeVisible();
+  });
+
+  test("memory page separates untrusted proposals from confirmed memory", async ({ page }) => {
+    await page.goto("/memories");
+    await expect(page.getByRole("heading", { name: "AI 建议记住" })).toBeVisible();
+    await expect(page.getByText("确认后才会用于未来对话", { exact: false }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "已确认的正式记忆" })).toBeVisible();
+    await expect(page.getByText("唯一召回真相源")).toBeVisible();
+    await expectNoHorizontalOverflow(page);
   });
 
   test("chat composer grows, remains visible and does not cancel on visibility changes", async ({ page }) => {

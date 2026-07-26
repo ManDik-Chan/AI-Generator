@@ -35,12 +35,32 @@ describe("automatic memory extraction protocol", () => {
     expect(result.operations[0]).not.toHaveProperty("userId");
   });
 
-  it("distinguishes inline facts from requests for previous context", () => {
-    expect(detectExplicitMemoryIntent("我需要你记住我的电脑配置。")).toBe("PREVIOUS_CONTEXT");
-    expect(detectExplicitMemoryIntent("我的显卡换成 RTX 5080 了，记住一下。")).toBe("INLINE_FACT");
-    expect(detectExplicitMemoryIntent("以后记得先给结论。")).toBe("INLINE_FACT");
-    expect(detectExplicitMemoryIntent("别忘了我不吃香菜。")).toBe("INLINE_FACT");
-    expect(detectExplicitMemoryIntent("对，就这些，帮我记住。")).toBe("PREVIOUS_CONTEXT");
+  it.each([
+    ["请记住：我的显卡是 RTX 5080。", "INLINE_FACT"],
+    ["ChatGPT，请你记住我喜欢先看结论。", "INLINE_FACT"],
+    ["以后请记得回答时先给结论。", "INLINE_FACT"],
+    ["别忘了我不吃香菜。", "INLINE_FACT"],
+    ["把我的默认语言记下来：中文。", "INLINE_FACT"],
+    ["我的显卡换成 RTX 5080 了，记住一下。", "INLINE_FACT"],
+    ["请记住这个。", "PREVIOUS_CONTEXT"],
+    ["对，就这些，帮我记住。", "PREVIOUS_CONTEXT"],
+  ] as const)("recognizes only explicit assistant-facing command %s", (message, intent) => {
+    expect(detectExplicitMemoryIntent(message)).toBe(intent);
+  });
+
+  it.each([
+    "我终于记住了：我的电脑配置是 RTX 5080。",
+    "你记住我的配置了吗？",
+    "这篇文章让我记住了保持耐心。",
+    "我记不住这些命令。",
+    "我不需要你记住我的配置。",
+    "他说“请记住我的地址”。",
+    "文章里写着：别忘了每天备份。",
+    "普通陈述里提到记住并不等于请求保存。",
+    "记住很难。",
+    "记住我的配置很重要。",
+  ])("fails closed to Proposal for non-command expression %s", (message) => {
+    expect(detectExplicitMemoryIntent(message)).toBeUndefined();
   });
 
   it("requires extracted facts to be traceable to user messages", () => {
@@ -49,7 +69,7 @@ describe("automatic memory extraction protocol", () => {
   });
 
   it("limits and deterministically ranks existing candidates", () => {
-    const candidates = Array.from({ length: 25 }, (_, index) => ({ id: String(index), content: index === 24 ? "长期项目" : `无关 ${index}`, category: "project", scope: "GLOBAL" as const, importance: 3, updatedAt: "2026-01-01T00:00:00Z" }));
+    const candidates = Array.from({ length: 25 }, (_, index) => ({ id: String(index), content: index === 24 ? "长期项目" : `无关 ${index}`, category: "project", scope: "GLOBAL" as const, importance: 3, updatedAt: "2026-01-01T00:00:00Z", revision: 1 }));
     const selected = selectExtractionCandidates("长期项目", candidates);
     expect(selected).toHaveLength(20);
     expect(selected[0]?.id).toBe("24");

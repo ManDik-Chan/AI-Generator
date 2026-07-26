@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import { chromium, type FullConfig } from "@playwright/test";
@@ -50,9 +50,141 @@ export default async function globalSetup(config: FullConfig) {
           },
         },
       });
+
+      for (const project of config.projects) {
+        const fixture = `Playwright memory ${project.name}`;
+        const chatToken = project.name.toLowerCase().replace(/[^a-z0-9_-]/g, "_");
+        const proposalNow = new Date();
+        const dedupeKey = (caseName: string) => createHash("sha256")
+          .update(`${project.name}:${caseName}`)
+          .digest("hex");
+        const common = {
+          userId: created.data.user.id,
+          status: "PENDING" as const,
+          category: "preference",
+          scope: "GLOBAL" as const,
+          importance: 4,
+          confidence: 0.96,
+          reasonCode: "preference",
+          sourceConversationId: agentFixtureIds.conversation,
+          sourceMessageId: agentFixtureIds.userMessage,
+          createdAt: proposalNow,
+          updatedAt: proposalNow,
+          expiresAt: new Date(proposalNow.getTime() + 30 * 86_400_000),
+        };
+        await tx.memoryProposal.createMany({
+          data: [
+            {
+              ...common,
+              action: "CREATE",
+              content: `${fixture} accept CREATE`,
+              topicKey: `e2e.${project.name}.accept`.replace(/[^a-z0-9._-]/g, "_"),
+              keywords: ["E2E", "accept"],
+              dedupeKey: dedupeKey("accept"),
+              suppressionKey: dedupeKey("accept-suppression"),
+            },
+            {
+              ...common,
+              action: "CREATE",
+              content: `${fixture} edit CREATE`,
+              topicKey: `e2e.${project.name}.edit`.replace(/[^a-z0-9._-]/g, "_"),
+              keywords: ["E2E", "edit"],
+              dedupeKey: dedupeKey("edit"),
+              suppressionKey: dedupeKey("edit-suppression"),
+            },
+            {
+              ...common,
+              action: "CREATE",
+              content: `${fixture} reject CREATE`,
+              topicKey: `e2e.${project.name}.reject`.replace(/[^a-z0-9._-]/g, "_"),
+              keywords: ["E2E", "reject"],
+              dedupeKey: dedupeKey("reject"),
+              suppressionKey: dedupeKey("reject-suppression"),
+            },
+          ],
+        });
+
+        const updateTarget = await tx.memory.create({
+          data: {
+            userId: created.data.user.id,
+            content: `${fixture} current UPDATE`,
+            category: "preference",
+            scope: "GLOBAL",
+            importance: 3,
+            topicKey: `e2e.${project.name}.update`.replace(/[^a-z0-9._-]/g, "_"),
+          },
+          select: { id: true, updatedAt: true, revision: true },
+        });
+        await tx.memoryProposal.create({
+          data: {
+            ...common,
+            action: "UPDATE",
+            targetMemoryId: updateTarget.id,
+            targetMemoryUpdatedAt: updateTarget.updatedAt,
+            targetMemoryRevision: updateTarget.revision,
+            content: `${fixture} accepted UPDATE`,
+            topicKey: `e2e.${project.name}.update`.replace(/[^a-z0-9._-]/g, "_"),
+            keywords: ["E2E", "update"],
+            dedupeKey: dedupeKey("update"),
+            suppressionKey: dedupeKey("update-suppression"),
+          },
+        });
+
+        const conflictTarget = await tx.memory.create({
+          data: {
+            userId: created.data.user.id,
+            content: `${fixture} current CONFLICT`,
+            category: "preference",
+            scope: "GLOBAL",
+            importance: 3,
+            topicKey: `e2e.${project.name}.conflict`.replace(/[^a-z0-9._-]/g, "_"),
+          },
+          select: { id: true, updatedAt: true, revision: true },
+        });
+        await tx.memoryProposal.create({
+          data: {
+            ...common,
+            action: "UPDATE",
+            targetMemoryId: conflictTarget.id,
+            targetMemoryUpdatedAt: conflictTarget.updatedAt,
+            targetMemoryRevision: conflictTarget.revision,
+            content: `${fixture} proposed CONFLICT`,
+            topicKey: `e2e.${project.name}.conflict`.replace(/[^a-z0-9._-]/g, "_"),
+            keywords: ["E2E", "conflict"],
+            dedupeKey: dedupeKey("conflict"),
+            suppressionKey: dedupeKey("conflict-suppression"),
+          },
+        });
+        await tx.memory.update({
+          where: { id: conflictTarget.id },
+          data: {
+            content: `${fixture} current CONFLICT changed after proposal`,
+          },
+        });
+        await tx.memory.createMany({
+          data: [
+            {
+              userId: created.data.user.id,
+              content: `E2E update target ${chatToken}`,
+              category: "preference",
+              scope: "GLOBAL",
+              importance: 3,
+              topicKey: `e2e.chat.${chatToken}.update`,
+            },
+            {
+              userId: created.data.user.id,
+              content: `E2E conflict target ${chatToken}`,
+              category: "preference",
+              scope: "GLOBAL",
+              importance: 3,
+              topicKey: `e2e.chat.${chatToken}.conflict`,
+            },
+          ],
+        });
+      }
     });
   } catch {
-    throw new Error("Unable to seed the synthetic Agent E2E conversation.");
+    throw new Error("Unable to seed the synthetic Agent and memory E2E fixtures.");
   } finally {
     await prisma.$disconnect();
   }

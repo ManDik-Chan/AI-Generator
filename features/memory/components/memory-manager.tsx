@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Brain, Database, Pencil, Pin, PinOff, Plus, Search, SlidersHorizontal, Sparkles, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,12 @@ import { StatusBanner } from "@/components/ui/status-banner";
 import { deleteMemoryAction, setMemoryEnabledAction, setMemoryMasterEnabledAction, setMemoryPinnedAction } from "@/features/memory/actions";
 import { MEMORY_CATEGORIES, MEMORY_CATEGORY_LABELS } from "@/features/memory/constants";
 import { MemoryFormDialog } from "@/features/memory/components/memory-form-dialog";
-import type { MemoryView } from "@/features/memory/types";
+import { MemoryProposalCard } from "@/features/memory/components/memory-proposal-card";
+import type { MemoryProposalView, MemoryView } from "@/features/memory/types";
 
 interface MemoryManagerProps {
   memories: MemoryView[];
+  proposals: MemoryProposalView[];
   personas: Array<{ id: string; name: string }>;
   memoryEnabled: boolean;
   initialPersonaId?: string;
@@ -23,7 +26,11 @@ interface MemoryManagerProps {
   semanticIndex: { configured: boolean; indexed: number; pending: number; indexedIds: string[]; model: string; dimensions: number };
 }
 
-export function MemoryManager({ memories, personas, memoryEnabled, initialPersonaId, maxTotal, referenceNow, semanticIndex }: MemoryManagerProps) {
+export function MemoryManager({ memories: initialMemories, proposals: initialProposals, personas, memoryEnabled: initialMemoryEnabled, initialPersonaId, maxTotal, referenceNow, semanticIndex }: MemoryManagerProps) {
+  const router = useRouter();
+  const [memories, setMemories] = useState(initialMemories);
+  const [proposals, setProposals] = useState(initialProposals);
+  const [memoryEnabled, setMemoryEnabled] = useState(initialMemoryEnabled);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MemoryView>();
   const [deleting, setDeleting] = useState<MemoryView>();
@@ -33,6 +40,12 @@ export function MemoryManager({ memories, personas, memoryEnabled, initialPerson
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string>();
+  const [resolvedProposalIds, setResolvedProposalIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const visibleProposals = proposals.filter(
+    (proposal) => !resolvedProposalIds.has(proposal.id),
+  );
   const indexedIds = useMemo(() => new Set(semanticIndex.indexedIds), [semanticIndex.indexedIds]);
   const enabledCount = memories.filter((memory) => memory.enabled).length;
   const pinnedCount = memories.filter((memory) => memory.pinned).length;
@@ -79,6 +92,33 @@ export function MemoryManager({ memories, personas, memoryEnabled, initialPerson
   return <div className="space-y-6">
     {message && <StatusBanner title="记忆库已更新" variant="success">{message}</StatusBanner>}
 
+    <section aria-labelledby="memory-proposals-title" className="space-y-4">
+      <div className="premium-panel p-4 sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="premium-kicker">REVIEW QUEUE</p>
+            <h2 className="mt-2 text-lg font-semibold" id="memory-proposals-title">AI 建议记住</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">确认后才会用于未来对话；这些建议尚未进入长期记忆，也不会建立语义向量。</p>
+          </div>
+          <span className="premium-chip">{visibleProposals.length} 条待确认</span>
+        </div>
+      </div>
+      {visibleProposals.length ? <div className="grid min-w-0 gap-4 xl:grid-cols-2">{visibleProposals.map((proposal) => <MemoryProposalCard key={proposal.id} memoryEnabled={memoryEnabled} onResolved={(proposalId, snapshot) => {
+        if (snapshot) {
+          setMemories(snapshot.memories);
+          setProposals(snapshot.proposals);
+          return;
+        }
+        setResolvedProposalIds((current) => new Set(current).add(proposalId));
+        router.refresh();
+      }} personas={personas} proposal={proposal} />)}</div> : <EmptyState description="聊天中发现新的长期信息后，会先在这里等待你确认。" icon={<Sparkles className="size-6" />} title="目前没有待确认建议" />}
+    </section>
+
+    <div className="flex items-end justify-between gap-3 border-b border-border/10 pb-3">
+      <div><p className="premium-kicker">CONFIRMED MEMORY</p><h2 className="mt-2 text-lg font-semibold">已确认的正式记忆</h2></div>
+      <p className="text-xs text-muted-foreground">唯一召回真相源</p>
+    </div>
+
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="记忆状态概览">
       <div className="premium-panel p-4"><p className="premium-kicker">CAPACITY</p><div className="mt-3 flex items-end justify-between"><p className="text-2xl font-semibold tabular-nums">{memories.length}<span className="text-sm font-medium text-muted-foreground"> / {maxTotal}</span></p><span className="text-xs text-muted-foreground">{capacityPercent}%</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-muted"><div className={capacityPercent >= 100 ? "h-full bg-destructive" : capacityPercent >= 80 ? "h-full bg-warning" : "h-full bg-primary"} style={{ width: `${capacityPercent}%` }} /></div></div>
       <div className="premium-panel p-4"><p className="premium-kicker">ACTIVE</p><p className="mt-3 text-2xl font-semibold tabular-nums">{enabledCount}</p><p className="mt-1 text-xs text-muted-foreground">已启用记忆</p></div>
@@ -90,7 +130,12 @@ export function MemoryManager({ memories, personas, memoryEnabled, initialPerson
 
     <section className="premium-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="flex items-start gap-3"><span className="premium-icon-tile size-10 shrink-0"><Brain className="size-5" /></span><div><p className="font-semibold">允许 AI 使用和更新记忆</p><p className="mt-1 text-xs leading-5 text-muted-foreground">关闭后保留现有内容，但聊天不会召回或自动整理记忆。</p></div></div>
-      <Button aria-pressed={memoryEnabled} className="shrink-0" disabled={pending} onClick={() => startTransition(async () => { const result = await setMemoryMasterEnabledAction(!memoryEnabled); setMessage(result.message); })} variant={memoryEnabled ? "default" : "outline"}>{memoryEnabled ? "记忆已开启" : "记忆已关闭"}</Button>
+      <Button aria-pressed={memoryEnabled} className="shrink-0" disabled={pending} onClick={() => startTransition(async () => {
+        const nextEnabled = !memoryEnabled;
+        const result = await setMemoryMasterEnabledAction(nextEnabled);
+        setMessage(result.message);
+        if (result.success) setMemoryEnabled(nextEnabled);
+      })} variant={memoryEnabled ? "default" : "outline"}>{memoryEnabled ? "记忆已开启" : "记忆已关闭"}</Button>
     </section>
 
     <section className="premium-panel p-3 sm:p-4">
@@ -111,6 +156,6 @@ export function MemoryManager({ memories, personas, memoryEnabled, initialPerson
     })}</div> : <EmptyState description={memories.length ? "调整搜索、筛选或排序条件后再试。" : "在聊天中自然交流，值得长期保留的信息会安全地出现在这里。"} icon={<Brain className="size-6" />} title={memories.length ? "没有符合条件的记忆" : "AI 还没有记住长期信息"} />}
 
     <MemoryFormDialog initial={editing} onOpenChange={setFormOpen} onSaved={setMessage} open={formOpen} personas={personas} />
-    <Dialog description="只会删除长期记忆及对应语义向量，不会删除对话、消息或 Persona。" footer={<><Button onClick={() => setDeleting(undefined)} variant="outline">取消</Button><Button className="bg-destructive text-white hover:bg-destructive/90" disabled={pending} onClick={() => deleting && startTransition(async () => { const result = await deleteMemoryAction(deleting.id); setMessage(result.message); setDeleting(undefined); })}>删除记忆</Button></>} onOpenChange={(open) => { if (!open && !pending) setDeleting(undefined); }} open={Boolean(deleting)} title="删除这条记忆？"><p className="text-sm text-muted-foreground">删除后无法恢复，请确认是否继续。</p></Dialog>
+    <Dialog description="会删除正式记忆及对应语义向量；相关建议只保留审计状态，不会阻止删除，也不会自动恢复记忆。" footer={<><Button onClick={() => setDeleting(undefined)} variant="outline">取消</Button><Button className="bg-destructive text-white hover:bg-destructive/90" disabled={pending} onClick={() => deleting && startTransition(async () => { const result = await deleteMemoryAction(deleting.id); setMessage(result.message); if (result.success) { setMemories((current) => current.filter((memory) => memory.id !== deleting.id)); setDeleting(undefined); } })}>删除记忆</Button></>} onOpenChange={(open) => { if (!open && !pending) setDeleting(undefined); }} open={Boolean(deleting)} title="删除这条记忆？"><p className="text-sm text-muted-foreground">删除后无法恢复，请确认是否继续。</p></Dialog>
   </div>;
 }

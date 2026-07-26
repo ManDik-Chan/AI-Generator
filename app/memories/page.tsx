@@ -16,7 +16,7 @@ export default async function MemoriesPage({ searchParams }: { searchParams: Pro
   return (
     <AppShell>
       <PageHeader
-        description={<><p>AI 会在对话中自动整理可能长期有用的信息；你始终可以查看、修改、停用或删除。</p><p className="mt-2 text-xs">启用语义召回时，整理文本和当前问题可能发送到配置的 Embedding Provider；向量只保存在当前项目数据库中，不返回浏览器，也不与其他用户共享。</p></>}
+        description={<><p>AI 会把可能长期有用的信息作为建议交给你确认；确认前不会用于未来对话。</p><p className="mt-2 text-xs">只有已确认的正式记忆会参与召回和语义索引。启用语义召回时，正式记忆整理文本和当前问题可能发送到配置的 Embedding Provider；向量只保存在当前项目数据库中，不返回浏览器，也不与其他用户共享。</p></>}
         eyebrow="TRUSTED MEMORY"
         title="AI 记忆库"
       />

@@ -16,6 +16,8 @@
 
 > Phase 5A3-2 已完成真实验收：长期记忆采用确定性关键词、`topicKey` / `keywords`、512 维 Embedding 语义召回与 Hybrid RRF；未配置或运行失败时安全退回关键词召回。这不是外部文件 RAG。详见 `docs/memory-semantic-retrieval.md`。
 
+> Phase 5B1 可信长期记忆提案层为 Draft：普通隐式提取只创建待确认 `MemoryProposal`，用户接受后才通过可信事务写入正式 `Memory`。Pending/Rejected/Expired Proposal 不参与 Prompt、召回、统计或 Embedding。详见 `docs/trusted-memory-proposals.md`。
+
 面向亲朋好友使用的私人 AI 助手平台。V2 使用 Next.js 15、TypeScript 与 Tailwind CSS 重构，目标是简单、稳定、美观和易维护。
 
 ## 本地开发
@@ -43,13 +45,13 @@ Phase 4A2 在 `/personas/new` 增加可选的 AI 草稿模式：自然语言描�
 
 ## 长期记忆
 
-Phase 5A1 在助手成功完成回复后使用一次低成本 OpenAI-compatible 模型调用，严格执行 CREATE / UPDATE / IGNORE，并通过 Next.js `after` 在响应结束后运行。用户仍可编辑、停用、删除，手动添加仅作为高级补救入口。
+Phase 5B1 将模型建议与正式记忆彻底分离。助手成功完成回复后，普通隐式事实只创建 30 天有效的待确认 `MemoryProposal`；用户可接受、编辑后接受或拒绝。确认前不会用于未来对话、不会占用正式容量，也不会建立向量。明确“请记住”继续支持即时正式保存，但与 Proposal 接受共用同一可信写入治理函数。
 
 Phase 5A3-2 使用通用 OpenAI-compatible Embedding Provider 和独立 `MemoryEmbedding` 表，为 Memory 内容建立固定 512 维索引。默认 `adaptive` 模式只在关键词结果不足、无直接匹配或出现记忆意图时生成一次 query embedding，再以稳定 RRF 融合确定性与语义排名。没有配置 Key、pgvector 不可用或 Provider 失败时聊天继续使用原确定性召回。当前不包含文件、网页、Message 向量化或外部知识库 RAG。
 
 真实 Supabase migration/vector extension、Embedding-3 回填、不同表达语义召回、Memory 更新后向量重建、隔离、Cascade 和安全降级均已通过项目所有者验收。没有自动删除或自动批量合并。
 
-新增 Persona migration 后，项目所有者需在真实数据库执行：
+在经过确认的非 Production/部署环境中，按顺序应用 versioned migrations：
 
 ```bash
 pnpm db:deploy

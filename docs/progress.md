@@ -399,6 +399,28 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 
 Phase 5A1 真实环境验收已全部通过。
 
+## Phase 5B1 实施记录（Draft）
+
+实施时间：2026-07-24
+
+- 新增独立 `MemoryProposal` 模型、状态/动作枚举、30 天到期、UPDATE `updatedAt` 快照、resolution 追踪和 SHA-256 幂等指纹。
+- 新增 `20260724120000_add_trusted_memory_proposals`，未修改任何已执行 migration；同步更新灾难恢复 RLS 基线。
+- `authenticated` 浏览器只可 SELECT 自己的 Proposal；INSERT/UPDATE/DELETE 均无 policy/grant。数据库触发器复核 Persona、来源、目标和 resolution 所有权。
+- 普通隐式提取只创建 PENDING Proposal，不写正式 Memory、不调用 embedding；明确“请记住”保留即时正式保存。
+- Proposal 接受、编辑后接受和拒绝使用 owner-scoped Server Action；正式写入共用可信治理函数和 Serializable 事务。
+- UPDATE 接受要求目标版本、scope、Persona 和启用状态完全匹配；冲突不覆盖、不降级 CREATE。
+- `/memories` 明确分隔待确认建议与正式 Memory，支持 CREATE/UPDATE 对照、接受、编辑后接受和拒绝；无批量接受。
+- Pending/Rejected/Expired Proposal 不进入确定性/语义/Hybrid RRF、Prompt、Agent、使用统计或向量回填。
+- 未连接或修改 Production，未读取真实用户数据或密钥。
+
+### 当前自动验证
+
+- `pnpm test`：132 个测试文件通过、3 个文件按环境明确 skipped；690 项通过、14 项 skipped。
+- `pnpm lint`、`pnpm typecheck`、`pnpm build`：通过。
+- Prisma Schema format、validate、generate：通过。
+- `pnpm test:e2e`：公开页面 Desktop Chromium、Mobile Chromium、WebKit iPhone 共 15 项通过；缺少 `PLAYWRIGHT_AUTH_STATE`，57 项登录态/项目限定测试明确 skipped。
+- 当前环境未配置 disposable PostgreSQL/Supabase 安全测试变量，真实 migration、RLS、事务回滚和 UPDATE race 集成套件明确 skipped；`REQUIRE_SECURITY_TEST_DATABASE=true` 时仍 fail-closed。
+
 ## Phase 6A2 完成状态
 
 项目所有者已完成真实环境验收，Phase 6A2 全部通过。

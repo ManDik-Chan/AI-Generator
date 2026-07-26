@@ -28,15 +28,28 @@ export default defineConfig({
     { name: "chromium-mobile", use: { ...devices["Pixel 5"] } },
     { name: "webkit-iphone", use: { ...devices["iPhone 13"] } },
   ],
-  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : {
-    command: process.env.CI ? "pnpm start --hostname 127.0.0.1" : "pnpm dev --hostname 127.0.0.1",
-    url: "http://127.0.0.1:3000/login",
-    env: {
-      AI_BASE_URL: process.env.AI_BASE_URL ?? "http://127.0.0.1:9/v1",
-      AI_API_KEY: process.env.AI_API_KEY ?? "playwright-mocked-provider",
-      AI_MODEL: process.env.AI_MODEL ?? "playwright-mocked-model",
+  webServer: process.env.PLAYWRIGHT_BASE_URL ? undefined : [
+    {
+      command: "node tests/e2e/mock-ai-provider.mjs",
+      url: "http://127.0.0.1:4319/health",
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
     },
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+    {
+      command: process.env.CI
+        ? "pnpm start --hostname 127.0.0.1"
+        : "pnpm dev --hostname 127.0.0.1",
+      url: "http://127.0.0.1:3000/login",
+      env: {
+        AI_BASE_URL: "http://127.0.0.1:4319/v1",
+        AI_API_KEY: process.env.AI_API_KEY ?? "playwright-mocked-provider",
+        AI_MODEL: process.env.AI_MODEL ?? "playwright-mocked-model",
+        AI_MEMORY_MODEL: "playwright-memory-model",
+        AI_EMBEDDING_MODEL: "mock-embedding",
+        AI_EMBEDDING_DIMENSIONS: "512",
+      },
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 });

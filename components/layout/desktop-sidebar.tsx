@@ -36,7 +36,7 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
       <div className="mt-5 rounded-control border border-border/10 bg-surface/60 p-2.5"><p className="text-xs font-bold">{displayName}</p><p className="mt-1 truncate text-[.625rem] text-muted-foreground">{viewer?.role === "ADMIN" ? "Administrator workspace" : "Private workspace"}</p></div>
 
       <Button asChild className="mt-3 w-full justify-start">
-        <Link href="/chat">
+        <Link href="/chat" prefetch={false}>
           <MessageSquarePlus aria-hidden="true" className="size-4" />
           新建对话
         </Link>
@@ -66,6 +66,7 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
                     )}
                     href={item.href}
                     key={item.href}
+                    prefetch={false}
                   >
                     <item.icon
                       aria-hidden="true"
@@ -119,11 +120,11 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
             </span>
           }
         >
-          <Link className={menuLink} href="/account">
+          <Link className={menuLink} href="/account" prefetch={false}>
             <UserRound className="size-4" />账号与设置
           </Link>
           {viewer?.role === "ADMIN" ? (
-            <Link className={menuLink} href="/admin">
+            <Link className={menuLink} href="/admin" prefetch={false}>
               <ShieldCheck className="size-4" />系统管理
             </Link>
           ) : null}

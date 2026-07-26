@@ -5,7 +5,9 @@ import { agentFixtureIds as ids, agentFixtureStartedAt as startedAt } from "../f
 import { expectNoHorizontalOverflow } from "./helpers";
 
 const authState = process.env.PLAYWRIGHT_AUTH_STATE;
-const hasAuthState = Boolean(authState && existsSync(authState));
+const hasAuthState = Boolean(
+  authState && (process.env.CI || existsSync(authState)),
+);
 type WorkerStatus = "QUEUED" | "BLOCKED" | "RUNNING" | "COMPLETE" | "ERROR" | "CANCELLED" | "TIMEOUT";
 
 function worker(key: string, position: number, status: WorkerStatus = "COMPLETE", dependsOnKeys: string[] = []) {

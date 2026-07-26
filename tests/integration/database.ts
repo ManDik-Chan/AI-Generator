@@ -15,6 +15,16 @@ if (process.env.REQUIRE_SECURITY_TEST_DATABASE === "true" && !integrationDatabas
   );
 }
 
+if (
+  process.env.REQUIRE_SECURITY_TEST_DATABASE === "true"
+  && process.env.DATABASE_URL?.trim() !== databaseUrl
+) {
+  throw new Error(
+    "Security acceptance requires DATABASE_URL and TEST_DATABASE_URL to reference "
+    + "the same disposable database so production transaction kernels cannot escape the test database.",
+  );
+}
+
 export function createIntegrationPrisma() {
   if (!integrationDatabaseEnabled || !databaseUrl) {
     throw new Error(
