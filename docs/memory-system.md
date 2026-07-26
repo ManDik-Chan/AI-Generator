@@ -1,18 +1,19 @@
-# Phase 5A1 自动长期记忆
+# Phase 5B1 可信长期记忆
 
 ## 产品范围
 
-用户只需自然聊天。当前 USER 与 ASSISTANT 消息都成功持久化为 COMPLETE 后，系统在响应结束后判断这一轮是否包含长期有用的信息，并执行 CREATE、UPDATE 或 IGNORE。`/memories` 是用户查看、修改、停用和删除 AI 记忆的控制页；手动添加保留在“更多操作”中作为高级补救入口。
+用户只需自然聊天。当前 USER 与 ASSISTANT 消息都成功持久化为 COMPLETE 后，系统在响应结束后判断这一轮是否包含长期有用的信息，并执行 CREATE、UPDATE 或 IGNORE。普通隐式事实只创建待用户确认的 `MemoryProposal`；明确“请记住”可继续即时写入正式 `Memory`。`/memories` 明确分隔 AI 建议与已确认正式记忆。
 
-Phase 5A1 不做 Embedding、向量数据库、RAG、后台队列、定时任务或多用户共享。后续 Phase 5A3-1 已完成，但仍未引入 Embedding、向量数据库或 RAG。
+正式 `Memory` 是唯一召回真相源。Pending、Rejected、Expired、Cancelled Proposal 不进入 Prompt、确定性/语义/Hybrid RRF、Agent context、使用统计或 Embedding。Phase 5A3-2 的 512 维语义召回保持不变，但只处理正式 Memory。本阶段不做文件、网页或图片 RAG、Message 全文向量化、定时任务或多用户共享。
 
 ## 非阻塞流程
 
 1. 聊天按原协议持久化 USER 与 PENDING ASSISTANT，并流式返回 delta。
 2. Provider 正常结束后将 ASSISTANT 写为 COMPLETE。
 3. 立即发送 SSE `done`；客户端将消息设为 complete，`finally` 恢复 Composer。
-4. Route Handler 使用 Next.js `after` 注册 `extractAndPersistMemories`。
-5. 后台任务自行捕获错误，只记录 requestId、userId、conversationId、sourceMessageId 和 errorCode。
+4. 后台生成任务调用 `extractAndPersistMemoryProposals`；此时 SSE `done` 已发送。
+5. 隐式事实只创建 Proposal；明确记忆请求事务成功后才返回正式 Memory ID 并安排向量同步。
+6. 后台任务自行捕获错误，只记录 requestId、userId、conversationId、sourceMessageId 和 errorCode。
 
 停止生成、Provider ERROR、助手未成功 COMPLETE、来源 USER 被 supersede 或 `Profile.memoryEnabled=false` 时不会提取。简单问候、感谢、确认语和纯标点由本地规则过滤，不产生模型费用。每轮只有一次业务提取，不对 Provider 错误自动重试；仅 JSON 解析失败可追加一次格式修复请求。
 
@@ -43,7 +44,7 @@ HTTP 400 单独映射为 `INVALID_REQUEST`，不会回退、重试、进入 JSON
 - UPDATE：只能引用服务端候选白名单中的现有 ID；
 - IGNORE：临时、不确定、敏感、重复或无长期价值内容。
 
-只有 confidence >= 0.85 才可能写入。Zod、类别、长度、importance、凭据检测、Persona 映射、候选白名单和所有权在服务端再次验证。模型不能控制 userId、personaId、enabled、origin、sourceConversationId 或 sourceMessageId；写入 origin 固定为 AUTO_EXTRACTED。
+只有 confidence >= 0.85 才可能形成 Proposal 或明确请求的正式写入。Zod、类别、长度、importance、凭据检测、Persona 映射、候选白名单、USER 证据和所有权在服务端再次验证。模型不能控制 userId、personaId、enabled、origin、sourceConversationId 或 sourceMessageId。
 
 ## 内容边界
 
@@ -57,11 +58,11 @@ Prompt 用 `<current_user_message>`、`<assistant_response context_only="true">`
 
 ## 幂等、事务与所有权
 
-任务开始前检查相同 `sourceMessageId + AUTO_EXTRACTED`，事务内再次检查来源 USER 仍为 COMPLETE、未 superseded、属于当前用户且总开关仍开启。CREATE 先做规范化精确去重；UPDATE 必须属于本轮候选白名单和当前用户。写入使用 Serializable 事务，不自动重试，冲突或后台失败不会影响已完成聊天。
+事务内再次检查来源 USER 仍为 COMPLETE、未 superseded、属于当前用户且总开关仍开启。隐式 Proposal 使用 `(userId, dedupeKey)` 唯一约束；后台重放指纹覆盖来源、动作、作用域/Persona、目标版本/topic、规范化 content 和稳定排序 keywords。独立 `suppressionKey` 不含 sourceMessageId，30 天内不会重新提出用户已拒绝的等价事实。UPDATE Proposal 保存目标 Memory 的 `updatedAt` 与 `revision` 快照；目标版本改变后可生成新快照，不会被旧 Proposal 永久阻塞。
 
-当前 Schema 已能使用 `sourceMessageId` 和 `origin` 实现写入幂等，因此没有新增 migration，也没有修改已部署的 `20260713010000_add_memory_foundation`。
+接受、编辑后接受和拒绝使用 Serializable 事务。手动 CREATE、明确命令式即时保存和 Proposal CREATE 共用 `persistTrustedMemoryChange`，先锁定 Profile 行，再在同一事务执行容量 count 与 INSERT。UPDATE 版本不一致时保持 Proposal 待检查。CREATE 接受时若后来出现同 topic 或停用的精确重复 Memory 会明确冲突；已启用精确重复才作为幂等接受，绝不静默 UPDATE。
 
-RLS 在应用层之外校验 Memory 及关联 Persona、Conversation、Message 的所有权。`prisma/rls.sql` 中每个 policy 都先 drop，可以重复执行。
+新增独立 `20260724120000_add_trusted_memory_proposals`，没有修改已部署 migration。RLS 对浏览器仅开放本人 Proposal SELECT；所有 Proposal mutation 由可信服务端执行。Persona、Conversation、Message、target/resolved Memory 使用复合外键永久绑定同一 owner；触发器额外验证来源必须是有效 COMPLETE USER Message、严格 30 天 TTL、PENDING 单向终态转换和不可变来源/目标快照。`prisma/rls.sql` 中每个 policy 都先 drop，可以在 versioned migrations 后重复执行。
 
 ## 召回与透明度
 
@@ -71,9 +72,11 @@ RLS 在应用层之外校验 Memory 及关联 Persona、Conversation、Message �
 
 ## 管理与删除
 
-`/memories` 标题为“AI 记住的内容”，显示来源中文、更新时间和最近使用时间。总开关“允许 AI 使用和更新记忆”同时控制召回与自动提取；关闭不会删除数据。编辑、停用、删除和来源对话链接继续可用，内部枚举不直接展示。
+`/memories` 的“AI 建议记住”展示待确认卡片，并明确提示“确认后才会用于未来对话”；“已确认的正式记忆”保留来源、更新时间、最近使用、编辑、启停、置顶和删除。Pending Proposal 不计入正式容量，不显示已索引。总开关关闭不会删除数据，仍可查看和拒绝，但禁止接受 Proposal。
 
 彻底删除需在该页点击删除并确认。停用或关闭总开关只停止使用；删除来源对话不会自动删除 Memory。
+
+完整 Proposal 数据模型、冲突语义、RLS 与 migration 顺序见 `docs/trusted-memory-proposals.md`。
 
 ## 聊天无闪屏
 

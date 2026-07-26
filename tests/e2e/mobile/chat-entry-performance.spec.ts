@@ -2,7 +2,9 @@ import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const authState = process.env.PLAYWRIGHT_AUTH_STATE;
-const hasAuthState = Boolean(authState && existsSync(authState));
+const hasAuthState = Boolean(
+  authState && (process.env.CI || existsSync(authState)),
+);
 
 test.describe("authenticated Chat entry performance", () => {
   test.skip(!hasAuthState, "Set PLAYWRIGHT_AUTH_STATE to measure an existing signed-in session.");

@@ -50,6 +50,19 @@ enum MemoryOrigin {
   AUTO_EXTRACTED
 }
 
+enum MemoryProposalStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum MemoryProposalAction {
+  CREATE
+  UPDATE
+}
+
 enum ToolType {
   SUMMARIZE
   REWRITE
@@ -170,6 +183,7 @@ model Profile {
   personas          Persona[]
   conversations     Conversation[]
   memories          Memory[]
+  memoryProposals   MemoryProposal[]
   memoryEmbeddings  MemoryEmbedding[]
   images            GeneratedImage[]
   toolRuns          ToolRun[]
@@ -322,12 +336,14 @@ model Persona {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user           Profile         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  conversations  Conversation[]
-  memories       Memory[]
-  avatarImage    GeneratedImage? @relation("PersonaAvatarImage", fields: [avatarImageId], references: [id], onDelete: SetNull)
-  generationRuns GenerationRun[]
+  user            Profile          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations   Conversation[]
+  memories        Memory[]
+  memoryProposals MemoryProposal[]
+  avatarImage     GeneratedImage?  @relation("PersonaAvatarImage", fields: [avatarImageId], references: [id], onDelete: SetNull)
+  generationRuns  GenerationRun[]
 
+  @@unique([id, userId])
   @@index([userId, updatedAt(sort: Desc)])
   @@index([userId, archivedAt, updatedAt(sort: Desc)])
   @@map("personas")
@@ -341,11 +357,12 @@ model Conversation {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  user      Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  persona   Persona?   @relation(fields: [personaId], references: [id], onDelete: SetNull)
-  messages  Message[]
-  memories  Memory[]
-  agentRuns AgentRun[]
+  user            Profile          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona         Persona?         @relation(fields: [personaId], references: [id], onDelete: SetNull)
+  messages        Message[]
+  memories        Memory[]
+  memoryProposals MemoryProposal[]
+  agentRuns       AgentRun[]
 
   @@unique([id, userId])
   @@index([userId, updatedAt(sort: Desc)])
@@ -363,10 +380,11 @@ model Message {
   createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   supersededAt   DateTime?     @map("superseded_at") @db.Timestamptz(6)
 
-  conversation        Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sourceMemories      Memory[]     @relation("MemorySourceMessage")
-  agentRunAsUser      AgentRun?    @relation("AgentRunUserMessage")
-  agentRunAsAssistant AgentRun?    @relation("AgentRunAssistantMessage")
+  conversation          Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMemories        Memory[]         @relation("MemorySourceMessage")
+  sourceMemoryProposals MemoryProposal[] @relation("MemoryProposalSourceMessage")
+  agentRunAsUser        AgentRun?        @relation("AgentRunUserMessage")
+  agentRunAsAssistant   AgentRun?        @relation("AgentRunAssistantMessage")
 
   @@unique([id, conversationId])
   @@index([conversationId, createdAt])
@@ -484,6 +502,7 @@ model Memory {
   keywords             String[]     @default([])
   pinned               Boolean      @default(false)
   useCount             Int          @default(0) @map("use_count")
+  revision             Int          @default(1)
   createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -492,7 +511,10 @@ model Memory {
   sourceConversation Conversation?    @relation(fields: [sourceConversationId], references: [id], onDelete: SetNull)
   sourceMessage      Message?         @relation("MemorySourceMessage", fields: [sourceMessageId], references: [id], onDelete: SetNull)
   embedding          MemoryEmbedding?
+  targetedProposals  MemoryProposal[] @relation("MemoryProposalTarget")
+  resolvedProposals  MemoryProposal[] @relation("MemoryProposalResolved")
 
+  @@unique([id, userId])
   @@index([userId, enabled, scope, importance, updatedAt(sort: Desc)])
   @@index([personaId, enabled, importance])
   @@index([sourceMessageId])
@@ -500,6 +522,49 @@ model Memory {
   @@index([userId, topicKey])
   @@index([personaId, topicKey])
   @@map("memories")
+}
+
+model MemoryProposal {
+  id                    String               @id @default(uuid()) @db.Uuid
+  userId                String               @map("user_id") @db.Uuid
+  personaId             String?              @map("persona_id") @db.Uuid
+  action                MemoryProposalAction
+  status                MemoryProposalStatus @default(PENDING)
+  targetMemoryId        String?              @map("target_memory_id") @db.Uuid
+  targetMemoryUpdatedAt DateTime?            @map("target_memory_updated_at") @db.Timestamptz(6)
+  targetMemoryRevision  Int?                 @map("target_memory_revision")
+  resolvedMemoryId      String?              @map("resolved_memory_id") @db.Uuid
+  content               String
+  category              String
+  scope                 MemoryScope
+  importance            Int                  @default(3)
+  topicKey              String?              @map("topic_key")
+  keywords              String[]             @default([])
+  confidence            Float
+  reasonCode            String               @map("reason_code")
+  sourceConversationId  String?              @map("source_conversation_id") @db.Uuid
+  sourceMessageId       String?              @map("source_message_id") @db.Uuid
+  dedupeKey             String               @map("dedupe_key") @db.VarChar(64)
+  suppressionKey        String               @map("suppression_key") @db.VarChar(64)
+  expiresAt             DateTime             @map("expires_at") @db.Timestamptz(6)
+  resolvedAt            DateTime?            @map("resolved_at") @db.Timestamptz(6)
+  createdAt             DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user               Profile       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  persona            Persona?      @relation(fields: [personaId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  targetMemory       Memory?       @relation("MemoryProposalTarget", fields: [targetMemoryId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  resolvedMemory     Memory?       @relation("MemoryProposalResolved", fields: [resolvedMemoryId, userId], references: [id, userId], onDelete: Restrict, onUpdate: Restrict)
+  sourceConversation Conversation? @relation(fields: [sourceConversationId, userId], references: [id, userId], onDelete: NoAction, onUpdate: NoAction)
+  sourceMessage      Message?      @relation("MemoryProposalSourceMessage", fields: [sourceMessageId, sourceConversationId], references: [id, conversationId], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@index([sourceMessageId])
+  @@index([targetMemoryId])
+  @@index([userId, suppressionKey, status, resolvedAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("memory_proposals")
 }
 
 model MemoryEmbedding {

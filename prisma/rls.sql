@@ -6,6 +6,7 @@ alter table public.personas enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
 alter table public.memories enable row level security;
+alter table public.memory_proposals enable row level security;
 alter table public.memory_embeddings enable row level security;
 alter table public.generated_images enable row level security;
 alter table public.tool_runs enable row level security;
@@ -38,6 +39,13 @@ drop policy if exists "memories_insert_own_relations" on public.memories;
 drop policy if exists "memories_update_own_relations" on public.memories;
 drop policy if exists "memories_delete_own" on public.memories;
 create policy "memories_select_own" on public.memories for select using (user_id = auth.uid());
+
+drop policy if exists "memory_proposals_select_own" on public.memory_proposals;
+drop policy if exists "memory_proposals_insert_own" on public.memory_proposals;
+drop policy if exists "memory_proposals_update_own" on public.memory_proposals;
+drop policy if exists "memory_proposals_delete_own" on public.memory_proposals;
+create policy "memory_proposals_select_own" on public.memory_proposals
+  for select using (user_id = auth.uid());
 
 drop policy if exists "memory_embeddings_select_own" on public.memory_embeddings;
 drop policy if exists "memory_embeddings_insert_own_memory" on public.memory_embeddings;
@@ -174,9 +182,9 @@ revoke all privileges on table public.profiles from public, anon, authenticated;
 grant select on table public.profiles to authenticated;
 grant update (display_name, avatar_url, memory_enabled) on table public.profiles to authenticated;
 
-revoke all privileges on table public.personas, public.conversations, public.memories
+revoke all privileges on table public.personas, public.conversations, public.memories, public.memory_proposals
 from public, anon, authenticated;
-grant select on table public.personas, public.conversations, public.memories
+grant select on table public.personas, public.conversations, public.memories, public.memory_proposals
 to authenticated;
 
 revoke all privileges on table
@@ -211,3 +219,6 @@ revoke all privileges on table public.model_configs, public.app_settings
 from public, anon, authenticated;
 revoke execute on function public.protect_profile_system_fields() from public, anon, authenticated;
 revoke execute on function public.handle_new_auth_user() from public, anon, authenticated;
+revoke execute on function public.validate_memory_proposal() from public, anon, authenticated;
+revoke execute on function public.protect_memory_proposal_source_message() from public, anon, authenticated;
+revoke execute on function public.bump_memory_revision() from public, anon, authenticated;

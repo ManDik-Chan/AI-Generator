@@ -13,11 +13,12 @@ assert(databaseUrl, "A disposable TEST_DATABASE_URL is required.");
 assert.equal(process.env.ALLOW_TEST_DATABASE_MUTATIONS, "true", "Mutation safety flag is required.");
 assert.equal(process.env.TEST_DATABASE_CONFIRMED_NON_PRODUCTION, "true", "Non-production confirmation is required.");
 
-const commandName = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-const supabaseName = process.platform === "win32" ? "supabase.exe" : "supabase";
+const commandName = "pnpm";
+const useWindowsShell = process.platform === "win32";
 const securityMigration = "20260722120000_security_hardening_rls_usage";
+const proposalMigration = "20260724120000_add_trusted_memory_proposals";
 const runtimeTables = [
-  "messages", "memory_embeddings", "generated_images", "tool_runs", "tool_assets",
+  "messages", "memory_proposals", "memory_embeddings", "generated_images", "tool_runs", "tool_assets",
   "generation_runs", "brainstorm_workers", "agent_runs", "agent_workers", "agent_events", "usage_ledger",
 ];
 const rlsTables = ["profiles", "personas", "conversations", "memories", ...runtimeTables];
@@ -27,6 +28,7 @@ function safeRun(command, args, options = {}) {
     cwd: root,
     env: process.env,
     encoding: "utf8",
+    shell: useWindowsShell,
     windowsHide: true,
     ...options,
   });
@@ -36,7 +38,16 @@ function safeRun(command, args, options = {}) {
 }
 
 function resetSupabase() {
-  safeRun(supabaseName, ["db", "reset", "--no-seed"], { label: "Supabase disposable database reset" });
+  safeRun(
+    commandName,
+    ["exec", "supabase", "db", "reset", "--no-seed"],
+    { label: "Supabase disposable database reset" },
+  );
+}
+
+function restoreCurrentDatabase() {
+  resetSupabase();
+  deploy(join(root, "prisma", "schema.prisma"));
 }
 
 function makeMigrationTree(filter, mutate) {
@@ -61,6 +72,14 @@ function makeMigrationTree(filter, mutate) {
 
 function deploy(schema) {
   safeRun(commandName, ["exec", "prisma", "migrate", "deploy", "--schema", schema], { label: "Prisma migration deploy" });
+}
+
+function resetToMigrationTree(schema) {
+  safeRun(
+    commandName,
+    ["exec", "prisma", "migrate", "reset", "--force", "--skip-seed", "--schema", schema],
+    { label: "Prisma disposable database reset" },
+  );
 }
 
 async function seedOldDatabase(db) {
@@ -108,7 +127,16 @@ async function seedOldDatabase(db) {
     result: { fixture: true },
     expiresAt: new Date(Date.now() + 86_400_000),
   } });
-  await db.memory.create({ data: { id: memoryId, userId, personaId, content: "synthetic memory", category: "fixture", scope: "PERSONA" } });
+  await db.$executeRawUnsafe(
+    `INSERT INTO public.memories
+       (id, user_id, persona_id, content, category, scope, updated_at)
+     VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, 'PERSONA', CURRENT_TIMESTAMP)`,
+    memoryId,
+    userId,
+    personaId,
+    "synthetic memory",
+    "fixture",
+  );
   await db.generatedImage.create({ data: {
     id: generatedImageId,
     userId,
@@ -180,12 +208,31 @@ async function verifyCleanDatabase() {
     const metadata = await db.$queryRawUnsafe(`
       SELECT
         to_regclass('public.usage_ledger')::text AS ledger,
+        to_regclass('public.memory_proposals')::text AS proposals,
         to_regprocedure('public.protect_profile_system_fields()')::text AS profile_guard,
+        to_regprocedure('public.validate_memory_proposal()')::text AS proposal_guard,
+        to_regprocedure('public.protect_memory_proposal_source_message()')::text AS source_guard,
+        to_regprocedure('public.bump_memory_revision()')::text AS revision_guard,
         EXISTS (
           SELECT 1 FROM pg_trigger
           WHERE tgrelid = 'public.profiles'::regclass
             AND tgname = 'profiles_protect_system_fields' AND NOT tgisinternal
         ) AS profile_trigger,
+        EXISTS (
+          SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'public.memory_proposals'::regclass
+            AND tgname = 'memory_proposals_validate' AND NOT tgisinternal
+        ) AS proposal_trigger,
+        EXISTS (
+          SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'public.messages'::regclass
+            AND tgname = 'messages_protect_memory_proposal_source' AND NOT tgisinternal
+        ) AS source_trigger,
+        EXISTS (
+          SELECT 1 FROM pg_trigger
+          WHERE tgrelid = 'public.memories'::regclass
+            AND tgname = 'memories_bump_revision' AND NOT tgisinternal
+        ) AS revision_trigger,
         EXISTS (
           SELECT 1 FROM pg_trigger
           WHERE tgrelid = 'auth.users'::regclass
@@ -194,10 +241,32 @@ async function verifyCleanDatabase() {
     `);
     assert.deepEqual(metadata[0], {
       ledger: "usage_ledger",
+      proposals: "memory_proposals",
       profile_guard: "protect_profile_system_fields()",
+      proposal_guard: "validate_memory_proposal()",
+      source_guard: "protect_memory_proposal_source_message()",
+      revision_guard: "bump_memory_revision()",
       profile_trigger: true,
+      proposal_trigger: true,
+      source_trigger: true,
+      revision_trigger: true,
       auth_trigger: true,
     });
+    const ownershipConstraints = await db.$queryRawUnsafe(`
+      SELECT conname
+      FROM pg_constraint
+      WHERE conrelid = 'public.memory_proposals'::regclass
+        AND contype = 'f'
+      ORDER BY conname
+    `);
+    assert.deepEqual(ownershipConstraints.map((row) => row.conname), [
+      "memory_proposals_persona_owner_fkey",
+      "memory_proposals_resolved_owner_fkey",
+      "memory_proposals_source_conversation_owner_fkey",
+      "memory_proposals_source_message_conversation_fkey",
+      "memory_proposals_target_owner_fkey",
+      "memory_proposals_user_id_fkey",
+    ]);
     await db.usageLedger.count();
     console.log(`clean_migration_verified rls_tables=${rls.length} policies=${policies.length} runtime_grants=${grants.length}`);
   } finally {
@@ -210,6 +279,7 @@ async function deployWithLockSampling(db) {
   const child = spawn(commandName, ["exec", "prisma", "migrate", "deploy"], {
     cwd: root,
     env: process.env,
+    shell: useWindowsShell,
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   });
@@ -247,7 +317,7 @@ async function verifyIncrementalUpgrade() {
   resetSupabase();
   const old = makeMigrationTree((name) => name < securityMigration);
   try {
-    deploy(old.schema);
+    resetToMigrationTree(old.schema);
     const db = new PrismaClient({ datasourceUrl: databaseUrl });
     try {
       const fixture = await seedOldDatabase(db);
@@ -285,51 +355,127 @@ async function verifyIncrementalUpgrade() {
   }
 }
 
-async function verifyTransactionalRollback() {
-  resetSupabase();
-  const old = makeMigrationTree((name) => name < securityMigration);
+async function verifyProposalTransactionalRollback(mode) {
+  const base = makeMigrationTree((name) => name < proposalMigration);
   const failing = makeMigrationTree(() => true, (temporaryPrisma) => {
-    const migrationPath = join(temporaryPrisma, "migrations", securityMigration, "migration.sql");
+    const migrationPath = join(temporaryPrisma, "migrations", proposalMigration, "migration.sql");
     const sql = readFileSync(migrationPath, "utf8");
     assert(sql.includes("COMMIT;"));
     writeFileSync(migrationPath, sql.replace(/COMMIT;\s*$/, "SELECT 1 / 0;\n\nCOMMIT;\n"), "utf8");
   });
   try {
-    deploy(old.schema);
+    resetSupabase();
+    let fixture;
+    if (mode === "incremental") {
+      resetToMigrationTree(base.schema);
+    }
     const db = new PrismaClient({ datasourceUrl: databaseUrl });
     try {
-      const fixture = await seedOldDatabase(db);
-      const failed = spawnSync(commandName, ["exec", "prisma", "migrate", "deploy", "--schema", failing.schema], {
+      if (mode === "incremental") fixture = await seedOldDatabase(db);
+      const args = mode === "clean"
+        ? ["exec", "prisma", "migrate", "reset", "--force", "--skip-seed", "--schema", failing.schema]
+        : ["exec", "prisma", "migrate", "deploy", "--schema", failing.schema];
+      const failed = spawnSync(commandName, args, {
         cwd: root,
         env: process.env,
         encoding: "utf8",
+        shell: useWindowsShell,
         windowsHide: true,
       });
       assert.notEqual(failed.status, 0, "Injected migration failure must fail.");
       const state = await db.$queryRawUnsafe(`
         SELECT
+          to_regclass('public.memory_proposals')::text AS proposals,
+          to_regtype('public."MemoryProposalStatus"')::text AS proposal_status,
+          to_regtype('public."MemoryProposalAction"')::text AS proposal_action,
+          to_regprocedure('public.validate_memory_proposal()')::text AS proposal_guard,
+          to_regprocedure('public.protect_memory_proposal_source_message()')::text AS source_guard,
+          to_regprocedure('public.bump_memory_revision()')::text AS revision_guard,
           to_regclass('public.usage_ledger')::text AS ledger,
-          to_regprocedure('public.protect_profile_system_fields()')::text AS profile_guard
+          to_regprocedure('public.protect_profile_system_fields()')::text AS profile_guard,
+          EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'memories'
+              AND column_name = 'revision'
+          ) AS memory_revision
       `);
-      assert.deepEqual(state[0], { ledger: null, profile_guard: null });
-      assert.equal(await db.profile.count(), fixture.counts.profiles);
-      assert.equal(await db.message.count(), fixture.counts.messages);
-      assert.equal((await db.profile.findUnique({ where: { id: fixture.ids.adminId }, select: { role: true } }))?.role, "ADMIN");
-      console.log("migration_failure_rollback_verified data_loss=0 partial_security_objects=0");
+      assert.deepEqual(state[0], {
+        proposals: null,
+        proposal_status: null,
+        proposal_action: null,
+        proposal_guard: null,
+        source_guard: null,
+        revision_guard: null,
+        ledger: "usage_ledger",
+        profile_guard: "protect_profile_system_fields()",
+        memory_revision: false,
+      });
+      const leakedSecurity = await db.$queryRawUnsafe(`
+        SELECT
+          count(*) FILTER (WHERE policyname = 'memory_proposals_select_own')::int AS policies,
+          count(*) FILTER (WHERE table_name = 'memory_proposals')::int AS grants
+        FROM (
+          SELECT policyname, NULL::text AS table_name
+          FROM pg_policies
+          WHERE schemaname = 'public'
+          UNION ALL
+          SELECT NULL::text, table_name::text
+          FROM information_schema.role_table_grants
+          WHERE table_schema = 'public' AND grantee = 'authenticated'
+        ) objects
+      `);
+      assert.deepEqual(leakedSecurity[0], { policies: 0, grants: 0 });
+
+      const migrationRows = await db.$queryRawUnsafe(`
+        SELECT finished_at, rolled_back_at
+        FROM public._prisma_migrations
+        WHERE migration_name = $1
+      `, proposalMigration);
+      assert(
+        migrationRows.every((row) => row.finished_at === null),
+        "Failed Proposal migration must never be recorded as applied.",
+      );
+      await db.$executeRawUnsafe(`
+        DELETE FROM public._prisma_migrations
+        WHERE migration_name = $1 AND finished_at IS NULL
+      `, proposalMigration);
+      const recorded = await db.$queryRawUnsafe(`
+        SELECT count(*)::int AS count
+        FROM public._prisma_migrations
+        WHERE migration_name = $1
+      `, proposalMigration);
+      assert.equal(recorded[0]?.count, 0);
+
+      if (fixture) {
+        assert.equal(await db.profile.count(), fixture.counts.profiles);
+        assert.equal(await db.message.count(), fixture.counts.messages);
+        assert.equal(
+          (await db.profile.findUnique({
+            where: { id: fixture.ids.adminId },
+            select: { role: true },
+          }))?.role,
+          "ADMIN",
+        );
+      }
+      console.log(`proposal_migration_failure_rollback_verified mode=${mode} data_loss=0 partial_proposal_objects=0`);
     } finally {
       await db.$disconnect();
     }
   } finally {
-    rmSync(old.temporaryRoot, { recursive: true, force: true });
+    rmSync(base.temporaryRoot, { recursive: true, force: true });
     rmSync(failing.temporaryRoot, { recursive: true, force: true });
+    restoreCurrentDatabase();
   }
 }
 
 const mode = process.argv[2];
-if (mode === "clean") await verifyCleanDatabase();
+if (mode === "clean") {
+  await verifyCleanDatabase();
+  await verifyProposalTransactionalRollback("clean");
+}
 else if (mode === "incremental") {
   await verifyIncrementalUpgrade();
-  await verifyTransactionalRollback();
+  await verifyProposalTransactionalRollback("incremental");
 } else {
   throw new Error("Usage: node scripts/verify-security-migrations.mjs <clean|incremental>");
 }

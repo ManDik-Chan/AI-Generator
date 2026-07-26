@@ -58,17 +58,60 @@ export function parseMemoryExtractionOutput(output: string) {
 export type ExplicitMemoryIntent = "INLINE_FACT" | "PREVIOUS_CONTEXT";
 
 export function detectExplicitMemoryIntent(message: string): ExplicitMemoryIntent | undefined {
-  const text = message.trim();
-  if (!/(?:请|帮我|需要你)?记住|以后记得|把(?:这个|这些|它)?记下来|别忘了/u.test(text)) return undefined;
-  const withoutIntent = text
-    .replace(/(?:请|帮我|需要你)?记住(?:一下)?/gu, " ")
-    .replace(/以后记得/gu, " ")
-    .replace(/把(?:这个|这些|它)?记下来/gu, " ")
-    .replace(/别忘了/gu, " ")
-    .replace(/[，。！？,.!?]/g, " ")
+  const text = message
+    .normalize("NFKC")
+    .trim()
+    .replace(/^(?:ChatGPT|助手|AI)[,，:：\s]+/iu, "");
+  if (!text) return undefined;
+  const trailingCommand = /(?:[,，;；。]\s*)(?:(?:请|请你|麻烦你?|帮我)\s*)?记(?:住|下|下来)(?:一下)?[!！。.\s]*$/u;
+
+  // Questions, negated requests, self-reports and quotations are deliberately
+  // fail-closed: they can still be proposed, but never become formal memory
+  // without confirmation.
+  if (/[?？]\s*$/u.test(text) || /(?:吗|么|呢)[!！。.\s]*$/u.test(text)) return undefined;
+  if (/(?:不用|不要|不必|别)(?:你|再)?(?:帮我)?记(?:住|下|下来|得)/u.test(text)) {
+    return undefined;
+  }
+  if (
+    !trailingCommand.test(text)
+    && /^(?:我|这篇文章|这本书|这门课|这个故事).{0,18}(?:终于|已经|总算|让我|使我|要我|也)?记(?:住|得|下来|不住)/u.test(text)
+  ) {
+    return undefined;
+  }
+  if (/(?:他说|她说|他们说|别人说|文章里|原文|引用).{0,20}(?:记住|记得|别忘|记下来)/u.test(text)) {
+    return undefined;
+  }
+  if (/[“"'「『].{0,40}(?:记住|记得|别忘|记下来).{0,40}[”"'」』]/u.test(text)) {
+    return undefined;
+  }
+
+  const directRemember = /^(?:请|请你|麻烦你?|劳驾|拜托|帮我|需要你|你要|你得|务必|一定要)\s*记(?:住|下|下来)(?:一下)?[,，:：\s]*/u;
+  const directObject = /^(?:(?:请|请你|麻烦你?|劳驾|拜托|帮我|需要你|你要|你得|务必|一定要)\s*)?把.{1,120}?记(?:住|下|下来)(?:[,，:：。.!！\s]|$)/u;
+  const futureReminder = /^(?:以后|从今以后)?\s*(?:(?:请|请你|麻烦你?|帮我|需要你|你要|你得|务必|一定要)\s*)?(?:记得|别忘了?)[,，:：\s]*/u;
+  const command = text.match(directRemember)
+    ?? text.match(directObject)
+    ?? text.match(futureReminder)
+    ?? text.match(trailingCommand);
+  if (!command) return undefined;
+
+  const payload = text
+    .replace(directRemember, " ")
+    .replace(futureReminder, " ")
+    .replace(trailingCommand, " ")
+    .replace(/^(?:(?:请|请你|麻烦你?|帮我)\s*)?把/u, " ")
+    .replace(/记(?:住|下|下来)(?:一下)?[!！。.\s]*$/u, " ")
+    .replace(/[，。！？,.!?:：;；]/gu, " ")
+    .replace(/\s+/g, " ")
     .trim();
-  const explicitCarry = /(?:以后记得|别忘了)/u.test(text) && withoutIntent.length > 1 && !/^(?:这个|这些|它|我的?(?:电脑)?配置)$/u.test(withoutIntent);
-  const hasInlineFact = explicitCarry || /(?:是|为|叫|喜欢|偏好|换成|改成|使用|不要|总是|一直|以后|不吃|不喝|不使用).{1,}|(?:RTX|GTX|Core|Ryzen|\bi[3579]-?\d|\d+[KkPp]?(?:Hz|GB|TB|K)\b)/iu.test(withoutIntent);
+  if (!payload || /^(?:这个|这些|它|这件事|上面这些|刚才说的|我刚才说的)$/u.test(payload)) {
+    return "PREVIOUS_CONTEXT";
+  }
+
+  const hasInlineFact =
+    /(?:是|为|叫|喜欢|偏好|换成|改成|使用|总是|一直|以后|不吃|不喝|不使用|需要|目标|配置).{1,}/u.test(payload)
+    || /(?:RTX|GTX|Core|Ryzen|\bi[3579]-?\d|\d+[KkPp]?(?:Hz|GB|TB|K)\b)/iu.test(payload)
+    || directObject.test(text)
+    || futureReminder.test(text);
   return hasInlineFact ? "INLINE_FACT" : "PREVIOUS_CONTEXT";
 }
 
@@ -87,6 +130,7 @@ export interface ExtractionCandidate {
   scope: "GLOBAL" | "PERSONA";
   importance: number;
   updatedAt: Date | string;
+  revision: number;
   topicKey?: string | null;
   keywords?: string[];
   pinned?: boolean;

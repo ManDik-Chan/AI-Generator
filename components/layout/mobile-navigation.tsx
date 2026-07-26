@@ -19,6 +19,7 @@ function MobileItem({ item, pathname }: { item: (typeof mobileNavigation)[number
         active ? "text-primary" : "text-muted-foreground active:bg-surface-muted",
       )}
       href={item.href}
+      prefetch={false}
     >
       <item.icon aria-hidden="true" className="size-[1.05rem]" />
       <span className="max-w-full truncate">{item.label}</span>
@@ -42,6 +43,7 @@ export function MobileNavigation() {
         aria-label="新建对话"
         className="grid size-11 place-items-center justify-self-center rounded-[1.125rem] bg-primary text-primary-foreground shadow-[0_10px_28px_hsl(var(--primary)/.3)] transition-transform active:scale-95 min-[360px]:size-[3.125rem]"
         href="/chat"
+        prefetch={false}
       >
         <Plus aria-hidden="true" className="size-6" />
       </Link>

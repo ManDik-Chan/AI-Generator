@@ -22,8 +22,8 @@ import { createChatRequestSchema } from "@/features/chat/schemas";
 import { getMemoryRuntimeLimits } from "@/features/memory/constants";
 import { retrieveRelevantMemories } from "@/features/memory/semantic-retrieval";
 import { buildUserMemoryBlock } from "@/lib/ai/prompts/user-memory";
-import { extractAndPersistMemories } from "@/features/memory/extractor";
-import { syncMemoryEmbeddingsForSourceMessage } from "@/features/memory/embedding-lifecycle";
+import { extractAndPersistMemoryProposals } from "@/features/memory/extractor";
+import { syncMemoryEmbeddingSafely } from "@/features/memory/embedding-lifecycle";
 import {
   createConversationTitle,
   encodeChatSse,
@@ -305,7 +305,7 @@ export async function POST(request: Request) {
             .filter((message): message is { role: "user" | "assistant"; content: string } => message.role !== "system")
             .slice(-8);
           try {
-            await extractAndPersistMemories({
+            const memoryResult = await extractAndPersistMemoryProposals({
               userId: user.id,
               conversationId,
               sourceMessageId: userMessageId,
@@ -315,7 +315,9 @@ export async function POST(request: Request) {
               recentTurns,
               persona: runtimePersonaId && runtimePersona ? { id: runtimePersonaId, name: runtimePersona.name } : undefined,
             });
-            await syncMemoryEmbeddingsForSourceMessage(user.id, userMessageId);
+            for (const memoryId of memoryResult.memoryIds) {
+              await syncMemoryEmbeddingSafely(memoryId, user.id);
+            }
           } catch (error) {
             console.warn("memory_extraction_failed", { requestId, userId: user.id, conversationId, sourceMessageId: userMessageId, errorCode: error instanceof Error ? error.name : "UNKNOWN" });
           }

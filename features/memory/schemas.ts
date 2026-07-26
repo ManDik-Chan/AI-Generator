@@ -1,12 +1,33 @@
 import { z } from "zod";
 import { MEMORY_CATEGORIES, MEMORY_LIMITS } from "@/features/memory/constants";
 import { MEMORY_GOVERNANCE_LIMITS } from "@/features/memory/constants";
-import { containsHighConfidenceCredential } from "@/features/memory/security";
+import { containsHighConfidenceCredential, normalizeMemoryKeywords } from "@/features/memory/security";
 
 export const memoryTopicKeySchema = z.string().trim().min(1).max(MEMORY_GOVERNANCE_LIMITS.topicKey).regex(/^[a-z0-9._-]+$/).optional();
-export const memoryKeywordsSchema = z.array(z.string().trim().min(1).max(MEMORY_GOVERNANCE_LIMITS.keyword)).max(MEMORY_GOVERNANCE_LIMITS.keywords).transform((values) => [...new Set(values)]).refine((values) => !values.some(containsHighConfidenceCredential), "关键词不能包含凭据。");
+export const memoryKeywordsSchema = z.array(z.string().trim().min(1).max(MEMORY_GOVERNANCE_LIMITS.keyword))
+  .max(MEMORY_GOVERNANCE_LIMITS.keywords)
+  .transform(normalizeMemoryKeywords)
+  .refine((values) => !values.some(containsHighConfidenceCredential), "关键词不能包含凭据。");
 
 export const memoryIdSchema = z.uuid("记忆 ID 格式无效。");
+export const memoryProposalIdSchema = z.uuid("记忆建议 ID 格式无效。");
 export const memoryContentSchema = z.string().transform((value) => value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "").trim()).pipe(z.string().min(2, "记忆内容至少需要 2 个字符。").max(MEMORY_LIMITS.content, "记忆内容不能超过 500 个字符。"));
 export const memoryInputSchema = z.object({ content: memoryContentSchema, category: z.enum(MEMORY_CATEGORIES).default("other"), scope: z.enum(["GLOBAL", "PERSONA"]).default("GLOBAL"), personaId: z.uuid().optional(), importance: z.coerce.number().int().min(1).max(5).default(3), enabled: z.boolean().default(true), sourceConversationId: z.uuid().optional(), sourceMessageId: z.uuid().optional(), origin: z.enum(["MANUAL", "CHAT_MESSAGE"]).default("MANUAL") }).superRefine((value, ctx) => { if (value.scope === "PERSONA" && !value.personaId) ctx.addIssue({ code: "custom", path: ["personaId"], message: "Persona 专属记忆必须选择人格。" }); if (value.scope === "GLOBAL" && value.personaId) ctx.addIssue({ code: "custom", path: ["personaId"], message: "全局记忆不能关联人格。" }); if (Boolean(value.sourceConversationId) !== Boolean(value.sourceMessageId)) ctx.addIssue({ code: "custom", path: ["sourceMessageId"], message: "聊天来源信息不完整。" }); });
+export const memoryProposalEditableInputSchema = z.object({
+  content: memoryContentSchema,
+  category: z.enum(MEMORY_CATEGORIES),
+  scope: z.enum(["GLOBAL", "PERSONA"]),
+  personaId: z.uuid().optional(),
+  importance: z.coerce.number().int().min(1).max(5),
+  topicKey: memoryTopicKeySchema,
+  keywords: memoryKeywordsSchema,
+}).strict().superRefine((value, ctx) => {
+  if (value.scope === "PERSONA" && !value.personaId) {
+    ctx.addIssue({ code: "custom", path: ["personaId"], message: "Persona 专属记忆必须选择人格。" });
+  }
+  if (value.scope === "GLOBAL" && value.personaId) {
+    ctx.addIssue({ code: "custom", path: ["personaId"], message: "全局记忆不能关联人格。" });
+  }
+});
 export interface MemoryInput { content: string; category: (typeof MEMORY_CATEGORIES)[number]; scope: "GLOBAL" | "PERSONA"; personaId?: string; importance: number; enabled: boolean; sourceConversationId?: string; sourceMessageId?: string; origin?: "MANUAL" | "CHAT_MESSAGE" }
+export type MemoryProposalEditableInput = z.input<typeof memoryProposalEditableInputSchema>;

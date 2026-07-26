@@ -22,7 +22,7 @@ describe("memory extractor prompt", () => {
   });
 
   it("exposes only safe candidate fields and grounded USER context", () => {
-    const messages = buildMemoryExtractorMessages({ currentUserMessage: "记住我的电脑配置", assistantResponse: "你的配置是 RTX 5070 Ti", recentTurns: [], explicitIntent: "PREVIOUS_CONTEXT", priorUserMessages: ["我的显卡是 RTX 5070 Ti，处理器是 i5-12600K。"], supportingAssistantMessages: ["你的配置是 RTX 5070 Ti。"], existingMemories: [{ id: "22222222-2222-4222-8222-222222222222", content: "旧偏好", category: "preference", scope: "GLOBAL", importance: 3, updatedAt: new Date() }] });
+    const messages = buildMemoryExtractorMessages({ currentUserMessage: "记住我的电脑配置", assistantResponse: "你的配置是 RTX 5070 Ti", recentTurns: [], explicitIntent: "PREVIOUS_CONTEXT", priorUserMessages: ["我的显卡是 RTX 5070 Ti，处理器是 i5-12600K。"], supportingAssistantMessages: ["你的配置是 RTX 5070 Ti。"], existingMemories: [{ id: "22222222-2222-4222-8222-222222222222", content: "旧偏好", category: "preference", scope: "GLOBAL", importance: 3, updatedAt: new Date(), revision: 1 }] });
     const policy = messages[0]?.content ?? "";
     const input = messages[1]?.content ?? "";
     expect(input).toContain("<explicit_memory_intent>PREVIOUS_CONTEXT</explicit_memory_intent>");

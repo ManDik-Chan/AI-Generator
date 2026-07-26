@@ -43,12 +43,15 @@ describe("pgvector memory contract", () => {
     expect(readFileSync("prisma/migrations/20260713110000_add_memory_governance/migration.sql", "utf8").length).toBeGreaterThan(0);
   });
 
-  it("schedules lifecycle sync only for content lifecycle actions and automatic extraction", () => {
+  it("schedules lifecycle sync only after a formal memory write", () => {
     const actions = readFileSync("features/memory/actions.ts", "utf8");
     const route = readFileSync("app/api/chat/route.ts", "utf8");
     expect(actions.match(/syncMemoryEmbeddingSafely/g)?.length).toBeGreaterThanOrEqual(4);
-    expect(actions).toContain("if (enabled) after(() => syncMemoryEmbeddingSafely");
-    expect(route).toContain("syncMemoryEmbeddingsForSourceMessage(user.id, userMessageId)");
+    expect(actions).toMatch(/if \(enabled\)\s*\{\s*after\(\(\) => syncMemoryEmbeddingSafely/);
+    expect(actions).toMatch(/if \(data\.enabled\)\s*\{\s*after\(\(\) => syncMemoryEmbeddingSafely/);
+    expect(route).toContain("for (const memoryId of memoryResult.memoryIds)");
+    expect(route).toContain("syncMemoryEmbeddingSafely(memoryId, user.id)");
+    expect(route).not.toContain("syncMemoryEmbeddingsForSourceMessage(user.id, userMessageId)");
     expect(actions.slice(actions.indexOf("setMemoryPinnedAction"), actions.indexOf("deleteMemoryAction"))).not.toContain("syncMemoryEmbeddingSafely");
   });
 });

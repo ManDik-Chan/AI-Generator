@@ -8,7 +8,7 @@ const loading = readFileSync("app/chat/loading.tsx", "utf8");
 describe("non-blocking automatic memory chat flow", () => {
   it("emits done before automatic extraction and only on successful finalization", () => {
     const done = route.indexOf('observer.send("done"');
-    const schedule = route.indexOf("await extractAndPersistMemories");
+    const schedule = route.indexOf("await extractAndPersistMemoryProposals");
     expect(done).toBeGreaterThan(-1);
     expect(schedule).toBeGreaterThan(done);
     expect(route).toContain("if (finalized && (profile?.memoryEnabled ?? true))");
@@ -16,7 +16,8 @@ describe("non-blocking automatic memory chat flow", () => {
 
   it("does not use detached fire-and-forget extraction", () => {
     expect(route).not.toContain("scheduleMemoryExtraction(after");
-    expect(route).toContain("await extractAndPersistMemories");
+    expect(route).toContain("await extractAndPersistMemoryProposals");
+    expect(route).toContain("for (const memoryId of memoryResult.memoryIds)");
   });
 
   it("keeps chat state and uses shallow history for a new conversation", () => {

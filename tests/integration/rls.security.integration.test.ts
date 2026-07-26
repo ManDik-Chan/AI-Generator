@@ -26,6 +26,7 @@ type Fixture = {
   agentWorker: string;
   agentEvent: string;
   memory: string;
+  memoryProposal: string;
   memoryEmbedding: string;
   generatedImage: string;
   usageLedger: string;
@@ -41,6 +42,7 @@ const runtimeTables = [
   "agent_workers",
   "agent_events",
   "generated_images",
+  "memory_proposals",
   "memory_embeddings",
   "usage_ledger",
 ] as const;
@@ -156,6 +158,28 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
       data: { userId, content: `Memory ${suffix}`, category: "fixture", scope: "GLOBAL" },
       select: { id: true },
     });
+    const proposalNow = new Date();
+    const memoryProposal = await db.memoryProposal.create({
+      data: {
+        userId,
+        action: "CREATE",
+        status: "PENDING",
+        content: `Proposed memory ${suffix}`,
+        category: "fixture",
+        scope: "GLOBAL",
+        importance: 3,
+        confidence: 0.95,
+        reasonCode: "stable_fact",
+        sourceConversationId: conversation.id,
+        sourceMessageId: message.id,
+        dedupeKey: suffix.toLowerCase().charCodeAt(0).toString(16).padStart(64, "0"),
+        suppressionKey: (suffix.toLowerCase().charCodeAt(0) + 100).toString(16).padStart(64, "0"),
+        createdAt: proposalNow,
+        updatedAt: proposalNow,
+        expiresAt: new Date(proposalNow.getTime() + 30 * 86_400_000),
+      },
+      select: { id: true },
+    });
     await db.$executeRaw(Prisma.sql`
       INSERT INTO public.memory_embeddings
         (memory_id, user_id, model, dimensions, content_hash, embedding, created_at, updated_at)
@@ -192,6 +216,7 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
       agentWorker: agentWorker.id,
       agentEvent: agentEvent.id,
       memory: memory.id,
+      memoryProposal: memoryProposal.id,
       memoryEmbedding: memory.id,
       generatedImage: generatedImage.id,
       usageLedger: usageLedger.id,
@@ -280,6 +305,7 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
       agent_workers: [a.agentWorker, b.agentWorker],
       agent_events: [a.agentEvent, b.agentEvent],
       generated_images: [a.generatedImage, b.generatedImage],
+      memory_proposals: [a.memoryProposal, b.memoryProposal],
       memory_embeddings: [a.memoryEmbedding, b.memoryEmbedding],
       usage_ledger: [a.usageLedger, b.usageLedger],
     };
@@ -305,6 +331,7 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
       agent_workers: a.agentWorker,
       agent_events: a.agentEvent,
       generated_images: a.generatedImage,
+      memory_proposals: a.memoryProposal,
       memory_embeddings: a.memoryEmbedding,
       usage_ledger: a.usageLedger,
     };
@@ -318,6 +345,7 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
       agent_workers: { status: "COMPLETE", final_deliverable: "forged" },
       agent_events: { type: "RUN_COMPLETED" },
       generated_images: { storage_path: "forged/path" },
+      memory_proposals: { status: "ACCEPTED", resolved_at: new Date().toISOString() },
       memory_embeddings: { model: "forged" },
       usage_ledger: { units: 0 },
     };
@@ -339,5 +367,68 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
       const result = await anonClient.from(table).select("*").limit(1);
       expect(result.error, `${table} anon read`).not.toBeNull();
     }
+  });
+
+  it("rejects trusted writes with cross-owner proposal relations", async () => {
+    await expect(db.memoryProposal.create({
+      data: {
+        userId: users.a.id,
+        personaId: b.persona,
+        action: "CREATE",
+        status: "PENDING",
+        content: "Forged Persona proposal",
+        category: "fixture",
+        scope: "PERSONA",
+        importance: 3,
+        confidence: 0.95,
+        reasonCode: "stable_fact",
+        sourceConversationId: a.conversation,
+        sourceMessageId: a.message,
+        dedupeKey: "f".repeat(64),
+        suppressionKey: "1".repeat(64),
+        expiresAt: new Date(Date.now() + 30 * 86_400_000),
+      },
+    })).rejects.toBeTruthy();
+
+    await expect(db.memoryProposal.create({
+      data: {
+        userId: users.a.id,
+        action: "UPDATE",
+        status: "PENDING",
+        targetMemoryId: b.memory,
+        targetMemoryUpdatedAt: new Date(),
+        targetMemoryRevision: 1,
+        content: "Forged target proposal",
+        category: "fixture",
+        scope: "GLOBAL",
+        importance: 3,
+        confidence: 0.95,
+        reasonCode: "stable_fact",
+        sourceConversationId: a.conversation,
+        sourceMessageId: a.message,
+        dedupeKey: "e".repeat(64),
+        suppressionKey: "2".repeat(64),
+        expiresAt: new Date(Date.now() + 30 * 86_400_000),
+      },
+    })).rejects.toBeTruthy();
+
+    await expect(db.memoryProposal.create({
+      data: {
+        userId: users.a.id,
+        action: "CREATE",
+        status: "PENDING",
+        content: "Forged source proposal",
+        category: "fixture",
+        scope: "GLOBAL",
+        importance: 3,
+        confidence: 0.95,
+        reasonCode: "stable_fact",
+        sourceConversationId: b.conversation,
+        sourceMessageId: b.message,
+        dedupeKey: "d".repeat(64),
+        suppressionKey: "3".repeat(64),
+        expiresAt: new Date(Date.now() + 30 * 86_400_000),
+      },
+    })).rejects.toBeTruthy();
   });
 });

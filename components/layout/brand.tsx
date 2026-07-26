@@ -16,6 +16,7 @@ export function Brand({
         className,
       )}
       href="/"
+      prefetch={false}
     >
       <span className="grid size-[2.375rem] shrink-0 place-items-center rounded-[.8125rem] bg-gradient-to-br from-primary via-primary to-[#4f7dff] text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/.2),0_10px_26px_hsl(var(--primary)/.24)] transition-transform duration-panel group-hover:-rotate-2 group-hover:scale-[1.03]">
         <svg

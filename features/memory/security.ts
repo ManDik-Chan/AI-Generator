@@ -8,4 +8,23 @@ const credentialPatterns = [
   /\b(?:postgres(?:ql)?|mysql|mongodb):\/\/[^\s:@]+:[^\s@]+@/i,
 ];
 export function containsHighConfidenceCredential(content: string) { return credentialPatterns.some((pattern) => pattern.test(content)); }
-export function normalizeMemoryContent(content: string) { return content.trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US"); }
+export function normalizeMemoryContent(content: string) {
+  return content
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-US")
+    .replace(/[\p{P}\p{S}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function normalizeMemoryKeywords(keywords: string[]) {
+  const canonical = new Map<string, string>();
+  for (const keyword of keywords) {
+    const value = keyword.normalize("NFKC").replace(/\s+/g, " ").trim();
+    const key = normalizeMemoryContent(value);
+    if (key && !canonical.has(key)) canonical.set(key, value);
+  }
+  return [...canonical.entries()]
+    .sort(([left], [right]) => left.localeCompare(right, "en-US"))
+    .map(([, value]) => value);
+}
