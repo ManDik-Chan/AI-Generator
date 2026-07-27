@@ -44,6 +44,25 @@ export function applyAgentTerminalMessage(messages: ChatMessageView[], terminal:
   } : message);
 }
 
+export function applyChatRecoverySnapshot(
+  messages: ChatMessageView[],
+  snapshot: { id: string; status: string; content: string },
+) {
+  const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
+  return messages.map((message) => {
+    if (message.id !== snapshot.id) return message;
+    if (snapshot.status === "PENDING") {
+      if (message.status !== "pending") return message;
+      return {
+        ...message,
+        content: snapshot.content || message.content,
+        status,
+      };
+    }
+    return { ...message, content: snapshot.content, status };
+  });
+}
+
 export function applyChatMemoryDisclosure(
   messages: ChatMessageView[],
   assistantMessageId: string,

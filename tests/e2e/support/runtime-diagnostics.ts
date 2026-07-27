@@ -11,6 +11,30 @@ interface RequestFailureDiagnostic {
   url: string;
 }
 
+function isCompletedMemoryActionNavigationCancellation(
+  failure: RequestFailureDiagnostic,
+) {
+  try {
+    const requestUrl = new URL(failure.url);
+    const pageUrl = new URL(failure.pageUrl);
+    return failure.failure === "Load request cancelled"
+      && failure.method === "POST"
+      && failure.resourceType === "fetch"
+      && !failure.isNavigationRequest
+      && failure.responseStatus === 200
+      && requestUrl.pathname === "/memories"
+      && pageUrl.pathname === "/memories"
+      && requestUrl.origin === pageUrl.origin;
+  } catch {
+    return false;
+  }
+}
+
+function isWebKitNextChunkLoadCancellation(error: string, origin: string) {
+  return error.startsWith("console: TypeError: Load failed (")
+    && error.includes(`${origin}/_next/static/chunks/`);
+}
+
 export interface RuntimeDiagnostics {
   errors: string[];
   pendingRequestDiagnostics?: Promise<void>[];
@@ -57,12 +81,30 @@ export function installRuntimeDiagnostics(page: Page): RuntimeDiagnostics {
   return diagnostics;
 }
 
+export function getUnexpectedRuntimeErrors(diagnostics: RuntimeDiagnostics) {
+  // WebKit can cancel the RSC response tail when a completed /memories Server
+  // Action immediately changes the rendered tree. We only pair that console
+  // signature with a same-origin, non-navigation POST that already returned
+  // HTTP 200; the unfiltered diagnostics attachment still retains both events.
+  const expectedCancellations = diagnostics.requestFailures
+    .filter(isCompletedMemoryActionNavigationCancellation)
+    .map((failure) => new URL(failure.url).origin);
+  return diagnostics.errors.filter((error) => {
+    const matchIndex = expectedCancellations.findIndex(
+      (origin) => isWebKitNextChunkLoadCancellation(error, origin),
+    );
+    if (matchIndex < 0) return true;
+    expectedCancellations.splice(matchIndex, 1);
+    return false;
+  });
+}
+
 export function expectNoRuntimeErrors(
   diagnostics: RuntimeDiagnostics,
   stage: string,
 ) {
   expect(
-    diagnostics.errors,
+    getUnexpectedRuntimeErrors(diagnostics),
     `${stage}\nRequest failures observed: ${JSON.stringify(diagnostics.requestFailures, null, 2)}`,
   ).toEqual([]);
 }

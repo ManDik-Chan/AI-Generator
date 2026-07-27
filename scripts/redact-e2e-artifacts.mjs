@@ -9,13 +9,8 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, extname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const [artifactRootArgument, sensitiveValuesFile] = process.argv.slice(2);
-if (!artifactRootArgument || !sensitiveValuesFile) {
-  throw new Error("Usage: node scripts/redact-e2e-artifacts.mjs <artifact-root> <sensitive-values-file>");
-}
-
-const artifactRoot = resolve(artifactRootArgument);
 const textExtensions = new Set([
   ".css",
   ".html",
@@ -41,29 +36,22 @@ const environmentNames = [
   "TEST_DATABASE_URL",
 ];
 
-const values = [];
-for (const name of environmentNames) {
-  const value = process.env[name];
-  if (value) values.push(value);
-}
-try {
-  values.push(...(await readFile(sensitiveValuesFile, "utf8")).split(/\r?\n/));
-} catch (error) {
-  if (error?.code !== "ENOENT") throw error;
-}
-const sensitiveValues = [...new Set(values.filter((value) => value.length >= 6))]
-  .flatMap((value) => [value, encodeURIComponent(value)])
-  .sort((left, right) => right.length - left.length);
+let sensitiveValues = [];
 
-function redact(content) {
+export function redactE2eArtifactText(content, values = []) {
   let result = content;
-  for (const value of sensitiveValues) {
+  for (const value of values) {
     result = result.split(value).join("[REDACTED]");
   }
   return result
+    .replace(/\bbase64-eyJ[A-Za-z0-9_=-]+/g, "[REDACTED_SUPABASE_SESSION]")
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED_JWT]")
     .replace(/\b(postgres(?:ql)?:\/\/)[^@\s"']+@/gi, "$1[REDACTED]@")
     .replace(/("password"\s*:\s*")[^"]+(")/gi, "$1[REDACTED]$2");
+}
+
+function redact(content) {
+  return redactE2eArtifactText(content, sensitiveValues);
 }
 
 async function sanitizeEmbeddedPlaywrightReport(path) {
@@ -130,9 +118,35 @@ async function zipFiles(root) {
   return archives;
 }
 
-if (!(await stat(artifactRoot)).isDirectory()) {
-  throw new Error(`Artifact root is not a directory: ${basename(artifactRoot)}`);
+async function main() {
+  const [artifactRootArgument, sensitiveValuesFile] = process.argv.slice(2);
+  if (!artifactRootArgument || !sensitiveValuesFile) {
+    throw new Error("Usage: node scripts/redact-e2e-artifacts.mjs <artifact-root> <sensitive-values-file>");
+  }
+
+  const artifactRoot = resolve(artifactRootArgument);
+  const values = [];
+  for (const name of environmentNames) {
+    const value = process.env[name];
+    if (value) values.push(value);
+  }
+  try {
+    values.push(...(await readFile(sensitiveValuesFile, "utf8")).split(/\r?\n/));
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+  sensitiveValues = [...new Set(values.filter((value) => value.length >= 6))]
+    .flatMap((value) => [value, encodeURIComponent(value)])
+    .sort((left, right) => right.length - left.length);
+
+  if (!(await stat(artifactRoot)).isDirectory()) {
+    throw new Error(`Artifact root is not a directory: ${basename(artifactRoot)}`);
+  }
+  for (const archive of await zipFiles(artifactRoot)) await sanitizeZip(archive);
+  await redactTree(artifactRoot);
+  process.stdout.write("e2e_artifacts_sanitized\n");
 }
-for (const archive of await zipFiles(artifactRoot)) await sanitizeZip(archive);
-await redactTree(artifactRoot);
-process.stdout.write("e2e_artifacts_sanitized\n");
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

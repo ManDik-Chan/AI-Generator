@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   after: vi.fn(),
   deleteMany: vi.fn(),
+  profileUpdate: vi.fn(),
   reviewLegacyMemory: vi.fn(),
   requireUser: vi.fn(),
   revalidatePath: vi.fn(),
@@ -17,6 +18,7 @@ vi.mock("@/lib/auth/session", () => ({ requireUser: mocks.requireUser }));
 vi.mock("@/lib/database/prisma", () => ({
   prisma: {
     memory: { deleteMany: mocks.deleteMany },
+    profile: { update: mocks.profileUpdate },
   },
 }));
 vi.mock("@/features/memory/access", () => ({ validateMemoryRelations: vi.fn() }));
@@ -44,6 +46,7 @@ import {
   createMemoryAction,
   deleteMemoryAction,
   markMemoryReviewedAction,
+  setMemoryMasterEnabledAction,
 } from "@/features/memory/actions";
 
 const memoryId = "550e8400-e29b-41d4-a716-446655440001";
@@ -105,6 +108,20 @@ describe("memory deletion", () => {
       "owner-id",
       memoryId,
     );
+  });
+
+  it("updates the master switch without starting a redundant page revalidation stream", async () => {
+    mocks.profileUpdate.mockResolvedValue({ id: "owner-id" });
+
+    await expect(setMemoryMasterEnabledAction(false)).resolves.toMatchObject({
+      success: true,
+    });
+
+    expect(mocks.profileUpdate).toHaveBeenCalledWith({
+      where: { id: "owner-id" },
+      data: { memoryEnabled: false },
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it("deletes an owned memory and revalidates the memory page", async () => {

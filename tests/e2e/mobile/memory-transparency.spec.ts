@@ -6,6 +6,7 @@ import { expectNoHorizontalOverflow } from "./helpers";
 import {
   observeRequestTerminal,
   runAndWaitForChatTransport,
+  runAndWaitForMemoryServerAction,
   sendChatAndWaitForCompletion,
   waitForReadyChatNavigation,
   waitForAssistantMessageStatus,
@@ -346,14 +347,20 @@ test.describe("memory provenance and live turn disclosure", () => {
         "内容来源：AI 对话整理",
         { exact: true },
       ).first()).toBeVisible();
-      await page.getByRole("button", { name: "记忆已开启" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await page.getByRole("button", { name: "记忆已开启" }).click();
+      });
       await expect(page.getByRole("button", { name: "记忆已关闭" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "记忆已关闭" })).toBeEnabled();
       await sendChat(page, db, userId, `请说明 ${token} alpha beta`);
       await expect(page.getByText(/本轮参考了 \d+ 条/)).toHaveCount(0);
 
       await page.goto("/memories");
-      await page.getByRole("button", { name: "记忆已关闭" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await page.getByRole("button", { name: "记忆已关闭" }).click();
+      });
       await expect(page.getByRole("button", { name: "记忆已开启" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "记忆已开启" })).toBeEnabled();
       await db.memory.updateMany({
         where: { userId },
         data: { enabled: false },
@@ -378,7 +385,9 @@ test.describe("memory provenance and live turn disclosure", () => {
         "旧版自动整理，尚未复核",
         { exact: true },
       )).toBeVisible();
-      await legacyCard.getByRole("button", { name: "标记为已核对" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await legacyCard.getByRole("button", { name: "标记为已核对" }).click();
+      });
       await expect(legacyCard.getByText(
         "用户已手动核对",
         { exact: true },

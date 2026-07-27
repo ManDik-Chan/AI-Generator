@@ -9,6 +9,30 @@ function isChatBootstrap(url: string, method: string) {
   return method === "GET" && new URL(url).pathname === "/api/chat/bootstrap";
 }
 
+function isMemoryServerAction(url: string, method: string, headers: Record<string, string>) {
+  return method === "POST"
+    && new URL(url).pathname === "/memories"
+    && Boolean(headers["next-action"]);
+}
+
+export async function runAndWaitForMemoryServerAction(
+  page: Page,
+  action: () => Promise<void>,
+) {
+  const responsePromise = page.waitForResponse(
+    (response) => isMemoryServerAction(
+      response.url(),
+      response.request().method(),
+      response.request().headers(),
+    ),
+    { timeout: 30_000 },
+  );
+  await action();
+  const response = await responsePromise;
+  expect(response.status(), "Memory Server Action must complete successfully.").toBe(200);
+  return response;
+}
+
 export async function waitForReadyChatNavigation(
   page: Page,
   action: () => Promise<unknown>,

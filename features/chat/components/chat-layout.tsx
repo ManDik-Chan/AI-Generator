@@ -11,7 +11,7 @@ import { AssistantSelectorPanel } from "@/features/chat/components/assistant-sel
 import { DeletedPersonaNotice } from "@/features/chat/components/deleted-persona-notice";
 import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import type { PersonaChatIdentity } from "@/features/persona/types";
-import { applyAgentTerminalMessage, applyChatMemoryDisclosure, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
+import { applyAgentTerminalMessage, applyChatMemoryDisclosure, applyChatRecoverySnapshot, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
@@ -71,6 +71,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const pendingCancelRef = useRef(false);
   const generationControllerRef = useRef<AbortController | undefined>(undefined);
   const conversationKeyRef = useRef(initialConversationKey);
+  const terminalChatMessageIdRef = useRef<string | undefined>(undefined);
   const mountedRef = useRef(true);
   useChatVisualViewport(shellRef);
   useChatPopstateSync(activeConversationRef);
@@ -129,10 +130,10 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       updateConversationGeneration(sessionStorage, viewerId, snapshot.conversationId, { chatMessageId: snapshot.status === "PENDING" ? snapshot.id : null });
       return;
     }
-    const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
-    setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
+    if (snapshot.status === "PENDING" && terminalChatMessageIdRef.current === snapshot.id) return;
+    setMessages((current) => applyChatRecoverySnapshot(current, snapshot));
     if (snapshot.status === "PENDING") { setGenerating(true); setError("任务正在后台继续生成。"); }
-    else { clearCurrentGeneration("CHAT"); setAssistantMessageId(undefined); setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
+    else { terminalChatMessageIdRef.current = snapshot.id; clearCurrentGeneration("CHAT"); setAssistantMessageId(undefined); setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
   }, [clearCurrentGeneration, viewerId]);
   useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:CHAT`, readRunId: readChatGeneration, writeRunId: writeChatGeneration, runId: assistantMessageId, onRunId: setAssistantMessageId, statusUrl: "/api/chat/messages/", statusSuffix: "/status", onSnapshot: recover });
   const recoverAgent = useCallback((snapshot: AgentRunView) => {
@@ -331,6 +332,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
     pendingCancelRef.current = false;
     setCancelling(false);
     pendingStopEditRef.current = false;
+    terminalChatMessageIdRef.current = undefined;
     if (!messageToEdit && !activeConversationRef.current.id) {
       setActiveTitle(content.replace(/\s+/g, " ").slice(0, 48));
     }
@@ -371,6 +373,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             const temporaryAssistantId = assistantId;
             userId = streamEvent.data.userMessageId;
             assistantId = streamEvent.data.assistantMessageId;
+            terminalChatMessageIdRef.current = undefined;
             setAssistantMessageId(assistantId);
             updateConversationGeneration(sessionStorage, viewerId, conversationKeyRef.current, { chatMessageId: assistantId });
             setMessages((current) => confirmOptimisticTurn(current, temporaryUserId, temporaryAssistantId, userId, assistantId));
@@ -390,18 +393,23 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
           }
           if (streamEvent.event === "done") {
             terminal = true;
+            terminalChatMessageIdRef.current = assistantId;
             clearCurrentGeneration("CHAT");
             setAssistantMessageId(undefined);
+            setError(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, id: streamEvent.data.messageId, status: "complete" } : message));
           }
           if (streamEvent.event === "cancelled") {
             terminal = true;
+            terminalChatMessageIdRef.current = assistantId;
             clearCurrentGeneration("CHAT");
             setAssistantMessageId(undefined);
+            setError(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
           }
           if (streamEvent.event === "error") {
             terminal = true;
+            terminalChatMessageIdRef.current = assistantId;
             clearCurrentGeneration("CHAT");
             setAssistantMessageId(undefined);
             setError(streamEvent.data.message);

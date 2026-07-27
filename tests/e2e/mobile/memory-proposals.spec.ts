@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { expectNoHorizontalOverflow } from "./helpers";
 import {
   runAndWaitForChatTransport,
+  runAndWaitForMemoryServerAction,
   sendChatAndWaitForCompletion,
   waitForAssistantMessageStatus,
 } from "../support/chat-terminal";
@@ -70,9 +71,8 @@ async function editLastChatMessage(
   await waitForAssistantMessageStatus(db, userId, replacementMessage, "COMPLETE");
 }
 
-async function openEditAcceptanceDialog(page: Page, proposalCard: Locator) {
-  const editButton = proposalCard.getByRole("button", { name: "编辑后接受" });
-  await editButton.evaluate(async (element) => {
+async function settleActionButtonInViewport(button: Locator) {
+  await button.evaluate(async (element) => {
     const root = document.documentElement;
     const previousBehavior = root.style.getPropertyValue("scroll-behavior");
     const previousPriority = root.style.getPropertyPriority("scroll-behavior");
@@ -87,8 +87,20 @@ async function openEditAcceptanceDialog(page: Page, proposalCard: Locator) {
       root.style.removeProperty("scroll-behavior");
     }
   });
-  await expect(editButton).toBeVisible();
-  await expect(editButton).toBeEnabled();
+  await expect(button).toBeVisible();
+  await expect(button).toBeEnabled();
+}
+
+async function runProposalServerAction(page: Page, button: Locator) {
+  await settleActionButtonInViewport(button);
+  await runAndWaitForMemoryServerAction(page, async () => {
+    await button.click();
+  });
+}
+
+async function openEditAcceptanceDialog(page: Page, proposalCard: Locator) {
+  const editButton = proposalCard.getByRole("button", { name: "编辑后接受" });
+  await settleActionButtonInViewport(editButton);
   await editButton.click();
   const dialog = page.getByRole("dialog", { name: "编辑建议后接受" });
   await expect(dialog).toBeVisible();
@@ -116,7 +128,10 @@ test.describe("trusted memory proposal workflow", () => {
         hasText: `${fixture} accept CREATE`,
       });
       await expect(createCard).toBeVisible();
-      await createCard.getByRole("button", { name: "接受", exact: true }).click();
+      await runProposalServerAction(
+        page,
+        createCard.getByRole("button", { name: "接受", exact: true }),
+      );
       await expect(createCard).toHaveCount(0);
       const createdMemoryCard = page.locator("article").filter({
         hasText: `${fixture} accept CREATE`,
@@ -127,14 +142,19 @@ test.describe("trusted memory proposal workflow", () => {
       )).toBeVisible();
       await createdMemoryCard.getByRole("button", { name: "删除", exact: true }).click();
       const deleteDialog = page.getByRole("dialog", { name: "删除这条记忆？" });
-      await deleteDialog.getByRole("button", { name: "删除记忆" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await deleteDialog.getByRole("button", { name: "删除记忆" }).click();
+      });
       await expect(createdMemoryCard).toHaveCount(0);
 
       const updateCard = page.locator("[data-memory-proposal-id]").filter({
         hasText: `${fixture} accepted UPDATE`,
       });
       await expect(updateCard.getByText(`${fixture} current UPDATE`, { exact: true })).toBeVisible();
-      await updateCard.getByRole("button", { name: "接受", exact: true }).click();
+      await runProposalServerAction(
+        page,
+        updateCard.getByRole("button", { name: "接受", exact: true }),
+      );
       await expect(updateCard).toHaveCount(0);
       await expect(page.getByText(`${fixture} accepted UPDATE`, { exact: true })).toBeVisible();
 
@@ -144,14 +164,19 @@ test.describe("trusted memory proposal workflow", () => {
       const editDialog = await openEditAcceptanceDialog(page, editCard);
       const editedContent = `${fixture} edited and accepted`;
       await editDialog.getByLabel("记忆内容").fill(editedContent);
-      await editDialog.getByRole("button", { name: "验证并接受" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await editDialog.getByRole("button", { name: "验证并接受" }).click();
+      });
       await expect(editCard).toHaveCount(0);
       await expect(page.getByText(editedContent, { exact: true })).toBeVisible();
 
       const rejectCard = page.locator("[data-memory-proposal-id]").filter({
         hasText: `${fixture} reject CREATE`,
       });
-      await rejectCard.getByRole("button", { name: "拒绝" }).click();
+      await runProposalServerAction(
+        page,
+        rejectCard.getByRole("button", { name: "拒绝" }),
+      );
       await expect(rejectCard).toHaveCount(0);
 
       const conflictCard = page.locator("[data-memory-proposal-id]").filter({
@@ -283,7 +308,10 @@ test.describe("trusted memory proposal workflow", () => {
         hasText: implicitContent,
       });
       await expect(implicitCard).toBeVisible();
-      await implicitCard.getByRole("button", { name: "接受", exact: true }).click();
+      await runProposalServerAction(
+        page,
+        implicitCard.getByRole("button", { name: "接受", exact: true }),
+      );
       await expect(implicitCard).toHaveCount(0);
       await expect(page.getByText(implicitContent, { exact: true })).toBeVisible();
       const acceptedMemory = await expect.poll(
@@ -320,7 +348,10 @@ test.describe("trusted memory proposal workflow", () => {
       const updateCard = page.locator("[data-memory-proposal-id]").filter({
         hasText: updateContent,
       });
-      await updateCard.getByRole("button", { name: "接受", exact: true }).click();
+      await runProposalServerAction(
+        page,
+        updateCard.getByRole("button", { name: "接受", exact: true }),
+      );
       await expect(updateCard).toHaveCount(0);
       await expect.poll(
         () => db.memory.count({ where: { userId, content: updateContent } }),
@@ -346,7 +377,9 @@ test.describe("trusted memory proposal workflow", () => {
       const editDialog = await openEditAcceptanceDialog(page, editCard);
       const editedContent = `E2E edited final ${token}`;
       await editDialog.getByLabel("记忆内容").fill(editedContent);
-      await editDialog.getByRole("button", { name: "验证并接受" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await editDialog.getByRole("button", { name: "验证并接受" }).click();
+      });
       await expect(editCard).toHaveCount(0);
       await expect.poll(
         () => db.memory.count({ where: { userId, content: editedContent } }),
@@ -369,7 +402,10 @@ test.describe("trusted memory proposal workflow", () => {
       const rejectCard = page.locator("[data-memory-proposal-id]").filter({
         hasText: rejectContent,
       });
-      await rejectCard.getByRole("button", { name: "拒绝" }).click();
+      await runProposalServerAction(
+        page,
+        rejectCard.getByRole("button", { name: "拒绝" }),
+      );
       await expect(rejectCard).toHaveCount(0);
       expect(await db.memory.count({ where: { userId, content: rejectContent } })).toBe(0);
 
@@ -403,7 +439,10 @@ test.describe("trusted memory proposal workflow", () => {
           content: `E2E conflict manually changed ${token}`,
         },
       });
-      await liveConflictCard.getByRole("button", { name: "接受", exact: true }).click();
+      await runProposalServerAction(
+        page,
+        liveConflictCard.getByRole("button", { name: "接受", exact: true }),
+      );
       await expect(liveConflictCard.getByText("原记忆已发生变化")).toBeVisible();
       await expect(liveConflictCard).toBeVisible();
 
@@ -438,7 +477,10 @@ test.describe("trusted memory proposal workflow", () => {
           expiresAt: new Date(past.getTime() + 30 * 86_400_000),
         },
       });
-      await expiredCard.getByRole("button", { name: "接受", exact: true }).click();
+      await runProposalServerAction(
+        page,
+        expiredCard.getByRole("button", { name: "接受", exact: true }),
+      );
       await expect(expiredCard).toHaveCount(0);
       expect(await db.memoryProposal.findUnique({
         where: { id: expiredProposal.id },
@@ -446,8 +488,11 @@ test.describe("trusted memory proposal workflow", () => {
       })).toEqual({ status: "EXPIRED" });
 
       await page.goto("/memories");
-      await page.getByRole("button", { name: "记忆已开启" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await page.getByRole("button", { name: "记忆已开启" }).click();
+      });
       await expect(page.getByRole("button", { name: "记忆已关闭" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "记忆已关闭" })).toBeEnabled();
       const disabledMessage = `E2E_DISABLED:${token} 在关闭状态下不得提取。`;
       await sendChatAndWaitForCompletion(
         page,
@@ -459,8 +504,11 @@ test.describe("trusted memory proposal workflow", () => {
         where: { userId, content: `E2E disabled candidate ${token}` },
       })).toBe(0);
       await page.goto("/memories");
-      await page.getByRole("button", { name: "记忆已关闭" }).click();
+      await runAndWaitForMemoryServerAction(page, async () => {
+        await page.getByRole("button", { name: "记忆已关闭" }).click();
+      });
       await expect(page.getByRole("button", { name: "记忆已开启" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "记忆已开启" })).toBeEnabled();
 
       await sendChatAndWaitForCompletion(
         page,

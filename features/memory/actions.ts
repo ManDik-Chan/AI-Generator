@@ -320,7 +320,6 @@ export async function setMemoryMasterEnabledAction(
     where: { id: user.id },
     data: { memoryEnabled: enabled },
   });
-  revalidatePath("/memories");
   return {
     success: true,
     message: enabled

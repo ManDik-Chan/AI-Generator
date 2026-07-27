@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { applyChatMemoryDisclosure, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
+import {
+  applyChatMemoryDisclosure,
+  applyChatRecoverySnapshot,
+  confirmOptimisticTurn,
+  createEditRequestTarget,
+} from "@/features/chat/client-state";
 import type { ChatMessageView } from "@/features/chat/types";
 
 const temporaryUser: ChatMessageView = { id: "user-temp", role: "user", content: "question", status: "complete", createdAt: "2026-07-12T00:00:00Z", temporary: true };
@@ -26,6 +31,36 @@ describe("chat client message identity", () => {
     const result = confirmOptimisticTurn([temporaryUser, assistant, { ...confirmedUser }], "user-temp", "assistant-temp", confirmedUser.id, "550e8400-e29b-41d4-a716-446655440002");
     expect(result.map((message) => message.id)).toEqual([confirmedUser.id, "550e8400-e29b-41d4-a716-446655440002"]);
     expect(result.every((message) => !message.temporary)).toBe(true);
+  });
+
+  it("never lets a stale PENDING recovery snapshot regress a terminal message", () => {
+    const assistant: ChatMessageView = {
+      ...temporaryUser,
+      id: "assistant-id",
+      role: "assistant",
+      content: "final answer",
+      status: "complete",
+    };
+
+    expect(applyChatRecoverySnapshot(
+      [assistant],
+      { id: assistant.id, status: "PENDING", content: "" },
+    )).toEqual([assistant]);
+  });
+
+  it("does not erase live partial content with an older empty PENDING snapshot", () => {
+    const assistant: ChatMessageView = {
+      ...temporaryUser,
+      id: "assistant-id",
+      role: "assistant",
+      content: "partial answer",
+      status: "pending",
+    };
+
+    expect(applyChatRecoverySnapshot(
+      [assistant],
+      { id: assistant.id, status: "PENDING", content: "" },
+    )).toEqual([assistant]);
   });
 
   it("binds a valid live disclosure only to its Assistant Message", () => {

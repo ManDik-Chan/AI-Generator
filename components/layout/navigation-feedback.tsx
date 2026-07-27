@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 function clearPendingLinks() {
@@ -13,6 +13,7 @@ function clearPendingLinks() {
 export function NavigationFeedback() {
   const pathname = usePathname();
   const search = useSearchParams().toString();
+  const feedbackRef = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -41,15 +42,18 @@ export function NavigationFeedback() {
 
     document.addEventListener("click", handleClick, true);
     window.addEventListener("pageshow", handlePageShow);
+    const feedback = feedbackRef.current;
+    feedback?.setAttribute("data-ready", "true");
     return () => {
       document.removeEventListener("click", handleClick, true);
       window.removeEventListener("pageshow", handlePageShow);
+      feedback?.removeAttribute("data-ready");
       clearPendingLinks();
     };
   }, []);
 
   return (
-    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5" data-navigation-feedback data-pending={pending ? "true" : "false"}>
+    <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5" data-navigation-feedback data-pending={pending ? "true" : "false"} ref={feedbackRef}>
       <span className="block h-full origin-left scale-x-0 bg-primary opacity-0 shadow-[0_0_12px_hsl(var(--primary)/.55)] transition-[transform,opacity] duration-150 data-[pending=true]:scale-x-100 data-[pending=true]:opacity-100" data-pending={pending ? "true" : "false"} />
       <span className="sr-only">{pending ? "正在打开页面" : ""}</span>
     </div>

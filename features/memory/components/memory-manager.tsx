@@ -43,6 +43,7 @@ export function MemoryManager({ memories: initialMemories, proposals: initialPro
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [masterPending, setMasterPending] = useState(false);
   const [message, setMessage] = useState<string>();
   const [resolvedProposalIds, setResolvedProposalIds] = useState<Set<string>>(
     () => new Set(),
@@ -139,12 +140,17 @@ export function MemoryManager({ memories: initialMemories, proposals: initialPro
 
     <section className="premium-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
       <div className="flex items-start gap-3"><span className="premium-icon-tile size-10 shrink-0"><Brain className="size-5" /></span><div><p className="font-semibold">允许 AI 使用和更新记忆</p><p className="mt-1 text-xs leading-5 text-muted-foreground">关闭后保留现有内容，但聊天不会召回或自动整理记忆。</p></div></div>
-      <Button aria-pressed={memoryEnabled} className="shrink-0" disabled={pending} onClick={() => startTransition(async () => {
+      <Button aria-pressed={memoryEnabled} className="shrink-0" disabled={pending || masterPending} onClick={async () => {
         const nextEnabled = !memoryEnabled;
-        const result = await setMemoryMasterEnabledAction(nextEnabled);
-        setMessage(result.message);
-        if (result.success) setMemoryEnabled(nextEnabled);
-      })} variant={memoryEnabled ? "default" : "outline"}>{memoryEnabled ? "记忆已开启" : "记忆已关闭"}</Button>
+        setMasterPending(true);
+        try {
+          const result = await setMemoryMasterEnabledAction(nextEnabled);
+          setMessage(result.message);
+          if (result.success) setMemoryEnabled(nextEnabled);
+        } finally {
+          setMasterPending(false);
+        }
+      }} variant={memoryEnabled ? "default" : "outline"}>{memoryEnabled ? "记忆已开启" : "记忆已关闭"}</Button>
     </section>
 
     <section className="premium-panel p-3 sm:p-4">

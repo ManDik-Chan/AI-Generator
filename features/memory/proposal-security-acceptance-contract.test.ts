@@ -81,5 +81,6 @@ describe("Proposal Security Acceptance wiring", () => {
     expect(playwrightConfig).toContain("retries: 0");
     expect(artifactSanitizer).toContain("playwrightReportBase64");
     expect(artifactSanitizer).toContain("sanitizeZip(archivePath)");
+    expect(artifactSanitizer).toContain("REDACTED_SUPABASE_SESSION");
   });
 });
