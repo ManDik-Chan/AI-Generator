@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
+import { applyChatMemoryDisclosure, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
 import type { ChatMessageView } from "@/features/chat/types";
 
 const temporaryUser: ChatMessageView = { id: "user-temp", role: "user", content: "question", status: "complete", createdAt: "2026-07-12T00:00:00Z", temporary: true };
@@ -27,4 +27,74 @@ describe("chat client message identity", () => {
     expect(result.map((message) => message.id)).toEqual([confirmedUser.id, "550e8400-e29b-41d4-a716-446655440002"]);
     expect(result.every((message) => !message.temporary)).toBe(true);
   });
+
+  it("binds a valid live disclosure only to its Assistant Message", () => {
+    const assistant: ChatMessageView = {
+      ...temporaryUser,
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      role: "assistant",
+      content: "answer",
+      temporary: false,
+    };
+    const payload = {
+      version: 1,
+      count: 1,
+      items: [{
+        id: "550e8400-e29b-41d4-a716-446655440003",
+        content: "用户偏好简洁回答",
+        category: "preference",
+        scope: "GLOBAL",
+        verificationMethod: "MANUAL_ENTRY",
+      }],
+    };
+    const result = applyChatMemoryDisclosure(
+      [confirmedUser, assistant],
+      assistant.id,
+      payload,
+    );
+    expect(result[0]).not.toHaveProperty("memoryDisclosure");
+    expect(result[1]?.memoryDisclosure).toEqual(payload);
+  });
+
+  it("ignores malformed or zero-count disclosures", () => {
+    expect(applyChatMemoryDisclosure(
+      [confirmedUser],
+      confirmedUser.id,
+      { version: 1, count: 0, items: [] },
+    )).toEqual([confirmedUser]);
+    expect(applyChatMemoryDisclosure(
+      [confirmedUser],
+      confirmedUser.id,
+      { version: 1, count: 1, items: [] },
+    )).toEqual([confirmedUser]);
+  });
+
+  it.each(["error", "cancelled"] as const)(
+    "does not bind disclosure to a terminal %s Assistant Message",
+    (status) => {
+      const assistant: ChatMessageView = {
+        ...temporaryUser,
+        id: "550e8400-e29b-41d4-a716-446655440002",
+        role: "assistant",
+        status,
+      };
+      const payload = {
+        version: 1,
+        count: 1,
+        items: [{
+          id: "550e8400-e29b-41d4-a716-446655440003",
+          content: "用户偏好简洁回答",
+          category: "preference",
+          scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+        }],
+      };
+
+      expect(applyChatMemoryDisclosure(
+        [assistant],
+        assistant.id,
+        payload,
+      )).toEqual([assistant]);
+    },
+  );
 });

@@ -4,7 +4,7 @@ import { memoryKeywordsSchema, memoryTopicKeySchema } from "@/features/memory/sc
 import { getMemoryMaxTotal } from "@/features/memory/constants";
 import { selectRelevantMemories } from "@/features/memory/selection";
 
-const candidate = (id: string, content: string, extra: Record<string, unknown> = {}) => ({ id, content, category: "profile", scope: "GLOBAL" as const, importance: 3, enabled: true, updatedAt: "2026-07-13T00:00:00Z", ...extra });
+const candidate = (id: string, content: string, extra: Record<string, unknown> = {}) => ({ id, content, category: "profile", scope: "GLOBAL" as const, verificationMethod: "MANUAL_ENTRY" as const, importance: 3, enabled: true, updatedAt: "2026-07-13T00:00:00Z", ...extra });
 
 describe("memory governance contract", () => {
   it("validates topic keys and normalizes keywords", () => {

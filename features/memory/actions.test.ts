@@ -4,8 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   after: vi.fn(),
   deleteMany: vi.fn(),
+  reviewLegacyMemory: vi.fn(),
   requireUser: vi.fn(),
   revalidatePath: vi.fn(),
+  updateOwnedMemoryAfterManualReview: vi.fn(),
+  writeTrustedMemoryChange: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({ after: mocks.after }));
@@ -30,10 +33,18 @@ vi.mock("@/features/memory/queries", () => ({
 }));
 vi.mock("@/features/memory/trusted-write", () => ({
   TrustedMemoryWriteError: class TrustedMemoryWriteError extends Error {},
-  writeTrustedMemoryChange: vi.fn(),
+  writeTrustedMemoryChange: mocks.writeTrustedMemoryChange,
+}));
+vi.mock("@/features/memory/review-service", () => ({
+  reviewLegacyMemory: mocks.reviewLegacyMemory,
+  updateOwnedMemoryAfterManualReview: mocks.updateOwnedMemoryAfterManualReview,
 }));
 
-import { deleteMemoryAction } from "@/features/memory/actions";
+import {
+  createMemoryAction,
+  deleteMemoryAction,
+  markMemoryReviewedAction,
+} from "@/features/memory/actions";
 
 const memoryId = "550e8400-e29b-41d4-a716-446655440001";
 
@@ -48,6 +59,52 @@ describe("memory deletion", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.requireUser.mockResolvedValue({ id: "owner-id" });
+    mocks.writeTrustedMemoryChange.mockResolvedValue({
+      memoryId,
+      created: true,
+      updated: false,
+      idempotent: false,
+    });
+  });
+
+  it("forces browser-created memory through the manual verification mapping", async () => {
+    await expect(createMemoryAction({
+      content: "用户偏好简洁回答",
+      category: "preference",
+      scope: "GLOBAL",
+      importance: 4,
+      enabled: true,
+      origin: "CHAT_MESSAGE",
+      sourceConversationId: "550e8400-e29b-41d4-a716-446655440002",
+      sourceMessageId: "550e8400-e29b-41d4-a716-446655440003",
+    })).resolves.toMatchObject({ success: true, id: memoryId });
+
+    expect(mocks.writeTrustedMemoryChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "owner-id",
+        origin: "MANUAL",
+        verificationSource: "MANUAL_CREATE",
+      }),
+    );
+    const write = mocks.writeTrustedMemoryChange.mock.calls[0]?.[0];
+    expect(write).not.toHaveProperty("sourceConversationId");
+    expect(write).not.toHaveProperty("sourceMessageId");
+  });
+
+  it("maps an owner-scoped review miss to NOT_FOUND", async () => {
+    mocks.reviewLegacyMemory.mockResolvedValue({
+      success: false,
+      code: "NOT_FOUND",
+    });
+
+    await expect(markMemoryReviewedAction(memoryId)).resolves.toMatchObject({
+      success: false,
+      code: "NOT_FOUND",
+    });
+    expect(mocks.reviewLegacyMemory).toHaveBeenCalledWith(
+      "owner-id",
+      memoryId,
+    );
   });
 
   it("deletes an owned memory and revalidates the memory page", async () => {

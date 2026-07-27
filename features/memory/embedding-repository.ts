@@ -101,7 +101,8 @@ export async function searchSemanticMemories(input: {
   const threshold = Math.min(1, Math.max(0, input.threshold));
   const limit = Math.min(50, Math.max(1, Math.floor(input.limit)));
   const rows = await prisma.$queryRaw<SemanticMemoryCandidate[]>(Prisma.sql`
-    SELECT m.id, m.content, m.category, m.scope, m.persona_id AS "personaId",
+    SELECT m.id, m.content, m.category, m.scope,
+      m.verification_method AS "verificationMethod", m.persona_id AS "personaId",
       m.importance, m.enabled, m.updated_at AS "updatedAt", m.topic_key AS "topicKey",
       m.keywords, m.pinned, m.use_count AS "useCount", m.last_used_at AS "lastUsedAt",
       1 - (me.embedding <=> ${vectorLiteral(queryEmbedding)}::extensions.vector) AS similarity

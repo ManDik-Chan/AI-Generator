@@ -9,11 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBanner } from "@/components/ui/status-banner";
-import { deleteMemoryAction, setMemoryEnabledAction, setMemoryMasterEnabledAction, setMemoryPinnedAction } from "@/features/memory/actions";
+import { deleteMemoryAction, markMemoryReviewedAction, setMemoryEnabledAction, setMemoryMasterEnabledAction, setMemoryPinnedAction } from "@/features/memory/actions";
 import { MEMORY_CATEGORIES, MEMORY_CATEGORY_LABELS } from "@/features/memory/constants";
 import { MemoryFormDialog } from "@/features/memory/components/memory-form-dialog";
 import { MemoryProposalCard } from "@/features/memory/components/memory-proposal-card";
 import type { MemoryProposalView, MemoryView } from "@/features/memory/types";
+import {
+  getMemoryOriginLabel,
+  getMemoryVerificationLabel,
+} from "@/features/memory/verification";
 
 interface MemoryManagerProps {
   memories: MemoryView[];
@@ -49,6 +53,9 @@ export function MemoryManager({ memories: initialMemories, proposals: initialPro
   const indexedIds = useMemo(() => new Set(semanticIndex.indexedIds), [semanticIndex.indexedIds]);
   const enabledCount = memories.filter((memory) => memory.enabled).length;
   const pinnedCount = memories.filter((memory) => memory.pinned).length;
+  const legacyCount = memories.filter(
+    (memory) => memory.verificationMethod === "LEGACY_UNREVIEWED",
+  ).length;
   const capacityPercent = maxTotal ? Math.min(100, Math.round((memories.length / maxTotal) * 100)) : 0;
   const duplicateTopics = useMemo(() => {
     const counts = new Map<string, number>();
@@ -70,6 +77,7 @@ export function MemoryManager({ memories: initialMemories, proposals: initialPro
         || (filter === "enabled" && memory.enabled)
         || (filter === "disabled" && !memory.enabled)
         || (filter === "pinned" && memory.pinned)
+        || (filter === "legacy" && memory.verificationMethod === "LEGACY_UNREVIEWED")
         || (filter === "never" && memory.useCount === 0)
         || (filter === "stale" && new Date(memory.lastUsedAt ?? memory.createdAt).getTime() < cutoff)
         || (filter === "duplicates" && Boolean(memory.topicKey) && (duplicateTopics.get(`${memory.scope}:${memory.personaId ?? "global"}:${memory.topicKey}`) ?? 0) > 1)
@@ -82,7 +90,7 @@ export function MemoryManager({ memories: initialMemories, proposals: initialPro
   const filterControls = <>
     <label className="relative min-w-0 md:col-span-2 lg:col-span-1"><span className="sr-only">搜索记忆</span><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><input className="premium-field h-11 pl-10 pr-3 text-sm" onChange={(event) => setQuery(event.target.value)} placeholder="搜索记忆内容或关键词" type="search" value={query} /></label>
     <select aria-label="筛选记忆" className="premium-field h-11 min-w-0 px-3 text-sm" onChange={(event) => setFilter(event.target.value)} value={filter}>
-      <option value="all">全部记忆</option><option value="global">全局记忆</option><option value="persona">Persona 专属</option><option value="enabled">已启用</option><option value="disabled">已停用</option><option value="pinned">已置顶</option><option value="never">从未使用</option><option value="stale">长期未使用</option><option value="duplicates">同主题可能重复</option>
+      <option value="all">全部记忆</option><option value="legacy">旧版未复核</option><option value="global">全局记忆</option><option value="persona">Persona 专属</option><option value="enabled">已启用</option><option value="disabled">已停用</option><option value="pinned">已置顶</option><option value="never">从未使用</option><option value="stale">长期未使用</option><option value="duplicates">同主题可能重复</option>
       {MEMORY_CATEGORIES.map((category) => <option key={category} value={`category:${category}`}>{MEMORY_CATEGORY_LABELS[category]}</option>)}
       {personas.map((persona) => <option key={persona.id} value={`persona:${persona.id}`}>{persona.name}</option>)}
     </select>
@@ -115,14 +123,15 @@ export function MemoryManager({ memories: initialMemories, proposals: initialPro
     </section>
 
     <div className="flex items-end justify-between gap-3 border-b border-border/10 pb-3">
-      <div><p className="premium-kicker">CONFIRMED MEMORY</p><h2 className="mt-2 text-lg font-semibold">已确认的正式记忆</h2></div>
+      <div><p className="premium-kicker">FORMAL MEMORY</p><h2 className="mt-2 text-lg font-semibold">正式记忆</h2></div>
       <p className="text-xs text-muted-foreground">唯一召回真相源</p>
     </div>
 
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="记忆状态概览">
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="记忆状态概览">
       <div className="premium-panel p-4"><p className="premium-kicker">CAPACITY</p><div className="mt-3 flex items-end justify-between"><p className="text-2xl font-semibold tabular-nums">{memories.length}<span className="text-sm font-medium text-muted-foreground"> / {maxTotal}</span></p><span className="text-xs text-muted-foreground">{capacityPercent}%</span></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-muted"><div className={capacityPercent >= 100 ? "h-full bg-destructive" : capacityPercent >= 80 ? "h-full bg-warning" : "h-full bg-primary"} style={{ width: `${capacityPercent}%` }} /></div></div>
       <div className="premium-panel p-4"><p className="premium-kicker">ACTIVE</p><p className="mt-3 text-2xl font-semibold tabular-nums">{enabledCount}</p><p className="mt-1 text-xs text-muted-foreground">已启用记忆</p></div>
       <div className="premium-panel p-4"><p className="premium-kicker">PINNED</p><p className="mt-3 text-2xl font-semibold tabular-nums">{pinnedCount}</p><p className="mt-1 text-xs text-muted-foreground">置顶记忆</p></div>
+      <div className={legacyCount ? "premium-panel border-warning/20 bg-warning-subtle/50 p-4" : "premium-panel p-4"}><p className="premium-kicker">LEGACY REVIEW</p><p className="mt-3 text-2xl font-semibold tabular-nums">{legacyCount}</p><p className="mt-1 text-xs text-muted-foreground">旧版待核对</p></div>
       <div className="premium-panel p-4"><p className="premium-kicker">SEMANTIC INDEX</p><p className="mt-3 flex items-center gap-2 text-sm font-semibold"><Database className="size-4 text-primary" />{semanticIndex.configured ? `${semanticIndex.indexed} 已索引` : "关键词召回"}</p><p className="mt-1 text-xs text-muted-foreground">{semanticIndex.configured ? `${semanticIndex.pending} 条待同步 · ${semanticIndex.dimensions} 维` : "Embedding 未配置，安全降级"}</p></div>
     </section>
 
@@ -146,10 +155,12 @@ export function MemoryManager({ memories: initialMemories, proposals: initialPro
 
     {shown.length ? <div className="grid gap-4 xl:grid-cols-2">{shown.map((memory) => {
       const duplicate = Boolean(memory.topicKey) && (duplicateTopics.get(`${memory.scope}:${memory.personaId ?? "global"}:${memory.topicKey}`) ?? 0) > 1;
-      return <article className={`premium-panel group p-5 transition-[border-color,box-shadow,transform] duration-panel hover:-translate-y-0.5 hover:shadow-soft ${memory.enabled ? "" : "opacity-70"}`} key={memory.id}>
-        <div className="flex items-start gap-3"><span className="premium-icon-tile size-10 shrink-0"><Brain className="size-4" /></span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="premium-kicker">{MEMORY_CATEGORY_LABELS[memory.category as keyof typeof MEMORY_CATEGORY_LABELS] ?? "其他"}</span>{memory.pinned && <span className="premium-chip border-primary/15 bg-primary-subtle text-primary-subtle-foreground"><Pin className="size-3" />已置顶</span>}{!memory.enabled && <span className="premium-chip">已停用</span>}</div><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7">{memory.content}</p></div></div>
+      const legacy = memory.verificationMethod === "LEGACY_UNREVIEWED";
+      return <article className={`premium-panel group min-w-0 p-5 transition-[border-color,box-shadow,transform] duration-panel hover:-translate-y-0.5 hover:shadow-soft ${legacy ? "border-warning/20" : ""} ${memory.enabled ? "" : "opacity-70"}`} key={memory.id}>
+        <div className="flex min-w-0 items-start gap-3"><span className="premium-icon-tile size-10 shrink-0"><Brain className="size-4" /></span><div className="min-w-0 flex-1"><div className="flex min-w-0 flex-wrap items-center gap-2"><span className="premium-kicker">{MEMORY_CATEGORY_LABELS[memory.category as keyof typeof MEMORY_CATEGORY_LABELS] ?? "其他"}</span><span className={legacy ? "premium-chip max-w-full border-warning/20 bg-warning-subtle text-warning-foreground" : "premium-chip max-w-full border-primary/12 bg-primary-subtle text-primary-subtle-foreground"}>{getMemoryVerificationLabel(memory.verificationMethod)}</span>{memory.pinned && <span className="premium-chip border-primary/15 bg-primary-subtle text-primary-subtle-foreground"><Pin className="size-3" />已置顶</span>}{!memory.enabled && <span className="premium-chip">已停用</span>}</div><p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7">{memory.content}</p></div></div>
+        {legacy ? <div className="mt-4 min-w-0 rounded-control border border-warning/20 bg-warning-subtle p-3 text-xs leading-5 text-warning-foreground"><p className="break-words">这条记忆来自旧版自动整理，尚未由你复核；在保持当前启用设置时，它仍会参与召回。</p><Button className="mt-2 max-w-full" disabled={pending} onClick={() => startTransition(async () => { const result = await markMemoryReviewedAction(memory.id); setMessage(result.message); if (result.success && result.verificationMethod && result.verifiedAt) setMemories((current) => current.map((item) => item.id === memory.id ? { ...item, verificationMethod: result.verificationMethod!, verifiedAt: result.verifiedAt } : item)); })} size="sm" variant="outline">标记为已核对</Button></div> : null}
         <div className="mt-4 flex flex-wrap gap-2"><span className="premium-chip">{memory.scope === "GLOBAL" ? "全局" : memory.personaName || "Persona"}</span><span className="premium-chip">重要程度 {memory.importance}</span><span className="premium-chip">使用 {memory.useCount} 次</span><span className={indexedIds.has(memory.id) ? "premium-chip border-primary/12 bg-primary-subtle text-primary-subtle-foreground" : "premium-chip"}><Sparkles className="size-3" />{semanticIndex.configured ? indexedIds.has(memory.id) ? "语义索引正常" : memory.enabled ? "等待索引" : "停用未索引" : "关键词召回"}</span>{duplicate && <span className="premium-chip border-warning/20 bg-warning-subtle text-warning-foreground">同主题可能重复</span>}</div>
-        <div className="mt-4 grid gap-1 border-t border-border/10 pt-3 text-[.6875rem] text-muted-foreground sm:grid-cols-2"><p>最近使用：{memory.lastUsedAt ? memory.lastUsedAt.slice(0, 10) : "尚未使用"}</p><p>更新于：{memory.updatedAt.slice(0, 10)}</p><p>{memory.origin === "MANUAL" ? "手动添加" : "从对话中整理"}</p></div>
+        <div className="mt-4 grid gap-1 border-t border-border/10 pt-3 text-[.6875rem] text-muted-foreground sm:grid-cols-2"><p>最近使用：{memory.lastUsedAt ? memory.lastUsedAt.slice(0, 10) : "尚未使用"}</p><p>更新于：{memory.updatedAt.slice(0, 10)}</p><p>内容来源：{getMemoryOriginLabel(memory.origin)}</p></div>
         {memory.sourceConversationId ? <Link className="mt-3 inline-flex min-h-9 items-center text-xs font-medium text-primary hover:underline" href={`/chat/${memory.sourceConversationId}`} prefetch={false}>查看来源对话</Link> : memory.origin !== "MANUAL" ? <p className="mt-3 text-xs text-muted-foreground">来源对话已删除</p> : null}
         <div className="mt-4 flex flex-wrap gap-1.5 border-t border-border/10 pt-3"><Button disabled={pending} onClick={() => startTransition(async () => { const result = await setMemoryPinnedAction(memory.id, !memory.pinned); setMessage(result.message); })} size="sm" variant="ghost">{memory.pinned ? <PinOff className="size-3.5" /> : <Pin className="size-3.5" />}{memory.pinned ? "取消置顶" : "置顶"}</Button><Button onClick={() => { setEditing(memory); setFormOpen(true); }} size="sm" variant="outline"><Pencil className="size-3.5" />编辑</Button><Button disabled={pending} onClick={() => startTransition(async () => { const result = await setMemoryEnabledAction(memory.id, !memory.enabled); setMessage(result.message); })} size="sm" variant="outline">{memory.enabled ? "停用" : "启用"}</Button><Button className="text-destructive-foreground" onClick={() => setDeleting(memory)} size="sm" variant="ghost"><Trash2 className="size-3.5" />删除</Button></div>
       </article>;

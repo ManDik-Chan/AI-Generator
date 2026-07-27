@@ -31,6 +31,10 @@ import {
   getMemories,
   getPendingMemoryProposals,
 } from "@/features/memory/queries";
+import {
+  reviewLegacyMemory,
+  updateOwnedMemoryAfterManualReview,
+} from "@/features/memory/review-service";
 
 const failure = (
   message: string,
@@ -105,7 +109,12 @@ export async function createMemoryAction(
   input: MemoryInput,
 ): Promise<MemoryActionResult> {
   const user = await requireUser();
-  const parsed = memoryInputSchema.safeParse(input);
+  const parsed = memoryInputSchema.safeParse({
+    ...input,
+    origin: "MANUAL",
+    sourceConversationId: undefined,
+    sourceMessageId: undefined,
+  });
   if (!parsed.success) {
     return failure(
       "请检查记忆表单。",
@@ -125,9 +134,8 @@ export async function createMemoryAction(
       importance: data.importance,
       topicKey: null,
       keywords: [],
-      sourceConversationId: data.sourceConversationId,
-      sourceMessageId: data.sourceMessageId,
-      origin: data.origin,
+      origin: "MANUAL",
+      verificationSource: "MANUAL_CREATE",
       enabled: data.enabled,
       requireMemoryEnabled: false,
       allowIdempotentDuplicate: false,
@@ -139,9 +147,7 @@ export async function createMemoryAction(
     return {
       success: true,
       id: written.memoryId,
-      message: data.origin === "CHAT_MESSAGE"
-        ? "已保存为长期记忆。"
-        : "记忆已创建。",
+      message: "记忆已创建。",
     };
   } catch (error) {
     return trustedFailure(error);
@@ -189,16 +195,13 @@ export async function updateMemoryAction(
   ) {
     return failure("相同的记忆已经存在。", undefined, "DUPLICATE");
   }
-  const result = await prisma.memory.updateMany({
-    where: { id, userId: user.id },
-    data: {
-      content: parsed.data.content,
-      category: parsed.data.category,
-      scope: parsed.data.scope,
-      personaId: parsed.data.scope === "PERSONA" ? parsed.data.personaId : null,
-      importance: parsed.data.importance,
-      enabled: parsed.data.enabled,
-    },
+  const result = await updateOwnedMemoryAfterManualReview(user.id, id, {
+    content: parsed.data.content,
+    category: parsed.data.category,
+    scope: parsed.data.scope,
+    personaId: parsed.data.scope === "PERSONA" ? parsed.data.personaId! : null,
+    importance: parsed.data.importance,
+    enabled: parsed.data.enabled,
   });
   if (!result.count) {
     return failure("记忆不存在或无权访问。", undefined, "NOT_FOUND");
@@ -208,6 +211,31 @@ export async function updateMemoryAction(
   }
   revalidatePath("/memories");
   return { success: true, id, message: "记忆已更新。" };
+}
+
+export async function markMemoryReviewedAction(
+  id: string,
+): Promise<MemoryActionResult> {
+  const user = await requireUser();
+  if (!memoryIdSchema.safeParse(id).success) {
+    return failure("记忆不存在或无权访问。", undefined, "NOT_FOUND");
+  }
+  const result = await reviewLegacyMemory(user.id, id);
+  if (!result.success) {
+    return result.code === "NOT_FOUND"
+      ? failure("记忆不存在或无权访问。", undefined, "NOT_FOUND")
+      : failure("这条记忆不是旧版未复核记忆。", undefined, "NOT_LEGACY");
+  }
+  return {
+    success: true,
+    id,
+    idempotent: result.idempotent,
+    verificationMethod: result.verificationMethod,
+    verifiedAt: result.verifiedAt.toISOString(),
+    message: result.idempotent
+      ? "这条记忆已经核对。"
+      : "已标记为用户手动核对。",
+  };
 }
 
 export async function setMemoryEnabledAction(

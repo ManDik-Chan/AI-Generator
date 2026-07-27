@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { shouldRequestSemanticRecall } from "@/features/memory/semantic-retrieval";
 import { fuseMemoryRankings, type MemoryCandidate } from "@/features/memory/selection";
 
-const memory = (id: string, overrides: Partial<MemoryCandidate> = {}): MemoryCandidate => ({ id, content: `memory ${id}`, category: "profile", scope: "GLOBAL", importance: 3, enabled: true, updatedAt: "2026-01-01T00:00:00Z", ...overrides });
+const memory = (id: string, overrides: Partial<MemoryCandidate> = {}): MemoryCandidate => ({ id, content: `memory ${id}`, category: "profile", scope: "GLOBAL", verificationMethod: "MANUAL_ENTRY", importance: 3, enabled: true, updatedAt: "2026-01-01T00:00:00Z", ...overrides });
 
 describe("adaptive semantic recall", () => {
   it("keeps off disabled and always limited to rounds with candidates", () => {

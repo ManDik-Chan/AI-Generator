@@ -11,7 +11,7 @@ import { AssistantSelectorPanel } from "@/features/chat/components/assistant-sel
 import { DeletedPersonaNotice } from "@/features/chat/components/deleted-persona-notice";
 import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import type { PersonaChatIdentity } from "@/features/persona/types";
-import { applyAgentTerminalMessage, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
+import { applyAgentTerminalMessage, applyChatMemoryDisclosure, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
@@ -384,7 +384,10 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             assistantContent += streamEvent.data.text;
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: assistantContent } : message));
           }
-          if (streamEvent.event === "memory") setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, memoryCount: streamEvent.data.count } : message));
+          if (streamEvent.event === "memory") {
+            setMessages((current) =>
+              applyChatMemoryDisclosure(current, assistantId, streamEvent.data));
+          }
           if (streamEvent.event === "done") {
             terminal = true;
             clearCurrentGeneration("CHAT");

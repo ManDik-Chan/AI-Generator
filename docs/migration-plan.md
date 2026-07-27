@@ -43,8 +43,10 @@
 - Memory CRUD、重要度和分类
 - 普通隐式提取先进入独立 MemoryProposal，由用户逐条接受、编辑后接受或拒绝
 - 正式 Memory 是唯一召回与 Embedding 真相源；UPDATE 接受使用版本冲突保护
+- 为正式 Memory 区分 `origin` 与用户行为核验来源；5B1 前未复核自动记忆保留 warning 并支持逐条核对
+- 聊天只在 live session 展示本轮实际注入的正式 Memory，不新增 Message 引用表或排名/向量审计
 - 聊天上下文按预算检索记忆
-- 验收：记忆可查看、编辑、删除和关闭使用
+- 验收：记忆可查看、按核验来源筛选、核对、编辑、删除和关闭使用；本轮引用与最终 selected Memory 一致
 
 ### Phase 6：工具箱
 
@@ -74,3 +76,5 @@
 ## 回滚与完成定义
 
 每个阶段使用独立、可审阅的变更集。若阶段失败，保留前一阶段可运行版本；数据库迁移必须同时提供向下迁移或明确的前滚恢复步骤。阶段完成必须满足：lint、typecheck、build 通过，文档与环境变量清单同步更新，且没有真实密钥进入仓库。
+
+Phase 5B2a 使用独立 `20260727013753_add_memory_verification`。部署前必须在 disposable 非 Production Supabase 验证 clean、旧库增量、历史来源回填和 `COMMIT` 前失败回滚；禁止 `prisma db push`。本轮实施只完成本地验证，未连接或修改 Production。

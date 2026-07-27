@@ -51,8 +51,8 @@ test.describe("authenticated mobile shell", () => {
     await page.goto("/memories");
     await expect(page.getByRole("heading", { name: "AI 建议记住" })).toBeVisible();
     await expect(page.getByText("确认后才会用于未来对话", { exact: false }).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "已确认的正式记忆" })).toBeVisible();
-    await expect(page.getByText("唯一召回真相源")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "正式记忆" })).toBeVisible();
+    await expect(page.getByText("唯一召回真相源", { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 

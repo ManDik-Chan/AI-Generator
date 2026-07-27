@@ -1,5 +1,6 @@
 import type { MemoryInput } from "@/features/memory/schemas";
-export interface MemoryView { id: string; content: string; category: string; scope: "GLOBAL" | "PERSONA"; origin: "MANUAL" | "CHAT_MESSAGE" | "AUTO_EXTRACTED"; importance: number; enabled: boolean; pinned: boolean; useCount: number; topicKey?: string; keywords: string[]; personaId?: string; personaName?: string; sourceConversationId?: string; sourceConversationTitle?: string; lastUsedAt?: string; createdAt: string; updatedAt: string }
+import type { MemoryVerificationMethod } from "@prisma/client";
+export interface MemoryView { id: string; content: string; category: string; scope: "GLOBAL" | "PERSONA"; origin: "MANUAL" | "CHAT_MESSAGE" | "AUTO_EXTRACTED"; verificationMethod: MemoryVerificationMethod; verifiedAt?: string; importance: number; enabled: boolean; pinned: boolean; useCount: number; topicKey?: string; keywords: string[]; personaId?: string; personaName?: string; sourceConversationId?: string; sourceConversationTitle?: string; lastUsedAt?: string; createdAt: string; updatedAt: string }
 export interface MemoryProposalView {
   id: string;
   actionLabel: "建议新增" | "建议更新";
@@ -32,6 +33,9 @@ export type MemoryActionResult = {
   code?: string;
   fieldErrors?: Record<string, string[]>;
   stateChanged?: boolean;
+  idempotent?: boolean;
+  verificationMethod?: MemoryVerificationMethod;
+  verifiedAt?: string;
   finalStatus?: "PENDING" | "ACCEPTED" | "REJECTED" | "EXPIRED" | "CANCELLED";
   resolutionSnapshot?: {
     memories: MemoryView[];

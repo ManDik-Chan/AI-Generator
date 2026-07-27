@@ -1,10 +1,12 @@
 import { normalizeMemoryContent } from "@/features/memory/security";
+import type { MemoryVerificationMethod } from "@prisma/client";
 
 export interface MemoryCandidate {
   id: string;
   content: string;
   category: string;
   scope: "GLOBAL" | "PERSONA";
+  verificationMethod: MemoryVerificationMethod;
   personaId?: string | null;
   importance: number;
   enabled: boolean;

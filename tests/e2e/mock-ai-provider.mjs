@@ -17,6 +17,44 @@ function sse(response, content) {
   response.end("data: [DONE]\n\n");
 }
 
+function slowSse(response) {
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+  response.write(`data: ${JSON.stringify({
+    choices: [{
+      delta: { content: "E2E slow response started" },
+      finish_reason: null,
+    }],
+  })}\n\n`);
+  setTimeout(() => {
+    if (response.destroyed || response.writableEnded) return;
+    response.write(`data: ${JSON.stringify({
+      choices: [{ delta: {}, finish_reason: "stop" }],
+    })}\n\n`);
+    response.end("data: [DONE]\n\n");
+  }, 10_000);
+}
+
+function decodeMemoryXml(value) {
+  return value
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", "\"")
+    .replaceAll("&apos;", "'")
+    .replaceAll("&amp;", "&");
+}
+
+function promptMemoryContents(messages) {
+  const system = messages.find((message) =>
+    String(message.content).includes("<user_memories>"));
+  return [...String(system?.content ?? "").matchAll(
+    /<memory>([\s\S]*?)<\/memory>/g,
+  )].map((match) => decodeMemoryXml(match[1]));
+}
+
 function textBetween(value, tag) {
   return value.match(new RegExp(`<${tag}[^>]*>\\s*([\\s\\S]*?)\\s*</${tag}>`))?.[1]?.trim() ?? "";
 }
@@ -62,6 +100,8 @@ function operationFor(messages) {
 }
 
 const server = createServer((request, response) => {
+  request.on("error", () => undefined);
+  response.on("error", () => undefined);
   if (request.method === "GET" && request.url === "/health") {
     response.writeHead(200, { "Content-Type": "text/plain" });
     response.end("ok");
@@ -98,11 +138,29 @@ const server = createServer((request, response) => {
       const isExtractor = messages.some(
         (message) => String(message.content).includes("你是长期记忆提取器"),
       );
+      const currentMessage = String(messages.at(-1)?.content ?? "");
+      if (!isExtractor && currentMessage.includes("E2E_PROVIDER_FAIL")) {
+        response.writeHead(503, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({
+          error: { message: "mocked provider failure" },
+        }));
+        return;
+      }
+      if (!isExtractor && currentMessage.includes("E2E_PROVIDER_SLOW")) {
+        slowSse(response);
+        return;
+      }
+      const promptAudit = !isExtractor
+        && currentMessage.includes("E2E_PROMPT_AUDIT")
+        ? `PROMPT_MEMORY_CONTENTS=${encodeURIComponent(JSON.stringify(
+            promptMemoryContents(messages).sort(),
+          ))}`
+        : undefined;
       sse(
         response,
         isExtractor
           ? JSON.stringify(operationFor(messages))
-          : "已收到这条测试消息。",
+          : promptAudit ?? "已收到这条测试消息。",
       );
     } catch {
       response.writeHead(400, { "Content-Type": "application/json" });

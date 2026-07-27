@@ -1,5 +1,6 @@
 import type { ChatMessageView } from "@/features/chat/types";
 import type { AgentRunTerminalSnapshot } from "@/features/agents/client-types";
+import { chatMemoryDisclosureSchema } from "@/features/memory/disclosure";
 
 interface EditTargetInput {
   message: ChatMessageView;
@@ -41,4 +42,20 @@ export function applyAgentTerminalMessage(messages: ChatMessageView[], terminal:
     content: terminal.assistantMessage.content,
     status: terminal.assistantMessage.status.toLowerCase() as ChatMessageView["status"],
   } : message);
+}
+
+export function applyChatMemoryDisclosure(
+  messages: ChatMessageView[],
+  assistantMessageId: string,
+  payload: unknown,
+) {
+  const parsed = chatMemoryDisclosureSchema.safeParse(payload);
+  if (!parsed.success || parsed.data.count === 0) return messages;
+  return messages.map((message) =>
+    message.id === assistantMessageId
+      && message.role === "assistant"
+      && message.status !== "error"
+      && message.status !== "cancelled"
+      ? { ...message, memoryDisclosure: parsed.data }
+      : message);
 }

@@ -84,4 +84,16 @@ describe("memory input safety", () => {
     expect(containsHighConfidenceCredential("api_key=abcdefghijklmnop1234")).toBe(true);
     expect(containsHighConfidenceCredential("我喜欢 TypeScript 和咖啡")).toBe(false);
   });
+
+  it("rejects browser-controlled verification fields", () => {
+    expect(memoryInputSchema.safeParse({
+      content: "用户偏好简洁回答",
+      category: "preference",
+      scope: "GLOBAL",
+      importance: 4,
+      enabled: true,
+      verificationMethod: "MANUAL_REVIEW",
+      verifiedAt: new Date().toISOString(),
+    }).success).toBe(false);
+  });
 });

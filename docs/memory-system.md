@@ -1,4 +1,12 @@
-# Phase 5B1 可信长期记忆
+# Phase 5B1 / 5B2a 可信长期记忆
+
+## Phase 5B2a 核验来源与引用透明度
+
+正式 `Memory` 保留 `origin` 作为内容业务来源，并新增 `verificationMethod` 表示当前内容通过哪一种用户行为获得可信状态。五类用户可见来源为手动添加、明确要求记住、确认 AI 建议、手动核对和“旧版自动整理，尚未复核”；不使用数字或高/中/低可信评分。
+
+旧 MANUAL 与 CHAT_MESSAGE 分别按 `createdAt` 回填为手动添加和明确请求；AUTO_EXTRACTED 若有同 owner Accepted Proposal 指向该 Memory，则按最新 `resolvedAt` 回填为 Proposal 接受，否则标记 Legacy 且 `verifiedAt=NULL`。Legacy 暂时继续按当前启用、作用域和排名设置参与召回，但管理页和聊天引用必须显示 warning。用户核对只更新 verification 字段，不增加 revision、不重建 Embedding。
+
+聊天 `memory` SSE 从 count 扩展为版本 1 的最小白名单，items 直接来自最终 `selectedMemories`，仍限制 8 条 / 2400 字符。UI 将 items 绑定到本轮 Assistant Message；只保留在当前客户端会话状态，刷新不重建。没有新增 Message 字段、引用/审计表、ConflictCase，也不保存 topic、keywords、排名分数、向量、Proposal 或 Provider 诊断。完整边界见 `docs/memory-provenance-and-reference-transparency.md`。
 
 ## 产品范围
 
@@ -68,11 +76,11 @@ Prompt 用 `<current_user_message>`、`<assistant_response context_only="true">`
 
 召回仍为确定性算法：当前消息与近期 USER 词项、importance、更新时间、Persona 和类别加权；默认最多 8 条、正文最多 2400 字符，整条取舍。记忆作为 XML 转义的不可信数据注入，不能覆盖安全规则、Persona 或当前请求。
 
-浏览器只收到 `event: memory` 的 count，并在助手消息下低调显示“已参考 N 条长期记忆”。后台提取结果本阶段静默保存，不引入轮询、WebSocket 或刷新。
+浏览器只在 Assistant Message 成功完成后收到版本化 `event: memory` 最小 DTO，并在对应已完成消息下显示可折叠的本轮引用明细；中止、Provider 错误或流式失败不显示 disclosure。纯已核验引用显示“本轮参考了 N 条已确认记忆”；Legacy 明确显示“含旧版未复核”与 warning，不称为用户已确认。数据只存在于 live session，不引入轮询、WebSocket、Message 持久化或刷新重建。
 
 ## 管理与删除
 
-`/memories` 的“AI 建议记住”展示待确认卡片，并明确提示“确认后才会用于未来对话”；“已确认的正式记忆”保留来源、更新时间、最近使用、编辑、启停、置顶和删除。Pending Proposal 不计入正式容量，不显示已索引。总开关关闭不会删除数据，仍可查看和拒绝，但禁止接受 Proposal。
+`/memories` 的“AI 建议记住”展示待确认卡片，并明确提示“确认后才会用于未来对话”；“正式记忆”保留来源、核验 badge、更新时间、最近使用、编辑、启停、置顶和删除。Legacy 卡片解释其仍会参与召回并提供局部“标记为已核对”操作。Pending Proposal 不计入正式容量，不显示已索引。总开关关闭不会删除数据，仍可查看和拒绝，但禁止接受 Proposal。
 
 彻底删除需在该页点击删除并确认。停用或关闭总开关只停止使用；删除来源对话不会自动删除 Memory。
 
