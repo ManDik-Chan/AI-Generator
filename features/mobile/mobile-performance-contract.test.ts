@@ -73,6 +73,16 @@ describe("Phase 6B2.1 performance and scrolling contracts", () => {
     expect(memories).toContain("prefetch={false}");
   });
 
+  it("does not speculate routes from always-visible post-login navigation", () => {
+    const home = read("features/home/components/home-dashboard.tsx");
+    const chatLayout = read("features/chat/components/chat-layout.tsx");
+    const chatComposer = read("features/chat/components/chat-composer.tsx");
+    expect(home).toContain('<Link href="/chat" prefetch={false}>');
+    expect(home).toContain('<Link href="/tools/brainstorm" prefetch={false}>');
+    expect(chatLayout.match(/prefetch=\{false\}/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(chatComposer).toContain('href="/tools/image" prefetch={false}');
+  });
+
   it("provides immediate navigation feedback without an artificial delay", () => {
     const feedback = read("components/layout/navigation-feedback.tsx");
     const layout = read("app/layout.tsx");

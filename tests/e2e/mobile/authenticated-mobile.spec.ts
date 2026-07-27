@@ -125,9 +125,16 @@ test.describe("authenticated mobile shell", () => {
     });
     await expect.poll(() => scroller.evaluate((element) => element.scrollHeight - element.clientHeight)).toBeGreaterThan(1000);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    await scroller.evaluate((element) => { element.scrollTop = 420; });
-    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(420);
-    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const scrollToBottomButton = page.getByRole("button", { name: "回到底部" });
+    await expect.poll(async () => {
+      await scroller.evaluate((element) => {
+        element.scrollTop = 419;
+        element.dispatchEvent(new Event("scroll", { bubbles: true }));
+        element.scrollTop = 420;
+        element.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      return scrollToBottomButton.isVisible();
+    }).toBe(true);
     expect(await scroller.evaluate((element) => element.scrollTop)).toBe(420);
 
     await expectSinglePrimaryScroller(page);

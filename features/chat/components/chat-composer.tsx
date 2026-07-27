@@ -58,7 +58,7 @@ export function ChatComposer(props: ChatComposerProps) {
     <div className="safe-inline shrink-0 bg-gradient-to-t from-background via-background/96 to-transparent pb-[max(.75rem,var(--safe-area-bottom))] pt-3 sm:px-6 sm:pt-4" data-chat-composer ref={containerRef}>
       <div className="mx-auto max-w-[52rem]">
         <div className="premium-panel-strong flex items-end gap-2 rounded-[1.35rem] p-2.5 focus-within:border-primary/45 focus-within:shadow-raised sm:p-3">
-          <Link aria-label="分析图片" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground transition hover:bg-primary-subtle hover:text-primary" href="/tools/image" title="打开图片理解"><ImageIcon className="size-4" /></Link>
+          <Link aria-label="分析图片" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground transition hover:bg-primary-subtle hover:text-primary" href="/tools/image" prefetch={false} title="打开图片理解"><ImageIcon className="size-4" /></Link>
           <textarea
             aria-label="消息内容"
             className="premium-scrollbar max-h-[min(10rem,35dvh)] min-h-11 flex-1 resize-none bg-transparent px-2 py-2.5 text-base leading-6 outline-none placeholder:text-muted-foreground sm:text-sm"

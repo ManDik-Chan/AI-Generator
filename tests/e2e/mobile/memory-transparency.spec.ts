@@ -1,53 +1,69 @@
 import { randomUUID, createHash } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
-import { createClient } from "@supabase/supabase-js";
 
 import { expectNoHorizontalOverflow } from "./helpers";
+import {
+  observeRequestTerminal,
+  runAndWaitForChatTransport,
+  sendChatAndWaitForCompletion,
+  waitForReadyChatNavigation,
+  waitForAssistantMessageStatus,
+} from "../support/chat-terminal";
+import {
+  cleanupIsolatedE2eUser,
+  createIsolatedE2eUser,
+} from "../support/isolated-user";
+import {
+  attachRuntimeDiagnostics,
+  expectNoRuntimeErrors,
+  installRuntimeDiagnostics,
+  type RuntimeDiagnostics,
+} from "../support/runtime-diagnostics";
 
 const supabaseUrl = process.env.SUPABASE_TEST_URL;
-const anonKey = process.env.SUPABASE_TEST_ANON_KEY;
 const serviceRoleKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
-const configured = Boolean(supabaseUrl && anonKey && serviceRoleKey);
-const runtimeErrors = new WeakMap<Page, string[]>();
+const configured = Boolean(supabaseUrl && serviceRoleKey);
+const runtimeDiagnostics = new WeakMap<Page, RuntimeDiagnostics>();
 
-function expectNoRuntimeErrors(page: Page, stage: string) {
-  expect(
-    runtimeErrors.get(page) ?? [],
-    `Memory transparency E2E emitted a console or page error during ${stage}.`,
-  ).toEqual([]);
+function assertNoRuntimeErrors(page: Page, stage: string) {
+  const diagnostics = runtimeDiagnostics.get(page) ?? {
+    errors: ["Runtime diagnostics were not installed."],
+    requestFailures: [],
+  };
+  expectNoRuntimeErrors(
+    diagnostics,
+    `Memory transparency E2E emitted an error during ${stage}.`,
+  );
 }
 
 test.beforeEach(async ({ page }) => {
-  const errors: string[] = [];
-  runtimeErrors.set(page, errors);
-  page.on("console", (message) => {
-    if (message.type() === "error") errors.push(`console: ${message.text()}`);
-  });
-  page.on("pageerror", (error) => {
-    errors.push(`page: ${error.message}`);
-  });
+  runtimeDiagnostics.set(page, installRuntimeDiagnostics(page));
 });
 
-test.afterEach(async ({ page }) => {
-  expectNoRuntimeErrors(page, "the completed scenario");
+test.afterEach(async ({ page }, testInfo) => {
+  const diagnostics = runtimeDiagnostics.get(page) ?? {
+    errors: ["Runtime diagnostics were not installed."],
+    requestFailures: [],
+  };
+  await attachRuntimeDiagnostics(testInfo, diagnostics);
+  assertNoRuntimeErrors(page, "the completed scenario");
 });
 
 async function sendChat(
   page: Page,
+  db: PrismaClient,
+  userId: string,
   message: string,
   expectedResponse = "已收到这条测试消息。",
 ) {
-  await page.goto("/chat");
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("消息内容").fill(message);
-  await page.getByRole("button", { name: "发送消息" }).click();
-  await expect(page.getByText(expectedResponse, { exact: true }).last()).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0, {
-    timeout: 30_000,
-  });
+  await sendChatAndWaitForCompletion(
+    page,
+    db,
+    userId,
+    message,
+    expectedResponse,
+  );
 }
 
 test.describe("memory provenance and live turn disclosure", () => {
@@ -59,38 +75,12 @@ test.describe("memory provenance and live turn disclosure", () => {
   }, testInfo) => {
     test.setTimeout(180_000);
     const db = new PrismaClient();
-    const service = createClient(supabaseUrl!, serviceRoleKey!, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
-      },
-    });
-    const token = `transparency-${testInfo.project.name}-${randomUUID()}`
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "-");
+    const identity = await createIsolatedE2eUser(page, testInfo, "transparency");
+    const token = identity.namespace;
     const legacyToken = `legacy${randomUUID().replaceAll("-", "")}`;
-    const email = `${token}@example.test`;
-    const password = `P!${randomUUID()}a9`;
-    const created = await service.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-    expect(created.error).toBeNull();
-    const userId = created.data.user!.id;
+    const userId = identity.userId;
 
     try {
-      await page.context().clearCookies();
-      await page.goto("/login");
-      await page.getByLabel("邮箱").fill(email);
-      await page.locator("#password").fill(password);
-      await page.getByRole("button", { name: "登录" }).click();
-      await page.waitForURL((url) => url.pathname !== "/login", {
-        timeout: 30_000,
-      });
-      await page.waitForLoadState("networkidle");
-
       const now = new Date();
       const disclosureA = `${token} alpha verified memory`;
       const disclosureB = `${token} beta verified memory`;
@@ -204,6 +194,8 @@ test.describe("memory provenance and live turn disclosure", () => {
       )}`;
       await sendChat(
         page,
+        db,
+        userId,
         `E2E_PROMPT_AUDIT 请说明 ${token} alpha beta`,
         promptAudit,
       );
@@ -232,12 +224,13 @@ test.describe("memory provenance and live turn disclosure", () => {
       expect(actuallyUsed.map((memory) => memory.content).sort()).toEqual(
         [disclosureA, disclosureB].sort(),
       );
-      expectNoRuntimeErrors(page, "successful disclosure");
+      assertNoRuntimeErrors(page, "successful disclosure");
 
-      await page.getByLabel("消息内容").fill(
-        `E2E_PROVIDER_FAIL ${token} alpha beta`,
-      );
-      await page.getByRole("button", { name: "发送消息" }).click();
+      const providerFailureMessage = `E2E_PROVIDER_FAIL ${token} alpha beta`;
+      await page.getByLabel("消息内容").fill(providerFailureMessage);
+      await runAndWaitForChatTransport(page, async () => {
+        await page.getByRole("button", { name: "发送消息" }).click();
+      });
       const failedAssistant = page.locator("article").filter({
         hasText: "本次生成未正常完成",
       }).last();
@@ -245,19 +238,42 @@ test.describe("memory provenance and live turn disclosure", () => {
       await expect(failedAssistant.getByText(
         /本轮参考了 \d+ 条/,
       )).toHaveCount(0);
-      expectNoRuntimeErrors(page, "Provider failure");
+      await waitForAssistantMessageStatus(
+        db,
+        userId,
+        providerFailureMessage,
+        "ERROR",
+      );
+      assertNoRuntimeErrors(page, "Provider failure");
 
-      await page.getByLabel("消息内容").fill(
-        `E2E_PROVIDER_SLOW ${token} alpha beta`,
+      const cancelledMessage = `E2E_PROVIDER_SLOW ${token} alpha beta`;
+      await page.getByLabel("消息内容").fill(cancelledMessage);
+      const slowResponsePromise = page.waitForResponse(
+        (response) => response.request().method() === "POST"
+          && new URL(response.url()).pathname === "/api/chat",
+        { timeout: 30_000 },
       );
       await page.getByRole("button", { name: "发送消息" }).click();
+      const slowResponse = await slowResponsePromise;
+      expect(slowResponse.status()).toBe(200);
+      const slowRequestTerminal = observeRequestTerminal(
+        page,
+        slowResponse.request(),
+      );
       const slowAssistant = page.locator("main article").last();
       const stopButton = page.getByRole(
         "button",
         { name: "停止生成", exact: true },
       );
       await expect(stopButton).toBeVisible({ timeout: 30_000 });
+      const cancelResponsePromise = page.waitForResponse(
+        (response) => response.request().method() === "POST"
+          && /\/api\/chat\/messages\/[^/]+\/cancel$/.test(new URL(response.url()).pathname),
+        { timeout: 30_000 },
+      );
       await stopButton.click();
+      const cancelResponse = await cancelResponsePromise;
+      expect(cancelResponse.status()).toBe(200);
       await expect(page.getByRole(
         "button",
         { name: "停止生成", exact: true },
@@ -267,7 +283,17 @@ test.describe("memory provenance and live turn disclosure", () => {
       await expect(slowAssistant.getByText(
         /本轮参考了 \d+ 条/,
       )).toHaveCount(0);
-      expectNoRuntimeErrors(page, "user cancellation");
+      expect(await slowRequestTerminal).toEqual({
+        failure: expect.anything(),
+        state: "failed",
+      });
+      await waitForAssistantMessageStatus(
+        db,
+        userId,
+        cancelledMessage,
+        "CANCELLED",
+      );
+      assertNoRuntimeErrors(page, "user cancellation");
       const useCountsAfterUnsuccessfulTurns = await db.memory.findMany({
         where: { userId, useCount: { gt: 0 } },
         orderBy: { content: "asc" },
@@ -279,14 +305,17 @@ test.describe("memory provenance and live turn disclosure", () => {
           .map((content) => ({ content, useCount: 1 })),
       );
 
-      await page.reload();
-      await page.waitForLoadState("networkidle");
+      await waitForReadyChatNavigation(
+        page,
+        () => page.reload({ waitUntil: "domcontentloaded" }),
+      );
+      await expect(page.getByLabel("消息内容")).toBeVisible();
       await expect(page.getByText(
         "本轮参考了 2 条已确认记忆",
         { exact: true },
       )).toHaveCount(0);
 
-      await sendChat(page, `请说明 ${legacyToken}`);
+      await sendChat(page, db, userId, `请说明 ${legacyToken}`);
       const legacyAssistant = page.locator("article").filter({
         hasText: "已收到这条测试消息。",
       }).last();
@@ -319,7 +348,7 @@ test.describe("memory provenance and live turn disclosure", () => {
       ).first()).toBeVisible();
       await page.getByRole("button", { name: "记忆已开启" }).click();
       await expect(page.getByRole("button", { name: "记忆已关闭" })).toBeVisible();
-      await sendChat(page, `请说明 ${token} alpha beta`);
+      await sendChat(page, db, userId, `请说明 ${token} alpha beta`);
       await expect(page.getByText(/本轮参考了 \d+ 条/)).toHaveCount(0);
 
       await page.goto("/memories");
@@ -329,7 +358,7 @@ test.describe("memory provenance and live turn disclosure", () => {
         where: { userId },
         data: { enabled: false },
       });
-      await sendChat(page, `zero-${token}`);
+      await sendChat(page, db, userId, `zero-${token}`);
       await expect(page.getByText(/本轮参考了 \d+ 条/)).toHaveCount(0);
 
       await db.memory.update({
@@ -366,17 +395,16 @@ test.describe("memory provenance and live turn disclosure", () => {
         verifiedAt: expect.any(Date),
       });
 
+      await page.goto("/memories", { waitUntil: "domcontentloaded" });
       for (const width of [390, 430, 768, 1440]) {
         await page.setViewportSize({
           width,
           height: width < 700 ? 844 : 1000,
         });
-        await page.goto("/memories");
         await expectNoHorizontalOverflow(page);
       }
     } finally {
-      await service.auth.admin.deleteUser(userId).catch(() => undefined);
-      await db.$disconnect();
+      await cleanupIsolatedE2eUser(identity, db, page);
     }
   });
 });

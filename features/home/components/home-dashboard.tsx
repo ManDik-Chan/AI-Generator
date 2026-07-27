@@ -102,7 +102,8 @@ export function HomeDashboard() {
           <Suspense fallback={<p className="mb-3 mt-5 text-sm font-bold text-muted-foreground">欢迎回来。</p>}><HomeWelcome /></Suspense>
           <h1 className="max-w-[46rem] text-balance text-[clamp(2.25rem,4.15vw,4.35rem)] font-[780] leading-[.98] tracking-[-.066em]"><span className="block">让你的 AI，</span><span className="block bg-gradient-to-r from-primary via-[#6f8fff] to-secondary bg-clip-text text-transparent">真正成为一个工作室。</span></h1>
           <p className="mt-5 max-w-[40rem] text-body text-muted-foreground">把连续对话、专属人格、长期记忆和创作工具连接成统一工作流。界面保持安静，能力在需要时出现。</p>
-          <div className="mt-6 flex flex-col gap-2.5 min-[521px]:flex-row"><Button asChild size="lg"><Link href="/chat">开始新对话<ArrowUpRight className="size-4" /></Link></Button><Button asChild size="lg" variant="outline"><Link href="/tools/brainstorm"><BrainCircuit className="size-4" />启动多 Agent</Link></Button></div>
+          {/* WebKit reports cancelled post-login RSC speculation as a load error; these routes should load only after an explicit click. */}
+          <div className="mt-6 flex flex-col gap-2.5 min-[521px]:flex-row"><Button asChild size="lg"><Link href="/chat" prefetch={false}>开始新对话<ArrowUpRight className="size-4" /></Link></Button><Button asChild size="lg" variant="outline"><Link href="/tools/brainstorm" prefetch={false}><BrainCircuit className="size-4" />启动多 Agent</Link></Button></div>
         </div>
         <LumenCoreVisual />
       </section>

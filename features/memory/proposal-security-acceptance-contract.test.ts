@@ -14,6 +14,11 @@ const mockProvider = readFileSync(
   "tests/e2e/mock-ai-provider.mjs",
   "utf8",
 );
+const playwrightConfig = readFileSync("playwright.config.ts", "utf8");
+const artifactSanitizer = readFileSync(
+  "scripts/redact-e2e-artifacts.mjs",
+  "utf8",
+);
 const migrationVerifier = readFileSync(
   "scripts/verify-security-migrations.mjs",
   "utf8",
@@ -41,7 +46,8 @@ describe("Proposal Security Acceptance wiring", () => {
     expect(mockProvider).toContain("/chat/completions");
     expect(mockProvider).toContain("你是长期记忆提取器");
     expect(mockProvider).toContain("/embeddings");
-    expect(e2e).toContain("sendChat(");
+    expect(e2e).toContain("sendChatAndWaitForCompletion(");
+    expect(e2e).toContain("waitForAssistantMessageStatus");
     expect(e2e).toContain("memoryProposal.count");
     expect(e2e).toContain("memoryEmbedding.count");
     expect(e2e).toContain("E2E_IMPLICIT");
@@ -60,5 +66,20 @@ describe("Proposal Security Acceptance wiring", () => {
   it("keeps the requested responsive matrix executable", () => {
     expect(e2e).toContain("[390, 430, 768, 1440]");
     expect(e2e).toContain("expectNoHorizontalOverflow");
+  });
+
+  it("isolates each authenticated browser project and retains sanitized diagnostics", () => {
+    expect(workflow).toContain("authenticated-browser-acceptance:");
+    expect(workflow).toContain("project: chromium-desktop");
+    expect(workflow).toContain("project: chromium-mobile");
+    expect(workflow).toContain("project: webkit-iphone");
+    expect(workflow).toContain("Start project-isolated local Supabase");
+    expect(workflow).toContain("node scripts/verify-e2e-readiness.mjs");
+    expect(workflow).toContain("node scripts/redact-e2e-artifacts.mjs");
+    expect(workflow).toContain("if: always() && steps.sanitize.outcome == 'success'");
+    expect(workflow).toContain("retention-days: 7");
+    expect(playwrightConfig).toContain("retries: 0");
+    expect(artifactSanitizer).toContain("playwrightReportBase64");
+    expect(artifactSanitizer).toContain("sanitizeZip(archivePath)");
   });
 });

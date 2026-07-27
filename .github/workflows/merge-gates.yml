@@ -73,10 +73,20 @@ jobs:
           pnpm build
 
   authenticated-playwright:
-    name: authenticated Playwright
+    name: authenticated Playwright (${{ matrix.project }})
     needs: [quality, node24-compatibility]
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium-desktop
+            browser: chromium
+          - project: chromium-mobile
+            browser: chromium
+          - project: webkit-iphone
+            browser: webkit
     steps:
       - name: Check out the exact PR commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -96,11 +106,11 @@ jobs:
         uses: supabase/setup-cli@6ffe784b57613e98e0c04651e5fde0cec28cb1c9
         with:
           version: 2.109.1
-      - name: Start isolated local Supabase
+      - name: Start project-isolated local Supabase
         shell: bash
         run: |
           set -euo pipefail
-          supabase start >"$RUNNER_TEMP/supabase-start.log" 2>&1
+          supabase start >"$RUNNER_TEMP/supabase-${{ matrix.project }}.log" 2>&1
           status_env="$(supabase status -o env)"
           eval "$status_env"
           for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do
@@ -109,16 +119,28 @@ jobs:
           {
             printf 'DATABASE_URL=%s\n' "$DB_URL"
             printf 'DIRECT_URL=%s\n' "$DB_URL"
+            printf 'TEST_DATABASE_URL=%s\n' "$DB_URL"
+            printf 'ALLOW_TEST_DATABASE_MUTATIONS=true\n'
+            printf 'TEST_DATABASE_CONFIRMED_NON_PRODUCTION=true\n'
             printf 'SUPABASE_TEST_URL=%s\n' "$API_URL"
+            printf 'SUPABASE_TEST_ANON_KEY=%s\n' "$ANON_KEY"
             printf 'SUPABASE_TEST_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
             printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
             printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$ANON_KEY"
             printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
             printf 'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000\n'
-            printf 'PLAYWRIGHT_AUTH_STATE=%s/playwright-auth.json\n' "$RUNNER_TEMP"
-            printf 'AI_BASE_URL=http://127.0.0.1:9/v1\n'
+            printf 'PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000\n'
+            printf 'PLAYWRIGHT_AUTH_STATE=%s/playwright-auth-${{ matrix.project }}.json\n' "$RUNNER_TEMP"
+            printf 'PLAYWRIGHT_OUTPUT_DIR=test-results/${{ matrix.project }}\n'
+            printf 'PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/${{ matrix.project }}\n'
+            printf 'E2E_PROJECT=${{ matrix.project }}\n'
+            printf 'E2E_SENSITIVE_VALUES_FILE=%s/e2e-sensitive-${{ matrix.project }}.txt\n' "$RUNNER_TEMP"
+            printf 'AI_BASE_URL=http://127.0.0.1:4319/v1\n'
             printf 'AI_API_KEY=isolated-test-provider-key\n'
             printf 'AI_MODEL=isolated-test-model\n'
+            printf 'AI_MEMORY_MODEL=isolated-memory-model\n'
+            printf 'AI_EMBEDDING_MODEL=mock-embedding\n'
+            printf 'AI_EMBEDDING_DIMENSIONS=512\n'
           } >> "$GITHUB_ENV"
       - name: Apply migrations and isolated-test RLS baseline
         shell: bash
@@ -126,26 +148,59 @@ jobs:
           set -euo pipefail
           pnpm exec prisma migrate deploy
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f prisma/rls.sql
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Install project browser
+        run: pnpm exec playwright install --with-deps ${{ matrix.browser }}
       - name: Build the application
         run: pnpm build
-      - name: Run focused Agent E2E
-        run: pnpm exec playwright test tests/e2e/mobile/agent-mode.spec.ts
-      - name: Run complete authenticated E2E
-        run: pnpm test:e2e
-      - name: Upload synthetic failure screenshots and videos
-        if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: authenticated-playwright-evidence-${{ github.run_attempt }}
-          path: |
-            test-results/**/test-failed-*.png
-            test-results/**/video.webm
-            test-results/**/error-context.md
-          if-no-files-found: ignore
-          retention-days: 7
-      - name: Stop isolated Supabase
+      - name: Run ready, isolated authenticated project
+        shell: bash
+        run: |
+          set -euo pipefail
+          log_dir="$RUNNER_TEMP/e2e-raw/${{ matrix.project }}"
+          mkdir -p "$log_dir"
+          setsid node tests/e2e/mock-ai-provider.mjs >"$log_dir/mock-provider.log" 2>&1 &
+          mock_pid=$!
+          setsid pnpm start --hostname 127.0.0.1 >"$log_dir/next.log" 2>&1 &
+          next_pid=$!
+          cleanup() {
+            kill -- "-$next_pid" "-$mock_pid" 2>/dev/null || true
+            wait "$next_pid" "$mock_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          node scripts/verify-e2e-readiness.mjs
+          pnpm exec playwright test \
+            --project="${{ matrix.project }}" \
+            --workers=1
+      - name: Sanitize authenticated E2E diagnostics
+        id: sanitize
         if: always()
         shell: bash
-        run: supabase stop --no-backup >"$RUNNER_TEMP/supabase-stop.log" 2>&1 || true
+        run: |
+          set -euo pipefail
+          artifact_dir="$RUNNER_TEMP/e2e-artifacts/${{ matrix.project }}"
+          mkdir -p "$artifact_dir"
+          if [[ -e "playwright-report/${{ matrix.project }}" ]]; then
+            cp -R "playwright-report/${{ matrix.project }}" "$artifact_dir/playwright-report"
+          fi
+          if [[ -e "test-results/${{ matrix.project }}" ]]; then
+            cp -R "test-results/${{ matrix.project }}" "$artifact_dir/test-results"
+          fi
+          if [[ -e "$RUNNER_TEMP/e2e-raw/${{ matrix.project }}" ]]; then
+            cp -R "$RUNNER_TEMP/e2e-raw/${{ matrix.project }}" "$artifact_dir/service-logs"
+          fi
+          node scripts/redact-e2e-artifacts.mjs \
+            "$artifact_dir" \
+            "$E2E_SENSITIVE_VALUES_FILE"
+          rm -f "$E2E_SENSITIVE_VALUES_FILE"
+      - name: Upload authenticated Playwright diagnostics
+        if: always() && steps.sanitize.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: authenticated-playwright-${{ matrix.project }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/e2e-artifacts/${{ matrix.project }}
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Stop project-isolated Supabase
+        if: always()
+        shell: bash
+        run: supabase stop --no-backup >"$RUNNER_TEMP/supabase-stop-${{ matrix.project }}.log" 2>&1 || true
