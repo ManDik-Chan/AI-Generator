@@ -47,7 +47,19 @@ export function redactE2eArtifactText(content, values = []) {
     .replace(/\bbase64-eyJ[A-Za-z0-9_=-]+/g, "[REDACTED_SUPABASE_SESSION]")
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, "[REDACTED_JWT]")
     .replace(/\b(postgres(?:ql)?:\/\/)[^@\s"']+@/gi, "$1[REDACTED]@")
-    .replace(/("password"\s*:\s*")[^"]+(")/gi, "$1[REDACTED]$2");
+    .replace(/("password"\s*:\s*")[^"]+(")/gi, "$1[REDACTED]$2")
+    .replace(
+      /([?&](?:access_token|refresh_token|token|api[_-]?key|apikey|secret|password)=)[^&#\s"']+/gi,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /((?:authorization|proxy-authorization)\s*:\s*)[^\r\n]+/gi,
+      "$1[REDACTED]",
+    )
+    .replace(
+      /((?:cookie|set-cookie)\s*:\s*)[^\r\n]+/gi,
+      "$1[REDACTED]",
+    );
 }
 
 function redact(content) {
@@ -76,6 +88,17 @@ async function sanitizeEmbeddedPlaywrightReport(path) {
   }
 }
 
+function decodeArtifactText(content, extension) {
+  if (extension && !textExtensions.has(extension)) return null;
+  try {
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(content);
+    const controls = decoded.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g)?.length ?? 0;
+    return controls <= Math.max(4, decoded.length * 0.01) ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
 async function redactTree(root) {
   for (const entry of await readdir(root, { withFileTypes: true })) {
     const path = join(root, entry.name);
@@ -83,11 +106,13 @@ async function redactTree(root) {
       await redactTree(path);
       continue;
     }
-    if (!entry.isFile() || !textExtensions.has(extname(entry.name).toLowerCase())) continue;
-    if (extname(entry.name).toLowerCase() === ".html") {
+    if (!entry.isFile()) continue;
+    const extension = extname(entry.name).toLowerCase();
+    if (extension === ".html") {
       await sanitizeEmbeddedPlaywrightReport(path);
     }
-    const original = await readFile(path, "utf8");
+    const original = decodeArtifactText(await readFile(path), extension);
+    if (original === null) continue;
     const sanitized = redact(original);
     if (sanitized !== original) await writeFile(path, sanitized, "utf8");
   }
@@ -97,6 +122,9 @@ async function sanitizeZip(path) {
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "e2e-artifact-"));
   try {
     execFileSync("unzip", ["-qq", path, "-d", temporaryDirectory], { stdio: "ignore" });
+    for (const archive of await zipFiles(temporaryDirectory)) {
+      await sanitizeZip(archive);
+    }
     await redactTree(temporaryDirectory);
     await rm(path, { force: true });
     execFileSync("zip", ["-q", "-r", path, "."], {
