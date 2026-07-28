@@ -244,3 +244,32 @@ jobs:
         if: always()
         shell: bash
         run: supabase stop --no-backup >"$RUNNER_TEMP/supabase-stop-${{ matrix.project }}.log" 2>&1 || true
+
+  authenticated-playwright:
+    name: authenticated Playwright
+    if: always()
+    needs:
+      - supabase-security-acceptance
+      - authenticated-browser-acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify authenticated acceptance results
+        shell: bash
+        env:
+          SUPABASE_RESULT: ${{ needs.supabase-security-acceptance.result }}
+          BROWSER_RESULT: ${{ needs.authenticated-browser-acceptance.result }}
+        run: |
+          set -euo pipefail
+          echo "Supabase Security Acceptance: $SUPABASE_RESULT"
+          echo "Authenticated browser matrix: $BROWSER_RESULT"
+
+          if [[ "$SUPABASE_RESULT" != "success" ]]; then
+            echo "::error::Supabase Security Acceptance did not succeed."
+            exit 1
+          fi
+
+          if [[ "$BROWSER_RESULT" != "success" ]]; then
+            echo "::error::One or more authenticated browser matrix jobs did not succeed."
+            exit 1
+          fi
