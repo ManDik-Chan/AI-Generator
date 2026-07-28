@@ -4,7 +4,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -17,6 +17,7 @@ const commandName = "pnpm";
 const useWindowsShell = process.platform === "win32";
 const securityMigration = "20260722120000_security_hardening_rls_usage";
 const proposalMigration = "20260724120000_add_trusted_memory_proposals";
+const verificationMigration = "20260727013753_add_memory_verification";
 const runtimeTables = [
   "messages", "memory_proposals", "memory_embeddings", "generated_images", "tool_runs", "tool_assets",
   "generation_runs", "brainstorm_workers", "agent_runs", "agent_workers", "agent_events", "usage_ledger",
@@ -157,6 +158,8 @@ async function seedOldDatabase(db) {
 }
 
 async function verifyCleanDatabase() {
+  restoreCurrentDatabase();
+  deploy(join(root, "prisma", "schema.prisma"));
   const db = new PrismaClient({ datasourceUrl: databaseUrl });
   try {
     const rls = await db.$queryRawUnsafe(`
@@ -187,6 +190,19 @@ async function verifyCleanDatabase() {
     `, runtimeTables);
     assert.equal(grants.length, runtimeTables.length);
     assert(grants.every((row) => row.privileges.length === 1 && row.privileges[0] === "SELECT"));
+
+    const memoryGrants = await db.$queryRawUnsafe(`
+      SELECT privilege_type::text AS privilege_type
+      FROM information_schema.role_table_grants
+      WHERE table_schema = 'public'
+        AND table_name = 'memories'
+        AND grantee = 'authenticated'
+      ORDER BY privilege_type
+    `);
+    assert.deepEqual(
+      memoryGrants.map((row) => row.privilege_type),
+      ["SELECT"],
+    );
 
     const profileUpdates = await db.$queryRawUnsafe(`
       SELECT column_name
@@ -267,11 +283,136 @@ async function verifyCleanDatabase() {
       "memory_proposals_target_owner_fkey",
       "memory_proposals_user_id_fkey",
     ]);
+    const verificationMetadata = await db.$queryRawUnsafe(`
+      SELECT
+        to_regtype('public."MemoryVerificationMethod"')::text
+          AS verification_type,
+        to_regclass(
+          'public.memories_user_id_verification_method_updated_at_idx'
+        )::text AS verification_index,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'memories'
+            AND column_name = 'verification_method'
+            AND is_nullable = 'NO'
+        ) AS verification_column,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'memories'
+            AND column_name = 'verified_at'
+            AND is_nullable = 'YES'
+        ) AS verified_at_column,
+        EXISTS (
+          SELECT 1
+          FROM pg_constraint
+          WHERE conrelid = 'public.memories'::regclass
+            AND conname = 'memories_verification_timestamp_check'
+        ) AS verification_constraint
+    `);
+    assert.deepEqual(verificationMetadata[0], {
+      verification_type: '"MemoryVerificationMethod"',
+      verification_index:
+        "memories_user_id_verification_method_updated_at_idx",
+      verification_column: true,
+      verified_at_column: true,
+      verification_constraint: true,
+    });
+    const verificationRecords = await db.$queryRawUnsafe(`
+      SELECT count(*)::int AS count,
+             bool_and(finished_at IS NOT NULL)::boolean AS finished,
+             bool_and(rolled_back_at IS NULL)::boolean AS not_rolled_back
+      FROM public._prisma_migrations
+      WHERE migration_name = $1
+    `, verificationMigration);
+    assert.deepEqual(verificationRecords[0], {
+      count: 1,
+      finished: true,
+      not_rolled_back: true,
+    });
     await db.usageLedger.count();
-    console.log(`clean_migration_verified rls_tables=${rls.length} policies=${policies.length} runtime_grants=${grants.length}`);
+    console.log(`clean_migration_verified rls_tables=${rls.length} policies=${policies.length} runtime_grants=${grants.length} repeat_deploy=verified`);
   } finally {
     await db.$disconnect();
   }
+}
+
+async function seedVerificationBackfillFixtures(db, fixture) {
+  const chatMemoryId = randomUUID();
+  const acceptedMemoryId = randomUUID();
+  const legacyMemoryId = randomUUID();
+  const createdAt = new Date("2026-07-25T12:00:00.000Z");
+  await db.$executeRawUnsafe(
+    `INSERT INTO public.memories
+       (id, user_id, content, category, scope, origin, created_at, updated_at)
+     VALUES
+       ($1::uuid, $4::uuid, 'historical chat memory', 'fixture',
+        'GLOBAL', 'CHAT_MESSAGE', $5::timestamptz, $5::timestamptz),
+       ($2::uuid, $4::uuid, 'historical accepted auto memory', 'fixture',
+        'GLOBAL', 'AUTO_EXTRACTED', $5::timestamptz, $5::timestamptz),
+       ($3::uuid, $4::uuid, 'historical unreviewed auto memory', 'fixture',
+        'GLOBAL', 'AUTO_EXTRACTED', $5::timestamptz, $5::timestamptz)`,
+    chatMemoryId,
+    acceptedMemoryId,
+    legacyMemoryId,
+    fixture.ids.userId,
+    createdAt.toISOString(),
+  );
+
+  const firstCreatedAt = new Date("2026-07-25T12:01:00.000Z");
+  const firstResolvedAt = new Date("2026-07-25T12:02:00.000Z");
+  const latestCreatedAt = new Date("2026-07-25T12:03:00.000Z");
+  const latestResolvedAt = new Date("2026-07-25T12:04:00.000Z");
+  for (const [label, proposalCreatedAt, proposalResolvedAt] of [
+    ["first", firstCreatedAt, firstResolvedAt],
+    ["latest", latestCreatedAt, latestResolvedAt],
+  ]) {
+    const proposal = await db.memoryProposal.create({
+      data: {
+        userId: fixture.ids.userId,
+        action: "CREATE",
+        status: "PENDING",
+        content: `historical accepted proposal ${label}`,
+        category: "fixture",
+        scope: "GLOBAL",
+        importance: 3,
+        confidence: 0.95,
+        reasonCode: "stable_fact",
+        sourceConversationId: fixture.ids.conversationId,
+        sourceMessageId: fixture.ids.chatMessageId,
+        dedupeKey: createHash("sha256")
+          .update(`verification:${label}:dedupe`)
+          .digest("hex"),
+        suppressionKey: createHash("sha256")
+          .update(`verification:${label}:suppression`)
+          .digest("hex"),
+        createdAt: proposalCreatedAt,
+        updatedAt: proposalCreatedAt,
+        expiresAt: new Date(
+          proposalCreatedAt.getTime() + 30 * 86_400_000,
+        ),
+      },
+      select: { id: true },
+    });
+    await db.memoryProposal.update({
+      where: { id: proposal.id },
+      data: {
+        status: "ACCEPTED",
+        resolvedMemoryId: acceptedMemoryId,
+        resolvedAt: proposalResolvedAt,
+      },
+    });
+  }
+  return {
+    chatMemoryId,
+    acceptedMemoryId,
+    legacyMemoryId,
+    createdAt,
+    latestResolvedAt,
+  };
 }
 
 async function deployWithLockSampling(db) {
@@ -316,6 +457,9 @@ async function deployWithLockSampling(db) {
 async function verifyIncrementalUpgrade() {
   resetSupabase();
   const old = makeMigrationTree((name) => name < securityMigration);
+  const beforeVerification = makeMigrationTree(
+    (name) => name < verificationMigration,
+  );
   try {
     // Supabase reset already leaves an empty disposable application schema.
     // Deploying the historical tree exercises the production migration path
@@ -324,6 +468,22 @@ async function verifyIncrementalUpgrade() {
     const db = new PrismaClient({ datasourceUrl: databaseUrl });
     try {
       const fixture = await seedOldDatabase(db);
+      deploy(beforeVerification.schema);
+      const verificationFixture = await seedVerificationBackfillFixtures(
+        db,
+        fixture,
+      );
+      const countsBeforeVerification = {
+        profiles: await db.profile.count(),
+        personas: await db.persona.count(),
+        conversations: await db.conversation.count(),
+        messages: await db.message.count(),
+        toolRuns: await db.toolRun.count(),
+        agentRuns: await db.agentRun.count(),
+        generationRuns: await db.generationRun.count(),
+        memories: await db.memory.count(),
+        generatedImages: await db.generatedImage.count(),
+      };
       const metrics = await deployWithLockSampling(db);
       const counts = {
         profiles: await db.profile.count(),
@@ -336,7 +496,55 @@ async function verifyIncrementalUpgrade() {
         memories: await db.memory.count(),
         generatedImages: await db.generatedImage.count(),
       };
-      assert.deepEqual(counts, fixture.counts, "Incremental migration must not lose synthetic history.");
+      assert.deepEqual(
+        counts,
+        countsBeforeVerification,
+        "Incremental migration must not lose synthetic history.",
+      );
+      const backfilled = await db.memory.findMany({
+        where: {
+          id: {
+            in: [
+              fixture.ids.memoryId,
+              verificationFixture.chatMemoryId,
+              verificationFixture.acceptedMemoryId,
+              verificationFixture.legacyMemoryId,
+            ],
+          },
+        },
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          origin: true,
+          verificationMethod: true,
+          verifiedAt: true,
+          createdAt: true,
+          revision: true,
+        },
+      });
+      const byId = new Map(backfilled.map((memory) => [memory.id, memory]));
+      const manual = byId.get(fixture.ids.memoryId);
+      assert.equal(manual?.verificationMethod, "MANUAL_ENTRY");
+      assert.equal(manual?.verifiedAt?.getTime(), manual?.createdAt.getTime());
+      const chat = byId.get(verificationFixture.chatMemoryId);
+      assert.equal(chat?.verificationMethod, "EXPLICIT_REQUEST");
+      assert.equal(chat?.verifiedAt?.getTime(), chat?.createdAt.getTime());
+      const accepted = byId.get(verificationFixture.acceptedMemoryId);
+      assert.equal(
+        accepted?.verificationMethod,
+        "PROPOSAL_ACCEPTANCE",
+      );
+      assert.equal(
+        accepted?.verifiedAt?.getTime(),
+        verificationFixture.latestResolvedAt.getTime(),
+      );
+      const legacy = byId.get(verificationFixture.legacyMemoryId);
+      assert.equal(legacy?.verificationMethod, "LEGACY_UNREVIEWED");
+      assert.equal(legacy?.verifiedAt, null);
+      assert(
+        backfilled.every((memory) => memory.revision === 1),
+        "Verification backfill must not increment memory revisions.",
+      );
       assert.equal((await db.profile.findUnique({ where: { id: fixture.ids.adminId }, select: { role: true } }))?.role, "ADMIN");
       const usage = await db.usageLedger.groupBy({
         by: ["capability"],
@@ -355,6 +563,10 @@ async function verifyIncrementalUpgrade() {
     }
   } finally {
     rmSync(old.temporaryRoot, { recursive: true, force: true });
+    rmSync(beforeVerification.temporaryRoot, {
+      recursive: true,
+      force: true,
+    });
   }
 }
 
@@ -485,14 +697,158 @@ async function verifyProposalTransactionalRollback(mode) {
   }
 }
 
+async function verifyVerificationTransactionalRollback(mode) {
+  const base = makeMigrationTree((name) => name < verificationMigration);
+  const failing = makeMigrationTree(() => true, (temporaryPrisma) => {
+    const migrationPath = join(
+      temporaryPrisma,
+      "migrations",
+      verificationMigration,
+      "migration.sql",
+    );
+    const sql = readFileSync(migrationPath, "utf8");
+    assert(sql.includes("COMMIT;"));
+    writeFileSync(
+      migrationPath,
+      sql.replace(/COMMIT;\s*$/, "SELECT 1 / 0;\n\nCOMMIT;\n"),
+      "utf8",
+    );
+  });
+  try {
+    resetSupabase();
+    let fixture;
+    let verificationFixture;
+    if (mode === "incremental") {
+      deploy(base.schema);
+      const seedingDb = new PrismaClient({ datasourceUrl: databaseUrl });
+      try {
+        fixture = await seedOldDatabase(seedingDb);
+        verificationFixture = await seedVerificationBackfillFixtures(
+          seedingDb,
+          fixture,
+        );
+      } finally {
+        await seedingDb.$disconnect();
+      }
+    }
+
+    const failed = spawnSync(
+      commandName,
+      [
+        "exec",
+        "prisma",
+        "migrate",
+        "deploy",
+        "--schema",
+        failing.schema,
+      ],
+      {
+        cwd: root,
+        env: process.env,
+        encoding: "utf8",
+        shell: useWindowsShell,
+        windowsHide: true,
+      },
+    );
+    assert.notEqual(failed.status, 0, "Injected verification migration must fail.");
+
+    const db = new PrismaClient({ datasourceUrl: databaseUrl });
+    try {
+      const state = await db.$queryRawUnsafe(`
+        SELECT
+          to_regtype('public."MemoryVerificationMethod"')::text
+            AS verification_type,
+          to_regclass(
+            'public.memories_user_id_verification_method_updated_at_idx'
+          )::text AS verification_index,
+          EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'memories'
+              AND column_name = 'verification_method'
+          ) AS verification_column,
+          EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'public'
+              AND table_name = 'memories'
+              AND column_name = 'verified_at'
+          ) AS verified_at_column,
+          EXISTS (
+            SELECT 1
+            FROM pg_constraint
+            WHERE conrelid = 'public.memories'::regclass
+              AND conname = 'memories_verification_timestamp_check'
+          ) AS verification_constraint,
+          to_regprocedure('public.bump_memory_revision()')::text
+            AS revision_guard
+      `);
+      assert.deepEqual(state[0], {
+        verification_type: null,
+        verification_index: null,
+        verification_column: false,
+        verified_at_column: false,
+        verification_constraint: false,
+        revision_guard: "bump_memory_revision()",
+      });
+
+      const migrationRows = await db.$queryRawUnsafe(`
+        SELECT finished_at, rolled_back_at
+        FROM public._prisma_migrations
+        WHERE migration_name = $1
+      `, verificationMigration);
+      assert(
+        migrationRows.every((row) => row.finished_at === null),
+        "Failed verification migration must never be recorded as applied.",
+      );
+      await db.$executeRawUnsafe(`
+        DELETE FROM public._prisma_migrations
+        WHERE migration_name = $1 AND finished_at IS NULL
+      `, verificationMigration);
+      const recorded = await db.$queryRawUnsafe(`
+        SELECT count(*)::int AS count
+        FROM public._prisma_migrations
+        WHERE migration_name = $1
+      `, verificationMigration);
+      assert.equal(recorded[0]?.count, 0);
+
+      if (fixture && verificationFixture) {
+        assert.equal(
+          await db.memory.count({ where: { userId: fixture.ids.userId } }),
+          4,
+        );
+        const legacyRaw = await db.$queryRawUnsafe(
+          `SELECT revision
+           FROM public.memories
+           WHERE id = $1::uuid`,
+          verificationFixture.legacyMemoryId,
+        );
+        assert.equal(legacyRaw[0]?.revision, 1);
+      }
+      console.log(
+        `verification_migration_failure_rollback_verified mode=${mode} data_loss=0 partial_verification_objects=0`,
+      );
+    } finally {
+      await db.$disconnect();
+    }
+  } finally {
+    rmSync(base.temporaryRoot, { recursive: true, force: true });
+    rmSync(failing.temporaryRoot, { recursive: true, force: true });
+    restoreCurrentDatabase();
+  }
+}
+
 const mode = process.argv[2];
 if (mode === "clean") {
   await verifyCleanDatabase();
   await verifyProposalTransactionalRollback("clean");
+  await verifyVerificationTransactionalRollback("clean");
 }
 else if (mode === "incremental") {
   await verifyIncrementalUpgrade();
   await verifyProposalTransactionalRollback("incremental");
+  await verifyVerificationTransactionalRollback("incremental");
 } else {
   throw new Error("Usage: node scripts/verify-security-migrations.mjs <clean|incremental>");
 }

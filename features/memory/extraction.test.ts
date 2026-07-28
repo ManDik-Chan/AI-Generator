@@ -31,8 +31,10 @@ describe("automatic memory extraction protocol", () => {
 
   it("requires a candidate UUID for UPDATE and strips model-owned fields", () => {
     expect(() => parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "UPDATE", content: "用户喜欢简洁回答", category: "preference", scope: "GLOBAL", importance: 4, confidence: 0.9, reasonCode: "preference" }] }))).toThrow();
-    const result = parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "IGNORE", confidence: 0.2, reasonCode: "uncertain", userId: "forbidden" }] }));
+    const result = parseMemoryExtractionOutput(JSON.stringify({ operations: [{ action: "IGNORE", confidence: 0.2, reasonCode: "uncertain", userId: "forbidden", verificationMethod: "MANUAL_REVIEW", verifiedAt: "forbidden" }] }));
     expect(result.operations[0]).not.toHaveProperty("userId");
+    expect(result.operations[0]).not.toHaveProperty("verificationMethod");
+    expect(result.operations[0]).not.toHaveProperty("verifiedAt");
   });
 
   it.each([

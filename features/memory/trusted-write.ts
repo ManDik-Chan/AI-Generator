@@ -6,6 +6,10 @@ import {
   containsHighConfidenceCredential,
   normalizeMemoryContent,
 } from "@/features/memory/security";
+import {
+  getTrustedMemoryVerification,
+  type TrustedMemoryVerificationSource,
+} from "@/features/memory/verification";
 import { prisma } from "@/lib/database/prisma";
 
 export type TrustedMemoryWriteErrorCode =
@@ -45,6 +49,8 @@ export interface TrustedMemoryWriteInput {
   sourceConversationId?: string | null;
   sourceMessageId?: string | null;
   origin: MemoryOrigin;
+  verificationSource: TrustedMemoryVerificationSource;
+  verificationNow?: Date;
   enabled?: boolean;
   requireMemoryEnabled?: boolean;
   allowIdempotentDuplicate?: boolean;
@@ -210,6 +216,10 @@ export async function persistTrustedMemoryChange(
     topicKey: parsed.data.topicKey ?? null,
     keywords: parsed.data.keywords,
     origin: input.origin,
+    ...getTrustedMemoryVerification(
+      input.verificationSource,
+      input.verificationNow,
+    ),
     sourceConversationId: input.sourceConversationId ?? null,
     sourceMessageId: input.sourceMessageId ?? null,
   };

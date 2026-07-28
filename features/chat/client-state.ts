@@ -1,5 +1,6 @@
 import type { ChatMessageView } from "@/features/chat/types";
 import type { AgentRunTerminalSnapshot } from "@/features/agents/client-types";
+import { chatMemoryDisclosureSchema } from "@/features/memory/disclosure";
 
 interface EditTargetInput {
   message: ChatMessageView;
@@ -41,4 +42,39 @@ export function applyAgentTerminalMessage(messages: ChatMessageView[], terminal:
     content: terminal.assistantMessage.content,
     status: terminal.assistantMessage.status.toLowerCase() as ChatMessageView["status"],
   } : message);
+}
+
+export function applyChatRecoverySnapshot(
+  messages: ChatMessageView[],
+  snapshot: { id: string; status: string; content: string },
+) {
+  const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
+  return messages.map((message) => {
+    if (message.id !== snapshot.id) return message;
+    if (snapshot.status === "PENDING") {
+      if (message.status !== "pending") return message;
+      return {
+        ...message,
+        content: snapshot.content || message.content,
+        status,
+      };
+    }
+    return { ...message, content: snapshot.content, status };
+  });
+}
+
+export function applyChatMemoryDisclosure(
+  messages: ChatMessageView[],
+  assistantMessageId: string,
+  payload: unknown,
+) {
+  const parsed = chatMemoryDisclosureSchema.safeParse(payload);
+  if (!parsed.success || parsed.data.count === 0) return messages;
+  return messages.map((message) =>
+    message.id === assistantMessageId
+      && message.role === "assistant"
+      && message.status !== "error"
+      && message.status !== "cancelled"
+      ? { ...message, memoryDisclosure: parsed.data }
+      : message);
 }

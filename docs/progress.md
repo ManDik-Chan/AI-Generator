@@ -1,5 +1,20 @@
 # 重构进度
 
+## Phase 5B2a — 记忆核验来源与本轮引用透明度
+
+实施时间：2026-07-27
+
+- [x] 新增 `MemoryVerificationMethod`、`verifiedAt`、双向时间 CHECK 与 owner/verification/updatedAt 筛选索引；未修改旧 migration。
+- [x] MANUAL、CHAT_MESSAGE、Accepted Proposal AUTO_EXTRACTED 与其余 Legacy 的旧库回填通过；最新有效 Proposal `resolvedAt` 生效，revision 不增长。
+- [x] 手动 CREATE、明确命令式保存、Proposal 接受/编辑后接受、正式 Memory 手动编辑与 Legacy 核对均使用服务端可信映射；模型和浏览器不能控制 verification 字段。
+- [x] `/memories` 增加统一 verification badge、Legacy warning/筛选/待核对计数与局部幂等核对，不重建页面、不重建 Embedding。
+- [x] Chat `memory` SSE 使用版本 1 最小 DTO，直接映射最终 selected Memory；最多 8 条 / 2400 字符，不泄露排名、向量、来源或 Proposal/Provider 诊断。
+- [x] disclosure 精确绑定本轮 Assistant Message，只存在于 live client session；刷新不重建，没有新增 Message 字段、引用表、审计时间线或 ConflictCase。
+- [x] disposable local Supabase clean/incremental/失败回滚通过；真实 PostgreSQL integration 15/15、真实 JWT/PostgREST RLS 7/7。
+- [x] production-mode Desktop Chromium、Mobile Chromium、WebKit iPhone E2E 3/3；390/430/768/1440 无横向溢出且无 console/page error。
+
+Legacy 按产品决定暂时继续召回，但必须显示 warning；正式 `Memory` 仍是唯一召回与 Embedding 真相源。未连接或修改 Production，未执行 Production migration，未读取真实用户数据或密钥。
+
 ## Phase 7A1.1 — Chat Agent Mode + Worker 编排底座（Draft）
 
 实施时间：2026-07-18
@@ -399,7 +414,7 @@ Phase 3 真实环境联调、数据迁移与功能验收已全部通过。
 
 Phase 5A1 真实环境验收已全部通过。
 
-## Phase 5B1 实施记录（Draft）
+## Phase 5B1 实施记录（已完成并合入主线）
 
 实施时间：2026-07-24
 

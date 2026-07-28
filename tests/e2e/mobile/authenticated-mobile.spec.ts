@@ -51,8 +51,8 @@ test.describe("authenticated mobile shell", () => {
     await page.goto("/memories");
     await expect(page.getByRole("heading", { name: "AI 建议记住" })).toBeVisible();
     await expect(page.getByText("确认后才会用于未来对话", { exact: false }).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "已确认的正式记忆" })).toBeVisible();
-    await expect(page.getByText("唯一召回真相源")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "正式记忆" })).toBeVisible();
+    await expect(page.getByText("唯一召回真相源", { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
@@ -125,9 +125,16 @@ test.describe("authenticated mobile shell", () => {
     });
     await expect.poll(() => scroller.evaluate((element) => element.scrollHeight - element.clientHeight)).toBeGreaterThan(1000);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
-    await scroller.evaluate((element) => { element.scrollTop = 420; });
-    await expect.poll(() => scroller.evaluate((element) => element.scrollTop)).toBe(420);
-    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    const scrollToBottomButton = page.getByRole("button", { name: "回到底部" });
+    await expect.poll(async () => {
+      await scroller.evaluate((element) => {
+        element.scrollTop = 419;
+        element.dispatchEvent(new Event("scroll", { bubbles: true }));
+        element.scrollTop = 420;
+        element.dispatchEvent(new Event("scroll", { bubbles: true }));
+      });
+      return scrollToBottomButton.isVisible();
+    }).toBe(true);
     expect(await scroller.evaluate((element) => element.scrollTop)).toBe(420);
 
     await expectSinglePrimaryScroller(page);

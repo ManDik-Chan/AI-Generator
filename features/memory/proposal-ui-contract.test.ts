@@ -16,7 +16,8 @@ describe("trusted memory proposal UI contract", () => {
     expect(manager).toContain("AI 建议记住");
     expect(manager).toContain("确认后才会用于未来对话");
     expect(manager).toContain("这些建议尚未进入长期记忆");
-    expect(manager).toContain("已确认的正式记忆");
+    expect(manager).toContain(">正式记忆<");
+    expect(manager).toContain("旧版未复核");
     expect(manager).toContain("唯一召回真相源");
   });
 

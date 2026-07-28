@@ -13,8 +13,17 @@ export default defineConfig({
   fullyParallel: true,
   workers: 1,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
-  reporter: "list",
+  retries: 0,
+  reporter: process.env.CI
+    ? [
+        ["list"],
+        ["html", {
+          open: "never",
+          outputFolder: process.env.PLAYWRIGHT_HTML_OUTPUT_DIR ?? "playwright-report",
+        }],
+      ]
+    : "list",
+  outputDir: process.env.PLAYWRIGHT_OUTPUT_DIR ?? "test-results",
   globalSetup: process.env.CI ? "./tests/e2e/global-setup.ts" : undefined,
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000",

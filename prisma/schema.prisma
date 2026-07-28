@@ -50,6 +50,14 @@ enum MemoryOrigin {
   AUTO_EXTRACTED
 }
 
+enum MemoryVerificationMethod {
+  MANUAL_ENTRY
+  EXPLICIT_REQUEST
+  PROPOSAL_ACCEPTANCE
+  MANUAL_REVIEW
+  LEGACY_UNREVIEWED
+}
+
 enum MemoryProposalStatus {
   PENDING
   ACCEPTED
@@ -493,6 +501,8 @@ model Memory {
   category             String
   scope                MemoryScope  @default(GLOBAL)
   origin               MemoryOrigin @default(MANUAL)
+  verificationMethod   MemoryVerificationMethod @map("verification_method")
+  verifiedAt           DateTime?    @map("verified_at") @db.Timestamptz(6)
   importance           Int          @default(3)
   sourceConversationId String?      @map("source_conversation_id") @db.Uuid
   sourceMessageId      String?      @map("source_message_id") @db.Uuid
@@ -519,6 +529,7 @@ model Memory {
   @@index([personaId, enabled, importance])
   @@index([sourceMessageId])
   @@index([userId, pinned, enabled, importance])
+  @@index([userId, verificationMethod, updatedAt(sort: Desc)])
   @@index([userId, topicKey])
   @@index([personaId, topicKey])
   @@map("memories")

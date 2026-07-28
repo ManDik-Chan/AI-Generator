@@ -22,23 +22,19 @@ test.describe("authenticated Chat entry performance", () => {
     });
 
     const link = page.getByRole("link", { name: "开始新对话" });
+    await expect(page.locator("[data-navigation-feedback]")).toHaveAttribute(
+      "data-ready",
+      "true",
+    );
     const startedAt = performance.now();
-    const feedbackMs = await link.evaluate((linkElement) => new Promise<number>((resolve, reject) => {
+    const feedbackMs = await link.evaluate((linkElement) => {
       const started = performance.now();
-      const element = document.querySelector("[data-navigation-feedback]");
-      if (!element) {
-        reject(new Error("Navigation feedback element was not found."));
-        return;
-      }
-      const observer = new MutationObserver(() => {
-        if (element.getAttribute("data-pending") === "true") {
-          observer.disconnect();
-          resolve(performance.now() - started);
-        }
-      });
-      observer.observe(element, { attributes: true, attributeFilter: ["data-pending"] });
       (linkElement as HTMLElement).click();
-    }));
+      if (linkElement.getAttribute("aria-busy") !== "true") {
+        throw new Error("Navigation feedback did not mark the activated link as busy.");
+      }
+      return performance.now() - started;
+    });
     await expect(page.locator("[data-chat-shell]")).toBeVisible({ timeout: 1_500 });
     await expect(page.getByLabel("消息内容")).toBeEditable({ timeout: 1_500 });
     const composerMs = performance.now() - startedAt;

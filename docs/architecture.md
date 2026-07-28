@@ -38,6 +38,12 @@ Embedding 配置、Provider、响应维度或 pgvector 查询失败只记录脱�
 
 浏览器对 `memory_proposals` 只有 owner-scoped SELECT。数据库触发器复核 Persona、Conversation、USER Message、目标 Memory 和 resolved Memory 的同用户关系；服务端查询仍显式携带 `userId`。完整边界见 `docs/trusted-memory-proposals.md`。
 
+## Phase 5B2a 核验来源与 live disclosure
+
+`Memory.origin` 继续描述内容业务来源；`Memory.verificationMethod` 与 `verifiedAt` 描述当前内容由手动录入、明确保存命令、Proposal 接受或后续手动核对获得的可信状态。5B1 前无法证明确认行为的 AUTO_EXTRACTED 数据回填为 `LEGACY_UNREVIEWED`，暂时继续召回但在所有管理/引用表面显示 warning。verification-only UPDATE 不改变 revision，也不触发 Embedding。
+
+Chat route 从最终 `selectedMemories` 直接构造版本 1 disclosure DTO；不二次查询/排名，不公开 topic、keywords、相似度、RRF、向量、来源或 Proposal/Provider 诊断。该事件只在 Assistant Message 成功落为 `COMPLETE` 后发送，中止或失败路径不发送；客户端也只在完成消息上渲染。Message Schema 与数据库不保存引用，因此刷新后不重建。这一边界保持正式 `Memory` 为唯一召回真相源，也保持 Proposal、RLS 与 MemoryEmbedding 模型不变。详见 `docs/memory-provenance-and-reference-transparency.md`。
+
 新聊天在 `xl` 桌面断点使用固定右侧助手栏，窄屏使用无第三方依赖的可访问抽屉；两者共享同一选择组件。选择状态保留在现有 `ChatLayout`，通过 History API 更新 `/chat?personaId=`，不创建数据库记录、不清空 Composer 草稿。已有 Conversation 不渲染选择栏，服务端继续拥有 Persona 绑定的最终决定权。
 
 ## 1. 现状审计

@@ -68,7 +68,7 @@ export async function loadAgentRuntimeContext(userId: string, runId: string) {
         ],
       },
       select: {
-        id: true, content: true, category: true, scope: true, personaId: true, importance: true,
+        id: true, content: true, category: true, scope: true, verificationMethod: true, personaId: true, importance: true,
         enabled: true, updatedAt: true, topicKey: true, keywords: true, pinned: true, useCount: true, lastUsedAt: true,
       },
     });

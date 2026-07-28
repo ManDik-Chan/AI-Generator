@@ -14,7 +14,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run tests/integration/usage-ledger.integration.test.ts tests/integration/memory-proposals.integration.test.ts",
+    "test:integration": "vitest run tests/integration/usage-ledger.integration.test.ts tests/integration/memory-proposals.integration.test.ts tests/integration/memory-verification.integration.test.ts",
     "test:rls": "vitest run tests/integration/rls.security.integration.test.ts",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",

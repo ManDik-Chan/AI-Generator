@@ -19,15 +19,15 @@ export function ConversationList({ conversations, activeId, loading = false, onN
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border/10 p-4">
-        <Link className="mb-4 flex items-center gap-3 rounded-control px-1 py-1" href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate}>
+        <Link className="mb-4 flex items-center gap-3 rounded-control px-1 py-1" href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate} prefetch={false}>
           <span className="premium-icon-tile size-10"><Sparkles className="size-4" /></span>
           <span><span className="block text-sm font-bold">AI-Generator</span><span className="block text-[.625rem] font-semibold uppercase tracking-[.14em] text-muted-foreground">Conversation Studio</span></span>
         </Link>
         <Button asChild className="w-full justify-start" size="lg">
-          <Link href="/chat" onClick={onNavigate}><Plus className="size-4" />新建对话</Link>
+          <Link href="/chat" onClick={onNavigate} prefetch={false}><Plus className="size-4" />新建对话</Link>
         </Button>
         <Button asChild className="mt-2 w-full justify-start" variant="ghost">
-          <Link href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate}><House className="size-4" />{CHAT_HOME_NAVIGATION.label}</Link>
+          <Link href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate} prefetch={false}><House className="size-4" />{CHAT_HOME_NAVIGATION.label}</Link>
         </Button>
       </div>
       <div className="premium-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4">

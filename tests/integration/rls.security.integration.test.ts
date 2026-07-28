@@ -155,7 +155,7 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
       select: { id: true },
     });
     const memory = await db.memory.create({
-      data: { userId, content: `Memory ${suffix}`, category: "fixture", scope: "GLOBAL" },
+      data: { userId, content: `Memory ${suffix}`, category: "fixture", scope: "GLOBAL", verificationMethod: "MANUAL_ENTRY", verifiedAt: new Date() },
       select: { id: true },
     });
     const proposalNow = new Date();
@@ -292,6 +292,60 @@ describe.skipIf(!supabaseRlsEnabled)("real Supabase JWT and PostgREST RLS attack
     const userBReadA = await userBClient.from("profiles").select("id").eq("id", users.a.id);
     expect(userBReadA.error).toBeNull();
     expect(userBReadA.data).toEqual([]);
+  });
+
+  it("exposes own memory verification read-only and hides other owners", async () => {
+    const own = await userAClient
+      .from("memories")
+      .select("id,verification_method,verified_at")
+      .eq("id", a.memory)
+      .single();
+    expect(own.error).toBeNull();
+    expect(own.data).toMatchObject({
+      id: a.memory,
+      verification_method: "MANUAL_ENTRY",
+    });
+    expect(own.data?.verified_at).toBeTruthy();
+
+    const foreign = await userAClient
+      .from("memories")
+      .select("id,verification_method,verified_at")
+      .eq("id", b.memory);
+    expect(foreign.error).toBeNull();
+    expect(foreign.data).toEqual([]);
+
+    for (const patch of [
+      { verification_method: "MANUAL_REVIEW" },
+      { verified_at: new Date(0).toISOString() },
+    ]) {
+      const attack = await userAClient
+        .from("memories")
+        .update(patch)
+        .eq("id", a.memory)
+        .select();
+      expect(attack.error, JSON.stringify(patch)).not.toBeNull();
+    }
+    const insertAttack = await userAClient.from("memories").insert({
+      user_id: users.a.id,
+      content: "browser-forged memory",
+      category: "fixture",
+      scope: "GLOBAL",
+      verification_method: "MANUAL_ENTRY",
+      verified_at: new Date().toISOString(),
+    });
+    expect(insertAttack.error).not.toBeNull();
+    const deleteAttack = await userAClient
+      .from("memories")
+      .delete()
+      .eq("id", a.memory);
+    expect(deleteAttack.error).not.toBeNull();
+    expect(await db.memory.findUnique({
+      where: { id: a.memory },
+      select: { verificationMethod: true, content: true },
+    })).toEqual({
+      verificationMethod: "MANUAL_ENTRY",
+      content: expect.stringContaining("Memory"),
+    });
   });
 
   it("lets authenticated users read only their own server-owned rows", async () => {

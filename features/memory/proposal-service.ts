@@ -170,6 +170,8 @@ export async function acceptMemoryProposal(
         sourceConversationId: proposal.sourceConversationId,
         sourceMessageId: proposal.sourceMessageId,
         origin: "AUTO_EXTRACTED",
+        verificationSource: "PROPOSAL_ACCEPTANCE",
+        verificationNow: now,
         allowIdempotentDuplicate: proposal.action === "CREATE",
         userLockAlreadyHeld: true,
       });

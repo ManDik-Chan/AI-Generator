@@ -76,6 +76,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
               content: `${label} current memory`,
               category: "other",
               scope: "GLOBAL",
+              verificationMethod: "MANUAL_ENTRY",
+              verifiedAt: new Date(),
               topicKey: `${label}.topic`,
             },
           })
@@ -658,6 +660,13 @@ describe.skipIf(!integrationDatabaseEnabled)(
       expect(await db.memory.count({
         where: { userId: owner.userId, content: "production CREATE accepted" },
       })).toBe(1);
+      expect(await db.memory.findFirst({
+        where: { userId: owner.userId, content: "production CREATE accepted" },
+        select: { verificationMethod: true, verifiedAt: true },
+      })).toEqual({
+        verificationMethod: "PROPOSAL_ACCEPTANCE",
+        verifiedAt: expect.any(Date),
+      });
 
       const target = await db.memory.create({
         data: {
@@ -665,6 +674,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "production UPDATE before",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           topicKey: "service.update",
         },
       });
@@ -684,8 +695,13 @@ describe.skipIf(!integrationDatabaseEnabled)(
       });
       expect(await db.memory.findUnique({
         where: { id: target.id },
-        select: { content: true, revision: true },
-      })).toEqual({ content: "production UPDATE after", revision: 2 });
+        select: { content: true, revision: true, verificationMethod: true, verifiedAt: true },
+      })).toEqual({
+        content: "production UPDATE after",
+        revision: 2,
+        verificationMethod: "PROPOSAL_ACCEPTANCE",
+        verifiedAt: expect.any(Date),
+      });
 
       const edited = await db.memoryProposal.create({
         data: proposalData(owner, "service-edited", {
@@ -703,11 +719,13 @@ describe.skipIf(!integrationDatabaseEnabled)(
       })).toMatchObject({ success: true, finalStatus: "ACCEPTED" });
       expect(await db.memory.findFirst({
         where: { userId: owner.userId, content: "edited content accepted" },
-        select: { category: true, importance: true, keywords: true },
+        select: { category: true, importance: true, keywords: true, verificationMethod: true, verifiedAt: true },
       })).toEqual({
         category: "preference",
         importance: 5,
         keywords: ["Edited", "关键词"],
+        verificationMethod: "PROPOSAL_ACCEPTANCE",
+        verifiedAt: expect.any(Date),
       });
 
       const rejected = await db.memoryProposal.create({
@@ -744,6 +762,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "conflict before",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           topicKey: "service.conflict",
         },
       });
@@ -785,6 +805,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "edited update target",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           topicKey: "service.edit-target",
         },
       });
@@ -794,6 +816,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "other topic owner",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           topicKey: "service.occupied-topic",
         },
       });
@@ -841,6 +865,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "later manual same topic",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           topicKey: "strict.topic",
         },
       });
@@ -870,6 +896,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "later stopped same topic",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           topicKey: "strict.stopped-topic",
         },
       });
@@ -899,6 +927,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "EXISTING exact，enabled!!!",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           topicKey: "strict.exact-other-topic",
         },
       });
@@ -926,6 +956,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: "disabled exact content",
           category: "other",
           scope: "GLOBAL",
+          verificationMethod: "MANUAL_ENTRY",
+          verifiedAt: new Date(),
           enabled: false,
         },
       });
@@ -1094,6 +1126,8 @@ describe.skipIf(!integrationDatabaseEnabled)(
           content: `capacity fixture ${index}`,
           category: "other",
           scope: "GLOBAL" as const,
+          verificationMethod: "MANUAL_ENTRY" as const,
+          verifiedAt: new Date(),
         })),
       });
       const proposal = await db.memoryProposal.create({
@@ -1112,6 +1146,7 @@ describe.skipIf(!integrationDatabaseEnabled)(
           importance: 3,
           keywords: [],
           origin: "MANUAL",
+          verificationSource: "MANUAL_CREATE",
           requireMemoryEnabled: false,
         }),
         acceptMemoryProposal(owner.userId, proposal.id),

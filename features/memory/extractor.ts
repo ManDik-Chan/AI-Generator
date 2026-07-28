@@ -331,6 +331,8 @@ export async function extractAndPersistMemoryProposals(
               sourceConversationId: input.conversationId,
               sourceMessageId: input.sourceMessageId,
               origin: "AUTO_EXTRACTED",
+              verificationSource: "EXPLICIT_REQUEST",
+              verificationNow: now,
               userLockAlreadyHeld: true,
             });
             created += Number(written.created);

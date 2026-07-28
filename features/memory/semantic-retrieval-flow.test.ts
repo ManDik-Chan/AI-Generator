@@ -27,7 +27,7 @@ const base = {
   requestId: "request-a",
   currentMessage: "之前那台机器的芯片是什么",
   recentUserMessages: [],
-  candidates: [{ id: "memory-a", content: "用户的电脑配置", category: "profile", scope: "GLOBAL" as const, importance: 3, enabled: true, updatedAt: "2026-01-01" }],
+  candidates: [{ id: "memory-a", content: "用户的电脑配置", category: "profile", scope: "GLOBAL" as const, verificationMethod: "MANUAL_ENTRY" as const, importance: 3, enabled: true, updatedAt: "2026-01-01" }],
   maxItems: 8,
   maxChars: 2400,
 };

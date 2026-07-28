@@ -11,7 +11,7 @@ import { AssistantSelectorPanel } from "@/features/chat/components/assistant-sel
 import { DeletedPersonaNotice } from "@/features/chat/components/deleted-persona-notice";
 import { PersonaAvatar } from "@/features/persona/components/persona-avatar";
 import type { PersonaChatIdentity } from "@/features/persona/types";
-import { applyAgentTerminalMessage, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
+import { applyAgentTerminalMessage, applyChatMemoryDisclosure, applyChatRecoverySnapshot, confirmOptimisticTurn, createEditRequestTarget } from "@/features/chat/client-state";
 import { getComposerDisabledReason } from "@/features/chat/composer-state";
 import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 import type { ChatMessageView, ChatStreamEvent, ConversationDetail, ConversationSummary } from "@/features/chat/types";
@@ -71,6 +71,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
   const pendingCancelRef = useRef(false);
   const generationControllerRef = useRef<AbortController | undefined>(undefined);
   const conversationKeyRef = useRef(initialConversationKey);
+  const terminalChatMessageIdRef = useRef<string | undefined>(undefined);
   const mountedRef = useRef(true);
   useChatVisualViewport(shellRef);
   useChatPopstateSync(activeConversationRef);
@@ -129,10 +130,10 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       updateConversationGeneration(sessionStorage, viewerId, snapshot.conversationId, { chatMessageId: snapshot.status === "PENDING" ? snapshot.id : null });
       return;
     }
-    const status = snapshot.status.toLowerCase() as ChatMessageView["status"];
-    setMessages((current) => current.map((message) => message.id === snapshot.id ? { ...message, content: snapshot.content, status } : message));
+    if (snapshot.status === "PENDING" && terminalChatMessageIdRef.current === snapshot.id) return;
+    setMessages((current) => applyChatRecoverySnapshot(current, snapshot));
     if (snapshot.status === "PENDING") { setGenerating(true); setError("任务正在后台继续生成。"); }
-    else { clearCurrentGeneration("CHAT"); setAssistantMessageId(undefined); setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
+    else { terminalChatMessageIdRef.current = snapshot.id; clearCurrentGeneration("CHAT"); setAssistantMessageId(undefined); setGenerating(false); setError(snapshot.status === "ERROR" ? "生成失败，请稍后重试。" : undefined); }
   }, [clearCurrentGeneration, viewerId]);
   useGenerationRecovery({ persistenceKey: `${viewerId}:${conversationKey}:CHAT`, readRunId: readChatGeneration, writeRunId: writeChatGeneration, runId: assistantMessageId, onRunId: setAssistantMessageId, statusUrl: "/api/chat/messages/", statusSuffix: "/status", onSnapshot: recover });
   const recoverAgent = useCallback((snapshot: AgentRunView) => {
@@ -331,6 +332,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
     pendingCancelRef.current = false;
     setCancelling(false);
     pendingStopEditRef.current = false;
+    terminalChatMessageIdRef.current = undefined;
     if (!messageToEdit && !activeConversationRef.current.id) {
       setActiveTitle(content.replace(/\s+/g, " ").slice(0, 48));
     }
@@ -371,6 +373,7 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             const temporaryAssistantId = assistantId;
             userId = streamEvent.data.userMessageId;
             assistantId = streamEvent.data.assistantMessageId;
+            terminalChatMessageIdRef.current = undefined;
             setAssistantMessageId(assistantId);
             updateConversationGeneration(sessionStorage, viewerId, conversationKeyRef.current, { chatMessageId: assistantId });
             setMessages((current) => confirmOptimisticTurn(current, temporaryUserId, temporaryAssistantId, userId, assistantId));
@@ -384,21 +387,29 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
             assistantContent += streamEvent.data.text;
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, content: assistantContent } : message));
           }
-          if (streamEvent.event === "memory") setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, memoryCount: streamEvent.data.count } : message));
+          if (streamEvent.event === "memory") {
+            setMessages((current) =>
+              applyChatMemoryDisclosure(current, assistantId, streamEvent.data));
+          }
           if (streamEvent.event === "done") {
             terminal = true;
+            terminalChatMessageIdRef.current = assistantId;
             clearCurrentGeneration("CHAT");
             setAssistantMessageId(undefined);
+            setError(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, id: streamEvent.data.messageId, status: "complete" } : message));
           }
           if (streamEvent.event === "cancelled") {
             terminal = true;
+            terminalChatMessageIdRef.current = assistantId;
             clearCurrentGeneration("CHAT");
             setAssistantMessageId(undefined);
+            setError(undefined);
             setMessages((current) => current.map((message) => message.id === assistantId ? { ...message, status: "cancelled" } : message));
           }
           if (streamEvent.event === "error") {
             terminal = true;
+            terminalChatMessageIdRef.current = assistantId;
             clearCurrentGeneration("CHAT");
             setAssistantMessageId(undefined);
             setError(streamEvent.data.message);
@@ -526,8 +537,8 @@ export function ChatLayout({ conversations, conversation, aiConfigured, agentCon
       <section className="flex min-w-0 flex-1 flex-col bg-background/72">
         <header className="flex min-h-[calc(var(--mobile-header-height)+var(--safe-area-top))] shrink-0 items-center gap-1 border-b border-border/10 bg-surface/72 px-[max(.5rem,var(--safe-area-left))] pb-2 pt-[max(.5rem,var(--safe-area-top))] backdrop-blur-xl min-[360px]:gap-1.5 min-[360px]:px-[max(.625rem,var(--safe-area-left))] sm:gap-2 sm:px-4 md:min-h-[4.25rem] md:gap-3 md:px-6 md:py-0">
           <button aria-label="打开对话历史" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden" onClick={() => setDrawerOpen(true)} type="button"><Menu className="size-5" /></button>
-          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
-          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || activePersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || activePersona)!.name} src={(conversation?.persona || activePersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>
+          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground md:hidden" href={CHAT_HOME_NAVIGATION.href} prefetch={false} title={CHAT_HOME_NAVIGATION.title}><House className="size-5" /></Link>
+          <Link aria-label={CHAT_HOME_NAVIGATION.label} className="shrink-0" href={CHAT_HOME_NAVIGATION.href} prefetch={false} title={CHAT_HOME_NAVIGATION.title}>{conversation?.persona || activePersona ? <PersonaAvatar className="size-8 rounded-xl" name={(conversation?.persona || activePersona)!.name} src={(conversation?.persona || activePersona)!.avatarUrl} /> : <span className="grid size-8 place-items-center rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"><Sparkles className="size-4" /></span>}</Link>
           <div className="min-w-0 flex-1"><h1 className="truncate text-sm font-semibold tracking-[-.01em]">{activeTitle ?? activePersona?.name ?? "新对话"}</h1><p className="truncate text-xs text-muted-foreground">{conversation?.persona ? `${conversation.persona.description || "AI 人格助手"}${conversation.persona.archived ? " · 已在回收站" : ""}` : activePersona?.description || (activePersona ? "AI 人格助手" : "默认 AI 助手")}</p></div>
           {!activeConversationId && <button aria-label="选择助手" className="grid size-11 shrink-0 place-items-center rounded-control text-muted-foreground hover:bg-surface-muted hover:text-foreground xl:hidden" onClick={() => setAssistantDrawerOpen(true)} title="选择助手" type="button"><Bot className="size-5" /></button>}
           {generating && <span className="premium-chip hidden shrink-0 border-primary/15 bg-primary-subtle text-primary-subtle-foreground sm:inline-flex"><span className="size-1.5 animate-pulse rounded-full bg-primary" />{cancelling ? "正在请求停止" : "正在生成"}</span>}

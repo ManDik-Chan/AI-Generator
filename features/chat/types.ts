@@ -1,3 +1,5 @@
+import type { ChatMemoryDisclosure } from "@/features/memory/disclosure";
+
 export type ChatMessageRole = "user" | "assistant";
 export type ChatMessageStatus = "pending" | "complete" | "error" | "cancelled";
 export type ChatGenerationMode = "CHAT" | "AGENT_STANDARD" | "AGENT_DEEP";
@@ -9,7 +11,7 @@ export interface ChatMessageView {
   status: ChatMessageStatus;
   createdAt: string;
   temporary?: boolean;
-  memoryCount?: number;
+  memoryDisclosure?: ChatMemoryDisclosure;
 }
 
 export interface ConversationSummary {
@@ -26,7 +28,7 @@ export interface ConversationDetail extends ConversationSummary {
 export type ChatStreamEvent =
   | { event: "conversation"; data: { conversationId: string; updatedAt: string } }
   | { event: "turn"; data: { conversationId: string; userMessageId: string; assistantMessageId: string; editedMessageId?: string } }
-  | { event: "memory"; data: { count: number } }
+  | { event: "memory"; data: ChatMemoryDisclosure }
   | { event: "delta"; data: { text: string } }
   | { event: "done"; data: { messageId: string } }
   | { event: "cancelled"; data: { messageId: string } }
