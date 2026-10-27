@@ -15,3 +15,6 @@ const categories = [
 ];
 const matches = categories.filter(([pattern]) => pattern.test(log)).map(([, label]) => label);
 console.error(`Supabase startup diagnostics: ${matches.join("; ") || "unclassified failure (raw log withheld)"}`);
+const registries = ["public.ecr.aws", "ghcr.io", "docker.io"].filter((host) => log.includes(host));
+const images = ["postgres", "gotrue", "postgrest", "kong", "postgres-meta", "vector"].filter((name) => new RegExp(`(?:/|\\b)${name}(?=[:/\\s]|$)`, "i").test(log));
+console.error(`Registry hosts mentioned: ${registries.join(", ") || "none"}; image names mentioned: ${images.join(", ") || "none"}`);
