@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  packages: read
 
 concurrency:
   group: security-acceptance-${{ github.event.pull_request.number || github.ref }}
@@ -44,8 +45,11 @@ jobs:
 
       - name: Start isolated local Supabase
         shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin > /dev/null
           if ! supabase start >"$RUNNER_TEMP/supabase-start.log" 2>&1; then
             node scripts/diagnose-supabase-start.mjs "$RUNNER_TEMP/supabase-start.log"
             exit 1
@@ -148,8 +152,11 @@ jobs:
 
       - name: Start project-isolated local Supabase
         shell: bash
+        env:
+          GHCR_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin > /dev/null
           if ! supabase start >"$RUNNER_TEMP/supabase-${{ matrix.project }}.log" 2>&1; then
             node scripts/diagnose-supabase-start.mjs "$RUNNER_TEMP/supabase-${{ matrix.project }}.log"
             exit 1
