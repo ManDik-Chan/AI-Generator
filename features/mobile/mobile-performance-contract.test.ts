@@ -47,10 +47,10 @@ describe("Phase 6B2.1 performance and scrolling contracts", () => {
 
   it("renders the home body on the server without Framer Motion", () => {
     const home = read("features/home/components/home-dashboard.tsx");
-    const page = read("app/page.tsx");
+    const page = read("app/(platform)/workspace/page.tsx");
     expect(home).not.toContain('"use client"');
     expect(home).not.toContain("framer-motion");
-    expect(home).toContain("让你的 AI");
+    expect(home).toContain("懂你所想");
     expect(home).toContain("Suspense");
     expect(page).toContain("<HomeDashboard />");
   });

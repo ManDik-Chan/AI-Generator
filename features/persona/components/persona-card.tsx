@@ -8,7 +8,7 @@ import type { PersonaView } from "@/features/persona/types";
 
 export function PersonaCard({ persona }: { persona: PersonaView }) {
   return (
-    <article className="group premium-panel relative flex min-h-[18rem] min-w-0 flex-col overflow-hidden p-5 transition-[border-color,box-shadow,transform] duration-panel hover:-translate-y-1 hover:border-primary/26 hover:shadow-raised">
+    <article className="group premium-panel relative flex min-h-[18rem] min-w-0 flex-col overflow-hidden p-5 transition-colors duration-500 ease-out-expo hover:bg-surface-muted">
       <div className="absolute right-0 top-0 size-32 rounded-full bg-primary/7 blur-3xl transition-transform duration-panel group-hover:scale-125" />
       <div className="relative flex min-w-0 items-start gap-4">
         <PersonaAvatar className="size-16 rounded-[1.2rem] shadow-soft" name={persona.name} src={persona.avatarUrl} />

@@ -4,17 +4,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { LoaderCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Pill buttons. Filled variants get a lime fill that rises from the bottom on hover (.btn-wipe).
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-control text-sm font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-panel focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 active:translate-y-px",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full text-[.8125rem] font-medium tracking-[.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 active:scale-[.97]",
   { variants: {
     variant: {
-      default: "border border-primary/70 bg-primary text-primary-foreground shadow-[0_8px_24px_hsl(var(--primary)/.22)] hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-raised",
-      secondary: "border border-transparent bg-surface-muted text-foreground hover:-translate-y-0.5 hover:bg-surface-subtle",
-      outline: "border border-border-strong/20 bg-surface/55 text-foreground backdrop-blur-sm hover:-translate-y-0.5 hover:border-foreground/45 hover:bg-surface-raised",
-      ghost: "border border-transparent text-muted-foreground hover:bg-surface-muted hover:text-foreground",
-      destructive: "border border-transparent bg-destructive text-white hover:bg-destructive/90 dark:text-background",
+      default: "btn-wipe border border-foreground bg-foreground text-background",
+      secondary: "btn-wipe border border-transparent bg-surface-muted text-foreground",
+      outline: "btn-wipe border border-foreground/25 bg-transparent text-foreground",
+      ghost: "border border-transparent text-muted-foreground transition-colors duration-300 hover:bg-surface hover:text-foreground",
+      destructive: "border border-transparent bg-destructive text-white transition-colors duration-300 hover:bg-destructive/90 dark:text-background",
     },
-    size: { default: "h-11 px-5", sm: "h-9 px-3.5 text-[.8125rem]", lg: "h-12 px-5", icon: "size-11", "icon-sm": "size-10" },
+    size: { default: "h-11 px-5", sm: "h-9 px-4 text-xs", lg: "h-12 px-6", icon: "size-11", "icon-sm": "size-10" },
   }, defaultVariants: { variant: "default", size: "default" } },
 );
 

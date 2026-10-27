@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ensureProfile } from "@/lib/auth/profile";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import type { AuthActionState } from "@/features/auth/types";
+import { safeReturnPath } from "@/lib/auth/return-path";
 
 const credentialsSchema = z.object({
   email: z.email("请输入有效的邮箱地址。"),
@@ -48,7 +49,7 @@ export async function signIn(
   }
 
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect(safeReturnPath(formData.get("next")));
 }
 
 export async function signUp(
@@ -72,7 +73,7 @@ export async function signUp(
       password: parsed.data.password,
       options: {
         data: { display_name: parsed.data.displayName },
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback`,
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=${encodeURIComponent(safeReturnPath(formData.get("next")))}`,
       },
     });
 
@@ -87,7 +88,7 @@ export async function signUp(
     return { error: "注册服务尚未配置完成，请稍后再试。" };
   }
 
-  redirect("/login?registered=1");
+  redirect(`/login?registered=1&next=${encodeURIComponent(safeReturnPath(formData.get("next")))}`);
 }
 
 export async function signOut() {

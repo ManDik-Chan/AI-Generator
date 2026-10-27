@@ -42,12 +42,12 @@ export default async function AccountPage() {
       <div className="mt-8 space-y-4">
         <Surface className="relative overflow-hidden p-5 sm:p-7" variant="default">
           <div aria-hidden="true" className="surface-grid absolute inset-0 opacity-25 [mask-image:linear-gradient(to_left,black,transparent_70%)]" />
-          <div aria-hidden="true" className="absolute -right-12 -top-20 size-56 rounded-full bg-primary/20 blur-[70px]" />
+          
           <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
-            <Avatar className="size-20 rounded-[1.5rem]" name={name} src={profile?.avatarUrl ?? undefined} />
+            <Avatar className="size-20 rounded-full" name={name} src={profile?.avatarUrl ?? undefined} />
             <div className="min-w-0 flex-1">
               <p className="premium-kicker">PROFILE</p>
-              <h1 className="mt-2 overflow-wrap-anywhere text-2xl font-bold tracking-[-.04em]">{name}</h1>
+              <h1 className="mt-2 overflow-wrap-anywhere text-[clamp(1.75rem,3vw,2.5rem)] font-medium tracking-[-.035em]">{name}</h1>
               <p className="mt-1 overflow-wrap-anywhere text-supporting">{user.email}</p>
             </div>
             <Badge variant={profile?.role === "ADMIN" ? "info" : "neutral"}>

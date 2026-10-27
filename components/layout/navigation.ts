@@ -18,7 +18,7 @@ export function navigationItemActive(pathname: string, href: string, matches?: r
 
 export const navigationGroups: ReadonlyArray<{ label: string; items: readonly NavigationItem[] }> = [
   { label: "工作空间", items: [
-    { label: "控制中心", href: "/", icon: Home }, { label: "AI 对话", href: "/chat", icon: MessageSquareText },
+    { label: "控制中心", href: "/workspace", icon: Home }, { label: "AI 对话", href: "/chat", icon: MessageSquareText },
     { label: "Agent 运行", href: "/agents", icon: Workflow }, { label: "AI 助手", href: "/personas", icon: Shapes }, { label: "长期记忆", href: "/memories", icon: Brain },
   ] },
   { label: "创作实验室", items: [
@@ -35,6 +35,6 @@ export const navigationGroups: ReadonlyArray<{ label: string; items: readonly Na
 ] as const;
 
 export const mobileNavigation = [
-  { label: "首页", href: "/", icon: Home }, { label: "聊天", href: "/chat", icon: MessageSquareText },
+  { label: "工作台", href: "/workspace", icon: Home }, { label: "聊天", href: "/chat", icon: MessageSquareText },
   { label: "助手", href: "/personas", icon: Shapes }, { label: "工具", href: "/tools", icon: Wrench },
 ] as const;
