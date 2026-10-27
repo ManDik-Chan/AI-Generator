@@ -24,7 +24,7 @@ test.describe("authenticated mobile shell", () => {
 
   test("navigation, tools and common overlays remain inside the viewport", async ({ page }) => {
     const routes = [
-      { path: "/", heading: /让你的 AI，.*真正成为一个工作室。/ },
+      { path: "/workspace", heading: /懂你所想，\s*守你所藏。/ },
       { path: "/agents", heading: "Agent 运行" },
       { path: "/tools", heading: "实用 AI 工具" },
       { path: "/tools/image", heading: "图片分析" },

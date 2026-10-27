@@ -46,7 +46,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase start >"$RUNNER_TEMP/supabase-start.log" 2>&1
+          if ! supabase start >"$RUNNER_TEMP/supabase-start.log" 2>&1; then
+            node scripts/diagnose-supabase-start.mjs "$RUNNER_TEMP/supabase-start.log"
+            exit 1
+          fi
           status_env="$(supabase status -o env)"
           eval "$status_env"
           for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do
@@ -147,7 +150,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase start >"$RUNNER_TEMP/supabase-${{ matrix.project }}.log" 2>&1
+          if ! supabase start >"$RUNNER_TEMP/supabase-${{ matrix.project }}.log" 2>&1; then
+            node scripts/diagnose-supabase-start.mjs "$RUNNER_TEMP/supabase-${{ matrix.project }}.log"
+            exit 1
+          fi
           status_env="$(supabase status -o env)"
           eval "$status_env"
           for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do
