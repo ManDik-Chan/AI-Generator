@@ -57,9 +57,11 @@ test("landing mobile navigation opens, dismisses and routes to a protected page"
   await page.context().clearCookies();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/?lang=zh");
-  const toggle = page.getByRole("button", { name: "打开菜单" });
+  const toggle = page.locator("[data-menu-btn]");
+  await expect(toggle).toHaveAccessibleName("打开菜单");
   await toggle.click();
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(toggle).toHaveAccessibleName("关闭菜单");
   await expect(page.getByRole("navigation", { name: "移动端导航" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
