@@ -17,6 +17,7 @@ import { downloadRemoteImageSafely } from "@/lib/ai/image/download";
 import { ImageProviderError } from "@/lib/ai/image/errors";
 import { getImageProvider } from "@/lib/ai/image/registry";
 import { prisma } from "@/lib/database/prisma";
+import { markGeneratedDeletion, requestDeletion, performDeletion } from "@/features/storage/deletion";
 
 export type ToolImageGenerationStage =
   | "preparing"
@@ -151,7 +152,11 @@ export async function generateToolImage(
       createdAt: created.createdAt.toISOString(),
     };
   } catch (error) {
-    await removeGeneratedImageObject(storageTarget).catch(() =>
+    const compensation = async () => {
+      const id = await requestDeletion({ kind: "TOOL_GENERATION", ownerId: input.userId, resourceId: generatedImageId, scopeId: null, bucket: storageTarget.bucket, path: storageTarget.path });
+      await performDeletion(id, () => removeGeneratedImageObject(storageTarget));
+    };
+    await compensation().catch(() =>
       console.error("generated_image_compensation_failed", {
         userId: input.userId,
         runId: input.runId,
@@ -179,7 +184,8 @@ export async function deleteToolGeneratedImage(
   if (!image?.toolRunId) return "not-found" as const;
   const target = resolveGeneratedImageStorageTarget({ userId, kind: "TOOL_GENERATION", storedBucket: image.storageBucket, storedPath: image.storagePath });
   if (!target) return "not-found" as const;
-  await removeGeneratedImageObject(target);
+  const deletion = await markGeneratedDeletion(userId, image.id);
+  await performDeletion(deletion.id, () => removeGeneratedImageObject(target));
   const deleted = await prisma.toolRun.deleteMany({
     where: {
       id: image.toolRunId,
@@ -200,10 +206,11 @@ export async function cleanupToolGeneratedImageForRun(
       toolRunId: runId,
       kind: "TOOL_GENERATION",
     },
-    select: { storageBucket: true, storagePath: true },
+    select: { id: true, storageBucket: true, storagePath: true },
   });
   if (!image) return;
   const target = resolveGeneratedImageStorageTarget({ userId, kind: "TOOL_GENERATION", storedBucket: image.storageBucket, storedPath: image.storagePath });
   if (!target) throw new ImageProviderError("STORAGE", "Generated image storage target is invalid");
-  await removeGeneratedImageObject(target);
+  const deletion = await markGeneratedDeletion(userId, image.id);
+  await performDeletion(deletion.id, () => removeGeneratedImageObject(target));
 }

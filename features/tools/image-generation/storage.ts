@@ -4,6 +4,7 @@ import { ImageProviderError } from "@/lib/ai/image/errors";
 import { requireGeneratedImageStorageConfig } from "@/lib/ai/image/config";
 import { createSupabaseAdminClient } from "@/lib/auth/supabase/admin";
 import { isTrustedGeneratedImageStorageTarget, resolveGeneratedImageStorageTarget, type TrustedGeneratedImageStorageTarget } from "@/features/generated-images/storage-target";
+import { reserveObject, deletePendingObjectBytes } from "@/features/storage/deletion";
 
 export function buildGeneratedImageStoragePath(
   userId: string,
@@ -22,6 +23,7 @@ export async function uploadGeneratedImage(
   const { bucket } = requireGeneratedImageStorageConfig();
   const target = resolveGeneratedImageStorageTarget({ userId, kind: "TOOL_GENERATION", storedBucket: bucket, storedPath: path });
   if (!target) throw new ImageProviderError("STORAGE", "Generated image storage target is invalid");
+  await reserveObject({ kind: "TOOL_GENERATION", ownerId: userId, resourceId: path.split("/")[1].split(".")[0], scopeId: null, bucket: target.bucket, path });
   const client = createSupabaseAdminClient();
   const { error } = await client.storage.from(target.bucket).upload(target.path, bytes, {
     contentType: mimeType,
@@ -36,9 +38,7 @@ export async function removeGeneratedImageObject(
   target: TrustedGeneratedImageStorageTarget,
 ) {
   if (!isTrustedGeneratedImageStorageTarget(target)) throw new ImageProviderError("STORAGE", "Generated image storage target is invalid");
-  const client = createSupabaseAdminClient();
-  const { error } = await client.storage.from(target.bucket).remove([target.path]);
-  if (error) throw new ImageProviderError("STORAGE", "Generated image deletion failed");
+  await deletePendingObjectBytes(target.bucket, target.path);
 }
 
 export async function createGeneratedImageSignedUrl(

@@ -11,6 +11,7 @@ import { downloadRemoteImageSafely } from "@/lib/ai/image/download";
 import { ImageProviderError } from "@/lib/ai/image/errors";
 import { getImageProvider } from "@/lib/ai/image/registry";
 import { prisma } from "@/lib/database/prisma";
+import { markGeneratedDeletion, requestDeletion, performDeletion } from "@/features/storage/deletion";
 
 const FINAL_PROMPT_SUFFIX = "。单人头像，主体居中，适合作为正方形应用头像，不含文字、水印或标志。";
 
@@ -48,7 +49,10 @@ export async function generatePersonaAvatarCandidate(userId: string, personaId: 
     onProgress?.("saving");
     await prisma.generatedImage.create({ data: { id: generatedImageId, userId, kind: "PERSONA_AVATAR", prompt, provider: result.provider, model: result.model, storagePath: storageTarget.path, storageBucket: storageTarget.bucket, mimeType: downloaded.mimeType, sizeBytes: downloaded.bytes.byteLength, width: result.width, height: result.height } });
   } catch (error) {
-    try { await removePersonaAvatar(storageTarget); } catch { /* best-effort rollback */ }
+    try {
+      const id = await requestDeletion({ kind: "PERSONA_AVATAR", ownerId: userId, resourceId: generatedImageId, scopeId: personaId, bucket: storageTarget.bucket, path: storageTarget.path });
+      await performDeletion(id, () => removePersonaAvatar(storageTarget));
+    } catch { console.warn("avatar_compensation_pending"); }
     if (error instanceof ImageProviderError) throw error;
     throw new ImageProviderError("STORAGE", "Generated image record could not be saved");
   }
@@ -77,7 +81,8 @@ export async function deleteGeneratedAvatar(userId: string, generatedImageId: st
   if (image.personaAvatar) return "in-use" as const;
   const target = resolveGeneratedImageStorageTarget({ userId, kind: image.kind, storedBucket: image.storageBucket, storedPath: image.storagePath });
   if (!target) return "not-found" as const;
-  await removePersonaAvatar(target);
+  const deletion = await markGeneratedDeletion(userId, image.id);
+  await performDeletion(deletion.id, () => removePersonaAvatar(target));
   await prisma.generatedImage.deleteMany({ where: { id: image.id, userId } });
   return "deleted" as const;
 }

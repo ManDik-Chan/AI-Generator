@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { discoverIntegrationFiles } from "@/scripts/run-security-integration.mjs";
 
 const packageJson = readFileSync("package.json", "utf8");
 const workflow = readFileSync(
@@ -26,13 +27,13 @@ const migrationVerifier = readFileSync(
 
 describe("Proposal Security Acceptance wiring", () => {
   it("runs the real Proposal production-transaction suite fail-closed", () => {
-    expect(packageJson).toContain(
-      "tests/integration/memory-proposals.integration.test.ts",
-    );
+    expect(JSON.parse(packageJson).scripts["test:integration"]).toBe("node scripts/run-security-integration.mjs");
+    const discovered = discoverIntegrationFiles(process.cwd());
+    expect(discovered).toContain("tests/integration/memory-proposals.integration.test.ts");
+    expect(discovered).toContain("tests/integration/memory-verification.integration.test.ts");
+    expect(discovered).toContain("tests/integration/rls.security.integration.test.ts");
     expect(workflow).toContain('REQUIRE_SECURITY_TEST_DATABASE: "true"');
-    expect(workflow).toContain(
-      "tests/integration/memory-proposals.integration.test.ts",
-    );
+    expect(workflow).toContain("run: pnpm test:integration");
     expect(workflow).toContain("pnpm exec prisma migrate deploy");
     expect(workflow).toContain("node scripts/verify-security-migrations.mjs clean");
     expect(workflow).toContain("node scripts/verify-security-migrations.mjs incremental");

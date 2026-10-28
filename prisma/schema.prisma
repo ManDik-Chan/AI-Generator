@@ -231,6 +231,7 @@ model UsageLedger {
 }
 
 model ToolRun {
+  storageDeletionRequestedAt DateTime? @map("storage_deletion_requested_at") @db.Timestamptz(6)
   id                String        @id @default(uuid()) @db.Uuid
   userId            String        @map("user_id") @db.Uuid
   type              ToolType
@@ -304,6 +305,8 @@ model GenerationRun {
 }
 
 model ToolAsset {
+  storageBucket String? @map("storage_bucket")
+  deletionRequestedAt DateTime? @map("deletion_requested_at") @db.Timestamptz(6)
   id          String        @id @default(uuid()) @db.Uuid
   userId      String        @map("user_id") @db.Uuid
   toolRunId   String        @map("tool_run_id") @db.Uuid
@@ -596,6 +599,7 @@ model MemoryEmbedding {
 }
 
 model GeneratedImage {
+  deletionRequestedAt DateTime? @map("deletion_requested_at") @db.Timestamptz(6)
   id            String             @id @default(uuid()) @db.Uuid
   userId        String             @map("user_id") @db.Uuid
   kind          GeneratedImageKind @default(PERSONA_AVATAR)
@@ -619,6 +623,26 @@ model GeneratedImage {
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, kind, createdAt(sort: Desc)])
   @@map("generated_images")
+}
+
+model AssetDeletion {
+  id String @id @default(uuid()) @db.Uuid
+  ownerId String @map("owner_id") @db.Uuid
+  resourceId String @map("resource_id") @db.Uuid
+  scopeId String? @map("scope_id") @db.Uuid
+  kind String
+  bucket String
+  path String
+  state String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now()) @map("next_attempt_at") @db.Timestamptz(6)
+  lastErrorCode String? @map("last_error_code")
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  @@unique([bucket, path])
+  @@index([state, nextAttemptAt])
+  @@map("asset_deletions")
 }
 
 model ModelConfig {
