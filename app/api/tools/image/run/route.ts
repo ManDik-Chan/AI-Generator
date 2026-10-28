@@ -2,6 +2,8 @@ import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { cleanupToolRunAssets } from "@/features/tools/image/assets";
+import { requestDeletion, performDeletion } from "@/features/storage/deletion";
+import { authorizedToolAssetBucket, validateObjectIdentity } from "@/features/storage/owned-target";
 import { buildImageAnalysisPrompt } from "@/features/tools/image/prompt";
 import { processUploadedImage, UnsafeUploadError } from "@/features/tools/image/processor";
 import { imageRunFieldsSchema } from "@/features/tools/image/schemas";
@@ -44,8 +46,8 @@ export async function POST(request: Request) {
   let sourceFile: File;
   if (upload instanceof File && upload.size) sourceFile = upload;
   else if (parsed.data.sourceAssetId) {
-    const source = await prisma.toolAsset.findFirst({ where: { id: parsed.data.sourceAssetId, userId, expiresAt: { gt: new Date() } }, select: { storagePath: true, mimeType: true } });
-    if (!source) return jsonError("原图片已到期或不可用，请重新选择图片。", 410, "ASSET_EXPIRED");
+    const source = await prisma.toolAsset.findFirst({ where: { id: parsed.data.sourceAssetId, userId, deletionRequestedAt: null, expiresAt: { gt: new Date() } }, select: { id: true, toolRunId: true, storageBucket: true, storagePath: true, mimeType: true, toolRun: { select: { userId: true } } } });
+    if (!source || source.toolRun.userId !== userId || !validateObjectIdentity({ kind: "TOOL_ASSET", ownerId: userId, resourceId: source.id, scopeId: source.toolRunId, bucket: authorizedToolAssetBucket(source.storageBucket), path: source.storagePath })) return jsonError("原图片已到期或不可用，请重新选择图片。", 410, "ASSET_EXPIRED");
     try { const bytes = await downloadToolAsset(source.storagePath); sourceFile = new File([bytes], "restored-image", { type: source.mimeType }); }
     catch { return jsonError("暂时无法读取原图片，请重新上传。", 503, "STORAGE"); }
   } else return jsonError("请选择一张图片。", 400, "EMPTY_FILE");
@@ -71,9 +73,12 @@ export async function POST(request: Request) {
   try {
     await uploadToolAsset(path, image.bytes, image.mimeType); uploaded = true;
     const { retentionDays } = getToolAssetConfig();
-    await prisma.toolAsset.create({ data: { userId, toolRunId: usage.runId, storagePath: path, mimeType: image.mimeType, sizeBytes: image.sizeBytes, width: image.width, height: image.height, sha256: image.sha256, expiresAt: new Date(Date.now() + retentionDays * 86_400_000) } });
+    await prisma.toolAsset.create({ data: { id: path.split("/")[2].split(".")[0], userId, toolRunId: usage.runId, storageBucket: getToolAssetConfig().bucket, storagePath: path, mimeType: image.mimeType, sizeBytes: image.sizeBytes, width: image.width, height: image.height, sha256: image.sha256, expiresAt: new Date(Date.now() + retentionDays * 86_400_000) } });
   } catch {
-    if (uploaded) await removeToolAssets([path]).catch(() => console.error("tool_asset_compensation_failed", { userId, runId: usage.runId }));
+    if (uploaded) await (async () => {
+      const id = await requestDeletion({ kind: "TOOL_ASSET", ownerId: userId, scopeId: usage.runId, resourceId: path.split("/")[2].split(".")[0], bucket: getToolAssetConfig().bucket, path });
+      await performDeletion(id, () => removeToolAssets([path]));
+    })().catch(() => console.error("tool_asset_compensation_pending", { userId, runId: usage.runId }));
     await finishToolRun(userId, usage.runId, "ERROR", { errorCode: "STORAGE" }).catch(() => undefined);
     return jsonError("图片暂时无法安全保存，请稍后重试。", 503, "STORAGE");
   }

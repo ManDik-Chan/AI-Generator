@@ -18,6 +18,12 @@ jobs:
     timeout-minutes: 45
     env:
       REQUIRE_SECURITY_TEST_DATABASE: "true"
+      SUPABASE_TEST_WORKDIR: ${{ github.workspace }}
+      ALLOW_TEST_DATABASE_RESET: "true"
+      AI_TOOL_ASSET_BUCKET: p1-tool-assets
+      AI_TOOL_ASSET_LEGACY_BUCKET: p1-tool-assets
+      SUPABASE_GENERATED_IMAGE_BUCKET: p1-generated-images
+      SUPABASE_PERSONA_AVATAR_BUCKET: p1-persona-avatars
     steps:
       - name: Check out the exact PR commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -52,6 +58,7 @@ jobs:
             node scripts/diagnose-supabase-start.mjs "$RUNNER_TEMP/supabase-start.log"
             exit 1
           fi
+          node scripts/disposable-supabase.mjs bind "$GITHUB_WORKSPACE"
           status_env="$(supabase status -o env)"
           eval "$status_env"
           for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do
@@ -85,17 +92,14 @@ jobs:
       - name: Verify clean migration metadata
         run: node scripts/verify-security-migrations.mjs clean
 
-      - name: Run real authenticated JWT and PostgREST attacks
-        run: pnpm test:rls
-
-      - name: Run real quota and Proposal production-transaction tests
-        run: |
-          pnpm exec vitest run \
-            tests/integration/usage-ledger.integration.test.ts \
-            tests/integration/memory-proposals.integration.test.ts
+      - name: Run all discovered real database, JWT and PostgREST suites
+        run: pnpm test:integration
 
       - name: Verify old-database upgrade and transaction rollback
         run: node scripts/verify-security-migrations.mjs incremental
+
+      - name: Verify every explicitly transactional historical migration rolls back
+        run: node scripts/verify-security-migrations.mjs rollback-all
 
       - name: Run static quality gates
         run: |

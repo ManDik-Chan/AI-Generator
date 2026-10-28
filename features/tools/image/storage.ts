@@ -2,10 +2,17 @@ import "server-only";
 
 import { getToolAssetConfig } from "@/lib/ai/vision/config";
 import { createSupabaseAdminClient } from "@/lib/auth/supabase/admin";
+import { prisma } from "@/lib/database/prisma";
+import { configuredBucket, validateObjectIdentity, type ObjectIdentity } from "@/features/storage/owned-target";
+import { reserveObject, deletePendingObjectBytes } from "@/features/storage/deletion";
 
 export function buildToolAssetPath(userId: string, runId: string, extension: string) { return `${userId}/${runId}/${crypto.randomUUID()}.${extension}`; }
 export async function uploadToolAsset(path: string, bytes: Uint8Array, mimeType: string) {
   const { bucket } = getToolAssetConfig(); const client = createSupabaseAdminClient();
+  const [ownerId, scopeId, file] = path.split("/");
+  const target: ObjectIdentity = { kind: "TOOL_ASSET", ownerId, scopeId, resourceId: file?.split(".")[0], bucket, path };
+  if (!validateObjectIdentity(target) || !await prisma.toolRun.findFirst({ where: { id: scopeId, userId: ownerId, storageDeletionRequestedAt: null } })) throw new Error("TOOL_ASSET_OWNER_MISMATCH");
+  await reserveObject(target);
   const { error } = await client.storage.from(bucket).upload(path, bytes, { contentType: mimeType, upsert: false, cacheControl: "3600" });
   if (error) throw new Error("TOOL_ASSET_UPLOAD_FAILED");
 }
@@ -23,7 +30,6 @@ export async function createToolAssetSignedUrl(path: string) {
 }
 export async function removeToolAssets(paths: string[]) {
   if (!paths.length) return;
-  const { bucket } = getToolAssetConfig(); const client = createSupabaseAdminClient();
-  const { error } = await client.storage.from(bucket).remove(paths);
-  if (error) throw new Error("TOOL_ASSET_DELETE_FAILED");
+  const bucket = configuredBucket("TOOL_ASSET");
+  for (const path of paths) await deletePendingObjectBytes(bucket, path);
 }

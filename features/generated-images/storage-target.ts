@@ -8,6 +8,7 @@ import {
 export type GeneratedImageStorageKind = "PERSONA_AVATAR" | "TOOL_GENERATION";
 
 const trustedStorageTarget: unique symbol = Symbol("trusted-generated-image-storage-target");
+const issuedTargets = new WeakSet<object>();
 
 export interface TrustedGeneratedImageStorageTarget {
   readonly bucket: string;
@@ -54,9 +55,11 @@ export function resolveGeneratedImageStorageTarget(input: StoredTargetInput): Tr
   if (typeof input.storedBucket !== "string" || typeof input.storedPath !== "string") return null;
   const bucket = trustedBucket(input.kind);
   if (input.storedBucket !== bucket || !isSafeOwnedPath(input.userId, input.kind, input.storedPath)) return null;
-  return { bucket, path: input.storedPath, kind: input.kind, [trustedStorageTarget]: true };
+  const target: TrustedGeneratedImageStorageTarget = Object.freeze({ bucket, path: input.storedPath, kind: input.kind, [trustedStorageTarget]: true as const });
+  issuedTargets.add(target);
+  return target;
 }
 
 export function isTrustedGeneratedImageStorageTarget(target: TrustedGeneratedImageStorageTarget) {
-  return target?.[trustedStorageTarget] === true;
+  return issuedTargets.has(target) && target?.[trustedStorageTarget] === true;
 }

@@ -9,6 +9,7 @@ import {
 import { createGeneratedImageSignedUrl } from "@/features/tools/image-generation/storage";
 import { prisma } from "@/lib/database/prisma";
 import { resolveGeneratedImageStorageTarget } from "@/features/generated-images/storage-target";
+import { AssetCleanupPending } from "@/features/storage/deletion";
 
 export const runtime = "nodejs";
 const imageIdSchema = z.uuid();
@@ -20,9 +21,9 @@ function downloadExtension(mimeType: string | null) {
   return "png";
 }
 
-async function ownedImage(userId: string, id: string) {
+async function ownedImage(userId: string, id: string, includePending = false) {
   return prisma.generatedImage.findFirst({
-    where: { id, userId },
+    where: { id, userId, ...(includePending ? {} : { deletionRequestedAt: null }) },
     select: {
       id: true,
       kind: true,
@@ -79,7 +80,7 @@ export async function DELETE(
   if (!imageIdSchema.safeParse(generatedImageId).success) {
     return message("图片不存在。", 404);
   }
-  const image = await ownedImage(user.id, generatedImageId);
+  const image = await ownedImage(user.id, generatedImageId, true);
   if (!image) return message("图片不存在。", 404);
   try {
     const target = resolveGeneratedImageStorageTarget({ userId: user.id, kind: image.kind, storedBucket: image.storageBucket, storedPath: image.storagePath });
@@ -97,8 +98,9 @@ export async function DELETE(
     if (result === "in-use") {
       return message("正在使用的头像不能删除。", 409);
     }
-    return NextResponse.json({ success: true });
-  } catch {
+    return NextResponse.json({ success: true, state: "COMPLETE" });
+  } catch (error) {
+    if (error instanceof AssetCleanupPending) return NextResponse.json({ success: false, state: error.state, message: error.state === "BLOCKED" ? "无法确认资源归属，清理已停止。" : "图片清理尚未完成，请稍后重试。" }, { status: error.state === "BLOCKED" ? 409 : 503 });
     return message("图片删除失败，请稍后重试。", 500);
   }
 }

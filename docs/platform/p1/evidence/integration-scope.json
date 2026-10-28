@@ -1,0 +1,414 @@
+{
+  "schemaVersion": "1.0",
+  "recordedAt": "2026-10-28T12:20:14.580Z",
+  "main": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+  "branch": "codex/p1-a-final-integration-20261028",
+  "acceptedSource": {
+    "sha": "387aca73d0a44a72f8cf80a0dfa602811e4a8891",
+    "localEquivalent": "ce209e3898295c77fee9fac36da8ea151161ba9e",
+    "tree": "d1793535354fbdd6e1e7a2556d8ab8654d06f551",
+    "ownerRecord": "https://github.com/ManDik-Chan/AI-Generator/issues/26",
+    "ownerState": "OWNER_REVIEW_PENDING",
+    "checkRuns": 13,
+    "requiredChecks": 6,
+    "evidenceAppliesOnlyToAcceptedSha": true
+  },
+  "nonDocumentationFileCount": 42,
+  "files": [
+    {
+      "file": ".github/workflows/security-acceptance.yml",
+      "acceptedBlob": "7e9c2481a65ca424a0b34669c1320bff445c84b1",
+      "integrationBlob": "7e9c2481a65ca424a0b34669c1320bff445c84b1",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "app/api/generated-images/[generatedImageId]/route.test.ts",
+      "acceptedBlob": "25ce2dac231f557777c1b47e1f87d5be4c9382e3",
+      "integrationBlob": "25ce2dac231f557777c1b47e1f87d5be4c9382e3",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "app/api/generated-images/[generatedImageId]/route.ts",
+      "acceptedBlob": "9f0b701c39523b01352b5a1f51e4d78d68d844ec",
+      "integrationBlob": "9f0b701c39523b01352b5a1f51e4d78d68d844ec",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "app/api/personas/[personaId]/avatar/route.ts",
+      "acceptedBlob": "3576822623b91820366a366f3393bf4566287874",
+      "integrationBlob": "3576822623b91820366a366f3393bf4566287874",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "app/api/tools/assets/[assetId]/route.ts",
+      "acceptedBlob": "9daf4e64150c8a4a46043c1f60e8027e6dfbcbbc",
+      "integrationBlob": "9daf4e64150c8a4a46043c1f60e8027e6dfbcbbc",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "app/api/tools/image/run/route.ts",
+      "acceptedBlob": "2d4d5061d2ed26f6ffb3383449824f9a82831d09",
+      "integrationBlob": "2d4d5061d2ed26f6ffb3383449824f9a82831d09",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "app/api/tools/runs/[runId]/route.ts",
+      "acceptedBlob": "ef52f6a2a40873e6a0821f496c2207ce0d424671",
+      "integrationBlob": "ef52f6a2a40873e6a0821f496c2207ce0d424671",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/generated-images/storage-target.ts",
+      "acceptedBlob": "7f830108a04c8fefe4596256cfb79659d88f8e2c",
+      "integrationBlob": "7f830108a04c8fefe4596256cfb79659d88f8e2c",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/memory/proposal-security-acceptance-contract.test.ts",
+      "acceptedBlob": "1035ec170f456f1c000a827a7ce14153da3fef3a",
+      "integrationBlob": "1035ec170f456f1c000a827a7ce14153da3fef3a",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/persona/avatar-service.integration.test.ts",
+      "acceptedBlob": "bd7866bca6a38552d9b354571c84d526c2173a20",
+      "integrationBlob": "bd7866bca6a38552d9b354571c84d526c2173a20",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/persona/avatar-service.ts",
+      "acceptedBlob": "867a3e83396f8c41c5ae32329038bd2b54bb0293",
+      "integrationBlob": "867a3e83396f8c41c5ae32329038bd2b54bb0293",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/persona/avatar-storage.ts",
+      "acceptedBlob": "c2f42fe60307df3491836632956d7be536c6be8d",
+      "integrationBlob": "c2f42fe60307df3491836632956d7be536c6be8d",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/storage/deletion.ts",
+      "acceptedBlob": "b48cc13fbea5c2d31ef64148edc380a13df2e884",
+      "integrationBlob": "b48cc13fbea5c2d31ef64148edc380a13df2e884",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/storage/owned-target.test.ts",
+      "acceptedBlob": "29096f2b5984f0254150ab412ab7abc6f409ae50",
+      "integrationBlob": "29096f2b5984f0254150ab412ab7abc6f409ae50",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/storage/owned-target.ts",
+      "acceptedBlob": "4770dc7fd75c380e4045e2369c6196cd75434e90",
+      "integrationBlob": "4770dc7fd75c380e4045e2369c6196cd75434e90",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/tools/actions.ts",
+      "acceptedBlob": "38d7197234faae625cf28d714dbedc71a30be2ab",
+      "integrationBlob": "38d7197234faae625cf28d714dbedc71a30be2ab",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/tools/image-generation/service.integration.test.ts",
+      "acceptedBlob": "1dc76485334d6342ebc2fee890933b941ca8d7db",
+      "integrationBlob": "1dc76485334d6342ebc2fee890933b941ca8d7db",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/tools/image-generation/service.ts",
+      "acceptedBlob": "03fedfd38004eab758e6923699db5d65c66647ec",
+      "integrationBlob": "03fedfd38004eab758e6923699db5d65c66647ec",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/tools/image-generation/storage.ts",
+      "acceptedBlob": "8cde64d8cd0a8af8b7ede91f132fffbca807a5b6",
+      "integrationBlob": "8cde64d8cd0a8af8b7ede91f132fffbca807a5b6",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/tools/image/assets.ts",
+      "acceptedBlob": "215e185edd21d3a8b248c588d879292751e2d863",
+      "integrationBlob": "215e185edd21d3a8b248c588d879292751e2d863",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "features/tools/image/storage.ts",
+      "acceptedBlob": "98596c774228841c1905319d90bd4dd566cea012",
+      "integrationBlob": "98596c774228841c1905319d90bd4dd566cea012",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "package.json",
+      "acceptedBlob": "91bf9919ea644dde00792e76e6edc0e4ed62281a",
+      "integrationBlob": "91bf9919ea644dde00792e76e6edc0e4ed62281a",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "prisma/migrations/20261028074859_asset_deletion_consistency/migration.sql",
+      "acceptedBlob": "aaf57c737de723e2bb6c934a9e7af22ecea1afd7",
+      "integrationBlob": "aaf57c737de723e2bb6c934a9e7af22ecea1afd7",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "prisma/migrations/20261028080215_asset_deletion_cascade_retry/migration.sql",
+      "acceptedBlob": "f826b1a0e02c2f8b925022b931914c8b45d0a8f2",
+      "integrationBlob": "f826b1a0e02c2f8b925022b931914c8b45d0a8f2",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "prisma/migrations/20261028081301_asset_attachment_fence/migration.sql",
+      "acceptedBlob": "14c2d7a2e58f1e3a0aa963b67b4f93e3f6a08bf6",
+      "integrationBlob": "14c2d7a2e58f1e3a0aa963b67b4f93e3f6a08bf6",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "prisma/migrations/20261028081742_validate_asset_ownership/migration.sql",
+      "acceptedBlob": "7634bab9243bb6dee88db75a67221d9dae5809c6",
+      "integrationBlob": "7634bab9243bb6dee88db75a67221d9dae5809c6",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "prisma/schema.prisma",
+      "acceptedBlob": "f4ff08cd0e104edf7b21bc4d1f1129f09333f6a0",
+      "integrationBlob": "f4ff08cd0e104edf7b21bc4d1f1129f09333f6a0",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/disposable-supabase.d.mts",
+      "acceptedBlob": "4005a57a10b87ebb15e2fecde2c48b064f3f37a8",
+      "integrationBlob": "4005a57a10b87ebb15e2fecde2c48b064f3f37a8",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/disposable-supabase.mjs",
+      "acceptedBlob": "c39762f83200b76498b7513f183b8eb64a831a06",
+      "integrationBlob": "c39762f83200b76498b7513f183b8eb64a831a06",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/disposable-supabase.test.ts",
+      "acceptedBlob": "a5207c948ef5c8b277daf0f22dde60e4e5651e5a",
+      "integrationBlob": "a5207c948ef5c8b277daf0f22dde60e4e5651e5a",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/run-local-security-stage.mjs",
+      "acceptedBlob": "80afd414dc67ec77981c9cef77a3099da3b2adb6",
+      "integrationBlob": "80afd414dc67ec77981c9cef77a3099da3b2adb6",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/run-security-integration.d.mts",
+      "acceptedBlob": "821ffa13ee555f126e7e997b932fb12cd6e6412e",
+      "integrationBlob": "821ffa13ee555f126e7e997b932fb12cd6e6412e",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/run-security-integration.mjs",
+      "acceptedBlob": "cbf009a121583b2923ca037c62ccfe71f442dc4b",
+      "integrationBlob": "cbf009a121583b2923ca037c62ccfe71f442dc4b",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/run-security-integration.test.ts",
+      "acceptedBlob": "a622368be335770e7cbbfcaedbde573c4f22ec52",
+      "integrationBlob": "a622368be335770e7cbbfcaedbde573c4f22ec52",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "scripts/verify-security-migrations.mjs",
+      "acceptedBlob": "5936428ba9d97e823d5e7d6c2047086bdea7a076",
+      "integrationBlob": "5936428ba9d97e823d5e7d6c2047086bdea7a076",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "supabase/config.toml",
+      "acceptedBlob": "654263b15f4f69dfacdc22cb2786c57fbd42dbb1",
+      "integrationBlob": "654263b15f4f69dfacdc22cb2786c57fbd42dbb1",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "tests/integration/fixtures/crash-deletion.ts",
+      "acceptedBlob": "882a438336b6429048dbffb631da122827348643",
+      "integrationBlob": "882a438336b6429048dbffb631da122827348643",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "tests/integration/fixtures/reserved-upload.ts",
+      "acceptedBlob": "fe92e810baf947179dc307c05844a056d9f7787d",
+      "integrationBlob": "fe92e810baf947179dc307c05844a056d9f7787d",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "tests/integration/private-asset-storage.integration.test.ts",
+      "acceptedBlob": "a9f1b9a769d324dc458515995d28111006b6f0dc",
+      "integrationBlob": "a9f1b9a769d324dc458515995d28111006b6f0dc",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "tests/integration/reserved-legacy-storage.integration.test.ts",
+      "acceptedBlob": "596313ea82010fa53673ab536854752049895ad3",
+      "integrationBlob": "596313ea82010fa53673ab536854752049895ad3",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "tests/integration/tool-asset-deletion.integration.test.ts",
+      "acceptedBlob": "7f98c1a701312a0152a8efb29e8161cebf9321a0",
+      "integrationBlob": "7f98c1a701312a0152a8efb29e8161cebf9321a0",
+      "identical": true,
+      "reason": "Required accepted P1-A dependency"
+    },
+    {
+      "file": "vercel.json",
+      "acceptedBlob": "ce9fa3892f29ae8af430882fedb78d25f65b9d5e",
+      "integrationBlob": "782bcb70883ff2d02433007aa2183bac4f1152e3",
+      "identical": false,
+      "reason": "Add exact integration branch to deployment deny map"
+    }
+  ],
+  "excluded": {
+    "p0Archive": true,
+    "p05Archive": true,
+    "oldP1PlanningAndLargeReports": true,
+    "reason": "No runtime/test dependency; historical records retained at immutable source links"
+  },
+  "history": [
+    {
+      "path": "docs/platform/p1/evidence/verification.json",
+      "sha256": "765be98b2de94183f5492d52d536488c1a709a313f900285f039d9581b5c01b3",
+      "gate": "FAILED",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/blob/387aca73d0a44a72f8cf80a0dfa602811e4a8891/docs/platform/p1/evidence/verification.json",
+      "unchanged": true
+    },
+    {
+      "path": "docs/platform/p1/remediation/evidence/verification.json",
+      "sha256": "6ebe94457f98aae5a2bfa92de559b7f738ae8f03ed6d280ba618f0d62b4d9585",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/blob/387aca73d0a44a72f8cf80a0dfa602811e4a8891/docs/platform/p1/remediation/evidence/verification.json",
+      "unchanged": true
+    }
+  ],
+  "localVerification": {
+    "targeted": {
+      "files": 7,
+      "total": 53,
+      "passed": 53,
+      "failed": 0,
+      "pending": 0,
+      "sha256": "b0d24c80ccdb176bb251ada7166c796a5b9a373920e05918e4fca98870abb583",
+      "suites": [
+        {
+          "file": "scripts/disposable-supabase.test.ts",
+          "status": "passed",
+          "tests": 2
+        },
+        {
+          "file": "scripts/run-security-integration.test.ts",
+          "status": "passed",
+          "tests": 10
+        },
+        {
+          "file": "features/memory/proposal-security-acceptance-contract.test.ts",
+          "status": "passed",
+          "tests": 4
+        },
+        {
+          "file": "features/persona/avatar-service.integration.test.ts",
+          "status": "passed",
+          "tests": 10
+        },
+        {
+          "file": "features/storage/owned-target.test.ts",
+          "status": "passed",
+          "tests": 14
+        },
+        {
+          "file": "features/tools/image-generation/service.integration.test.ts",
+          "status": "passed",
+          "tests": 7
+        },
+        {
+          "file": "app/api/generated-images/[generatedImageId]/route.test.ts",
+          "status": "passed",
+          "tests": 6
+        }
+      ]
+    },
+    "lint": {
+      "exitCode": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "method": "Direct pinned Node CLI binaries; pnpm exec attempted to purge the shared junction and was refused. No dependency mutation or skipped assertion.",
+    "full914Rerun": false,
+    "isolatedDatabaseRerun": false,
+    "unchangedCoreAndTestsVerifiedByGitBlob": true
+  },
+  "newPullRequestValidation": {
+    "state": "NOT_YET_RUN",
+    "requiredContexts": [
+      "lint",
+      "typecheck",
+      "unit tests",
+      "build",
+      "authenticated Playwright",
+      "Supabase Security Acceptance"
+    ],
+    "oldShaResultsInherited": false
+  },
+  "boundaries": {
+    "mainModified": false,
+    "productionSupabaseAccess": false,
+    "mergeAuthorized": false,
+    "deploymentAuthorized": false,
+    "landingChanged": false,
+    "P1_B": "NO-GO",
+    "P1_C": "NO-GO"
+  }
+}
