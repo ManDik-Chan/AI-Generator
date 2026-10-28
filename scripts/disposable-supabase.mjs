@@ -47,9 +47,12 @@ export function assertDisposableTarget(env=process.env) {
   }
   return target;
 }
+let engineApiVersion;
 const request=(method,path,body)=>new Promise((resolveRequest,reject)=>{
+  engineApiVersion??=execFileSync("docker",["version","--format","{{.Server.APIVersion}}"],{encoding:"utf8"}).trim();
+  assert(/^\d+\.\d+$/.test(engineApiVersion),"Docker server API version required");
   const raw=body?JSON.stringify(body):"";
-  const req=http.request({socketPath:process.platform==="win32"?"//./pipe/docker_engine":"/var/run/docker.sock",path,method,headers:raw?{"Content-Type":"application/json","Content-Length":Buffer.byteLength(raw)}:{}},res=>{
+  const req=http.request({socketPath:process.platform==="win32"?"//./pipe/docker_engine":"/var/run/docker.sock",path:`/v${engineApiVersion}${path}`,method,headers:raw?{"Content-Type":"application/json","Content-Length":Buffer.byteLength(raw)}:{}},res=>{
     let output="";res.on("data",chunk=>output+=chunk);res.on("end",()=>res.statusCode>=200&&res.statusCode<300?resolveRequest(output?JSON.parse(output):{}):reject(new Error(`Owned container operation failed: ${res.statusCode} ${output.slice(0,500)}`)));
   });req.on("error",reject);req.end(raw);
 });
