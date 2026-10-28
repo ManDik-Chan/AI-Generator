@@ -9,7 +9,7 @@ import { PrismaClient } from "@prisma/client";
 const require = createRequire(import.meta.url);
 const root = process.cwd();
 const mode = process.argv[2];
-if (!["migrate", "integration", "all-real", "metadata", "cleanup", "migrations-clean", "migrations-incremental", "migrations-rollback-all"].includes(mode) || !process.argv[3]) {
+if (!["migrate", "registry", "registry-migrations", "integration", "all-real", "metadata", "cleanup", "migrations-clean", "migrations-incremental", "migrations-rollback-all"].includes(mode) || !process.argv[3]) {
   throw new Error("Usage: node scripts/run-local-security-stage.mjs <migrate|integration|all-real|metadata|cleanup> <isolated-workdir>");
 }
 const isolated = realpathSync(resolve(process.argv[3]));
@@ -60,6 +60,8 @@ if (mode === "metadata") {
   } finally { await db.$disconnect(); }
 } else {
   const args = mode === "migrate" ? [require.resolve("prisma/build/index.js"), "migrate", "deploy"]
+    : mode === "registry-migrations" ? ["scripts/verify-registry-migrations.mjs"]
+    : mode === "registry" ? [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "tests/integration/registry.integration.test.ts", "--reporter=default"]
     : mode.startsWith("migrations-") ? ["scripts/verify-security-migrations.mjs",mode.slice("migrations-".length)]
     : mode === "integration" ? ["scripts/run-security-integration.mjs"]
     : mode === "cleanup" ? ["--conditions=react-server", "--import", "tsx", "scripts/cleanup-tool-assets.ts"]
