@@ -63,7 +63,7 @@ if (mode === "metadata") {
     : mode.startsWith("migrations-") ? ["scripts/verify-security-migrations.mjs",mode.slice("migrations-".length)]
     : mode === "integration" ? ["scripts/run-security-integration.mjs"]
     : mode === "cleanup" ? ["--conditions=react-server", "--import", "tsx", "scripts/cleanup-tool-assets.ts"]
-      : [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "--reporter=json", "--outputFile=test-results/local-stage-all-real.json"];
+      : [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "--no-file-parallelism", "--reporter=json", "--outputFile=test-results/local-stage-all-real.json"];
   const result = spawnSync(process.execPath, args, { cwd: root, env, encoding: "utf8", windowsHide: true, maxBuffer: 32 * 1024 * 1024 });
   writeFileSync(`test-results/local-stage-${mode}.log`, (result.stdout ?? "") + (result.stderr ?? ""));
   console.info(`Local ${mode}: exit ${result.status ?? "process error"}; raw output retained in ignored test-results.`);
