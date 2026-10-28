@@ -50,7 +50,7 @@ export function assertDisposableTarget(env=process.env) {
 const request=(method,path,body)=>new Promise((resolveRequest,reject)=>{
   const raw=body?JSON.stringify(body):"";
   const req=http.request({socketPath:process.platform==="win32"?"//./pipe/docker_engine":"/var/run/docker.sock",path,method,headers:raw?{"Content-Type":"application/json","Content-Length":Buffer.byteLength(raw)}:{}},res=>{
-    let output="";res.on("data",chunk=>output+=chunk);res.on("end",()=>res.statusCode>=200&&res.statusCode<300?resolveRequest(output?JSON.parse(output):{}):reject(new Error(`Owned container operation failed: ${res.statusCode}`)));
+    let output="";res.on("data",chunk=>output+=chunk);res.on("end",()=>res.statusCode>=200&&res.statusCode<300?resolveRequest(output?JSON.parse(output):{}):reject(new Error(`Owned container operation failed: ${res.statusCode} ${output.slice(0,500)}`)));
   });req.on("error",reject);req.end(raw);
 });
 export async function bindDisposableLoopback(workdir) {
@@ -64,7 +64,10 @@ export async function bindDisposableLoopback(workdir) {
     // Keep the actual probe/retries; a one-second interval avoids waiting for
     // Docker's default 30-second first probe after recreating a test container.
     if(c.Config.Healthcheck) c.Config.Healthcheck.Interval=1_000_000_000;
-    const networks=Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n,v])=>[n,{Aliases:v.Aliases,IPAMConfig:{IPv4Address:v.IPAddress}}]));
+    // Preserve DNS aliases, not a static address: Linux bridge networks created
+    // without an explicit subnet reject static IPAM requests. The routed API
+    // readiness check below verifies all consumers after endpoint recreation.
+    const networks=Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n,v])=>[n,{Aliases:v.Aliases}]));
     await request("POST",`/containers/${c.Id}/stop?t=20`);
     await request("DELETE",`/containers/${c.Id}`);
     const made=await request("POST",`/containers/create?name=${name}`,{...c.Config,HostConfig:c.HostConfig,NetworkingConfig:{EndpointsConfig:networks}});
