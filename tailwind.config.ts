@@ -36,14 +36,20 @@ const config: Config = {
         destructive: { DEFAULT: "hsl(var(--destructive))", foreground: "hsl(var(--destructive-foreground))", subtle: "hsl(var(--destructive-subtle))" },
         info: { DEFAULT: "hsl(var(--info))", foreground: "hsl(var(--info-foreground))", subtle: "hsl(var(--info-subtle))" },
         "focus-ring": "hsl(var(--focus-ring))",
+        lime: "hsl(var(--lime))",
+        forest: "hsl(var(--forest))",
       },
+      fontFamily: {
+        sans: ["var(--font-latin)", "var(--font-sc)", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "ui-sans-serif", "system-ui", "sans-serif"],
+      },
+      transitionTimingFunction: { "out-expo": "cubic-bezier(.19,1,.22,1)" },
       borderRadius: {
         control: "var(--radius-control)", card: "var(--radius-card)", panel: "var(--radius-panel)", dialog: "var(--radius-dialog)", sheet: "var(--radius-sheet)", overlay: "var(--radius-overlay)", display: "var(--radius-display)",
         xl: "var(--radius-card)", "2xl": "var(--radius-overlay)",
       },
       boxShadow: {
-        soft: "0 10px 28px hsl(var(--overlay) / .08)",
-        raised: "0 20px 52px hsl(var(--overlay) / .13)",
+        soft: "0 8px 24px hsl(var(--overlay) / .06)",
+        raised: "0 18px 48px hsl(var(--overlay) / .1)",
         overlay: "0 28px 72px hsl(var(--overlay) / .18)",
       },
       transitionDuration: { fast: "140ms", panel: "220ms" },

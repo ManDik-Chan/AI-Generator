@@ -1,13 +1,14 @@
 import { AuthForm } from "@/features/auth/components/auth-form";
 import { signIn } from "@/features/auth/actions";
 import { StatusBanner } from "@/components/ui/status-banner";
+import { safeReturnPath } from "@/lib/auth/return-path";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ configuration?: string; registered?: string }>;
+  searchParams: Promise<{ configuration?: string; registered?: string; next?: string; error?: string }>;
 }) {
-  const { configuration, registered } = await searchParams;
+  const { configuration, registered, next, error } = await searchParams;
 
   return (
     <>
@@ -20,7 +21,8 @@ export default async function LoginPage({
       {configuration === "missing" && (
         <StatusBanner className="mt-5" title="登录暂不可用" variant="warning">服务尚未准备好，请稍后再试或联系管理员。</StatusBanner>
       )}
-      <AuthForm action={signIn} mode="login" />
+      {error === "callback" ? <StatusBanner className="mt-5" variant="error">验证链接已失效，请重新登录或申请新的验证邮件。</StatusBanner> : null}
+      <AuthForm action={signIn} mode="login" nextPath={safeReturnPath(next)} />
     </>
   );
 }

@@ -108,9 +108,14 @@ jobs:
           version: 2.109.1
       - name: Start project-isolated local Supabase
         shell: bash
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ""
         run: |
           set -euo pipefail
-          supabase start >"$RUNNER_TEMP/supabase-${{ matrix.project }}.log" 2>&1
+          if ! supabase start >"$RUNNER_TEMP/supabase-${{ matrix.project }}.log" 2>&1; then
+            node scripts/diagnose-supabase-start.mjs "$RUNNER_TEMP/supabase-${{ matrix.project }}.log"
+            exit 1
+          fi
           status_env="$(supabase status -o env)"
           eval "$status_env"
           for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do

@@ -1,10 +1,15 @@
 import type { Metadata, Viewport } from "next";
+import { Figtree, Noto_Sans_SC } from "next/font/google";
 import { Suspense } from "react";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { NavigationFeedback } from "@/components/layout/navigation-feedback";
 import { themeInitializationScript } from "@/lib/theme";
+
+// One type system for the landing page and the app: Figtree for Latin, Noto Sans SC for Chinese.
+const latin = Figtree({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-latin", display: "swap" });
+const chinese = Noto_Sans_SC({ weight: ["400", "500"], variable: "--font-sc", display: "swap", preload: false });
 
 export const metadata: Metadata = {
   title: {
@@ -22,14 +27,14 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eef1f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#07090f" },
+    { media: "(prefers-color-scheme: light)", color: "#f3efe8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1415" },
   ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html className={`${latin.variable} ${chinese.variable}`} lang="zh-CN" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} /></head>
       <body><Suspense fallback={null}><NavigationFeedback /></Suspense><ThemeProvider>{children}</ThemeProvider></body>
     </html>

@@ -28,6 +28,8 @@ export function NavigationFeedback() {
       if (!target || target.target === "_blank" || target.hasAttribute("download")) return;
       const destination = new URL(target.href, window.location.href);
       if (destination.origin !== window.location.origin) return;
+      // In-page anchors do not initiate a route transition and never become busy links.
+      if (destination.pathname === window.location.pathname && destination.search === window.location.search) return;
       if (destination.pathname === window.location.pathname && destination.search === window.location.search && destination.hash === window.location.hash) return;
 
       target.dataset.navigationPending = "true";
@@ -54,7 +56,7 @@ export function NavigationFeedback() {
 
   return (
     <div aria-live="polite" className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-0.5" data-navigation-feedback data-pending={pending ? "true" : "false"} ref={feedbackRef}>
-      <span className="block h-full origin-left scale-x-0 bg-primary opacity-0 shadow-[0_0_12px_hsl(var(--primary)/.55)] transition-[transform,opacity] duration-150 data-[pending=true]:scale-x-100 data-[pending=true]:opacity-100" data-pending={pending ? "true" : "false"} />
+      <span className="block h-full origin-left scale-x-0 bg-foreground opacity-0 transition-[transform,opacity] duration-150 data-[pending=true]:scale-x-100 data-[pending=true]:opacity-100" data-pending={pending ? "true" : "false"} />
       <span className="sr-only">{pending ? "正在打开页面" : ""}</span>
     </div>
   );

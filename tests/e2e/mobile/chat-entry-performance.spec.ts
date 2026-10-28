@@ -12,7 +12,7 @@ test.describe("authenticated Chat entry performance", () => {
   test("keeps the Composer interactive while the non-critical bootstrap is delayed", async ({ page }) => {
     await page.goto("/chat");
     await expect(page.locator("[data-chat-shell]")).toBeVisible();
-    await page.goto("/");
+    await page.goto("/workspace");
 
     const requests: string[] = [];
     page.on("request", (request) => requests.push(new URL(request.url()).pathname));

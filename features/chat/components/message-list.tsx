@@ -143,7 +143,7 @@ export function MessageList(props: MessageListProps) {
               <p className="premium-kicker mt-6">NEW CONVERSATION</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-[-.035em] sm:text-3xl">{props.persona ? `与 ${props.persona.name} 开始对话` : "今天想一起完成什么？"}</h2>
               <p className="mx-auto mt-3 max-w-md whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{props.persona?.greeting || (props.persona ? props.persona.description || "发送第一条消息开始对话。" : "默认助手已准备好。提出问题、梳理想法，或从一个尚未成形的灵感开始。")}</p>
-              <div className="mx-auto mt-6 h-px w-20 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+              <div className="mx-auto mt-6 h-px w-20 bg-border/20" />
             </div>
           </div>
         )}

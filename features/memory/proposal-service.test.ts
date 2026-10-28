@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 
 const mocks = vi.hoisted(() => ({
@@ -89,6 +89,8 @@ function transactionClient() {
 
 describe("trusted memory proposal resolution", () => {
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(snapshot);
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.transaction.mockImplementation(async (callback) => callback(transactionClient()));
     mocks.proposalFindFirst.mockResolvedValue(baseProposal);
@@ -104,6 +106,7 @@ describe("trusted memory proposal resolution", () => {
     mocks.memoryUpdateMany.mockResolvedValue({ count: 1 });
     mocks.queryRaw.mockResolvedValue([{ memoryEnabled: true }]);
   });
+  afterEach(() => vi.useRealTimers());
 
   it("retries PostgreSQL 40001 when Prisma wraps raw SQL as P2010", async () => {
     mocks.transaction

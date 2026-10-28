@@ -3,6 +3,6 @@ import { CHAT_HOME_NAVIGATION } from "@/features/chat/navigation";
 
 describe("chat home navigation", () => {
   it("uses a direct, accessible home destination for shared and header links", () => {
-    expect(CHAT_HOME_NAVIGATION).toEqual({ href: "/", label: "返回首页", title: "返回首页" });
+    expect(CHAT_HOME_NAVIGATION).toEqual({ href: "/workspace", label: "返回工作台", title: "返回工作台" });
   });
 });

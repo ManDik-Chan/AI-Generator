@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
+import { safeReturnPath } from "@/lib/auth/return-path";
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
-  const requestedNext = request.nextUrl.searchParams.get("next") ?? "/";
-  const safeNext = requestedNext.startsWith("/") && !requestedNext.startsWith("//") ? requestedNext : "/";
+  const safeNext = safeReturnPath(request.nextUrl.searchParams.get("next"));
 
   if (code) {
     const supabase = await createSupabaseServerClient();
@@ -16,5 +16,5 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(new URL("/login?error=callback", request.url));
+  return NextResponse.redirect(new URL(`/login?error=callback&next=${encodeURIComponent(safeNext)}`, request.url));
 }

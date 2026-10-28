@@ -19,9 +19,9 @@ export function ConversationList({ conversations, activeId, loading = false, onN
   return (
     <div className="flex h-full flex-col">
       <div className="border-b border-border/10 p-4">
-        <Link className="mb-4 flex items-center gap-3 rounded-control px-1 py-1" href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate} prefetch={false}>
-          <span className="premium-icon-tile size-10"><Sparkles className="size-4" /></span>
-          <span><span className="block text-sm font-bold">AI-Generator</span><span className="block text-[.625rem] font-semibold uppercase tracking-[.14em] text-muted-foreground">Conversation Studio</span></span>
+        <Link className="group mb-4 flex items-center gap-3 rounded-full px-1 py-1" href={CHAT_HOME_NAVIGATION.href} onClick={onNavigate} prefetch={false}>
+          <span className="premium-icon-tile size-10 rounded-full"><Sparkles className="size-4" /></span>
+          <span><span className="block text-sm font-semibold tracking-[-.03em]">AI-Generator</span><span className="block text-[.6875rem] text-muted-foreground">Conversation Studio</span></span>
         </Link>
         <Button asChild className="w-full justify-start" size="lg">
           <Link href="/chat" onClick={onNavigate} prefetch={false}><Plus className="size-4" />新建对话</Link>
