@@ -64,7 +64,7 @@ export async function bindDisposableLoopback(workdir) {
     // Keep the actual probe/retries; a one-second interval avoids waiting for
     // Docker's default 30-second first probe after recreating a test container.
     if(c.Config.Healthcheck) c.Config.Healthcheck.Interval=1_000_000_000;
-    const networks=Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n,v])=>[n,{Aliases:v.Aliases}]));
+    const networks=Object.fromEntries(Object.entries(c.NetworkSettings.Networks).map(([n,v])=>[n,{Aliases:v.Aliases,IPAMConfig:{IPv4Address:v.IPAddress}}]));
     await request("POST",`/containers/${c.Id}/stop?t=20`);
     await request("DELETE",`/containers/${c.Id}`);
     const made=await request("POST",`/containers/create?name=${name}`,{...c.Config,HostConfig:c.HostConfig,NetworkingConfig:{EndpointsConfig:networks}});
@@ -74,10 +74,31 @@ export async function bindDisposableLoopback(workdir) {
   const deadline=Date.now()+30_000;
   while(true) {
     const ready=["kong","db"].every(kind=>{const c=inspect(`supabase_${kind}_${project}`);return c.State.Running && (!c.State.Health || c.State.Health.Status==="healthy");});
-    if(ready) return;
+    if(ready) break;
     assert(Date.now()<deadline,"Owned containers did not become healthy after loopback binding");
     await new Promise(resolveWait=>setTimeout(resolveWait,500));
   }
+  // CLI reset recreates Auth/Storage endpoints. Kong can retain their old DNS
+  // addresses even though its own health probe passes. Refresh only this
+  // project's gateway, then test the real routed APIs before tests/migrations.
+  const gateway=inspect(`supabase_kong_${project}`);
+  assert(gateway.Config.Labels?.["com.supabase.cli.project"]===project);
+  execFileSync("docker",["restart",gateway.Id],{stdio:"ignore",windowsHide:true});
+  const cli=join(process.cwd(),"node_modules/supabase/dist/supabase.js");
+  const readyDeadline=Date.now()+30_000;
+  let lastStatus="not ready";
+  while(Date.now()<readyDeadline) {
+    try {
+      const status=JSON.parse(execFileSync(process.execPath,[cli,"status","--workdir",workdir,"-o","json"],{encoding:"utf8",stdio:["ignore","pipe","ignore"],windowsHide:true}));
+      const codes=await Promise.all(["/auth/v1/health","/storage/v1/status","/rest/v1/"].map(async endpoint=>{
+        const response=await fetch(status.API_URL+endpoint,{headers:{apikey:status.ANON_KEY,Authorization:`Bearer ${status.ANON_KEY}`},signal:AbortSignal.timeout(1500)});return response.status;
+      }));
+      lastStatus=codes.join(",");
+      if(codes.every(code=>code===200)){console.info("Owned routed Auth/Storage/REST health verified");return;}
+    } catch { lastStatus="CLI/API not ready"; }
+    await new Promise(resolveWait=>setTimeout(resolveWait,500));
+  }
+  throw new Error(`Owned routed APIs did not become ready: ${lastStatus}`);
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   if(process.argv[2]!=="bind") throw new Error("Usage: node scripts/disposable-supabase.mjs bind <explicit-workdir>");
