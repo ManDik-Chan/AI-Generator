@@ -95,6 +95,21 @@ describe.skipIf(!enabled)("RESERVED semantics and historical private Storage acc
     expect((await admin.storage.from(oldBucket).download(target.path)).error).toBeNull();
     // Retired-bucket bytes intentionally retained as blocked audit evidence.
   });
+  it("cleans real legacy filenames distinct from asset IDs only within the authenticated owner's run",async()=>{
+    const aa=await identity(),bb=await identity(b);
+    for(const target of [aa,bb]) {
+      target.path=`${target.ownerId}/${target.scopeId}/${randomUUID()}.png`;
+      expect((await admin.storage.from(bucket).upload(target.path,bytes,{upsert:false,contentType:"image/png"})).error).toBeNull();
+      await db.toolAsset.create({data:{id:target.resourceId,userId:target.ownerId,toolRunId:target.scopeId,storagePath:target.path,mimeType:"image/png",sizeBytes:4,width:1,height:1,sha256:"a".repeat(64),expiresAt:new Date(Date.now()+86400000)}});
+    }
+    expect((await clientA.auth.getUser()).data.user?.id).toBe(a);
+    await cleanupToolRunAssets(a,aa.scopeId);
+    expect((await admin.storage.from(bucket).download(aa.path)).error).not.toBeNull();
+    expect((await admin.storage.from(bucket).download(bb.path)).error).toBeNull();
+    expect((await clientA.storage.from(bucket).download(bb.path)).error).not.toBeNull();
+    await cleanupToolRunAssets(b,bb.scopeId);
+    expect((await admin.storage.from(bucket).download(bb.path)).error).not.toBeNull();
+  });
   it("withdraws new signing and restore access before cleanup, without claiming old signed URLs were revoked",async()=>{
     const target=await identity();await uploadToolAsset(target.path,bytes,"image/png");
     await db.toolAsset.create({data:{id:target.resourceId,userId:a,toolRunId:target.scopeId,storageBucket:bucket,storagePath:target.path,mimeType:"image/png",sizeBytes:4,width:1,height:1,sha256:"a".repeat(64),expiresAt:new Date(Date.now()+86400000)}});
