@@ -1,0 +1,5366 @@
+{
+  "title": "AIG P0 CI / branch evidence",
+  "classification": "INTERNAL",
+  "collected_at": "2026-10-28 01:52:20 UTC",
+  "timezone": "Asia/Singapore",
+  "readOnly": true,
+  "repository": "ManDik-Chan/AI-Generator",
+  "baseline": {
+    "main": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+    "tree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+    "prHead": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+    "testedMergeSha": "37fe42669a706f9b3a2707691c56b7d374936950",
+    "testedMergeTree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+    "testedMergeSource": "https://api.github.com/repos/ManDik-Chan/AI-Generator/git/commits/37fe42669a706f9b3a2707691c56b7d374936950"
+  },
+  "pagination": {
+    "branches": {
+      "per_page": 100,
+      "page": 1,
+      "count": 23,
+      "complete": true
+    },
+    "pulls": {
+      "per_page": 100,
+      "page": 1,
+      "count": 25,
+      "complete": true
+    },
+    "actions": {
+      "per_page": 100,
+      "page": 1,
+      "count": 53,
+      "total_count": 53,
+      "complete": true
+    },
+    "mainChecks": {
+      "per_page": 100,
+      "page": 1,
+      "count": 0
+    },
+    "headChecks": {
+      "per_page": 100,
+      "page": 1,
+      "count": 14
+    }
+  },
+  "ruleset": {
+    "source": "https://api.github.com/repos/ManDik-Chan/AI-Generator/rulesets/19544327",
+    "value": {
+      "id": 19544327,
+      "name": "Protect main branch",
+      "target": "branch",
+      "source_type": "Repository",
+      "source": "ManDik-Chan/AI-Generator",
+      "enforcement": "active",
+      "conditions": {
+        "ref_name": {
+          "exclude": [],
+          "include": [
+            "refs/heads/main"
+          ]
+        }
+      },
+      "rules": [
+        {
+          "type": "deletion"
+        },
+        {
+          "type": "non_fast_forward"
+        },
+        {
+          "type": "pull_request",
+          "parameters": {
+            "required_approving_review_count": 0,
+            "dismiss_stale_reviews_on_push": false,
+            "required_reviewers": [],
+            "require_code_owner_review": false,
+            "require_last_push_approval": false,
+            "required_review_thread_resolution": true,
+            "require_extra_approval_for_unattributed_changes": true,
+            "allowed_merge_methods": [
+              "merge",
+              "squash",
+              "rebase"
+            ]
+          }
+        },
+        {
+          "type": "required_status_checks",
+          "parameters": {
+            "strict_required_status_checks_policy": true,
+            "do_not_enforce_on_create": false,
+            "required_status_checks": [
+              {
+                "context": "lint",
+                "integration_id": 15368
+              },
+              {
+                "context": "typecheck",
+                "integration_id": 15368
+              },
+              {
+                "context": "unit tests",
+                "integration_id": 15368
+              },
+              {
+                "context": "build",
+                "integration_id": 15368
+              },
+              {
+                "context": "authenticated Playwright",
+                "integration_id": 15368
+              },
+              {
+                "context": "Supabase Security Acceptance",
+                "integration_id": 15368
+              }
+            ]
+          }
+        }
+      ],
+      "node_id": "RRS_lACqUmVwb3NpdG9yec414tonzgEqOQc",
+      "created_at": "2026-07-22T18:19:55.749+08:00",
+      "updated_at": "2026-07-22T18:19:55.830+08:00",
+      "bypass_actors": [],
+      "current_user_can_bypass": "never",
+      "_links": {
+        "self": {
+          "href": "https://api.github.com/repos/ManDik-Chan/AI-Generator/rulesets/19544327"
+        },
+        "html": {
+          "href": "https://github.com/ManDik-Chan/AI-Generator/rules/19544327"
+        }
+      }
+    }
+  },
+  "branches": [
+    {
+      "name": "codex/claude-landing-delivery",
+      "head": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 1
+      },
+      "pullRequests": [
+        {
+          "number": 25,
+          "state": "closed",
+          "merged_at": "2026-10-28T00:43:12Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/claude-landing-delivery",
+        "sha": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/9EiuoWB2uPe3x8yPaL28buUmzuty",
+              "updated_at": "2026-10-28T00:30:18Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 14,
+          "checks": [
+            {
+              "name": "authenticated Playwright",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122560578679",
+              "started_at": "2026-10-28T00:42:46Z",
+              "completed_at": "2026-10-28T00:42:49Z"
+            },
+            {
+              "name": "Authenticated E2E (chromium-mobile)",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086915",
+              "started_at": "2026-10-28T00:35:38Z",
+              "completed_at": "2026-10-28T00:42:44Z"
+            },
+            {
+              "name": "Authenticated E2E (chromium-desktop)",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086900",
+              "started_at": "2026-10-28T00:35:38Z",
+              "completed_at": "2026-10-28T00:40:26Z"
+            },
+            {
+              "name": "Authenticated E2E (webkit-iphone)",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086879",
+              "started_at": "2026-10-28T00:35:39Z",
+              "completed_at": "2026-10-28T00:41:45Z"
+            },
+            {
+              "name": "authenticated Playwright (webkit-iphone)",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508835",
+              "started_at": "2026-10-28T00:31:13Z",
+              "completed_at": "2026-10-28T00:37:25Z"
+            },
+            {
+              "name": "authenticated Playwright (chromium-desktop)",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508832",
+              "started_at": "2026-10-28T00:31:13Z",
+              "completed_at": "2026-10-28T00:38:56Z"
+            },
+            {
+              "name": "authenticated Playwright (chromium-mobile)",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508810",
+              "started_at": "2026-10-28T00:31:13Z",
+              "completed_at": "2026-10-28T00:37:39Z"
+            },
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-10-28T00:30:19Z",
+              "completed_at": "2026-10-28T00:30:19Z"
+            },
+            {
+              "name": "unit tests",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555908726",
+              "started_at": "2026-10-28T00:27:26Z",
+              "completed_at": "2026-10-28T00:28:10Z"
+            },
+            {
+              "name": "build",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555908645",
+              "started_at": "2026-10-28T00:27:26Z",
+              "completed_at": "2026-10-28T00:28:42Z"
+            },
+            {
+              "name": "typecheck",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555908482",
+              "started_at": "2026-10-28T00:27:26Z",
+              "completed_at": "2026-10-28T00:28:06Z"
+            },
+            {
+              "name": "lint",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555907733",
+              "started_at": "2026-10-28T00:27:26Z",
+              "completed_at": "2026-10-28T00:27:55Z"
+            },
+            {
+              "name": "Node 24 compatibility",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555906053",
+              "started_at": "2026-10-28T00:29:33Z",
+              "completed_at": "2026-10-28T00:31:10Z"
+            },
+            {
+              "name": "Supabase Security Acceptance",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122555153200",
+              "started_at": "2026-10-28T00:27:26Z",
+              "completed_at": "2026-10-28T00:35:36Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...a0050aaf4fc16e1cadd110918c3354a29e8d99fe"
+    },
+    {
+      "name": "codex/hotfix-profile-dropdown-placement",
+      "head": "2c7f34eaf807239d418f4a955b979359f26e1832",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 75
+      },
+      "pullRequests": [
+        {
+          "number": 14,
+          "state": "closed",
+          "merged_at": "2026-07-13T16:38:28Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/hotfix-profile-dropdown-placement",
+        "sha": "2c7f34eaf807239d418f4a955b979359f26e1832",
+        "status": {
+          "state": "failure",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "failure",
+              "url": "https://vercel.com/man-dik/ai-generator/8taYHAYkKwsp5xud48cd3Nv7zC78",
+              "updated_at": "2026-07-13T16:31:50Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 1,
+          "checks": [
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-13T16:31:51Z",
+              "completed_at": "2026-07-13T16:31:51Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...2c7f34eaf807239d418f4a955b979359f26e1832"
+    },
+    {
+      "name": "codex/security-hardening-rls-usage",
+      "head": "f4d3023921933d206ec0c2d84dab9e9cd4d3e3b3",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 17
+      },
+      "pullRequests": [
+        {
+          "number": 22,
+          "state": "closed",
+          "merged_at": "2026-07-22T11:03:44Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/security-hardening-rls-usage",
+        "sha": "f4d3023921933d206ec0c2d84dab9e9cd4d3e3b3",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/6gz19F6v5N67uJx6WWbQjt77QWEh",
+              "updated_at": "2026-07-22T10:36:57Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 8,
+          "checks": [
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-22T10:36:57Z",
+              "completed_at": "2026-07-22T10:36:57Z"
+            },
+            {
+              "name": "authenticated Playwright",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462948/job/88898703546",
+              "started_at": "2026-07-22T10:36:38Z",
+              "completed_at": "2026-07-22T10:44:52Z"
+            },
+            {
+              "name": "build",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462948/job/88898365365",
+              "started_at": "2026-07-22T10:35:05Z",
+              "completed_at": "2026-07-22T10:36:22Z"
+            },
+            {
+              "name": "typecheck",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462948/job/88898365349",
+              "started_at": "2026-07-22T10:35:05Z",
+              "completed_at": "2026-07-22T10:35:45Z"
+            },
+            {
+              "name": "lint",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462948/job/88898365328",
+              "started_at": "2026-07-22T10:35:05Z",
+              "completed_at": "2026-07-22T10:35:37Z"
+            },
+            {
+              "name": "unit tests",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462948/job/88898365318",
+              "started_at": "2026-07-22T10:35:05Z",
+              "completed_at": "2026-07-22T10:35:41Z"
+            },
+            {
+              "name": "Node 24 compatibility",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462948/job/88898365292",
+              "started_at": "2026-07-22T10:35:05Z",
+              "completed_at": "2026-07-22T10:36:36Z"
+            },
+            {
+              "name": "Supabase Security Acceptance",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462796/job/88898364718",
+              "started_at": "2026-07-22T10:35:05Z",
+              "completed_at": "2026-07-22T10:44:07Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...f4d3023921933d206ec0c2d84dab9e9cd4d3e3b3"
+    },
+    {
+      "name": "codex/v2-phase-1",
+      "head": "6b5c1a2bbd6ccde30b7419b783a73731da790648",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 123
+      },
+      "pullRequests": [
+        {
+          "number": 2,
+          "state": "closed",
+          "merged_at": "2026-07-11T14:40:20Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-1",
+        "sha": "6b5c1a2bbd6ccde30b7419b783a73731da790648",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...6b5c1a2bbd6ccde30b7419b783a73731da790648"
+    },
+    {
+      "name": "codex/v2-phase-2",
+      "head": "8200362fe0c36fcec001d6180def8c1897e540a6",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 121
+      },
+      "pullRequests": [
+        {
+          "number": 3,
+          "state": "closed",
+          "merged_at": "2026-07-11T17:11:13Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-2",
+        "sha": "8200362fe0c36fcec001d6180def8c1897e540a6",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...8200362fe0c36fcec001d6180def8c1897e540a6"
+    },
+    {
+      "name": "codex/v2-phase-3",
+      "head": "6de40d7b941d7741ac1c8d4bdcedebd0ac07d8aa",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 114
+      },
+      "pullRequests": [
+        {
+          "number": 4,
+          "state": "closed",
+          "merged_at": "2026-07-12T05:28:41Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-3",
+        "sha": "6de40d7b941d7741ac1c8d4bdcedebd0ac07d8aa",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...6de40d7b941d7741ac1c8d4bdcedebd0ac07d8aa"
+    },
+    {
+      "name": "codex/v2-phase-4a",
+      "head": "8304e741f8d732eee6ddd853e93153368da6c75f",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 111
+      },
+      "pullRequests": [
+        {
+          "number": 5,
+          "state": "closed",
+          "merged_at": "2026-07-12T10:05:49Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-4a",
+        "sha": "8304e741f8d732eee6ddd853e93153368da6c75f",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...8304e741f8d732eee6ddd853e93153368da6c75f"
+    },
+    {
+      "name": "codex/v2-phase-4a2",
+      "head": "78f649c7a446eec917f03e6d25e856de632c51b9",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 109
+      },
+      "pullRequests": [
+        {
+          "number": 6,
+          "state": "closed",
+          "merged_at": "2026-07-12T11:02:31Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-4a2",
+        "sha": "78f649c7a446eec917f03e6d25e856de632c51b9",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...78f649c7a446eec917f03e6d25e856de632c51b9"
+    },
+    {
+      "name": "codex/v2-phase-4a3",
+      "head": "baff9b0fd2e987f6315c0d7b57fded69c14db0b4",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 103
+      },
+      "pullRequests": [
+        {
+          "number": 7,
+          "state": "closed",
+          "merged_at": "2026-07-12T16:30:47Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-4a3",
+        "sha": "baff9b0fd2e987f6315c0d7b57fded69c14db0b4",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...baff9b0fd2e987f6315c0d7b57fded69c14db0b4"
+    },
+    {
+      "name": "codex/v2-phase-5a1",
+      "head": "c95083505c430f31f1aebe6b44db011c9528fa58",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 96
+      },
+      "pullRequests": [
+        {
+          "number": 8,
+          "state": "closed",
+          "merged_at": "2026-07-13T02:44:10Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-5a1",
+        "sha": "c95083505c430f31f1aebe6b44db011c9528fa58",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...c95083505c430f31f1aebe6b44db011c9528fa58"
+    },
+    {
+      "name": "codex/v2-phase-5a3-1",
+      "head": "960ff2dd3435923df2a01069b35f20ff71231924",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 92
+      },
+      "pullRequests": [
+        {
+          "number": 9,
+          "state": "closed",
+          "merged_at": "2026-07-13T04:37:35Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-5a3-1",
+        "sha": "960ff2dd3435923df2a01069b35f20ff71231924",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...960ff2dd3435923df2a01069b35f20ff71231924"
+    },
+    {
+      "name": "codex/v2-phase-5a3-2",
+      "head": "631f351829bdb4b191de14ac7bcd326769f7ebaa",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 89
+      },
+      "pullRequests": [
+        {
+          "number": 10,
+          "state": "closed",
+          "merged_at": "2026-07-13T06:37:58Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-5a3-2",
+        "sha": "631f351829bdb4b191de14ac7bcd326769f7ebaa",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...631f351829bdb4b191de14ac7bcd326769f7ebaa"
+    },
+    {
+      "name": "codex/v2-phase-6a1",
+      "head": "136d8ba1a3e5c83546d5b45c944651ef16abfd6e",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 85
+      },
+      "pullRequests": [
+        {
+          "number": 11,
+          "state": "closed",
+          "merged_at": "2026-07-13T08:10:08Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-6a1",
+        "sha": "136d8ba1a3e5c83546d5b45c944651ef16abfd6e",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...136d8ba1a3e5c83546d5b45c944651ef16abfd6e"
+    },
+    {
+      "name": "codex/v2-phase-6a2",
+      "head": "198e070f78eb05c8dd59622ff6056132ef8be4f6",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 81
+      },
+      "pullRequests": [
+        {
+          "number": 12,
+          "state": "closed",
+          "merged_at": "2026-07-13T10:23:46Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-6a2",
+        "sha": "198e070f78eb05c8dd59622ff6056132ef8be4f6",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...198e070f78eb05c8dd59622ff6056132ef8be4f6"
+    },
+    {
+      "name": "codex/v2-phase-6a3-image-generation",
+      "head": "6e3eaf329808658d2e9edf34ee98379c89c93eff",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 70
+      },
+      "pullRequests": [
+        {
+          "number": 15,
+          "state": "closed",
+          "merged_at": "2026-07-17T09:40:48Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-6a3-image-generation",
+        "sha": "6e3eaf329808658d2e9edf34ee98379c89c93eff",
+        "status": {
+          "state": "failure",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "failure",
+              "url": "https://vercel.com/man-dik/ai-generator/96AjUZKPhtDCottdWafu7ZgyoTHR",
+              "updated_at": "2026-07-17T05:04:16Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 1,
+          "checks": [
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-17T05:04:16Z",
+              "completed_at": "2026-07-17T05:04:16Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...6e3eaf329808658d2e9edf34ee98379c89c93eff"
+    },
+    {
+      "name": "codex/v2-phase-6b1-design-foundation",
+      "head": "ea33dd6a0fe2a83d47dd63801ac64acf916f5425",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 77
+      },
+      "pullRequests": [
+        {
+          "number": 13,
+          "state": "closed",
+          "merged_at": "2026-07-13T14:27:24Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-6b1-design-foundation",
+        "sha": "ea33dd6a0fe2a83d47dd63801ac64acf916f5425",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...ea33dd6a0fe2a83d47dd63801ac64acf916f5425"
+    },
+    {
+      "name": "codex/v2-phase-6b2-mobile-experience",
+      "head": "264238ccbdfac388de329d4d7b5038b02c093ff5",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 65
+      },
+      "pullRequests": [
+        {
+          "number": 17,
+          "state": "closed",
+          "merged_at": "2026-07-17T15:01:47Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-6b2-mobile-experience",
+        "sha": "264238ccbdfac388de329d4d7b5038b02c093ff5",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/qHv2Vm6fzG7J7LQLk13kT9je3geg",
+              "updated_at": "2026-07-17T14:54:26Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 1,
+          "checks": [
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-17T14:54:28Z",
+              "completed_at": "2026-07-17T14:54:28Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...264238ccbdfac388de329d4d7b5038b02c093ff5"
+    },
+    {
+      "name": "codex/v2-phase-6b3-lumen-foundation",
+      "head": "b688df1e0c3694dff96f89eb94a8f37a0d233396",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 56
+      },
+      "pullRequests": [
+        {
+          "number": 19,
+          "state": "closed",
+          "merged_at": "2026-07-18T03:37:33Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-6b3-lumen-foundation",
+        "sha": "b688df1e0c3694dff96f89eb94a8f37a0d233396",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/3V7AWSaJ4UX5warZVHpmyLH9gVX1",
+              "updated_at": "2026-07-17T19:40:10Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 1,
+          "checks": [
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-17T19:40:12Z",
+              "completed_at": "2026-07-17T19:40:12Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...b688df1e0c3694dff96f89eb94a8f37a0d233396"
+    },
+    {
+      "name": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "head": "af78ef4878f57bc268853868180b26cd17443c50",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 28
+      },
+      "pullRequests": [
+        {
+          "number": 21,
+          "state": "closed",
+          "merged_at": "2026-07-22T08:42:01Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+        "sha": "af78ef4878f57bc268853868180b26cd17443c50",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/HUQcn8t84egmWzrxUhzUp3uPrRdz",
+              "updated_at": "2026-07-22T07:29:06Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 7,
+          "checks": [
+            {
+              "name": "authenticated Playwright",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29900292233/job/88859599054",
+              "started_at": "2026-07-22T07:29:31Z",
+              "completed_at": "2026-07-22T07:36:29Z"
+            },
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-22T07:29:07Z",
+              "completed_at": "2026-07-22T07:29:07Z"
+            },
+            {
+              "name": "typecheck",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29900292233/job/88859307395",
+              "started_at": "2026-07-22T07:27:56Z",
+              "completed_at": "2026-07-22T07:28:27Z"
+            },
+            {
+              "name": "build",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29900292233/job/88859307388",
+              "started_at": "2026-07-22T07:27:56Z",
+              "completed_at": "2026-07-22T07:29:18Z"
+            },
+            {
+              "name": "Node 24 compatibility",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29900292233/job/88859307361",
+              "started_at": "2026-07-22T07:27:56Z",
+              "completed_at": "2026-07-22T07:29:28Z"
+            },
+            {
+              "name": "unit tests",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29900292233/job/88859307330",
+              "started_at": "2026-07-22T07:27:56Z",
+              "completed_at": "2026-07-22T07:28:31Z"
+            },
+            {
+              "name": "lint",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29900292233/job/88859307291",
+              "started_at": "2026-07-22T07:27:57Z",
+              "completed_at": "2026-07-22T07:28:27Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...af78ef4878f57bc268853868180b26cd17443c50"
+    },
+    {
+      "name": "codex/v2-phase-7a1-1-agent-workers",
+      "head": "22feedb722ae5ff897f587ab3a9a2a2024aa1024",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 42
+      },
+      "pullRequests": [
+        {
+          "number": 20,
+          "state": "closed",
+          "merged_at": "2026-07-19T02:58:44Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-7a1-1-agent-workers",
+        "sha": "22feedb722ae5ff897f587ab3a9a2a2024aa1024",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/9RYWDQQvBGKxoKJ9Q9iuz2skKK9X",
+              "updated_at": "2026-07-18T18:03:21Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 1,
+          "checks": [
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-18T18:03:22Z",
+              "completed_at": "2026-07-18T18:03:22Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...22feedb722ae5ff897f587ab3a9a2a2024aa1024"
+    },
+    {
+      "name": "codex/v2-phase-7a1-multi-agent-brainstorm",
+      "head": "e11182401d006b8819a9ee39cc1a5ba47a0df3a1",
+      "protected": false,
+      "relationToMain": {
+        "status": "behind",
+        "ahead": 0,
+        "behind": 66
+      },
+      "pullRequests": [
+        {
+          "number": 16,
+          "state": "closed",
+          "merged_at": "2026-07-17T13:03:11Z"
+        }
+      ],
+      "ci": {
+        "branch": "codex/v2-phase-7a1-multi-agent-brainstorm",
+        "sha": "e11182401d006b8819a9ee39cc1a5ba47a0df3a1",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/Hmzdaikrm3YfKjvcPAWY99aoPccG",
+              "updated_at": "2026-07-17T12:23:03Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 1,
+          "checks": [
+            {
+              "name": "Vercel Preview Comments",
+              "conclusion": "success",
+              "status": "completed",
+              "url": "https://vercel.com/github",
+              "started_at": "2026-07-17T12:23:04Z",
+              "completed_at": "2026-07-17T12:23:04Z"
+            }
+          ]
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...e11182401d006b8819a9ee39cc1a5ba47a0df3a1"
+    },
+    {
+      "name": "main",
+      "head": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+      "protected": true,
+      "relationToMain": {
+        "status": "identical",
+        "ahead": 0,
+        "behind": 0
+      },
+      "pullRequests": [],
+      "ci": {
+        "branch": "main",
+        "sha": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+        "status": {
+          "state": "success",
+          "total": 1,
+          "contexts": [
+            {
+              "context": "Vercel",
+              "state": "success",
+              "url": "https://vercel.com/man-dik/ai-generator/6bjC92UkE5Br9XbkHDz453fK7zob",
+              "updated_at": "2026-10-28T00:45:07Z"
+            }
+          ]
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": null
+    },
+    {
+      "name": "test1",
+      "head": "5b521d64bd26c57c6a004d2deac4fb97379562d3",
+      "protected": false,
+      "relationToMain": {
+        "status": "diverged",
+        "ahead": 1,
+        "behind": 135
+      },
+      "pullRequests": [
+        {
+          "number": 1,
+          "state": "open",
+          "merged_at": null
+        }
+      ],
+      "ci": {
+        "branch": "test1",
+        "sha": "5b521d64bd26c57c6a004d2deac4fb97379562d3",
+        "status": {
+          "state": "pending",
+          "total": 0,
+          "contexts": []
+        },
+        "checks": {
+          "total": 0,
+          "checks": []
+        }
+      },
+      "comparisonUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/compare/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c...5b521d64bd26c57c6a004d2deac4fb97379562d3"
+    }
+  ],
+  "pullRequests": [
+    {
+      "number": 25,
+      "title": "Deliver Claude landing page and workspace design",
+      "state": "closed",
+      "merged_at": "2026-10-28T00:43:12Z",
+      "merge_commit_sha": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+      "head_sha": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+      "head_ref": "codex/claude-landing-delivery",
+      "base_sha": "2dfd48ae3c7548a79dbe56996c8fb42ec965fecf",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/25"
+    },
+    {
+      "number": 24,
+      "title": "feat(memory): add trusted provenance and turn-level disclosure",
+      "state": "closed",
+      "merged_at": "2026-07-28T17:48:05Z",
+      "merge_commit_sha": "2dfd48ae3c7548a79dbe56996c8fb42ec965fecf",
+      "head_sha": "655e3e915857d9eaa6ddc5d39fb7ed397f6a129d",
+      "head_ref": "codex/phase-5b2a-memory-provenance-transparency",
+      "base_sha": "2a869a47d46487147ade878cb6e21defaefef62b",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/24"
+    },
+    {
+      "number": 23,
+      "title": "feat: add trusted memory proposal workflow",
+      "state": "closed",
+      "merged_at": "2026-07-26T17:10:18Z",
+      "merge_commit_sha": "2a869a47d46487147ade878cb6e21defaefef62b",
+      "head_sha": "297de9d3952198477246aee5f3612379959af2ae",
+      "head_ref": "codex/phase-5b1-trusted-memory-proposals",
+      "base_sha": "6082ed08c7755421f8dd119a6dff3e956f1999ce",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/23"
+    },
+    {
+      "number": 22,
+      "title": "fix: harden RLS and usage accounting",
+      "state": "closed",
+      "merged_at": "2026-07-22T11:03:44Z",
+      "merge_commit_sha": "6082ed08c7755421f8dd119a6dff3e956f1999ce",
+      "head_sha": "f4d3023921933d206ec0c2d84dab9e9cd4d3e3b3",
+      "head_ref": "codex/security-hardening-rls-usage",
+      "base_sha": "ffe60ce823d25ede55a367c3a0b702ee2fbe1db1",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/22"
+    },
+    {
+      "number": 21,
+      "title": "fix: sync completed Agent answers without page refresh",
+      "state": "closed",
+      "merged_at": "2026-07-22T08:42:01Z",
+      "merge_commit_sha": "ffe60ce823d25ede55a367c3a0b702ee2fbe1db1",
+      "head_sha": "af78ef4878f57bc268853868180b26cd17443c50",
+      "head_ref": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "base_sha": "fc38a195a78e3649e37fd7b5b0e58d62e00aa21f",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/21"
+    },
+    {
+      "number": 20,
+      "title": "feat: add agent mode and worker orchestration foundation",
+      "state": "closed",
+      "merged_at": "2026-07-19T02:58:44Z",
+      "merge_commit_sha": "fc38a195a78e3649e37fd7b5b0e58d62e00aa21f",
+      "head_sha": "22feedb722ae5ff897f587ab3a9a2a2024aa1024",
+      "head_ref": "codex/v2-phase-7a1-1-agent-workers",
+      "base_sha": "d72951596953ef3283f42c22f9a6493004c62012",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/20"
+    },
+    {
+      "number": 19,
+      "title": "refactor: integrate Lumen UI and harden application foundations",
+      "state": "closed",
+      "merged_at": "2026-07-18T03:37:33Z",
+      "merge_commit_sha": "d72951596953ef3283f42c22f9a6493004c62012",
+      "head_sha": "b688df1e0c3694dff96f89eb94a8f37a0d233396",
+      "head_ref": "codex/v2-phase-6b3-lumen-foundation",
+      "base_sha": "f4fed955f2f8bc610069bd4df0a88f301d1701a9",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/19"
+    },
+    {
+      "number": 18,
+      "title": "fix: stabilize mobile keyboard performance and desktop layout",
+      "state": "closed",
+      "merged_at": "2026-07-18T03:37:34Z",
+      "merge_commit_sha": "d8f5c092422102d586a6537d1585df2bcc69de44",
+      "head_sha": "d8f5c092422102d586a6537d1585df2bcc69de44",
+      "head_ref": "codex/v2-phase-6b2-1-mobile-performance-desktop",
+      "base_sha": "f4fed955f2f8bc610069bd4df0a88f301d1701a9",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/18"
+    },
+    {
+      "number": 17,
+      "title": "refactor: harden mobile web experience across the app",
+      "state": "closed",
+      "merged_at": "2026-07-17T15:01:47Z",
+      "merge_commit_sha": "f4fed955f2f8bc610069bd4df0a88f301d1701a9",
+      "head_sha": "264238ccbdfac388de329d4d7b5038b02c093ff5",
+      "head_ref": "codex/v2-phase-6b2-mobile-experience",
+      "base_sha": "0a7d703480b7fcbc6244d40c4b66deff89315283",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/17"
+    },
+    {
+      "number": 16,
+      "title": "feat: add private multi-agent brainstorm workspace",
+      "state": "closed",
+      "merged_at": "2026-07-17T13:03:11Z",
+      "merge_commit_sha": "0a7d703480b7fcbc6244d40c4b66deff89315283",
+      "head_sha": "e11182401d006b8819a9ee39cc1a5ba47a0df3a1",
+      "head_ref": "codex/v2-phase-7a1-multi-agent-brainstorm",
+      "base_sha": "f9f1efce525dee336c95608c500fe00308093e91",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/16"
+    },
+    {
+      "number": 15,
+      "title": "feat: add private AI image generation workspace",
+      "state": "closed",
+      "merged_at": "2026-07-17T09:40:48Z",
+      "merge_commit_sha": "f9f1efce525dee336c95608c500fe00308093e91",
+      "head_sha": "6e3eaf329808658d2e9edf34ee98379c89c93eff",
+      "head_ref": "codex/v2-phase-6a3-image-generation",
+      "base_sha": "b541f0099160cb6f899e8035ed2b48e28275ac07",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/15"
+    },
+    {
+      "number": 14,
+      "title": "fix: open sidebar profile menu upward",
+      "state": "closed",
+      "merged_at": "2026-07-13T16:38:28Z",
+      "merge_commit_sha": "b541f0099160cb6f899e8035ed2b48e28275ac07",
+      "head_sha": "2c7f34eaf807239d418f4a955b979359f26e1832",
+      "head_ref": "codex/hotfix-profile-dropdown-placement",
+      "base_sha": "bea3d4999d1294cf7f1d0e8172c7f5189ee2ff77",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/14"
+    },
+    {
+      "number": 13,
+      "title": "feat: establish premium product design system",
+      "state": "closed",
+      "merged_at": "2026-07-13T14:27:24Z",
+      "merge_commit_sha": "bea3d4999d1294cf7f1d0e8172c7f5189ee2ff77",
+      "head_sha": "ea33dd6a0fe2a83d47dd63801ac64acf916f5425",
+      "head_ref": "codex/v2-phase-6b1-design-foundation",
+      "base_sha": "474016d74a5a70b703214287e0a2ee4cd9c00fd0",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/13"
+    },
+    {
+      "number": 12,
+      "title": "feat: add secure image understanding tool",
+      "state": "closed",
+      "merged_at": "2026-07-13T10:23:46Z",
+      "merge_commit_sha": "474016d74a5a70b703214287e0a2ee4cd9c00fd0",
+      "head_sha": "198e070f78eb05c8dd59622ff6056132ef8be4f6",
+      "head_ref": "codex/v2-phase-6a2",
+      "base_sha": "907beca0eb290ef5535447b396e2254312935262",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/12"
+    },
+    {
+      "number": 11,
+      "title": "feat: add text utility toolbox",
+      "state": "closed",
+      "merged_at": "2026-07-13T08:10:08Z",
+      "merge_commit_sha": "907beca0eb290ef5535447b396e2254312935262",
+      "head_sha": "136d8ba1a3e5c83546d5b45c944651ef16abfd6e",
+      "head_ref": "codex/v2-phase-6a1",
+      "base_sha": "9b1c3fbc661a9ab848578e4b3c117c6be9b464f0",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/11"
+    },
+    {
+      "number": 10,
+      "title": "feat: add hybrid semantic memory retrieval",
+      "state": "closed",
+      "merged_at": "2026-07-13T06:37:58Z",
+      "merge_commit_sha": "9b1c3fbc661a9ab848578e4b3c117c6be9b464f0",
+      "head_sha": "631f351829bdb4b191de14ac7bcd326769f7ebaa",
+      "head_ref": "codex/v2-phase-5a3-2",
+      "base_sha": "275469842dd142e36f6b07c222f7154bc2746e39",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/10"
+    },
+    {
+      "number": 9,
+      "title": "feat: improve memory retrieval and governance",
+      "state": "closed",
+      "merged_at": "2026-07-13T04:37:35Z",
+      "merge_commit_sha": "275469842dd142e36f6b07c222f7154bc2746e39",
+      "head_sha": "960ff2dd3435923df2a01069b35f20ff71231924",
+      "head_ref": "codex/v2-phase-5a3-1",
+      "base_sha": "933a283e85aaf2013b9ac3a2273762a33ff72dc6",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/9"
+    },
+    {
+      "number": 8,
+      "title": "feat: add automatic long-term memory foundation",
+      "state": "closed",
+      "merged_at": "2026-07-13T02:44:10Z",
+      "merge_commit_sha": "933a283e85aaf2013b9ac3a2273762a33ff72dc6",
+      "head_sha": "c95083505c430f31f1aebe6b44db011c9528fa58",
+      "head_ref": "codex/v2-phase-5a1",
+      "base_sha": "961078e475df26da0866369bfa0931b60ad85295",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/8"
+    },
+    {
+      "number": 7,
+      "title": "feat: add GLM-Image persona avatar generation",
+      "state": "closed",
+      "merged_at": "2026-07-12T16:30:47Z",
+      "merge_commit_sha": "961078e475df26da0866369bfa0931b60ad85295",
+      "head_sha": "baff9b0fd2e987f6315c0d7b57fded69c14db0b4",
+      "head_ref": "codex/v2-phase-4a3",
+      "base_sha": "bbbc41f3b646de5d70574b5db7df0094a9494549",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/7"
+    },
+    {
+      "number": 6,
+      "title": "feat: add AI persona draft generation",
+      "state": "closed",
+      "merged_at": "2026-07-12T11:02:31Z",
+      "merge_commit_sha": "bbbc41f3b646de5d70574b5db7df0094a9494549",
+      "head_sha": "78f649c7a446eec917f03e6d25e856de632c51b9",
+      "head_ref": "codex/v2-phase-4a2",
+      "base_sha": "aa142ea4d290c272ab368c217d02d21f8d90b35a",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/6"
+    },
+    {
+      "number": 5,
+      "title": "feat: add persona management and persona chat",
+      "state": "closed",
+      "merged_at": "2026-07-12T10:05:49Z",
+      "merge_commit_sha": "aa142ea4d290c272ab368c217d02d21f8d90b35a",
+      "head_sha": "8304e741f8d732eee6ddd853e93153368da6c75f",
+      "head_ref": "codex/v2-phase-4a",
+      "base_sha": "1531a94b8853fdb34d4389ad6aff87f7a33de639",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/5"
+    },
+    {
+      "number": 4,
+      "title": "feat: add streaming AI chat foundation",
+      "state": "closed",
+      "merged_at": "2026-07-12T05:28:41Z",
+      "merge_commit_sha": "1531a94b8853fdb34d4389ad6aff87f7a33de639",
+      "head_sha": "6de40d7b941d7741ac1c8d4bdcedebd0ac07d8aa",
+      "head_ref": "codex/v2-phase-3",
+      "base_sha": "c669c270598e0b022118e58d54d112a4eeecf046",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/4"
+    },
+    {
+      "number": 3,
+      "title": "feat: add database authentication and authorization foundation",
+      "state": "closed",
+      "merged_at": "2026-07-11T17:11:13Z",
+      "merge_commit_sha": "c669c270598e0b022118e58d54d112a4eeecf046",
+      "head_sha": "8200362fe0c36fcec001d6180def8c1897e540a6",
+      "head_ref": "codex/v2-phase-2",
+      "base_sha": "22f03ad0d335c4e82876053e5765e94d154b95fb",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/3"
+    },
+    {
+      "number": 2,
+      "title": "feat: initialize AI-Generator V2 foundation",
+      "state": "closed",
+      "merged_at": "2026-07-11T14:40:20Z",
+      "merge_commit_sha": "22f03ad0d335c4e82876053e5765e94d154b95fb",
+      "head_sha": "6b5c1a2bbd6ccde30b7419b783a73731da790648",
+      "head_ref": "codex/v2-phase-1",
+      "base_sha": "a27054fe0d850fdaa8a47a27200c248a3c905504",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/2"
+    },
+    {
+      "number": 1,
+      "title": "Add files via upload",
+      "state": "open",
+      "merged_at": null,
+      "merge_commit_sha": null,
+      "head_sha": "5b521d64bd26c57c6a004d2deac4fb97379562d3",
+      "head_ref": "test1",
+      "base_sha": "14a7e551f599cf04ae143734028e6de89e9c4847",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/pull/1"
+    }
+  ],
+  "workflowRuns": [
+    {
+      "id": 40608867988,
+      "name": "Merge Gates",
+      "head_sha": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 2,
+      "created_at": "2026-10-28T00:27:23Z",
+      "updated_at": "2026-10-28T00:38:56Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988"
+    },
+    {
+      "id": 40608867953,
+      "name": "Security Acceptance",
+      "head_sha": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-10-28T00:27:23Z",
+      "updated_at": "2026-10-28T00:42:50Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953"
+    },
+    {
+      "id": 40530960408,
+      "name": "Merge Gates",
+      "head_sha": "228de1cdaff5103b435506c127593fbfba4ab37f",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:26:16Z",
+      "updated_at": "2026-10-27T15:33:15Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408"
+    },
+    {
+      "id": 40530960195,
+      "name": "Security Acceptance",
+      "head_sha": "228de1cdaff5103b435506c127593fbfba4ab37f",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:26:16Z",
+      "updated_at": "2026-10-27T15:35:28Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195"
+    },
+    {
+      "id": 40530356687,
+      "name": "Merge Gates",
+      "head_sha": "c2cc702eb17390782c2f69553b8a43ed06420c0c",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:22:40Z",
+      "updated_at": "2026-10-27T15:24:31Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530356687"
+    },
+    {
+      "id": 40530356666,
+      "name": "Security Acceptance",
+      "head_sha": "c2cc702eb17390782c2f69553b8a43ed06420c0c",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:22:40Z",
+      "updated_at": "2026-10-27T15:23:58Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530356666"
+    },
+    {
+      "id": 40529831346,
+      "name": "Merge Gates",
+      "head_sha": "1a76d08da8811c94a586b1be28d4424ed3593f46",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:19:31Z",
+      "updated_at": "2026-10-27T15:22:36Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529831346"
+    },
+    {
+      "id": 40529831302,
+      "name": "Security Acceptance",
+      "head_sha": "1a76d08da8811c94a586b1be28d4424ed3593f46",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:19:31Z",
+      "updated_at": "2026-10-27T15:20:38Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529831302"
+    },
+    {
+      "id": 40529306972,
+      "name": "Security Acceptance",
+      "head_sha": "d80048a241f2594760445c37e569277b5bec65e5",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:16:17Z",
+      "updated_at": "2026-10-27T15:17:33Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529306972"
+    },
+    {
+      "id": 40529306850,
+      "name": "Merge Gates",
+      "head_sha": "d80048a241f2594760445c37e569277b5bec65e5",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:16:17Z",
+      "updated_at": "2026-10-27T15:19:00Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529306850"
+    },
+    {
+      "id": 40527413763,
+      "name": "Security Acceptance",
+      "head_sha": "317a01873d8638b98c5d371dd211041caa3b9e37",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:04:53Z",
+      "updated_at": "2026-10-27T15:06:05Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413763"
+    },
+    {
+      "id": 40527413667,
+      "name": "Merge Gates",
+      "head_sha": "317a01873d8638b98c5d371dd211041caa3b9e37",
+      "head_branch": "codex/claude-landing-delivery",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-10-27T15:04:53Z",
+      "updated_at": "2026-10-27T15:06:16Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667"
+    },
+    {
+      "id": 30382441452,
+      "name": "Security Acceptance",
+      "head_sha": "655e3e915857d9eaa6ddc5d39fb7ed397f6a129d",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-28T17:20:30Z",
+      "updated_at": "2026-07-28T17:47:02Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30382441452"
+    },
+    {
+      "id": 30382440320,
+      "name": "Merge Gates",
+      "head_sha": "655e3e915857d9eaa6ddc5d39fb7ed397f6a129d",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-28T17:20:29Z",
+      "updated_at": "2026-07-28T17:38:02Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30382440320"
+    },
+    {
+      "id": 30379991438,
+      "name": "Security Acceptance",
+      "head_sha": "473eae3785160c254f2e72baddd3544646cd13cb",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-28T16:48:41Z",
+      "updated_at": "2026-07-28T16:57:54Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30379991438"
+    },
+    {
+      "id": 30379991412,
+      "name": "Merge Gates",
+      "head_sha": "473eae3785160c254f2e72baddd3544646cd13cb",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-28T16:48:41Z",
+      "updated_at": "2026-07-28T16:55:33Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30379991412"
+    },
+    {
+      "id": 30278163760,
+      "name": "Security Acceptance",
+      "head_sha": "89e086d7ba7943cc6147c81ac550de0a1cd873f1",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-27T15:04:00Z",
+      "updated_at": "2026-07-27T15:14:26Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30278163760"
+    },
+    {
+      "id": 30278163753,
+      "name": "Merge Gates",
+      "head_sha": "89e086d7ba7943cc6147c81ac550de0a1cd873f1",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-27T15:04:00Z",
+      "updated_at": "2026-07-27T15:11:31Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30278163753"
+    },
+    {
+      "id": 30263731177,
+      "name": "Merge Gates",
+      "head_sha": "6e24324379ebeb7bce377c2934b4d69a3c7dfc29",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-27T11:54:33Z",
+      "updated_at": "2026-07-27T12:01:00Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30263731177"
+    },
+    {
+      "id": 30263731175,
+      "name": "Security Acceptance",
+      "head_sha": "6e24324379ebeb7bce377c2934b4d69a3c7dfc29",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-27T11:54:33Z",
+      "updated_at": "2026-07-27T12:04:21Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30263731175"
+    },
+    {
+      "id": 30236205859,
+      "name": "Merge Gates",
+      "head_sha": "6c3ba2fa368a071bb99dd63fdc91d049f6866337",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-27T04:06:43Z",
+      "updated_at": "2026-07-27T04:17:22Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30236205859"
+    },
+    {
+      "id": 30236205814,
+      "name": "Security Acceptance",
+      "head_sha": "6c3ba2fa368a071bb99dd63fdc91d049f6866337",
+      "head_branch": "codex/phase-5b2a-memory-provenance-transparency",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 2,
+      "created_at": "2026-07-27T04:06:43Z",
+      "updated_at": "2026-07-27T06:46:11Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30236205814"
+    },
+    {
+      "id": 30210115381,
+      "name": "Merge Gates",
+      "head_sha": "297de9d3952198477246aee5f3612379959af2ae",
+      "head_branch": "codex/phase-5b1-trusted-memory-proposals",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-26T16:18:17Z",
+      "updated_at": "2026-07-26T16:28:16Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30210115381"
+    },
+    {
+      "id": 30210115380,
+      "name": "Security Acceptance",
+      "head_sha": "297de9d3952198477246aee5f3612379959af2ae",
+      "head_branch": "codex/phase-5b1-trusted-memory-proposals",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-26T16:18:17Z",
+      "updated_at": "2026-07-26T16:28:05Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30210115380"
+    },
+    {
+      "id": 30208088002,
+      "name": "Security Acceptance",
+      "head_sha": "d9e64cf3ac08be78ff3c4c7931a49de5d9c34022",
+      "head_branch": "codex/phase-5b1-trusted-memory-proposals",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-26T15:23:17Z",
+      "updated_at": "2026-07-26T15:25:36Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30208088002"
+    },
+    {
+      "id": 30208087984,
+      "name": "Merge Gates",
+      "head_sha": "d9e64cf3ac08be78ff3c4c7931a49de5d9c34022",
+      "head_branch": "codex/phase-5b1-trusted-memory-proposals",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-26T15:23:17Z",
+      "updated_at": "2026-07-26T15:34:20Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30208087984"
+    },
+    {
+      "id": 29912462948,
+      "name": "Merge Gates",
+      "head_sha": "f4d3023921933d206ec0c2d84dab9e9cd4d3e3b3",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T10:35:02Z",
+      "updated_at": "2026-07-22T10:44:52Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462948"
+    },
+    {
+      "id": 29912462796,
+      "name": "Security Acceptance",
+      "head_sha": "f4d3023921933d206ec0c2d84dab9e9cd4d3e3b3",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T10:35:02Z",
+      "updated_at": "2026-07-22T10:44:08Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462796"
+    },
+    {
+      "id": 29907150646,
+      "name": "Security Acceptance",
+      "head_sha": "f55b5ff3208ce5502e6e0311a7af78cbe00884fd",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T09:14:07Z",
+      "updated_at": "2026-07-22T09:21:46Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29907150646"
+    },
+    {
+      "id": 29907150296,
+      "name": "Merge Gates",
+      "head_sha": "f55b5ff3208ce5502e6e0311a7af78cbe00884fd",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T09:14:07Z",
+      "updated_at": "2026-07-22T09:22:54Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29907150296"
+    },
+    {
+      "id": 29906665400,
+      "name": "Security Acceptance",
+      "head_sha": "9914250d89fde452c91bb31bfb02bbd5eca3dc99",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T09:06:46Z",
+      "updated_at": "2026-07-22T09:13:39Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29906665400"
+    },
+    {
+      "id": 29906665025,
+      "name": "Merge Gates",
+      "head_sha": "9914250d89fde452c91bb31bfb02bbd5eca3dc99",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-22T09:06:46Z",
+      "updated_at": "2026-07-22T09:08:03Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29906665025"
+    },
+    {
+      "id": 29900292233,
+      "name": "Merge Gates",
+      "head_sha": "af78ef4878f57bc268853868180b26cd17443c50",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T07:27:53Z",
+      "updated_at": "2026-07-22T07:36:29Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29900292233"
+    },
+    {
+      "id": 29899391982,
+      "name": "Merge Gates",
+      "head_sha": "de301e945616842d3b559e9fe700e2de4a4084fe",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T07:12:57Z",
+      "updated_at": "2026-07-22T07:21:17Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29899391982"
+    },
+    {
+      "id": 29898526891,
+      "name": "Merge Gates",
+      "head_sha": "e1f54fee57dc45c22da005aa0b7524df7074ca44",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-22T06:58:39Z",
+      "updated_at": "2026-07-22T07:08:43Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29898526891"
+    },
+    {
+      "id": 29897722512,
+      "name": "Merge Gates",
+      "head_sha": "fa696ee50475dd1f73ba400e4e166d92de75e480",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-22T06:44:17Z",
+      "updated_at": "2026-07-22T06:53:00Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29897722512"
+    },
+    {
+      "id": 29897033615,
+      "name": "Merge Gates",
+      "head_sha": "5fa4d6433e946d82532d2faaec9466c20e2c080c",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-22T06:31:35Z",
+      "updated_at": "2026-07-22T06:40:41Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29897033615"
+    },
+    {
+      "id": 29896532198,
+      "name": "Merge Gates",
+      "head_sha": "97424f6dc888f9e14aecf94e29b79a4901cb20a0",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-22T06:21:58Z",
+      "updated_at": "2026-07-22T06:29:14Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29896532198"
+    },
+    {
+      "id": 29895965705,
+      "name": "Merge Gates",
+      "head_sha": "21d05b884c273b9d6c86a35e3e4a9a0a5220cdd5",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-22T06:11:08Z",
+      "updated_at": "2026-07-22T06:19:00Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29895965705"
+    },
+    {
+      "id": 29895181031,
+      "name": "Merge Gates",
+      "head_sha": "ea6739603dca465274e1f3abe12cb124e089f83d",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 2,
+      "created_at": "2026-07-22T05:55:51Z",
+      "updated_at": "2026-07-22T06:06:59Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29895181031"
+    },
+    {
+      "id": 29894868921,
+      "name": "Merge Gates",
+      "head_sha": "750fd9e6851a23afc1b5fd9274ea48f33b535144",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-22T05:49:20Z",
+      "updated_at": "2026-07-22T05:53:57Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29894868921"
+    },
+    {
+      "id": 29894286676,
+      "name": "Merge Gates",
+      "head_sha": "038db232d837d9cd52724eca571ebc574c38ae23",
+      "head_branch": "codex/v2-phase-7a1-1-agent-terminal-sync-hotfix",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-22T05:37:01Z",
+      "updated_at": "2026-07-22T05:43:55Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29894286676"
+    },
+    {
+      "id": 29856991296,
+      "name": "Security Acceptance",
+      "head_sha": "3a369df7353fbcb87a91d83aa73f34337cc3603e",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T18:23:14Z",
+      "updated_at": "2026-07-21T18:28:44Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29856991296"
+    },
+    {
+      "id": 29856407435,
+      "name": "Security Acceptance",
+      "head_sha": "44a6d0fc2785602ed68b31562e753b38527ccf50",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T18:15:05Z",
+      "updated_at": "2026-07-21T18:21:58Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29856407435"
+    },
+    {
+      "id": 29856201071,
+      "name": "Security Acceptance",
+      "head_sha": "51eea44a462a7c9119350dedd1e20d1dd63bfd37",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "cancelled",
+      "attempt": 1,
+      "created_at": "2026-07-21T18:12:13Z",
+      "updated_at": "2026-07-21T18:15:31Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29856201071"
+    },
+    {
+      "id": 29855552751,
+      "name": "Security Acceptance",
+      "head_sha": "13d06259da9654618b94e07b94bb210704e84fc9",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T18:03:01Z",
+      "updated_at": "2026-07-21T18:10:28Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29855552751"
+    },
+    {
+      "id": 29855301015,
+      "name": "Security Acceptance",
+      "head_sha": "8e5a24c6ddb79ce8ad6d68977d36f16fe402ffeb",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T17:59:37Z",
+      "updated_at": "2026-07-21T18:01:48Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29855301015"
+    },
+    {
+      "id": 29854855221,
+      "name": "Security Acceptance",
+      "head_sha": "b4623722c1323e0a8bfbf94eab63ec45777a28a6",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T17:53:26Z",
+      "updated_at": "2026-07-21T17:58:24Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29854855221"
+    },
+    {
+      "id": 29854087252,
+      "name": "Security Acceptance",
+      "head_sha": "9ed18e7d9d030c2d22939cd5053b9392fa5f0fe8",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T17:42:38Z",
+      "updated_at": "2026-07-21T17:51:20Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29854087252"
+    },
+    {
+      "id": 29853743721,
+      "name": "Security Acceptance",
+      "head_sha": "22d023de65afa552ada4b3f3f8b32670cd771bc1",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T17:37:37Z",
+      "updated_at": "2026-07-21T17:41:42Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29853743721"
+    },
+    {
+      "id": 29853557397,
+      "name": "Security Acceptance",
+      "head_sha": "b870352a69eb6adfc4847810bb2e23ef10b1d846",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T17:34:59Z",
+      "updated_at": "2026-07-21T17:36:33Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29853557397"
+    },
+    {
+      "id": 29853395527,
+      "name": "Security Acceptance",
+      "head_sha": "cbb783408f425faf4813c06e17a999f158bfa274",
+      "head_branch": "codex/security-hardening-rls-usage",
+      "event": "pull_request",
+      "status": "completed",
+      "conclusion": "failure",
+      "attempt": 1,
+      "created_at": "2026-07-21T17:32:45Z",
+      "updated_at": "2026-07-21T17:34:17Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29853395527"
+    },
+    {
+      "id": 29156534302,
+      "name": "Graph Update: pip in /., /legacy/streamlit #1456571977",
+      "head_sha": "22f03ad0d335c4e82876053e5765e94d154b95fb",
+      "head_branch": "main",
+      "event": "dynamic",
+      "status": "completed",
+      "conclusion": "success",
+      "attempt": 1,
+      "created_at": "2026-07-11T14:40:25Z",
+      "updated_at": "2026-07-11T14:41:05Z",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29156534302"
+    }
+  ],
+  "jobs": [
+    {
+      "id": 122555153028,
+      "run_id": 40608867988,
+      "name": "lint",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555153028",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run lint",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555153376,
+      "run_id": 40608867988,
+      "name": "unit tests",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555153376",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run unit tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555153402,
+      "run_id": 40608867988,
+      "name": "build",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555153402",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555153455,
+      "run_id": 40608867988,
+      "name": "Node 24 compatibility",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555153455",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run Node 24 compatibility gates",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Post Install Node.js 24",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555153474,
+      "run_id": 40608867988,
+      "name": "typecheck",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555153474",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555649979,
+      "run_id": 40608867988,
+      "name": "authenticated Playwright (${{ matrix.project }})",
+      "conclusion": "skipped",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555649979",
+      "steps": []
+    },
+    {
+      "id": 122555906053,
+      "run_id": 40608867988,
+      "name": "Node 24 compatibility",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555906053",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run Node 24 compatibility gates",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555907733,
+      "run_id": 40608867988,
+      "name": "lint",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555907733",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run lint",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555908482,
+      "run_id": 40608867988,
+      "name": "typecheck",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555908482",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555908645,
+      "run_id": 40608867988,
+      "name": "build",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555908645",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555908726,
+      "run_id": 40608867988,
+      "name": "unit tests",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555908726",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run unit tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122556508810,
+      "run_id": 40608867988,
+      "name": "authenticated Playwright (chromium-mobile)",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508810",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply migrations and isolated-test RLS baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "success"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated Playwright diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122556508832,
+      "run_id": 40608867988,
+      "name": "authenticated Playwright (chromium-desktop)",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508832",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply migrations and isolated-test RLS baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "success"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated Playwright diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122556508835,
+      "run_id": 40608867988,
+      "name": "authenticated Playwright (webkit-iphone)",
+      "conclusion": "success",
+      "attempt": 2,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508835",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply migrations and isolated-test RLS baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "success"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated Playwright diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122555153200,
+      "run_id": 40608867953,
+      "name": "Supabase Security Acceptance",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122555153200",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply all migrations to a clean database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify clean migration metadata",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run real authenticated JWT and PostgREST attacks",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run real quota and Proposal production-transaction tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify old-database upgrade and transaction rollback",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run static quality gates",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122558086879,
+      "run_id": 40608867953,
+      "name": "Authenticated E2E (webkit-iphone)",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086879",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply all migrations to a clean project database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "success"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122558086900,
+      "run_id": 40608867953,
+      "name": "Authenticated E2E (chromium-desktop)",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086900",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply all migrations to a clean project database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "success"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122558086915,
+      "run_id": 40608867953,
+      "name": "Authenticated E2E (chromium-mobile)",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086915",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply all migrations to a clean project database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "success"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122560578679,
+      "run_id": 40608867953,
+      "name": "authenticated Playwright",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122560578679",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify authenticated acceptance results",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122283297839,
+      "run_id": 40530960408,
+      "name": "lint",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122283297839",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run lint",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122283298228,
+      "run_id": 40530960408,
+      "name": "build",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122283298228",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122283298292,
+      "run_id": 40530960408,
+      "name": "Node 24 compatibility",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122283298292",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run Node 24 compatibility gates",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122283298329,
+      "run_id": 40530960408,
+      "name": "typecheck",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122283298329",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122283298436,
+      "run_id": 40530960408,
+      "name": "unit tests",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122283298436",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run unit tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122284444132,
+      "run_id": 40530960408,
+      "name": "authenticated Playwright (webkit-iphone)",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122284444132",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Apply migrations and isolated-test RLS baseline",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Upload authenticated Playwright diagnostics",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122284444170,
+      "run_id": 40530960408,
+      "name": "authenticated Playwright (chromium-mobile)",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122284444170",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply migrations and isolated-test RLS baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated Playwright diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122284444402,
+      "run_id": 40530960408,
+      "name": "authenticated Playwright (chromium-desktop)",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122284444402",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply migrations and isolated-test RLS baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated Playwright diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122283296149,
+      "run_id": 40530960195,
+      "name": "Supabase Security Acceptance",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195/job/122283296149",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply all migrations to a clean database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify clean migration metadata",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run real authenticated JWT and PostgREST attacks",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run real quota and Proposal production-transaction tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify old-database upgrade and transaction rollback",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run static quality gates",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122286014860,
+      "run_id": 40530960195,
+      "name": "Authenticated E2E (chromium-mobile)",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195/job/122286014860",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Apply all migrations to a clean project database",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Upload authenticated E2E diagnostics",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122286014981,
+      "run_id": 40530960195,
+      "name": "Authenticated E2E (chromium-desktop)",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195/job/122286014981",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply all migrations to a clean project database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload authenticated E2E diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122286015928,
+      "run_id": 40530960195,
+      "name": "Authenticated E2E (webkit-iphone)",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195/job/122286015928",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start project-isolated local Supabase",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Apply all migrations to a clean project database",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Install project browser",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run ready, isolated authenticated project",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Sanitize authenticated E2E diagnostics",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Upload authenticated E2E diagnostics",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Stop project-isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122288697284,
+      "run_id": 40530960195,
+      "name": "authenticated Playwright",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195/job/122288697284",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify authenticated acceptance results",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122270642632,
+      "run_id": 40527413667,
+      "name": "typecheck",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667/job/122270642632",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122270642652,
+      "run_id": 40527413667,
+      "name": "unit tests",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667/job/122270642652",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run unit tests",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122270642696,
+      "run_id": 40527413667,
+      "name": "Node 24 compatibility",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667/job/122270642696",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run Node 24 compatibility gates",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Post Install Node.js 24",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122270642940,
+      "run_id": 40527413667,
+      "name": "lint",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667/job/122270642940",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run lint",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122270643091,
+      "run_id": 40527413667,
+      "name": "build",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667/job/122270643091",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122271454265,
+      "run_id": 40527413667,
+      "name": "authenticated Playwright (${{ matrix.project }})",
+      "conclusion": "skipped",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667/job/122271454265",
+      "steps": []
+    },
+    {
+      "id": 122270643514,
+      "run_id": 40527413763,
+      "name": "Supabase Security Acceptance",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413763/job/122270643514",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start isolated local Supabase",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Apply all migrations to a clean database",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify clean migration metadata",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run real authenticated JWT and PostgREST attacks",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run real quota and Proposal production-transaction tests",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Verify old-database upgrade and transaction rollback",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Run static quality gates",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Stop isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122271277288,
+      "run_id": 40527413763,
+      "name": "authenticated Playwright",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413763/job/122271277288",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify authenticated acceptance results",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 122271278847,
+      "run_id": 40527413763,
+      "name": "Authenticated E2E (${{ matrix.project }})",
+      "conclusion": "skipped",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413763/job/122271278847",
+      "steps": []
+    },
+    {
+      "id": 88853843268,
+      "run_id": 29898526891,
+      "name": "typecheck",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29898526891/job/88853843268",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run typecheck",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 88853843276,
+      "run_id": 29898526891,
+      "name": "build",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29898526891/job/88853843276",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 88853843287,
+      "run_id": 29898526891,
+      "name": "Node 24 compatibility",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29898526891/job/88853843287",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run Node 24 compatibility gates",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 24",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 88853843288,
+      "run_id": 29898526891,
+      "name": "unit tests",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29898526891/job/88853843288",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run unit tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 88853843304,
+      "run_id": 29898526891,
+      "name": "lint",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29898526891/job/88853843304",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run lint",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 88854087748,
+      "run_id": 29898526891,
+      "name": "authenticated Playwright",
+      "conclusion": "failure",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29898526891/job/88854087748",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js 22",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply migrations and isolated-test RLS baseline",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Playwright browsers",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run focused Agent E2E",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run complete authenticated E2E",
+          "conclusion": "failure"
+        },
+        {
+          "name": "Upload synthetic failure screenshots and videos",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js 22",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 88898364718,
+      "run_id": 29912462796,
+      "name": "Supabase Security Acceptance",
+      "conclusion": "success",
+      "attempt": 1,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/29912462796/job/88898364718",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Start isolated local Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Apply all migrations to a clean database",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify clean migration metadata",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run real authenticated JWT and PostgREST attacks",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run real quota, concurrency, and idempotency tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify old-database upgrade and transaction rollback",
+          "conclusion": "success"
+        },
+        {
+          "name": "Restore a clean migrated database for browser tests",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run static quality gates",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install Playwright browsers",
+          "conclusion": "success"
+        },
+        {
+          "name": "Build the application for authenticated E2E",
+          "conclusion": "success"
+        },
+        {
+          "name": "Run authenticated Chromium and mobile WebKit E2E",
+          "conclusion": "success"
+        },
+        {
+          "name": "Stop isolated Supabase",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Supabase CLI",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Install pnpm",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out the exact PR commit",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "logSnippets": [
+    {
+      "job_id": 122555153200,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122555153200",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 126,
+          "text": "2026-10-28T00:27:29.5504082Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 630,
+          "text": "2026-10-28T00:32:11.1832554Z clean_migration_verified rls_tables=16 policies=17 runtime_grants=12 repeat_deploy=verified"
+        },
+        {
+          "line": 631,
+          "text": "2026-10-28T00:32:26.8970717Z proposal_migration_failure_rollback_verified mode=clean data_loss=0 partial_proposal_objects=0"
+        },
+        {
+          "line": 632,
+          "text": "2026-10-28T00:32:58.2006874Z verification_migration_failure_rollback_verified mode=clean data_loss=0 partial_verification_objects=0"
+        },
+        {
+          "line": 666,
+          "text": "2026-10-28T00:33:16.6032238Z  Test Files  1 passed (1)"
+        },
+        {
+          "line": 667,
+          "text": "2026-10-28T00:33:16.6034076Z       Tests  7 passed (7)"
+        },
+        {
+          "line": 756,
+          "text": "2026-10-28T00:33:19.0268584Z  Test Files  2 passed (2)"
+        },
+        {
+          "line": 757,
+          "text": "2026-10-28T00:33:19.0270869Z       Tests  14 passed (14)"
+        },
+        {
+          "line": 788,
+          "text": "2026-10-28T00:33:38.0656509Z incremental_migration_verified duration_ms=1691 observed_lock_window_ms=0 max_relation_locks=0"
+        },
+        {
+          "line": 789,
+          "text": "2026-10-28T00:33:55.1904741Z proposal_migration_failure_rollback_verified mode=incremental data_loss=0 partial_proposal_objects=0"
+        },
+        {
+          "line": 790,
+          "text": "2026-10-28T00:34:27.8967020Z verification_migration_failure_rollback_verified mode=incremental data_loss=0 partial_verification_objects=0"
+        },
+        {
+          "line": 1300,
+          "text": "2026-10-28T00:35:19.1328757Z  Test Files  147 passed (147)"
+        },
+        {
+          "line": 1301,
+          "text": "2026-10-28T00:35:19.1333427Z       Tests  836 passed (836)"
+        },
+        {
+          "line": 1306,
+          "text": "2026-10-28T00:35:20.6677074Z The schema at prisma/schema.prisma is valid 🚀"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122555153200/logs"
+    },
+    {
+      "job_id": 122555908726,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555908726",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 120,
+          "text": "2026-10-28T00:27:29.8663493Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 738,
+          "text": "2026-10-28T00:28:06.0192640Z  Test Files  147 passed | 4 skipped (151)"
+        },
+        {
+          "line": 739,
+          "text": "2026-10-28T00:28:06.0196768Z       Tests  836 passed | 22 skipped (858)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122555908726/logs"
+    },
+    {
+      "job_id": 122558086900,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086900",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 125,
+          "text": "2026-10-28T00:35:43.9226124Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 1055,
+          "text": "2026-10-28T00:38:26.2971103Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 1087,
+          "text": "2026-10-28T00:40:09.0121910Z   29 passed (1.7m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122558086900/logs"
+    },
+    {
+      "job_id": 122558086915,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086915",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 125,
+          "text": "2026-10-28T00:35:45.0835400Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 1056,
+          "text": "2026-10-28T00:41:16.4218862Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 1088,
+          "text": "2026-10-28T00:42:27.2564003Z   3 skipped"
+        },
+        {
+          "line": 1089,
+          "text": "2026-10-28T00:42:27.2564756Z   26 passed (1.2m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122558086915/logs"
+    },
+    {
+      "job_id": 122558086879,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953/job/122558086879",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 125,
+          "text": "2026-10-28T00:35:44.9603613Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 1990,
+          "text": "2026-10-28T00:39:21.7605165Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 2022,
+          "text": "2026-10-28T00:41:26.8235996Z   3 skipped"
+        },
+        {
+          "line": 2023,
+          "text": "2026-10-28T00:41:26.8237089Z   26 passed (2.2m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122558086879/logs"
+    },
+    {
+      "job_id": 122556508832,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508832",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 125,
+          "text": "2026-10-28T00:31:16.4875499Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 1163,
+          "text": "2026-10-28T00:36:49.0709570Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 1195,
+          "text": "2026-10-28T00:38:39.7384799Z   29 passed (1.9m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122556508832/logs"
+    },
+    {
+      "job_id": 122556508810,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508810",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 125,
+          "text": "2026-10-28T00:31:17.1798683Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 1206,
+          "text": "2026-10-28T00:36:18.0208358Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 1238,
+          "text": "2026-10-28T00:37:22.8057311Z   3 skipped"
+        },
+        {
+          "line": 1239,
+          "text": "2026-10-28T00:37:22.8057539Z   26 passed (1.1m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122556508810/logs"
+    },
+    {
+      "job_id": 122556508835,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122556508835",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 125,
+          "text": "2026-10-28T00:31:18.7461763Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 2139,
+          "text": "2026-10-28T00:34:37.1678934Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 2171,
+          "text": "2026-10-28T00:37:07.5428819Z   3 skipped"
+        },
+        {
+          "line": 2172,
+          "text": "2026-10-28T00:37:07.5429393Z   26 passed (2.6m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122556508835/logs"
+    },
+    {
+      "job_id": 122555153455,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555153455",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 120,
+          "text": "2026-10-28T00:27:28.8799019Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 747,
+          "text": "2026-10-28T00:28:21.6460540Z  Test Files  147 passed | 4 skipped (151)"
+        },
+        {
+          "line": 748,
+          "text": "2026-10-28T00:28:21.6467384Z       Tests  836 passed | 22 skipped (858)"
+        },
+        {
+          "line": 785,
+          "text": "2026-10-28T00:28:46.0296670Z An error occurred in `next/font`."
+        },
+        {
+          "line": 787,
+          "text": "2026-10-28T00:28:46.0297376Z TypeError: Cannot read properties of null (reading '1')"
+        },
+        {
+          "line": 797,
+          "text": "2026-10-28T00:28:46.0314895Z An error occurred in `next/font`."
+        },
+        {
+          "line": 799,
+          "text": "2026-10-28T00:28:46.0315644Z TypeError: Cannot read properties of null (reading '1')"
+        },
+        {
+          "line": 818,
+          "text": "2026-10-28T00:28:46.0371311Z TypeError: Cannot read properties of null (reading '1')"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122555153455/logs"
+    },
+    {
+      "job_id": 122555906053,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988/job/122555906053",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 120,
+          "text": "2026-10-28T00:29:36.5444220Z HEAD is now at 37fe426 Merge a0050aaf4fc16e1cadd110918c3354a29e8d99fe into 2dfd48ae3c7548a79dbe56996c8fb42ec965fecf"
+        },
+        {
+          "line": 747,
+          "text": "2026-10-28T00:30:23.7392343Z  Test Files  147 passed | 4 skipped (151)"
+        },
+        {
+          "line": 748,
+          "text": "2026-10-28T00:30:23.7396193Z       Tests  836 passed | 22 skipped (858)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122555906053/logs"
+    },
+    {
+      "job_id": 122284444402,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122284444402",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 1202,
+          "text": "2026-10-27T15:31:01.3992646Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 1276,
+          "text": "2026-10-27T15:32:54.8635581Z   1 failed"
+        },
+        {
+          "line": 1278,
+          "text": "2026-10-27T15:32:54.8637557Z   28 passed (1.9m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122284444402/logs"
+    },
+    {
+      "job_id": 122286014981,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195/job/122286014981",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 1054,
+          "text": "2026-10-27T15:33:27.6646042Z Running 29 tests using 1 worker"
+        },
+        {
+          "line": 1128,
+          "text": "2026-10-27T15:35:04.2270188Z   1 failed"
+        },
+        {
+          "line": 1130,
+          "text": "2026-10-27T15:35:04.2271278Z   28 passed (1.6m)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122286014981/logs"
+    },
+    {
+      "job_id": 122284444132,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408/job/122284444132",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 490,
+          "text": "2026-10-27T15:32:19.6195254Z Supabase startup diagnostics: container registry rate limit; container image pull failed"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122284444132/logs"
+    },
+    {
+      "job_id": 122270642652,
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667/job/122270642652",
+      "source": "GitHub Actions job log API",
+      "lines": [
+        {
+          "line": 907,
+          "text": "2026-10-27T15:05:31.4380891Z  Test Files  1 failed | 146 passed | 4 skipped (151)"
+        },
+        {
+          "line": 908,
+          "text": "2026-10-27T15:05:31.4382196Z       Tests  6 failed | 830 passed | 22 skipped (858)"
+        }
+      ],
+      "apiUrl": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/122270642652/logs"
+    }
+  ],
+  "limitations": [
+    {
+      "query": "https://api.github.com/repos/ManDik-Chan/AI-Generator/branches/main/protection",
+      "status": 403,
+      "meaning": "integration has no administration permission; ruleset successfully read separately"
+    },
+    {
+      "query": "https://api.github.com/repos/ManDik-Chan/AI-Generator/rules/branches/main",
+      "status": 400,
+      "meaning": "connector endpoint allowlist rejects this route"
+    },
+    {
+      "query": "https://api.github.com/repos/ManDik-Chan/AI-Generator/actions/jobs/88854087748/logs",
+      "status": 410,
+      "meaning": "old job log unavailable; cause not reverified"
+    },
+    {
+      "meaning": "No production database, production runtime, preview runtime, real provider or process-kill test performed by this audit"
+    }
+  ]
+}

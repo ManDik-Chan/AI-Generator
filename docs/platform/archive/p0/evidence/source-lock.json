@@ -1,0 +1,27 @@
+{
+  "classification": "INTERNAL",
+  "audit_date": "2026-10-28",
+  "timezone": "Asia/Singapore",
+  "main": {
+    "repository": "ManDik-Chan/AI-Generator",
+    "commit": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+    "tree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+    "commit_time_utc": "2026-10-28T00:43:12Z",
+    "evidence": "https://api.github.com/repos/ManDik-Chan/AI-Generator/git/commits/e33ac216bdcffc44d12d4b7315e0d6cc48decf5c"
+  },
+  "source_export": {
+    "from_commit": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+    "tree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+    "evidence": "https://api.github.com/repos/ManDik-Chan/AI-Generator/git/commits/a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+    "method": "git archive of local immutable PR25 object, same tree verified against remote main; not a main Git checkout",
+    "path": "D:/AIGC/platform-p0-audit-20261028/AI-Generator",
+    "reason": "Default Git proxy 127.0.0.1:26001 unreachable; direct Git connection reset. Remote identity and CI were read through authorized GitHub connector. Original repositories were not reset or switched."
+  },
+  "ctmr": {
+    "repository": "JNKL0620/CTMR_4C",
+    "commit": "ddb510499a690c286ca607dc876d757c62662813",
+    "tree": "15213cbf95e62d9c37840d4fd2378798df6ec41d",
+    "evidence": "https://api.github.com/repos/JNKL0620/CTMR_4C/branches/main",
+    "scope": "Private fixed source read through connector; no code, weights or patient assets copied into deliverable"
+  }
+}

@@ -1,0 +1,2945 @@
+{
+  "openapi": "3.2.1",
+  "info": {
+    "title": "AIG Platform — P0 Draft / Not Implemented",
+    "version": "0.1.0-draft",
+    "description": "INTERNAL. All operations are proposals. Bearer authentication describes future API clients. Browser uses existing Supabase SSR sessions; bridging/CSRF must be frozen and tested before implementation. No new browser cookie/auth system is introduced by this document."
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Proposed prefix only; no deployment is asserted."
+    }
+  ],
+  "security": [
+    {
+      "SupabaseBearer": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "P1",
+      "description": "Not available until stage approval and gates pass."
+    },
+    {
+      "name": "P2",
+      "description": "Not available until stage approval and gates pass."
+    },
+    {
+      "name": "P3",
+      "description": "Not available until stage approval and gates pass."
+    },
+    {
+      "name": "P4",
+      "description": "Not available until stage approval and gates pass."
+    },
+    {
+      "name": "P5",
+      "description": "Not available until stage approval and gates pass."
+    }
+  ],
+  "paths": {
+    "/projects": {
+      "get": {
+        "operationId": "listProjects",
+        "summary": "Discover only PUBLIC published projects",
+        "description": "PROPOSED ONLY. Private workspaces use a separately authorized query; this discovery endpoint never lists UNLISTED.",
+        "tags": [
+          "P1"
+        ],
+        "x-stage": "P1",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "SupabaseBearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}": {
+      "get": {
+        "operationId": "getProject",
+        "summary": "Read published public/link content or authorized private project",
+        "description": "PROPOSED ONLY. Unauthorized or unknown resources return identical 404. No user runs, credentials, drafts or internal endpoints in public DTO.",
+        "tags": [
+          "P1"
+        ],
+        "x-stage": "P1",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Project"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "SupabaseBearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/versions/{version}": {
+      "get": {
+        "operationId": "getVersion",
+        "summary": "Read an authorized immutable version",
+        "description": "PROPOSED ONLY. ",
+        "tags": [
+          "P1"
+        ],
+        "x-stage": "P1",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "SupabaseBearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/versions/{version}/manifest": {
+      "get": {
+        "operationId": "getManifest",
+        "summary": "Read curated manifest snapshot",
+        "description": "PROPOSED ONLY. Expose only curated declarative content; endpointRef cannot be resolved into credentials or internal addresses.",
+        "tags": [
+          "P3"
+        ],
+        "x-stage": "P3",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Manifest"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "SupabaseBearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/versions/{version}/presentation": {
+      "get": {
+        "operationId": "getPresentation",
+        "summary": "Read reviewed presentation snapshot",
+        "description": "PROPOSED ONLY. ",
+        "tags": [
+          "P1"
+        ],
+        "x-stage": "P1",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 80
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Presentation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {},
+          {
+            "SupabaseBearer": []
+          }
+        ]
+      }
+    },
+    "/projects/{projectId}/installations": {
+      "post": {
+        "operationId": "createInstallation",
+        "summary": "Install for authenticated caller",
+        "description": "PROPOSED ONLY. No userId accepted; repeated installation returns existing caller installation without widening grants.",
+        "tags": [
+          "P2"
+        ],
+        "x-stage": "P2",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Installation"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/installations/{id}/grants": {
+      "post": {
+        "operationId": "createGrant",
+        "summary": "Explicitly consent to a version and capability",
+        "description": "PROPOSED ONLY. ",
+        "tags": [
+          "P2"
+        ],
+        "x-stage": "P2",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Grant"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantRequest"
+              }
+            }
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/grants/{grantId}": {
+      "delete": {
+        "operationId": "revokeGrant",
+        "summary": "Revoke caller grant and invalidate new steps",
+        "description": "PROPOSED ONLY. Idempotent; old attempts cannot submit new visible output. Remote requests may still consume resources.",
+        "tags": [
+          "P2"
+        ],
+        "x-stage": "P2",
+        "parameters": [
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/projects/{projectId}/runs": {
+      "post": {
+        "operationId": "createRun",
+        "summary": "Persist a run, reservation and outbox atomically",
+        "description": "PROPOSED ONLY. Only approved synthetic test adapters in P4. Return 202 after commit. Same key+same request returns same run; changed request => 409. Validate parameters against immutable capability inputSchema. READY freezes approved assets at creation (may be empty for parameter-only tasks); UPLOAD requires explicit inputs/finalize before dispatch. Body limit proposal: 64 KiB and nesting depth 16.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              }
+            }
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/runs/{runId}/inputs/finalize": {
+      "post": {
+        "operationId": "finalizeInputs",
+        "summary": "Atomically seal the complete approved input set",
+        "description": "PROPOSED ONLY. Owner only. After current owner authorization, look up idempotency record BEFORE first-execution preconditions: same key+hash returns current authorized Run view even after ACCEPTED/terminal. First execution requires PENDING+UPLOAD. Check all assets APPROVED and bound to subject/capability. Seal RunInput/inputSetHash/inputsSealedAt and ready outbox in one transaction. Changed set or already sealed with different inputs => 409. Upload completions alone never dispatch.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InputFinalize"
+              }
+            }
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/runs/{runId}": {
+      "get": {
+        "operationId": "getRun",
+        "summary": "Owner-only run status",
+        "description": "PROPOSED ONLY. Cache-Control: no-store. Return no private data for project authors or admins by default.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/runs/{runId}/cancel": {
+      "post": {
+        "operationId": "cancelRun",
+        "summary": "Request cancellation and persist intent",
+        "description": "PROPOSED ONLY. Idempotent. Repeated/terminal requests return current view; 202 does not claim GPU computation has stopped.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/runs/{runId}/artifacts/upload-intents": {
+      "post": {
+        "operationId": "createUploadIntent",
+        "summary": "Allocate owner-scoped quarantine upload",
+        "description": "PROPOSED ONLY. Allowed only while run PENDING, inputMode=UPLOAD and not sealed. 100 MiB is a proposed ceiling, not verified platform support; multipart negotiation and part URLs require P4 spike. No raw bytes pass through this API.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadIntent"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadRequest"
+              }
+            }
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/runs/{runId}/artifacts/upload-completions": {
+      "post": {
+        "operationId": "completeUpload",
+        "summary": "Verify transport completion and schedule scan",
+        "description": "PROPOSED ONLY. Verify stored metadata and checksum server-side; reject foreign artifact, unexpected type, expired intent and changed inputs. No dispatch before APPROVED.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadComplete"
+              }
+            }
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/runs/{runId}/artifacts/{artifactId}": {
+      "get": {
+        "operationId": "getArtifact",
+        "summary": "Read owner-scoped artifact metadata",
+        "description": "PROPOSED ONLY. Never expose storageKey; authenticated download transport is deliberately not frozen until revocation/signed URL tests pass.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "artifactId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Artifact"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      }
+    },
+    "/credentials": {
+      "get": {
+        "operationId": "listCredentials",
+        "summary": "List only caller credential metadata",
+        "description": "PROPOSED ONLY. ",
+        "tags": [
+          "P5"
+        ],
+        "x-stage": "P5",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Credential"
+                  },
+                  "maxItems": 50
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createCredential",
+        "summary": "Bind a provider credential to caller",
+        "description": "PROPOSED ONLY. TLS only; secret writeOnly; disable request-body logging; approved provider only. SESSION mode uses separately proven volatile storage and expiresAt, never a durable queue.",
+        "tags": [
+          "P5"
+        ],
+        "x-stage": "P5",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credential"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialRequest"
+              }
+            }
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/credentials/{credentialId}": {
+      "delete": {
+        "operationId": "revokeCredential",
+        "summary": "Revoke and schedule payload destruction",
+        "description": "PROPOSED ONLY. ",
+        "tags": [
+          "P5"
+        ],
+        "x-stage": "P5",
+        "parameters": [
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/credentials/{credentialId}/grants": {
+      "post": {
+        "operationId": "createCredentialGrant",
+        "summary": "Grant narrow proxy use without revealing the key",
+        "description": "PROPOSED ONLY. ",
+        "tags": [
+          "P5"
+        ],
+        "x-stage": "P5",
+        "parameters": [
+          {
+            "name": "credentialId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialGrant"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialGrantRequest"
+              }
+            }
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/credential-grants/{grantId}": {
+      "delete": {
+        "operationId": "revokeCredentialGrant",
+        "summary": "Revoke caller credential delegation",
+        "description": "PROPOSED ONLY. ",
+        "tags": [
+          "P5"
+        ],
+        "x-stage": "P5",
+        "parameters": [
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "x-browser-csrf": "Existing Supabase SSR cookie support requires a reviewed Origin/CSRF bridge; not frozen in P0."
+      }
+    },
+    "/internal/adapters/{endpointId}/callbacks": {
+      "post": {
+        "operationId": "handleCallback",
+        "summary": "Accept authenticated, deduplicated adapter event",
+        "description": "PROPOSED ONLY. Private ingress. endpointId selects immutable registry revision. HMAC-SHA256 over timestamp + dot + exact raw body; 300-second skew proposal. Persist receipt sequence/fence and CAS run lastCallbackSequence within attempt; next sequence only, out-of-order => 409/retry. Same eventId+bodyHash replay is idempotent; same sequence different eventId is rejected. Check current authorization before commit. URL possession is not authentication.",
+        "tags": [
+          "P4"
+        ],
+        "x-stage": "P4",
+        "parameters": [
+          {
+            "name": "endpointId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{2,79}$"
+            }
+          },
+          {
+            "name": "X-AIG-Timestamp",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "X-AIG-Signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^v1=[a-f0-9]{64}$"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "400": {
+            "$ref": "#/components/responses/Error"
+          },
+          "401": {
+            "$ref": "#/components/responses/Error"
+          },
+          "403": {
+            "$ref": "#/components/responses/Error"
+          },
+          "404": {
+            "$ref": "#/components/responses/Error"
+          },
+          "409": {
+            "$ref": "#/components/responses/Error"
+          },
+          "413": {
+            "$ref": "#/components/responses/Error"
+          },
+          "429": {
+            "$ref": "#/components/responses/Error"
+          },
+          "503": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Callback"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AdapterSignature": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "SupabaseBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "Supabase access token",
+        "description": "Verify issuer, signature, expiration and current subject; service_role is forbidden as user identity."
+      },
+      "AdapterSignature": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-AIG-Signature",
+        "description": "HMAC raw body and timestamp, plus endpoint revision and replay checks. This is not a user Provider key."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        }
+      },
+      "Project": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "visibility",
+          "summary"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 63
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "visibility": {
+            "type": "string",
+            "enum": [
+              "PRIVATE",
+              "UNLISTED",
+              "PUBLIC"
+            ]
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "currentVersionId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ProjectPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Project"
+            },
+            "maxItems": 50
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 500
+          }
+        }
+      },
+      "Version": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "projectId",
+          "version",
+          "manifestHash",
+          "presentationHash",
+          "publishedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "manifestHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "presentationHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "publishedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Installation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "projectId",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "REVOKED"
+            ]
+          }
+        }
+      },
+      "GrantRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "versionId",
+          "capability",
+          "scope",
+          "audience",
+          "expiresAt"
+        ],
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "audience": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Scope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "inputClasses",
+          "maxRuns",
+          "maxPlatformUnits"
+        ],
+        "properties": {
+          "inputClasses": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "SYNTHETIC",
+                "PUBLIC_CURATED"
+              ]
+            },
+            "maxItems": 2
+          },
+          "maxRuns": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "maxPlatformUnits": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          }
+        }
+      },
+      "Grant": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "installationId",
+          "versionId",
+          "capability",
+          "audience",
+          "scope",
+          "expiresAt",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "installationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "audience": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "scope": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "REVOKED",
+              "EXPIRED"
+            ]
+          }
+        }
+      },
+      "ExecutionSelection": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode"
+            ],
+            "properties": {
+              "mode": {
+                "const": "PLATFORM"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "mode",
+              "credentialId",
+              "credentialGrantId",
+              "model"
+            ],
+            "properties": {
+              "mode": {
+                "const": "BYOK"
+              },
+              "credentialId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "credentialGrantId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            }
+          }
+        ]
+      },
+      "JsonValue": {
+        "oneOf": [
+          {
+            "type": "string",
+            "maxLength": 16384
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "maxItems": 32
+          },
+          {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            }
+          }
+        ]
+      },
+      "RunRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "versionId",
+          "grantId",
+          "capability",
+          "parameters",
+          "inputMode",
+          "inputAssetIds",
+          "execution"
+        ],
+        "properties": {
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grantId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "parameters": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            }
+          },
+          "inputMode": {
+            "type": "string",
+            "enum": [
+              "READY",
+              "UPLOAD"
+            ]
+          },
+          "inputAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 32,
+            "uniqueItems": true
+          },
+          "execution": {
+            "$ref": "#/components/schemas/ExecutionSelection"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "inputMode": {
+                  "const": "UPLOAD"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "inputAssetIds": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "InputFinalize": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "inputAssetIds"
+        ],
+        "properties": {
+          "inputAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 32,
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        }
+      },
+      "Run": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "projectId",
+          "versionId",
+          "state",
+          "inputMode",
+          "inputsSealed",
+          "revision",
+          "statusUrl",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "ACCEPTED",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED",
+              "TIMED_OUT"
+            ]
+          },
+          "inputMode": {
+            "type": "string",
+            "enum": [
+              "READY",
+              "UPLOAD"
+            ]
+          },
+          "inputsSealed": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "statusUrl": {
+            "type": "string",
+            "pattern": "^/api/v1/runs/[0-9a-f-]+$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelRequestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            },
+            "maxItems": 32
+          }
+        }
+      },
+      "Artifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "runId",
+          "mimeType",
+          "sizeBytes",
+          "sha256",
+          "visibility",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mimeType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "visibility": {
+            "const": "OWNER_ONLY"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UploadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mimeType",
+          "sizeBytes",
+          "sha256"
+        ],
+        "properties": {
+          "mimeType": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "application/octet-stream",
+              "model/gltf-binary"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 104857600
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        }
+      },
+      "UploadIntent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "artifactId",
+          "transport",
+          "expiresAt",
+          "uploadUrl",
+          "requiredHeaders"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "artifactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "transport": {
+            "type": "string",
+            "enum": [
+              "SIGNED_PUT",
+              "MULTIPART"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "uploadUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "requiredHeaders": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 10
+          }
+        }
+      },
+      "UploadComplete": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifactId"
+        ],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "partNumber",
+                "etag"
+              ],
+              "properties": {
+                "partNumber": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10000
+                },
+                "etag": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200
+                }
+              }
+            },
+            "maxItems": 10000
+          }
+        }
+      },
+      "UploadStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "artifactId",
+          "state"
+        ],
+        "properties": {
+          "artifactId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "UPLOADED",
+              "SCANNING",
+              "APPROVED",
+              "REJECTED"
+            ]
+          }
+        }
+      },
+      "CredentialRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerRef",
+          "label",
+          "secret",
+          "mode"
+        ],
+        "properties": {
+          "providerRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,79}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "writeOnly": true
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "PERSISTENT",
+              "SESSION"
+            ]
+          }
+        }
+      },
+      "Credential": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "providerRef",
+          "label",
+          "fingerprint",
+          "status",
+          "mode"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "providerRef": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "fingerprint": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "REVOKED",
+              "EXPIRED"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "PERSISTENT",
+              "SESSION"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CredentialGrantRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "projectVersionId",
+          "capability",
+          "audience",
+          "models",
+          "expiresAt"
+        ],
+        "properties": {
+          "projectVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "capability": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "audience": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "maxItems": 20
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CredentialGrant": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "credentialId",
+          "projectVersionId",
+          "status",
+          "expiresAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "credentialId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projectVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "REVOKED",
+              "EXPIRED"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Callback": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "eventId",
+          "runId",
+          "attempt",
+          "fence",
+          "sequence",
+          "state"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "attempt": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "ACCEPTED",
+              "RUNNING",
+              "SUCCEEDED",
+              "FAILED",
+              "CANCELLED"
+            ]
+          },
+          "outputArtifactIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "maxItems": 32
+          }
+        }
+      },
+      "Manifest": {
+        "title": "AIG Project Manifest — PROPOSED, NOT IMPLEMENTED",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "projectId",
+          "slug",
+          "version",
+          "name",
+          "category",
+          "visibility",
+          "integration",
+          "capabilities",
+          "dataPolicy"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": "1.0.0"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,62}$"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$",
+            "maxLength": 80
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "category": {
+            "enum": [
+              "research",
+              "web-service",
+              "algorithm",
+              "software",
+              "ai",
+              "other"
+            ]
+          },
+          "visibility": {
+            "enum": [
+              "PRIVATE",
+              "UNLISTED",
+              "PUBLIC"
+            ]
+          },
+          "integration": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode"
+                ],
+                "properties": {
+                  "mode": {
+                    "const": "SHOWCASE"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode",
+                  "embedRef"
+                ],
+                "properties": {
+                  "mode": {
+                    "const": "VERIFIED_EMBED"
+                  },
+                  "embedRef": {
+                    "$ref": "#/components/schemas/Manifest/$defs/registryRef"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "mode",
+                  "openapi",
+                  "endpointRef",
+                  "operations"
+                ],
+                "properties": {
+                  "mode": {
+                    "const": "REMOTE_API"
+                  },
+                  "openapi": {
+                    "type": "string",
+                    "pattern": "^\\./[A-Za-z0-9_-]+\\.(yaml|json)$",
+                    "maxLength": 100
+                  },
+                  "endpointRef": {
+                    "$ref": "#/components/schemas/Manifest/$defs/registryRef"
+                  },
+                  "operations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 32,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "capability",
+                        "operationId",
+                        "inputSchema",
+                        "outputSchema"
+                      ],
+                      "properties": {
+                        "capability": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "operationId": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z][A-Za-z0-9_]{0,99}$"
+                        },
+                        "inputSchema": {
+                          "$ref": "#/components/schemas/Manifest/$defs/schemaPath"
+                        },
+                        "outputSchema": {
+                          "$ref": "#/components/schemas/Manifest/$defs/schemaPath"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "capabilities": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 32,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*){1,5}$",
+              "maxLength": 100
+            }
+          },
+          "dataPolicy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "publicDemoData",
+              "requiresExplicitConsentForRemoteProcessing",
+              "dataClasses",
+              "retentionSeconds"
+            ],
+            "properties": {
+              "publicDemoData": {
+                "enum": [
+                  "none",
+                  "curated-synthetic-only",
+                  "approved-public-assets"
+                ]
+              },
+              "requiresExplicitConsentForRemoteProcessing": {
+                "type": "boolean"
+              },
+              "processorRef": {
+                "$ref": "#/components/schemas/Manifest/$defs/registryRef"
+              },
+              "dataClasses": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "SYNTHETIC",
+                    "PUBLIC_CURATED",
+                    "PERSONAL",
+                    "MEDICAL_SENSITIVE"
+                  ]
+                }
+              },
+              "retentionSeconds": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2592000
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "integration": {
+                  "properties": {
+                    "mode": {
+                      "const": "REMOTE_API"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "dataPolicy": {
+                  "required": [
+                    "processorRef"
+                  ],
+                  "properties": {
+                    "requiresExplicitConsentForRemoteProcessing": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "$defs": {
+          "registryRef": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,79}$"
+          },
+          "schemaPath": {
+            "type": "string",
+            "pattern": "^\\./[A-Za-z0-9_-]+\\.schema\\.json$",
+            "maxLength": 120
+          }
+        }
+      },
+      "Presentation": {
+        "title": "AIG Presentation — PROPOSED, NOT IMPLEMENTED",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schemaVersion",
+          "projectId",
+          "version",
+          "title",
+          "sections"
+        ],
+        "properties": {
+          "schemaVersion": {
+            "const": "1.0.0"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$",
+            "maxLength": 80
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "sections": {
+            "type": "array",
+            "maxItems": 24,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "kind",
+                    "title",
+                    "body",
+                    "verification"
+                  ],
+                  "properties": {
+                    "id": {
+                      "$ref": "#/components/schemas/Presentation/$defs/id"
+                    },
+                    "kind": {
+                      "const": "MARKDOWN"
+                    },
+                    "title": {
+                      "$ref": "#/components/schemas/Presentation/$defs/title"
+                    },
+                    "body": {
+                      "type": "string",
+                      "maxLength": 20000
+                    },
+                    "verification": {
+                      "$ref": "#/components/schemas/Presentation/$defs/verification"
+                    },
+                    "sourceAssetIds": {
+                      "$ref": "#/components/schemas/Presentation/$defs/assets"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "kind",
+                    "title",
+                    "metrics"
+                  ],
+                  "properties": {
+                    "id": {
+                      "$ref": "#/components/schemas/Presentation/$defs/id"
+                    },
+                    "kind": {
+                      "const": "BENCHMARKS"
+                    },
+                    "title": {
+                      "$ref": "#/components/schemas/Presentation/$defs/title"
+                    },
+                    "metrics": {
+                      "type": "array",
+                      "maxItems": 30,
+                      "items": {
+                        "$ref": "#/components/schemas/Presentation/$defs/metric"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "kind",
+                    "title",
+                    "viewerType",
+                    "assetIds",
+                    "dataClass"
+                  ],
+                  "properties": {
+                    "id": {
+                      "$ref": "#/components/schemas/Presentation/$defs/id"
+                    },
+                    "kind": {
+                      "const": "VIEWER"
+                    },
+                    "title": {
+                      "$ref": "#/components/schemas/Presentation/$defs/title"
+                    },
+                    "viewerType": {
+                      "enum": [
+                        "MESH3D",
+                        "IMAGE_STACK",
+                        "PLOT"
+                      ]
+                    },
+                    "assetIds": {
+                      "$ref": "#/components/schemas/Presentation/$defs/assets",
+                      "minItems": 1
+                    },
+                    "dataClass": {
+                      "enum": [
+                        "SYNTHETIC",
+                        "PUBLIC_CURATED"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "kind",
+                    "title",
+                    "assetIds"
+                  ],
+                  "properties": {
+                    "id": {
+                      "$ref": "#/components/schemas/Presentation/$defs/id"
+                    },
+                    "kind": {
+                      "const": "DOCS"
+                    },
+                    "title": {
+                      "$ref": "#/components/schemas/Presentation/$defs/title"
+                    },
+                    "assetIds": {
+                      "$ref": "#/components/schemas/Presentation/$defs/assets",
+                      "minItems": 1
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "$defs": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "verification": {
+            "enum": [
+              "VERIFIED_SOURCE",
+              "VERIFIED_TEST",
+              "CLAIMED",
+              "UNVERIFIED"
+            ]
+          },
+          "assets": {
+            "type": "array",
+            "maxItems": 30,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "metric": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "status"
+            ],
+            "properties": {
+              "name": {
+                "$ref": "#/components/schemas/Presentation/$defs/title"
+              },
+              "status": {
+                "enum": [
+                  "UNPUBLISHED",
+                  "REPORTED",
+                  "REPRODUCED"
+                ]
+              },
+              "value": {
+                "type": "number"
+              },
+              "unit": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "dataset": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "protocol": {
+                "type": "string",
+                "maxLength": 2000
+              },
+              "evidenceAssetId": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "status": {
+                      "const": "UNPUBLISHED"
+                    }
+                  }
+                },
+                "then": {
+                  "not": {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "unit"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "dataset"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "protocol"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "evidenceAssetId"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "else": {
+                  "required": [
+                    "value",
+                    "unit",
+                    "dataset",
+                    "protocol",
+                    "evidenceAssetId"
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "responses": {
+      "Error": {
+        "description": "Sanitized error; never return raw provider messages, keys, stack traces or connection strings.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    }
+  }
+}

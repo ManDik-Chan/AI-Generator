@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aig:platform:manifest:1.0.0-draft",
+  "title": "AIG Project Manifest — PROPOSED, NOT IMPLEMENTED",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "projectId", "slug", "version", "name", "category", "visibility", "integration", "capabilities", "dataPolicy"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "projectId": {"type": "string", "format": "uuid"},
+    "slug": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,62}$"},
+    "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$", "maxLength": 80},
+    "name": {"type": "string", "minLength": 1, "maxLength": 120},
+    "summary": {"type": "string", "maxLength": 500},
+    "category": {"enum": ["research", "web-service", "algorithm", "software", "ai", "other"]},
+    "visibility": {"enum": ["PRIVATE", "UNLISTED", "PUBLIC"]},
+    "integration": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["mode"], "properties": {"mode": {"const": "SHOWCASE"}}},
+        {"type": "object", "additionalProperties": false, "required": ["mode", "embedRef"], "properties": {"mode": {"const": "VERIFIED_EMBED"}, "embedRef": {"$ref": "#/$defs/registryRef"}}},
+        {"type": "object", "additionalProperties": false, "required": ["mode", "openapi", "endpointRef", "operations"], "properties": {"mode": {"const": "REMOTE_API"}, "openapi": {"type": "string", "pattern": "^\\./[A-Za-z0-9_-]+\\.(yaml|json)$", "maxLength": 100}, "endpointRef": {"$ref": "#/$defs/registryRef"}, "operations": {"type": "array", "minItems": 1, "maxItems": 32, "items": {"type": "object", "additionalProperties": false, "required": ["capability", "operationId", "inputSchema", "outputSchema"], "properties": {"capability": {"type": "string", "maxLength": 100}, "operationId": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]{0,99}$"}, "inputSchema": {"$ref": "#/$defs/schemaPath"}, "outputSchema": {"$ref": "#/$defs/schemaPath"}}}}}}
+      ]
+    },
+    "capabilities": {"type": "array", "minItems": 1, "maxItems": 32, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*){1,5}$", "maxLength": 100}},
+    "dataPolicy": {
+      "type": "object", "additionalProperties": false,
+      "required": ["publicDemoData", "requiresExplicitConsentForRemoteProcessing", "dataClasses", "retentionSeconds"],
+      "properties": {
+        "publicDemoData": {"enum": ["none", "curated-synthetic-only", "approved-public-assets"]},
+        "requiresExplicitConsentForRemoteProcessing": {"type": "boolean"},
+        "processorRef": {"$ref": "#/$defs/registryRef"},
+        "dataClasses": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["SYNTHETIC", "PUBLIC_CURATED", "PERSONAL", "MEDICAL_SENSITIVE"]}},
+        "retentionSeconds": {"type": "integer", "minimum": 0, "maximum": 2592000}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"integration": {"properties": {"mode": {"const": "REMOTE_API"}}}}},
+      "then": {"properties": {"dataPolicy": {"required": ["processorRef"], "properties": {"requiresExplicitConsentForRemoteProcessing": {"const": true}}}}}
+    }
+  ],
+  "$defs": {
+    "registryRef": {"type": "string", "pattern": "^[a-z][a-z0-9-]{2,79}$"},
+    "schemaPath": {"type": "string", "pattern": "^\\./[A-Za-z0-9_-]+\\.schema\\.json$", "maxLength": 120}
+  }
+}

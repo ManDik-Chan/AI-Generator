@@ -1,0 +1,31 @@
+{
+  "checkedAt": "2026-10-28T04:09:23.322543+00:00",
+  "result": "PASS",
+  "trackedSourceBlobs": 618,
+  "sourceMismatches": [],
+  "generatorDeterministic": true,
+  "generatedDigests": {
+    "assetmetadata.schema.json": "439d957ea6e3a94ddc93078d2823f097b8d25945453d183868c97b7a8bd40a02",
+    "draft.schema.json": "7177ddffa295dd55919c9af660da453cad2b10f5a243c5ab1636a899443009a1",
+    "futurerouting.schema.json": "c7623d3bd8d455c5e1190db4ae9e6821d17bee8097fa154e06c0c3fc584415ae",
+    "manifest.schema.json": "ce140b0925c2bba0cb59a1b015f125795dc6f5eb30c7230f294b218ec6f7386c",
+    "presentation.schema.json": "ef9b2b6975aa0a39d7ee11cc72c3fcfafd4da1a3ac0cee7d62a4c56ede191cb2",
+    "release.schema.json": "92894ec7c061ddc7d4d648bdbe3a03b81291e8499e2ee3bcd44709a610277036",
+    "version.schema.json": "599f6c7f533dd6323580009d2561bbf40fc99e47db7e54e3917b79484e25e42a",
+    "p1.openapi.json": "ee2704d49fa5ac5cb37cdd496a7f3dd09a8065cf08f314fcc6f7224c1899b170"
+  },
+  "originalCheckoutStates": [
+    {
+      "path": "D:\\AI-Generator",
+      "sameHeadBranchStatus": true
+    },
+    {
+      "path": "D:\\AIGC\\AI-Generator",
+      "sameHeadBranchStatus": true
+    }
+  ],
+  "newScope": "docs/platform only",
+  "runtimeTests": "NOT_EXECUTED",
+  "ownerDecision": "PENDING",
+  "generatedLineEndings": "LF explicit; archived inputs preserved byte-for-byte"
+}

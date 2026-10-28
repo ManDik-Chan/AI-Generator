@@ -1,0 +1,242 @@
+{
+  "checked_at_utc": "2026-10-28T02:01:56.823049+00:00",
+  "scope": "Documentation only; no application imports, tests, network, DB, migration or deployment",
+  "validators": {
+    "jsonschema": "4.26.0",
+    "openapi-spec-validator": "0.9.0",
+    "openapi-schema-validator": "0.9.0"
+  },
+  "metaschemas": "2 PASS",
+  "openapi": {
+    "version": "3.2.1",
+    "result": "PASS",
+    "paths": 20,
+    "operations": 21
+  },
+  "contract_cases": [
+    {
+      "name": "manifest/generic-non-AI-showcase",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/remote-with-operation-schema-mapping",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/registered-embed-proposal",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-unknown-field",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-unknown-schema-version",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-slug-in-projectId",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-invalid-slug",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-noncanonical-version",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-duplicate-capability",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-arbitrary-hosted-runtime",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-negative-retention",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-without-consent",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-without-processor",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-arbitrary-endpoint-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-url-as-endpoint-ref",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-openapi-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-missing-operation-map",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-input-schema-ref",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/unpublished-no-fake-value",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/typed-static-viewer",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reported-with-provenance-fields",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-unpublished-zero",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-reported-without-evidence",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-arbitrary-component",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-iframe-section",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-medical-public-viewer",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-javascript-viewer",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/generic-parameter-only",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/upload-awaits-explicit-finalize",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/explicit-byok",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-caller-supplied-owner",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-missing-grant",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-missing-parameters",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-byok-missing-delegation",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-implicit-fallback",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-upload-with-presealed-inputs",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/complete-input-list",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/reject-empty",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/reject-duplicate",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "credential/reject-arbitrary-base-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "callback/typed-event",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "callback/reject-missing-fence",
+      "expected": "reject",
+      "result": "PASS"
+    }
+  ],
+  "contract_cases_passed": 42,
+  "source_integrity": {
+    "locked_main": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+    "archive_from": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+    "git_tree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+    "tracked_files_verified": 618,
+    "mismatches": [],
+    "new_files_outside_docs_platform": 0
+  },
+  "local_markdown_links": "PASS",
+  "limitations": [
+    "Structural fixtures do not implement or prove AuthZ, SSRF, XSS sanitization, KMS, callback ordering, browser behavior or runtime durability.",
+    "Semantic publication checks and application/DB/medical test gates remain unexecuted."
+  ]
+}

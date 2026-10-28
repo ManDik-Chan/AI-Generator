@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectId": "11111111-1111-4111-8111-111111111111",
+  "version": "0.1.0",
+  "title": "CONTRACT FIXTURE",
+  "sections": [
+    {
+      "id": "overview",
+      "kind": "MARKDOWN",
+      "title": "Overview",
+      "body": "Synthetic schema fixture only.",
+      "verification": "UNVERIFIED"
+    },
+    {
+      "id": "metrics",
+      "kind": "BENCHMARKS",
+      "title": "No results",
+      "metrics": [
+        {
+          "name": "Fixture metric",
+          "status": "UNPUBLISHED"
+        }
+      ]
+    }
+  ]
+}

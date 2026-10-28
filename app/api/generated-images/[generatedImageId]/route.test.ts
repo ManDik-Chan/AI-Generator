@@ -9,6 +9,7 @@ vi.mock("@/features/persona/avatar-service", () => ({ deleteGeneratedAvatar: moc
 vi.mock("@/lib/ai/image/config", () => ({ requireAvatarStorageConfig: () => ({ bucket: "persona-avatars" }), requireGeneratedImageStorageConfig: () => ({ bucket: "generated-images" }) }));
 
 import { DELETE, GET } from "@/app/api/generated-images/[generatedImageId]/route";
+import { AssetCleanupPending } from "@/features/storage/deletion";
 
 const id = "550e8400-e29b-41d4-a716-446655440000";
 const context = { params: Promise.resolve({ generatedImageId: id }) };
@@ -66,5 +67,20 @@ describe("GeneratedImage authenticated Storage route", () => {
     const failed = await DELETE(request, context);
     expect(failed.status).toBe(500);
     expect(await failed.json()).toEqual({ message: "图片删除失败，请稍后重试。" });
+  });
+  it("distinguishes pending cleanup, blocked ownership and completed deletion without blocking retries", async () => {
+    mocks.find.mockResolvedValue({ id, kind: "TOOL_GENERATION", storageBucket: "generated-images", storagePath: "owner/image.png", mimeType: "image/png" });
+    mocks.deleteTool.mockRejectedValue(new AssetCleanupPending("PENDING"));
+    const pending=await DELETE(request,context);
+    expect(pending.status).toBe(503);
+    expect(await pending.json()).toMatchObject({success:false,state:"PENDING"});
+    expect(mocks.find).toHaveBeenLastCalledWith(expect.objectContaining({where:{id,userId:"owner"}}));
+    mocks.deleteTool.mockRejectedValue(new AssetCleanupPending("BLOCKED"));
+    const blocked=await DELETE(request,context);
+    expect(blocked.status).toBe(409);
+    expect(await blocked.json()).toMatchObject({success:false,state:"BLOCKED"});
+    mocks.deleteTool.mockResolvedValue("deleted");
+    expect(await (await DELETE(request,context)).json()).toEqual({success:true,state:"COMPLETE"});
+    expect(mocks.deleteTool).toHaveBeenLastCalledWith("owner",id);
   });
 });

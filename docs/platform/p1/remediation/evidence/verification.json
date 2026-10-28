@@ -1,0 +1,1543 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-10-28T08:35:04.899Z",
+  "scope": "P1-A two security blockers only; no P1-B/C",
+  "baseline": {
+    "commit": "fbd29c4030ebf9292e156c49c6263e6dea6dd55b",
+    "ciCommit": "ec8a52a81d368b1a85f30d3d6a6d0a0eaaccd1b7",
+    "p05": "b7d1e1f05dda563a0179597078e1abb8b7c2f534",
+    "initialP1Worktree": "clean",
+    "branch": "codex/p1-a-security-remediation-20261028",
+    "worktree": "D:\\AIGC\\platform-p1-20261028",
+    "originalHead": "317a01873d8638b98c5d371dd211041caa3b9e37",
+    "originalStatusUnchanged": true,
+    "p05CheckoutUnchanged": true,
+    "cachedOriginMain": "2dfd48ae3c7548a79dbe56996c8fb42ec965fecf",
+    "remoteMain": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+    "remoteMainCheck": "GitHub connector compare_commits returned identical; see remote-main.json. Cached origin/main is stale and was not used as the baseline."
+  },
+  "testedCode": {
+    "commit": "4125e9d532e5515f1089a7e56cd0e2c0c586ca01",
+    "testExecution": "Immediately before commit; these source bytes were committed unchanged; evidence/docs commit is separate",
+    "files": [
+      {
+        "file": ".github/workflows/security-acceptance.yml",
+        "sha256": "a029c76cdeb66eb4b43a82af55126e45334ffa04075bc23dda52ea1f12ccd638"
+      },
+      {
+        "file": "app/api/generated-images/[generatedImageId]/route.test.ts",
+        "sha256": "bbb130b3e5fb19f4da44f0d23727f9bdab8da5c5ef34aa3ad967a6109b549a2a"
+      },
+      {
+        "file": "app/api/generated-images/[generatedImageId]/route.ts",
+        "sha256": "170bc93ec54eabddf06256f18bdcac3812f30e839de91f1841e3f39509566f58"
+      },
+      {
+        "file": "app/api/personas/[personaId]/avatar/route.ts",
+        "sha256": "527c89dd861643183efcdb37f0588e8ffec27696816063ff77a9b259ac5240a2"
+      },
+      {
+        "file": "app/api/tools/assets/[assetId]/route.ts",
+        "sha256": "6b641880a32f605db2fca2e22c72dff278b43221a6e70b75ebf0e433ba7be813"
+      },
+      {
+        "file": "app/api/tools/image/run/route.ts",
+        "sha256": "a5cc3ab222b8fb195e769190fef85e09f8c3f4b8ae77e8cec6fb002a81cff7df"
+      },
+      {
+        "file": "app/api/tools/runs/[runId]/route.ts",
+        "sha256": "781ab68de8f6c0448f545e9d7a4b9a4634ab337e836621db4e7c3997c69d2a70"
+      },
+      {
+        "file": "features/generated-images/storage-target.ts",
+        "sha256": "0561edaf649d957beff0e64d94834b686caa19f1c24a8a6ee59ddbdb0dc1dbba"
+      },
+      {
+        "file": "features/persona/avatar-service.integration.test.ts",
+        "sha256": "5617463ef6a502de6b51d05b3b5331c493df3e85cd0e9fd963a51a70290735a1"
+      },
+      {
+        "file": "features/persona/avatar-service.ts",
+        "sha256": "1d66645cdab324e3bc5322cec6db4bd82087dcb5022d9549ec85b423daf531b8"
+      },
+      {
+        "file": "features/persona/avatar-storage.ts",
+        "sha256": "a1b4aa3995bfb8aec5433ebc73443da4a18626ff3d44013734135a5ae20d3e35"
+      },
+      {
+        "file": "features/storage/deletion.ts",
+        "sha256": "0a0f4fdf5b95dce43a355850ddda9a45a457821315554185af59f0ad54063ab6"
+      },
+      {
+        "file": "features/storage/owned-target.test.ts",
+        "sha256": "bbb44d3dc156fb2e3a643641c4a3ada0d33016c432718ea5e9a86bd9aeae7283"
+      },
+      {
+        "file": "features/storage/owned-target.ts",
+        "sha256": "8fc222e3952c4ecf3b45f8085c31632056212132db5aaaa18b4db26d91ac9bfd"
+      },
+      {
+        "file": "features/tools/actions.ts",
+        "sha256": "0cc4b1b76b7bf5e9f76a19b2217eaaa820903707a1850c425293d5a2575dc20a"
+      },
+      {
+        "file": "features/tools/image-generation/service.integration.test.ts",
+        "sha256": "c66e2a8c2f69f4a93a9171e00f5ddaf9918cb96a0309e266c732bd59f24c6c3b"
+      },
+      {
+        "file": "features/tools/image-generation/service.ts",
+        "sha256": "7df45d123198cb9d12f9ccc933ffdaa093e78f8917a99ca2eac0bfcfe94e43fa"
+      },
+      {
+        "file": "features/tools/image-generation/storage.ts",
+        "sha256": "b7d7150bd209aff239b402169af6a84133af3817118f0cba35d11a07abe6f9eb"
+      },
+      {
+        "file": "features/tools/image/assets.ts",
+        "sha256": "e453442c6b32c1e3a4bbd1a3f68052bee35f77f0c00def1f982c12bec977dfe0"
+      },
+      {
+        "file": "features/tools/image/storage.ts",
+        "sha256": "73c0ad83b8357e766e19cf840e5ed65157699a9ad38e429ab8016cf8ff02b870"
+      },
+      {
+        "file": "package.json",
+        "sha256": "c1cbe9ae6e4e92e022fea0ab4492aeb62489380678d31726cbd089d28594c85b"
+      },
+      {
+        "file": "prisma/migrations/20261028074859_asset_deletion_consistency/migration.sql",
+        "sha256": "4cda2f92ff3332788f7a2c31a6b4830166a1fd337e90028c0445ea6f7ecaa1b1"
+      },
+      {
+        "file": "prisma/migrations/20261028080215_asset_deletion_cascade_retry/migration.sql",
+        "sha256": "9c9e26fdf24f4ecc4076c4addfbbed4b212dd4dcf8707c866410eea6f2681e8f"
+      },
+      {
+        "file": "prisma/migrations/20261028081301_asset_attachment_fence/migration.sql",
+        "sha256": "186e528c524c72ee8d7d44ad3ac75756d12867c26a9d77ecbdb14e7a182f7484"
+      },
+      {
+        "file": "prisma/migrations/20261028081742_validate_asset_ownership/migration.sql",
+        "sha256": "9df2c3f2c2f5318ae9c706787f22b6ec872f625403aa4f8b8a50a50292348eac"
+      },
+      {
+        "file": "prisma/schema.prisma",
+        "sha256": "220181cd202f9f2e59c70cb0aa51a234d7d8bc0d18ed292fcd49850224b38907"
+      },
+      {
+        "file": "scripts/run-local-security-stage.mjs",
+        "sha256": "85ac531456cde47aca84591616745f20d154f06d22cc198175e1b1cec640b183"
+      },
+      {
+        "file": "scripts/run-security-integration.mjs",
+        "sha256": "e166e12b79754d2912e7bb8cb897fc61b8d789488135ef63442b86aa781a208f"
+      },
+      {
+        "file": "supabase/config.toml",
+        "sha256": "0c5bbe9293739af012230cd31dfa3f9f8679f505d1b134954afbc1ea5b39b0d9"
+      },
+      {
+        "file": "tests/integration/fixtures/crash-deletion.ts",
+        "sha256": "e7a3ff7d6233534436e4603498273f6d76bde86ef22bf43409580e1d9c269c2f"
+      },
+      {
+        "file": "tests/integration/private-asset-storage.integration.test.ts",
+        "sha256": "f9b61e22972eb8c9b389e64068c6fdda11b77078acb3ea0009466a19efd32607"
+      }
+    ],
+    "originalBlockerTestUnchanged": true,
+    "originalBlockerTestSha256": "6111d756deb8542aaa978087072c88ab7983a9e2293c5daf2a7e4743a114b9ac"
+  },
+  "runtime": {
+    "node": "v22.23.1",
+    "vitest": "4.1.10",
+    "prisma": "6.19.3",
+    "supabaseCLI": "2.109.1",
+    "supabaseJS": "2.110.2",
+    "dockerEngine": "29.6.2"
+  },
+  "isolation": {
+    "project": "aig-platform-p1-20261028",
+    "workdir": "D:/AIGC/platform-p1-isolated-20261028",
+    "databaseHost": "127.0.0.1:55432",
+    "apiHost": "127.0.0.1:55431",
+    "loopbackAndProjectLabelVerifiedByRunner": true,
+    "productionConnections": false,
+    "storageEnabled": true
+  },
+  "results": {
+    "full": {
+      "fileCount": 155,
+      "total": 903,
+      "passed": 903,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "startedAt": "2026-10-28T08:28:14.777Z",
+      "suites": [
+        {
+          "file": "lib/theme.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/premium-product-ui.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "scripts/backfill-memory-embeddings.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "scripts/redact-e2e-artifacts.test.ts",
+          "status": "passed",
+          "passed": 1
+        },
+        {
+          "file": "scripts/run-security-integration.test.ts",
+          "status": "passed",
+          "passed": 10
+        },
+        {
+          "file": "app/enter/route.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "components/ai/generation-progress.test.ts",
+          "status": "passed",
+          "passed": 1
+        },
+        {
+          "file": "components/layout/design-foundation.test.ts",
+          "status": "passed",
+          "passed": 7
+        },
+        {
+          "file": "components/layout/navigation.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "components/ui/dropdown.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "lib/ai/agent-config.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "lib/ai/collect-text.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "lib/ai/config.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "lib/ai/read-sse.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "lib/ai/tool-config.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "lib/auth/return-path.test.ts",
+          "status": "passed",
+          "passed": 28
+        },
+        {
+          "file": "features/admin/admin-contract.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/generated-images/storage-target.test.ts",
+          "status": "passed",
+          "passed": 11
+        },
+        {
+          "file": "features/chat/access.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/chat/agent-terminal-sync.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/chat/assistant-identity.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/chat/assistant-selection.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/chat/bootstrap-route.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/chat/client-state.test.ts",
+          "status": "passed",
+          "passed": 10
+        },
+        {
+          "file": "features/chat/composer-state.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "features/chat/edit.test.ts",
+          "status": "passed",
+          "passed": 10
+        },
+        {
+          "file": "features/chat/entry-performance.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/chat/navigation.test.ts",
+          "status": "passed",
+          "passed": 1
+        },
+        {
+          "file": "features/chat/persistence.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/chat/queries.test.ts",
+          "status": "passed",
+          "passed": 1
+        },
+        {
+          "file": "features/chat/schemas.test.ts",
+          "status": "passed",
+          "passed": 14
+        },
+        {
+          "file": "features/chat/use-chat-popstate-sync.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/chat/utils.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/chat/viewport.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/home/presentation.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/auth/actions.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "features/generation/cancel-client.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/generation/client-sse.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/generation/conversation-isolation-contract.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/generation/conversation-registry.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/generation/durable-cancellation.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/generation/recovery-contract.test.ts",
+          "status": "passed",
+          "passed": 14
+        },
+        {
+          "file": "features/generation/runs.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/generation/use-generation-recovery.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/agents/client-state.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/agents/creation-behavior.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/creation-contract.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/agents/data-model.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/agents/deadline.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/events-behavior.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/agents/graph.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/agents/leader.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/logging-contract.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/planner.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/agents/presentation.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/agents/recovery-contract.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/agents/run-state-behavior.test.ts",
+          "status": "passed",
+          "passed": 7
+        },
+        {
+          "file": "features/agents/service.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/agents/status-query.test.ts",
+          "status": "passed",
+          "passed": 1
+        },
+        {
+          "file": "features/agents/status-route.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/terminal-query.test.ts",
+          "status": "passed",
+          "passed": 1
+        },
+        {
+          "file": "features/agents/terminal-route.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/tool-policy.test.ts",
+          "status": "passed",
+          "passed": 10
+        },
+        {
+          "file": "features/agents/ui-contract.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/agents/worker-cancellation-contract.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/worker-context.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/agents/worker-output.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/agents/worker-pool.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/mobile/mobile-experience.test.ts",
+          "status": "passed",
+          "passed": 9
+        },
+        {
+          "file": "features/mobile/mobile-performance-contract.test.ts",
+          "status": "passed",
+          "passed": 9
+        },
+        {
+          "file": "features/tools/database-contract.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/tools/integration-contract.test.ts",
+          "status": "passed",
+          "passed": 7
+        },
+        {
+          "file": "features/tools/output-guard.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/tools/prompts.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/tools/schemas.test.ts",
+          "status": "passed",
+          "passed": 12
+        },
+        {
+          "file": "features/tools/usage.test.ts",
+          "status": "passed",
+          "passed": 19
+        },
+        {
+          "file": "features/tools/utils.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/persona/actions.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/persona/avatar-dialog-ux.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/persona/avatar-service.integration.test.ts",
+          "status": "passed",
+          "passed": 10
+        },
+        {
+          "file": "features/persona/avatar-service.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/persona/chat.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/persona/generation.test.ts",
+          "status": "passed",
+          "passed": 22
+        },
+        {
+          "file": "features/persona/persona-generation-progress.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/persona/prompt.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/persona/queries.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/persona/schemas.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/persona/trash-ux.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/usage/ledger.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/memory/access.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/memory/actions.test.ts",
+          "status": "passed",
+          "passed": 7
+        },
+        {
+          "file": "features/memory/after.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/memory/automatic-chat-flow.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/memory/chat-integration.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "features/memory/database-contract.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/memory/disclosure.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/memory/embedding-lifecycle.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/memory/embedding-text.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/memory/extraction.test.ts",
+          "status": "passed",
+          "passed": 32
+        },
+        {
+          "file": "features/memory/extractor.test.ts",
+          "status": "passed",
+          "passed": 16
+        },
+        {
+          "file": "features/memory/governance.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/memory/proposal-database-contract.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "features/memory/proposal-security-acceptance-contract.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/memory/proposal-service.test.ts",
+          "status": "passed",
+          "passed": 11
+        },
+        {
+          "file": "features/memory/proposal-ui-contract.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "features/memory/proposal-utils.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "features/memory/provider.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/memory/review-service.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/memory/schemas.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/memory/selection.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "features/memory/semantic-database-contract.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "features/memory/semantic-retrieval-flow.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/memory/semantic-retrieval.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/memory/verification-database-contract.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/memory/verification.test.ts",
+          "status": "passed",
+          "passed": 12
+        },
+        {
+          "file": "features/storage/owned-target.test.ts",
+          "status": "passed",
+          "passed": 14
+        },
+        {
+          "file": "tests/integration/memory-proposals.integration.test.ts",
+          "status": "passed",
+          "passed": 9
+        },
+        {
+          "file": "tests/integration/memory-verification.integration.test.ts",
+          "status": "passed",
+          "passed": 1
+        },
+        {
+          "file": "tests/integration/private-asset-storage.integration.test.ts",
+          "status": "passed",
+          "passed": 16
+        },
+        {
+          "file": "tests/integration/rls.security.integration.test.ts",
+          "status": "passed",
+          "passed": 7
+        },
+        {
+          "file": "tests/integration/tool-asset-deletion.integration.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "tests/integration/usage-ledger.integration.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "app/auth/callback/route.test.ts",
+          "status": "passed",
+          "passed": 5
+        },
+        {
+          "file": "lib/ai/embeddings/config.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "lib/ai/embeddings/openai-compatible.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "lib/ai/image/config.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "lib/ai/image/download.test.ts",
+          "status": "passed",
+          "passed": 24
+        },
+        {
+          "file": "lib/ai/image/errors.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "lib/ai/prompts/memory-extractor.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "lib/ai/prompts/persona-assistant.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "lib/ai/prompts/user-memory.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "lib/ai/providers/openai-compatible.test.ts",
+          "status": "passed",
+          "passed": 11
+        },
+        {
+          "file": "lib/ai/vision/config.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "lib/ai/vision/openai-compatible.test.ts",
+          "status": "passed",
+          "passed": 7
+        },
+        {
+          "file": "lib/auth/supabase/middleware.test.ts",
+          "status": "passed",
+          "passed": 15
+        },
+        {
+          "file": "features/tools/brainstorm/config.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/tools/brainstorm/contracts.test.ts",
+          "status": "passed",
+          "passed": 10
+        },
+        {
+          "file": "features/tools/brainstorm/prompts.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "features/tools/brainstorm/service.test.ts",
+          "status": "passed",
+          "passed": 14
+        },
+        {
+          "file": "features/tools/brainstorm/usage-display.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/tools/image/database-contract.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/tools/image/processor.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "features/tools/image/prompt.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/tools/image/usage-display.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "features/tools/image-generation/contracts.test.ts",
+          "status": "passed",
+          "passed": 9
+        },
+        {
+          "file": "features/tools/image-generation/draft.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/tools/image-generation/recovery.test.ts",
+          "status": "passed",
+          "passed": 3
+        },
+        {
+          "file": "features/tools/image-generation/service.integration.test.ts",
+          "status": "passed",
+          "passed": 7
+        },
+        {
+          "file": "tests/e2e/support/isolated-user.test.ts",
+          "status": "passed",
+          "passed": 2
+        },
+        {
+          "file": "tests/e2e/support/runtime-diagnostics.test.ts",
+          "status": "passed",
+          "passed": 8
+        },
+        {
+          "file": "app/api/generated-images/[generatedImageId]/route.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "app/api/personas/generate/route.test.ts",
+          "status": "passed",
+          "passed": 4
+        },
+        {
+          "file": "app/api/tools/run/route.test.ts",
+          "status": "passed",
+          "passed": 6
+        },
+        {
+          "file": "lib/ai/image/providers/zhipu-glm-image.test.ts",
+          "status": "passed",
+          "passed": 10
+        },
+        {
+          "file": "app/api/personas/[personaId]/avatar/generate/route.test.ts",
+          "status": "passed",
+          "passed": 2
+        }
+      ]
+    },
+    "realIntegration": {
+      "fileCount": 6,
+      "total": 42,
+      "passed": 42,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "startedAt": "2026-10-28T08:28:02.000Z",
+      "suites": [
+        {
+          "file": "tests/integration/memory-proposals.integration.test.ts",
+          "status": "passed",
+          "passed": 9,
+          "cases": [
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions uses composite owner FKs permanently and rejects parent ownership changes",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions accepts only active COMPLETE USER sources and cancels pending proposals on chat supersede",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions rejects illegal TTL, target, resolution combinations, and terminal transitions",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions lets users delete formal memories while preserving non-restoring Proposal audit state",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions calls the production service for CREATE, UPDATE, edited accept, reject, expiry, and conflicts",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions never turns a CREATE proposal into an UPDATE after later manual changes",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions keeps a stale UPDATE conflicted while accepting a new target revision",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions is idempotent under duplicate clicks and rolls back Memory if proposal resolution fails",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL memory proposal security and production transactions serializes manual CREATE against Proposal CREATE at 299/300 capacity",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "tests/integration/memory-verification.integration.test.ts",
+          "status": "passed",
+          "passed": 1,
+          "cases": [
+            {
+              "name": "real PostgreSQL memory verification provenance enforces all five methods, trusted paths, review idempotency, and owner isolation",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "tests/integration/private-asset-storage.integration.test.ts",
+          "status": "passed",
+          "passed": 16,
+          "cases": [
+            {
+              "name": "real private Storage deletion and recovery deletes A's object while retaining B's real bytes and denying ordinary JWT removal",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery rejects raw privileged deletion without a durable authorized intent",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery retries after Storage success but DB acknowledgement failure, without deleting B",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery recovers after process death between Storage acknowledgement and DB acknowledgement",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery serializes duplicate consumers and fences late row attachment/key reuse",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery recovers from competing authorized deletion requests without touching B",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery retains cleanup evidence on parent cascade and makes the cleanup table JWT-inaccessible",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery covers avatar and generated-image removal with the same durable authorization boundary",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery keeps upload/compensation intent durable even before a source row exists",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery does not let corrupt avatar/generated references enqueue another owner's legitimate key",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery retains real bytes and the source on injected Storage failure, then completes on retry",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery does not turn a committed source into an upload compensation deletion",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery requires explicit historical bucket authorization for legacy source rows",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery runs the independent cleanup command against durable due intents",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery fences concurrent source attachment against upload compensation",
+              "status": "passed"
+            },
+            {
+              "name": "real private Storage deletion and recovery fails closed for malformed paths and wrong buckets while preserving the other user's bytes",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "tests/integration/rls.security.integration.test.ts",
+          "status": "passed",
+          "passed": 7,
+          "cases": [
+            {
+              "name": "real Supabase JWT and PostgREST RLS attacks allows only the three approved own-profile columns",
+              "status": "passed"
+            },
+            {
+              "name": "real Supabase JWT and PostgREST RLS attacks prevents cross-user profile reads and writes for USER and ADMIN JWTs",
+              "status": "passed"
+            },
+            {
+              "name": "real Supabase JWT and PostgREST RLS attacks exposes own memory verification read-only and hides other owners",
+              "status": "passed"
+            },
+            {
+              "name": "real Supabase JWT and PostgREST RLS attacks lets authenticated users read only their own server-owned rows",
+              "status": "passed"
+            },
+            {
+              "name": "real Supabase JWT and PostgREST RLS attacks rejects INSERT, status forgery, and DELETE on every server-owned table",
+              "status": "passed"
+            },
+            {
+              "name": "real Supabase JWT and PostgREST RLS attacks gives anon no profile, runtime-state, or usage-ledger access",
+              "status": "passed"
+            },
+            {
+              "name": "real Supabase JWT and PostgREST RLS attacks rejects trusted writes with cross-owner proposal relations",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "tests/integration/tool-asset-deletion.integration.test.ts",
+          "status": "passed",
+          "passed": 4,
+          "cases": [
+            {
+              "name": "real database ToolAsset deletion security regression rejects another owner's run ID without calling privileged Storage removal",
+              "status": "passed"
+            },
+            {
+              "name": "real database ToolAsset deletion security regression deletes an owned completed run after successful Storage removal",
+              "status": "passed"
+            },
+            {
+              "name": "real database ToolAsset deletion security regression must retain a durable cleanup basis and refuse success when Storage deletion fails",
+              "status": "passed"
+            },
+            {
+              "name": "real database ToolAsset deletion security regression must reject a corrupted foreign-owner storage path before invoking privileged removal",
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "file": "tests/integration/usage-ledger.integration.test.ts",
+          "status": "passed",
+          "passed": 5,
+          "cases": [
+            {
+              "name": "real PostgreSQL usage ledger keeps chat, tool, image, and Agent usage after user-facing history is deleted",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL usage ledger rolls back a concurrent duplicate Idempotency-Key with no duplicate ToolRun or charge",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL usage ledger lets only one of two different concurrent requests pass a daily limit of one",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL usage ledger reserves only one AgentRun and one charge for a concurrent duplicate request",
+              "status": "passed"
+            },
+            {
+              "name": "real PostgreSQL usage ledger enforces one charge per run across capabilities and records ADMIN usage without limiting it",
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "historicalP0Structural": {
+      "passed": 42,
+      "failed": 0,
+      "scope": "Schema/OpenAPI shapes only; not database, execution or Storage authorization"
+    },
+    "lint": {
+      "exitCode": 0,
+      "warnings": 0
+    },
+    "typecheck": {
+      "exitCode": 0,
+      "strict": true
+    },
+    "database": {
+      "project": "aig-platform-p1-20261028",
+      "migrations": [
+        {
+          "migration_name": "20260711173000_phase_2_foundation",
+          "checksum": "cc0804c53dd1347b3ff05e5cbe6a2142abc508eb28ecb31568c2dc992088cad8",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260712093000_add_message_superseded_at",
+          "checksum": "b700a16d4d1a17d92188b2addb4a1a4d3826d1dad88f9ee86e74aca2c48e0fd1",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260712153000_add_persona_greeting_archived_at",
+          "checksum": "7be8d07b52a13ca2a15cb280f31c8ad7d302827d68f6e98d79e3c335092b523c",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260712190000_add_persona_avatar_image",
+          "checksum": "e1b2ac65fa64d8e6f44731bca0986f52b4e9fd58a62c561e0d7ff7ca70dd22bb",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260713010000_add_memory_foundation",
+          "checksum": "db03ad0a6faf49871dc726a34383c3e655d522c152c902ac123be1936f2387ed",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260713110000_add_memory_governance",
+          "checksum": "18aa61a447c18acc8269d535d2aff2bb6d5f1cd1be163c5aea2c06caea09f702",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260713150000_add_memory_embeddings",
+          "checksum": "6c51ecbd395a59d86148cc1ca3fe622c7b9cc7bf42e7b9e821599bcef975836e",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260713190000_add_tool_runs",
+          "checksum": "c3de3112215d3b6acc7e3219664fe43f1864a77bd60129e612606c9c3f765d61",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260713220000_add_tool_assets",
+          "checksum": "ef7d3180956cf3f90cfa8ce6769e4933870d9c2d8027e4054f3972553de8f62d",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260716190000_add_image_generation_tool",
+          "checksum": "de2e142f93ba2ddb1f1e3bdc84cca72ab46a9cbd7439566454e6083fb5675814",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260717120000_add_generation_recovery",
+          "checksum": "f1ca907b7630c091514a058129d2ebbaeccdd07237264d8fa532b0fd5bd7d5b2",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260717180000_add_brainstorm_workers",
+          "checksum": "5e8cf0f36395faaf77e435a264791f2612ce3fd6c38febb0d73f286b9b6be6b7",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260718160000_add_agent_workers",
+          "checksum": "2189c3801f1afc529d89a13e72df1f5f8f7d7ae8a1df9353024a97784faf0744",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260722120000_security_hardening_rls_usage",
+          "checksum": "6ec46b03633c6cd0c50d60097f7a86a311a695aeee637b8b343c589833f80a98",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260722160000_strengthen_usage_idempotency",
+          "checksum": "989de69debecee212f510d478cf31695a8e3b5d5b5f463599432d598957f4cb5",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260724120000_add_trusted_memory_proposals",
+          "checksum": "70e557b0b8e526474d68bfc31725ed6e604a0daea1580a3447eee10f2eedaf3c",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20260727013753_add_memory_verification",
+          "checksum": "194d1ede89ce3d88fec56e13a7ccfb046584f049bb16cc324319f4f1bb23e97f",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20261028074859_asset_deletion_consistency",
+          "checksum": "4cda2f92ff3332788f7a2c31a6b4830166a1fd337e90028c0445ea6f7ecaa1b1",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20261028080215_asset_deletion_cascade_retry",
+          "checksum": "9c9e26fdf24f4ecc4076c4addfbbed4b212dd4dcf8707c866410eea6f2681e8f",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20261028081301_asset_attachment_fence",
+          "checksum": "186e528c524c72ee8d7d44ad3ac75756d12867c26a9d77ecbdb14e7a182f7484",
+          "applied": true,
+          "localChecksumMatches": true
+        },
+        {
+          "migration_name": "20261028081742_validate_asset_ownership",
+          "checksum": "9df2c3f2c2f5318ae9c706787f22b6ec872f625403aa4f8b8a50a50292348eac",
+          "applied": true,
+          "localChecksumMatches": true
+        }
+      ],
+      "remainingSyntheticAccounts": 0,
+      "cleanup": [
+        {
+          "state": "BLOCKED",
+          "count": 128
+        },
+        {
+          "state": "COMPLETE",
+          "count": 304
+        }
+      ],
+      "storage": [
+        {
+          "id": "p1-generated-images",
+          "public": false,
+          "objects": 0
+        },
+        {
+          "id": "p1-persona-avatars",
+          "public": false,
+          "objects": 0
+        },
+        {
+          "id": "p1-tool-assets",
+          "public": false,
+          "objects": 0
+        }
+      ],
+      "boundary": [
+        {
+          "cleanup_rls": true,
+          "authenticated_select": false,
+          "authenticated_insert": false,
+          "authenticated_update": false,
+          "authenticated_delete": false,
+          "composite_owner_validated": true
+        }
+      ]
+    },
+    "finalMaintenance": {
+      "exitCode": 0,
+      "meaning": "Scan completed; not all objects declared deleted",
+      "expiredFixtureSources": {
+        "scanned": 12,
+        "deleted": 0,
+        "failed": 12
+      },
+      "pending": 0,
+      "blocked": 128,
+      "blockedMeaning": "Intentionally malformed or legacy-unbound synthetic references retained across isolated regression runs; never passed to privileged removal",
+      "actualObjectsRemaining": 0
+    },
+    "faultBoundaries": [
+      "Original four tests use real DB/Auth with mocked removeToolAssets; file unchanged",
+      "New suite uses real Storage; targeted DELETE fetch returns HTTP 503 for one fault test; real bytes checked before/after retry",
+      "A per-task SQL trigger injects DB COMPLETE acknowledgement failure",
+      "A child process exits 73 after actual Storage removal before DB ack",
+      "Next cache/session bridging is mocked where required; no browser or real provider"
+    ],
+    "qualityNotes": [
+      "Suite-level DB fixtures serialized; within-test concurrency remains real",
+      "Prisma deadlock/SSI errors and injected failures are expected assertions, not ignored test failures"
+    ]
+  },
+  "landing": {
+    "verification": "source only",
+    "files": [
+      {
+        "path": "features/landing/art.ts",
+        "sha256": "d8dc11530d190336a812722f66eefd6af2077b79ee7b06b82ebbe19066ba6a49",
+        "actual": "d8dc11530d190336a812722f66eefd6af2077b79ee7b06b82ebbe19066ba6a49",
+        "unchanged": true
+      },
+      {
+        "path": "features/landing/components/landing-page.tsx",
+        "sha256": "5ffba770904b1ded352bbf0af65c6e1babf15467a587862c1a08037e40ddc736",
+        "actual": "5ffba770904b1ded352bbf0af65c6e1babf15467a587862c1a08037e40ddc736",
+        "unchanged": true
+      },
+      {
+        "path": "features/landing/components/landing-runtime.tsx",
+        "sha256": "0a606915f1487ccbe8c65b26a33acbfc86ed517e4ffe841b7fd8ff889c986ac1",
+        "actual": "0a606915f1487ccbe8c65b26a33acbfc86ed517e4ffe841b7fd8ff889c986ac1",
+        "unchanged": true
+      },
+      {
+        "path": "features/landing/components/primitives.tsx",
+        "sha256": "59a1bc8cc1e60137551fd5c52ea235b680541906dac4daf2eb128967f601f75d",
+        "actual": "59a1bc8cc1e60137551fd5c52ea235b680541906dac4daf2eb128967f601f75d",
+        "unchanged": true
+      },
+      {
+        "path": "features/landing/content.ts",
+        "sha256": "458924c6b9050204c8facecf7d7927324fb6a772fa000eabe568e808a420bbb4",
+        "actual": "458924c6b9050204c8facecf7d7927324fb6a772fa000eabe568e808a420bbb4",
+        "unchanged": true
+      },
+      {
+        "path": "features/landing/landing.css",
+        "sha256": "6113bc55a424308f7807d05f66f283d7ae57af37188c8421a1dcc248cb3542d9",
+        "actual": "6113bc55a424308f7807d05f66f283d7ae57af37188c8421a1dcc248cb3542d9",
+        "unchanged": true
+      },
+      {
+        "path": "app/(marketing)/layout.tsx",
+        "sha256": "1ad671b52fc4378ca3c258a422b394f041bfedff805ac0ee59f3dbba7386707a",
+        "actual": "1ad671b52fc4378ca3c258a422b394f041bfedff805ac0ee59f3dbba7386707a",
+        "unchanged": true
+      },
+      {
+        "path": "app/(marketing)/page.tsx",
+        "sha256": "1c268d01009e703bc781ffb842a90767a790d47399f449f56c6d6c76b65ba45c",
+        "actual": "1c268d01009e703bc781ffb842a90767a790d47399f449f56c6d6c76b65ba45c",
+        "unchanged": true
+      },
+      {
+        "path": "app/layout.tsx",
+        "sha256": "e74191d7824e624a9f64d61b28ca812a2e3ca4c3266bc6679dd00fc7a8defd32",
+        "actual": "e74191d7824e624a9f64d61b28ca812a2e3ca4c3266bc6679dd00fc7a8defd32",
+        "unchanged": true
+      },
+      {
+        "path": "app/globals.css",
+        "sha256": "4b0f0523cf007cf76670ab34a71907945dc506e899bf3204a7ffb033804ffcf7",
+        "actual": "4b0f0523cf007cf76670ab34a71907945dc506e899bf3204a7ffb033804ffcf7",
+        "unchanged": true
+      },
+      {
+        "path": "app/(platform)/workspace/page.tsx",
+        "sha256": "ff213f5f3ec6c4521d74b820fab1af127c73385bcaeac25af7a5510e25b8ece1",
+        "actual": "ff213f5f3ec6c4521d74b820fab1af127c73385bcaeac25af7a5510e25b8ece1",
+        "unchanged": true
+      }
+    ],
+    "browserVisualAcceptance": "NOT EXECUTED / NOT AUTHORIZED"
+  },
+  "cleanup": {
+    "taskContainersRemaining": 0,
+    "dockerEngineStillRunning": true,
+    "volumesRetained": true,
+    "userContainersOrProcessesStopped": false
+  },
+  "outstanding": [
+    {
+      "id": "A-MIG-03",
+      "status": "OPEN",
+      "reason": "Default-workdir reset verifier unsafe for explicit isolated target; old upgrade/injected migration rollback not executed this round"
+    },
+    {
+      "id": "REMOTE-CI",
+      "status": "NOT EXECUTED",
+      "reason": "No push/workflow dispatch; required checks unchanged; cannot claim CI green"
+    },
+    {
+      "id": "RESERVED-RECOVERY",
+      "status": "MANUAL RECONCILIATION REQUIRED BEFORE ENABLEMENT",
+      "reason": "No automatic timeout/reaper for potentially in-flight uploads; immutable reservation retained"
+    },
+    {
+      "id": "LEGACY-BUCKET",
+      "status": "DEFAULT DENY; PRODUCTION INVENTORY REQUIRED",
+      "reason": "Explicit proven historical bucket mapping required, no production variables changed"
+    },
+    {
+      "id": "VISUAL",
+      "status": "NOT EXECUTED",
+      "reason": "AGENTS browser prohibition; no UI changes"
+    }
+  ],
+  "verdict": {
+    "A_DEL_01": "LOCAL-VERIFIED",
+    "A_NS_02": "LOCAL-VERIFIED",
+    "P1_A": "SPECIALIZED REMEDIATION PASSED LOCALLY; OVERALL ACCEPTANCE PENDING",
+    "P1_B": "NO-GO; OWNER APPROVAL REQUIRED AFTER A GATE",
+    "P1_C": "NOT STARTED",
+    "productionMergeDeployPublicAccess": "NOT AUTHORIZED / NOT PERFORMED"
+  },
+  "rawEvidence": [
+    {
+      "file": "test-results/local-stage-all-real.json",
+      "sha256": "0d923b86b295cdba6df9b9653f2ac3d6c927b791abbc6d7f110226a227e7a131",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/security-integration-oo8BQ5/report.json",
+      "sha256": "1ae12d393b1ebdcb3f5887e9cb0fdefadb62a3d49e7792a39c973d06f41a54c4",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/remediation-lint.log",
+      "sha256": "26e18605dfaa48aa43aa4d6fcee342c6870d94730bd053d88f47f7f3a978abc6",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/remediation-typecheck.log",
+      "sha256": "5a3973f79ed9becd5f23c4feff467513814de7ea381d75a4d2e339aa8b8edca9",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/remediation-p0.log",
+      "sha256": "52bb63da43126583f3ebd6d003f2d3ef960a1ab2ffbace6b2270ea003c9fcbf2",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/local-stage-metadata.json",
+      "sha256": "69a9b6216e0442a7a2ce60430cf76ce79ab0c7d60efdb64b876e6ad265e041b7",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/local-stage-cleanup.log",
+      "sha256": "560a765a4d4825bcaf4ee74fce7bc7db61c3db00a653ebcc9a3691ccc4a31af7",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/remediation-stop.log",
+      "sha256": "985e5aa3b7c28be643e15ba541453a968ab6e999267d5ad34282c4f3fd09d567",
+      "retention": "ignored local test-results; no credentials published"
+    },
+    {
+      "file": "test-results/remediation-running-containers.jsonl",
+      "sha256": "c364248c79dd23d9945ac800937376555326d1c4adcdf862802edb05bf9dbd9f",
+      "retention": "ignored local test-results; no credentials published"
+    }
+  ]
+}

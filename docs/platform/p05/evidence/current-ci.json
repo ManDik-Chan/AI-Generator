@@ -1,0 +1,802 @@
+{
+  "collectedAt": "2026-10-28T03:52:52.604Z",
+  "source": "Authorized GitHub connector GET; no workflow rerun",
+  "main": {
+    "sha": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+    "tree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+    "url": "https://github.com/ManDik-Chan/AI-Generator/tree/main"
+  },
+  "workflowRuns": [
+    {
+      "id": 40608867988,
+      "headSha": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "success",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867988",
+      "attempt": 2
+    },
+    {
+      "id": 40608867953,
+      "headSha": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "success",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40608867953",
+      "attempt": 1
+    },
+    {
+      "id": 40530960408,
+      "headSha": "228de1cdaff5103b435506c127593fbfba4ab37f",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960408",
+      "attempt": 1
+    },
+    {
+      "id": 40530960195,
+      "headSha": "228de1cdaff5103b435506c127593fbfba4ab37f",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530960195",
+      "attempt": 1
+    },
+    {
+      "id": 40530356687,
+      "headSha": "c2cc702eb17390782c2f69553b8a43ed06420c0c",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530356687",
+      "attempt": 1
+    },
+    {
+      "id": 40530356666,
+      "headSha": "c2cc702eb17390782c2f69553b8a43ed06420c0c",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40530356666",
+      "attempt": 1
+    },
+    {
+      "id": 40529831346,
+      "headSha": "1a76d08da8811c94a586b1be28d4424ed3593f46",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529831346",
+      "attempt": 1
+    },
+    {
+      "id": 40529831302,
+      "headSha": "1a76d08da8811c94a586b1be28d4424ed3593f46",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529831302",
+      "attempt": 1
+    },
+    {
+      "id": 40529306972,
+      "headSha": "d80048a241f2594760445c37e569277b5bec65e5",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529306972",
+      "attempt": 1
+    },
+    {
+      "id": 40529306850,
+      "headSha": "d80048a241f2594760445c37e569277b5bec65e5",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40529306850",
+      "attempt": 1
+    },
+    {
+      "id": 40527413763,
+      "headSha": "317a01873d8638b98c5d371dd211041caa3b9e37",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413763",
+      "attempt": 1
+    },
+    {
+      "id": 40527413667,
+      "headSha": "317a01873d8638b98c5d371dd211041caa3b9e37",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "failure",
+      "headBranch": "codex/claude-landing-delivery",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/40527413667",
+      "attempt": 1
+    },
+    {
+      "id": 30382441452,
+      "headSha": "655e3e915857d9eaa6ddc5d39fb7ed397f6a129d",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "success",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30382441452",
+      "attempt": 1
+    },
+    {
+      "id": 30382440320,
+      "headSha": "655e3e915857d9eaa6ddc5d39fb7ed397f6a129d",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "success",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30382440320",
+      "attempt": 1
+    },
+    {
+      "id": 30379991438,
+      "headSha": "473eae3785160c254f2e72baddd3544646cd13cb",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "success",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30379991438",
+      "attempt": 1
+    },
+    {
+      "id": 30379991412,
+      "headSha": "473eae3785160c254f2e72baddd3544646cd13cb",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "success",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30379991412",
+      "attempt": 1
+    },
+    {
+      "id": 30278163760,
+      "headSha": "89e086d7ba7943cc6147c81ac550de0a1cd873f1",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "success",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30278163760",
+      "attempt": 1
+    },
+    {
+      "id": 30278163753,
+      "headSha": "89e086d7ba7943cc6147c81ac550de0a1cd873f1",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "success",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30278163753",
+      "attempt": 1
+    },
+    {
+      "id": 30263731177,
+      "headSha": "6e24324379ebeb7bce377c2934b4d69a3c7dfc29",
+      "event": "pull_request",
+      "name": "Merge Gates",
+      "conclusion": "failure",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30263731177",
+      "attempt": 1
+    },
+    {
+      "id": 30263731175,
+      "headSha": "6e24324379ebeb7bce377c2934b4d69a3c7dfc29",
+      "event": "pull_request",
+      "name": "Security Acceptance",
+      "conclusion": "success",
+      "headBranch": "codex/phase-5b2a-memory-provenance-transparency",
+      "url": "https://github.com/ManDik-Chan/AI-Generator/actions/runs/30263731175",
+      "attempt": 1
+    }
+  ],
+  "ruleset": {
+    "id": 19544327,
+    "enforcement": "active",
+    "rules": [
+      {
+        "type": "deletion"
+      },
+      {
+        "type": "non_fast_forward"
+      },
+      {
+        "type": "pull_request",
+        "parameters": {
+          "required_approving_review_count": 0,
+          "dismiss_stale_reviews_on_push": false,
+          "required_reviewers": [],
+          "require_code_owner_review": false,
+          "require_last_push_approval": false,
+          "required_review_thread_resolution": true,
+          "require_extra_approval_for_unattributed_changes": true,
+          "allowed_merge_methods": [
+            "merge",
+            "squash",
+            "rebase"
+          ]
+        }
+      },
+      {
+        "type": "required_status_checks",
+        "parameters": {
+          "strict_required_status_checks_policy": true,
+          "do_not_enforce_on_create": false,
+          "required_status_checks": [
+            {
+              "context": "lint",
+              "integration_id": 15368
+            },
+            {
+              "context": "typecheck",
+              "integration_id": 15368
+            },
+            {
+              "context": "unit tests",
+              "integration_id": 15368
+            },
+            {
+              "context": "build",
+              "integration_id": 15368
+            },
+            {
+              "context": "authenticated Playwright",
+              "integration_id": 15368
+            },
+            {
+              "context": "Supabase Security Acceptance",
+              "integration_id": 15368
+            }
+          ]
+        }
+      }
+    ],
+    "bypassActors": []
+  },
+  "latestSecurityJobs": {
+    "jobs": [
+      {
+        "id": 122555153200,
+        "name": "Supabase Security Acceptance",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40608867953,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Install dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Start isolated local Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Apply all migrations to a clean database",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Verify clean migration metadata",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Run real authenticated JWT and PostgREST attacks",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Run real quota and Proposal production-transaction tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Verify old-database upgrade and transaction rollback",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Run static quality gates",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Stop isolated Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Post Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          },
+          {
+            "name": "Post Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 27
+          },
+          {
+            "name": "Post Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29
+          }
+        ]
+      },
+      {
+        "id": 122558086879,
+        "name": "Authenticated E2E (webkit-iphone)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40608867953,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Install dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Start project-isolated local Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Apply all migrations to a clean project database",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Install project browser",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Build the application",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Run ready, isolated authenticated project",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Sanitize authenticated E2E diagnostics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Upload authenticated E2E diagnostics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Stop project-isolated Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Post Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          },
+          {
+            "name": "Post Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 27
+          },
+          {
+            "name": "Post Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29
+          }
+        ]
+      },
+      {
+        "id": 122558086900,
+        "name": "Authenticated E2E (chromium-desktop)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40608867953,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Install dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Start project-isolated local Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Apply all migrations to a clean project database",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Install project browser",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Build the application",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Run ready, isolated authenticated project",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Sanitize authenticated E2E diagnostics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Upload authenticated E2E diagnostics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Stop project-isolated Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Post Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          },
+          {
+            "name": "Post Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 27
+          },
+          {
+            "name": "Post Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29
+          }
+        ]
+      },
+      {
+        "id": 122558086915,
+        "name": "Authenticated E2E (chromium-mobile)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40608867953,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Install dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Start project-isolated local Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Apply all migrations to a clean project database",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Install project browser",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Build the application",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 10
+          },
+          {
+            "name": "Run ready, isolated authenticated project",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 11
+          },
+          {
+            "name": "Sanitize authenticated E2E diagnostics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 12
+          },
+          {
+            "name": "Upload authenticated E2E diagnostics",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Stop project-isolated Supabase",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Post Install Supabase CLI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 25
+          },
+          {
+            "name": "Post Install Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 26
+          },
+          {
+            "name": "Post Install pnpm",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 27
+          },
+          {
+            "name": "Post Check out the exact PR commit",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 28
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 29
+          }
+        ]
+      },
+      {
+        "id": 122560578679,
+        "name": "authenticated Playwright",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40608867953,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Verify authenticated acceptance results",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          }
+        ]
+      }
+    ]
+  }
+}

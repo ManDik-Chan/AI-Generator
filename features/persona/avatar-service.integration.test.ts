@@ -11,6 +11,13 @@ vi.mock("@/lib/ai/image/config", () => ({ requireImageConfig: () => ({ size: "12
 vi.mock("@/lib/ai/image/download", () => ({ downloadRemoteImageSafely: mocks.download }));
 vi.mock("@/features/persona/avatar-storage", () => ({ buildPersonaAvatarStoragePath: (userId: string, personaId: string, imageId: string, extension: string) => `${userId}/${personaId}/${imageId}.${extension}`, uploadPersonaAvatar: mocks.upload, removePersonaAvatar: mocks.remove }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
+// This file tests orchestration with mocked DB/Storage. Durable authorization is
+// exercised independently against PostgreSQL and Storage in tests/integration.
+vi.mock("@/features/storage/deletion", () => ({
+  requestDeletion: vi.fn().mockResolvedValue("intent"),
+  markGeneratedDeletion: vi.fn().mockResolvedValue({ id: "intent" }),
+  performDeletion: async (_id: string, remove: () => Promise<void>) => remove(),
+}));
 
 import { applyPersonaAvatar, deleteGeneratedAvatar, generatePersonaAvatarCandidate } from "@/features/persona/avatar-service";
 

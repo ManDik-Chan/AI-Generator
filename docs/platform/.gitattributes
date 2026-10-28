@@ -1,0 +1,3 @@
+# Keep archived inputs byte-identical to their recorded SHA-256 evidence.
+archive/p0/** -text
+p05/inputs/** -text

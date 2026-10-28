@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aig:p05:assetmetadata:0.5.0",
+  "$ref": "#/$defs/AssetMetadata",
+  "$defs": {
+    "AssetMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "projectId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "sourceDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "deliveryDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "mime": {
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "text/markdown"
+          ]
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2097152
+        },
+        "dataClass": {
+          "enum": [
+            "SYNTHETIC",
+            "PUBLIC_CURATED"
+          ]
+        },
+        "provenance": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "rightsRef": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "rightsExpiresAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "scanRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "state": {
+          "enum": [
+            "QUARANTINED",
+            "VALIDATED",
+            "APPROVED",
+            "REJECTED",
+            "RETIRED"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "projectId",
+        "sourceDigest",
+        "mime",
+        "dataClass",
+        "provenance",
+        "rightsRef",
+        "rightsExpiresAt",
+        "state"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "VALIDATED",
+                  "APPROVED"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "deliveryDigest",
+              "size",
+              "scanRevision"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

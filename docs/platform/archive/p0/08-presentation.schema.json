@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aig:platform:presentation:1.0.0-draft",
+  "title": "AIG Presentation — PROPOSED, NOT IMPLEMENTED",
+  "type": "object", "additionalProperties": false,
+  "required": ["schemaVersion", "projectId", "version", "title", "sections"],
+  "properties": {
+    "schemaVersion": {"const": "1.0.0"},
+    "projectId": {"type": "string", "format": "uuid"},
+    "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$", "maxLength": 80},
+    "title": {"type": "string", "minLength": 1, "maxLength": 120},
+    "sections": {
+      "type": "array", "maxItems": 24,
+      "items": {
+        "oneOf": [
+          {"type": "object", "additionalProperties": false, "required": ["id", "kind", "title", "body", "verification"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "MARKDOWN"}, "title": {"$ref": "#/$defs/title"}, "body": {"type": "string", "maxLength": 20000}, "verification": {"$ref": "#/$defs/verification"}, "sourceAssetIds": {"$ref": "#/$defs/assets"}}},
+          {"type": "object", "additionalProperties": false, "required": ["id", "kind", "title", "metrics"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "BENCHMARKS"}, "title": {"$ref": "#/$defs/title"}, "metrics": {"type": "array", "maxItems": 30, "items": {"$ref": "#/$defs/metric"}}}},
+          {"type": "object", "additionalProperties": false, "required": ["id", "kind", "title", "viewerType", "assetIds", "dataClass"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "VIEWER"}, "title": {"$ref": "#/$defs/title"}, "viewerType": {"enum": ["MESH3D", "IMAGE_STACK", "PLOT"]}, "assetIds": {"$ref": "#/$defs/assets", "minItems": 1}, "dataClass": {"enum": ["SYNTHETIC", "PUBLIC_CURATED"]}}},
+          {"type": "object", "additionalProperties": false, "required": ["id", "kind", "title", "assetIds"], "properties": {"id": {"$ref": "#/$defs/id"}, "kind": {"const": "DOCS"}, "title": {"$ref": "#/$defs/title"}, "assetIds": {"$ref": "#/$defs/assets", "minItems": 1}}}
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,63}$"},
+    "title": {"type": "string", "minLength": 1, "maxLength": 120},
+    "verification": {"enum": ["VERIFIED_SOURCE", "VERIFIED_TEST", "CLAIMED", "UNVERIFIED"]},
+    "assets": {"type": "array", "maxItems": 30, "uniqueItems": true, "items": {"type": "string", "format": "uuid"}},
+    "metric": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "status"],
+      "properties": {"name": {"$ref": "#/$defs/title"}, "status": {"enum": ["UNPUBLISHED", "REPORTED", "REPRODUCED"]}, "value": {"type": "number"}, "unit": {"type": "string", "maxLength": 40}, "dataset": {"type": "string", "maxLength": 200}, "protocol": {"type": "string", "maxLength": 2000}, "evidenceAssetId": {"type": "string", "format": "uuid"}},
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "UNPUBLISHED"}}}, "then": {"not": {"anyOf": [{"required": ["value"]}, {"required": ["unit"]}, {"required": ["dataset"]}, {"required": ["protocol"]}, {"required": ["evidenceAssetId"]}]}}, "else": {"required": ["value", "unit", "dataset", "protocol", "evidenceAssetId"]}}
+      ]
+    }
+  }
+}

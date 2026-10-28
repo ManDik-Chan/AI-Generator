@@ -1,0 +1,201 @@
+{
+  "schemaVersion": "1",
+  "date": "2026-10-28",
+  "status": "Verified-source-only",
+  "mainCommit": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+  "tree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+  "pageFiles": [
+    "app/(auth)/login/page.tsx",
+    "app/(auth)/register/page.tsx",
+    "app/(marketing)/page.tsx",
+    "app/(platform)/workspace/page.tsx",
+    "app/account/page.tsx",
+    "app/admin/page.tsx",
+    "app/agents/page.tsx",
+    "app/agents/[agentRunId]/page.tsx",
+    "app/chat/page.tsx",
+    "app/chat/[conversationId]/page.tsx",
+    "app/memories/page.tsx",
+    "app/personas/page.tsx",
+    "app/personas/new/page.tsx",
+    "app/personas/trash/page.tsx",
+    "app/personas/[personaId]/page.tsx",
+    "app/personas/[personaId]/edit/page.tsx",
+    "app/tools/page.tsx",
+    "app/tools/brainstorm/page.tsx",
+    "app/tools/history/page.tsx",
+    "app/tools/image/page.tsx",
+    "app/tools/image-generate/page.tsx",
+    "app/tools/rewrite/page.tsx",
+    "app/tools/summarize/page.tsx",
+    "app/tools/translate/page.tsx"
+  ],
+  "apiFiles": [
+    {
+      "path": "app/api/agents/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/agents/[agentRunId]/route.ts",
+      "methods": [
+        "GET",
+        "DELETE"
+      ]
+    },
+    {
+      "path": "app/api/agents/[agentRunId]/cancel/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/agents/[agentRunId]/status/route.ts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "app/api/agents/[agentRunId]/terminal/route.ts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "app/api/agents/[agentRunId]/workers/[workerKey]/cancel/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/chat/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/chat/bootstrap/route.ts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "app/api/chat/messages/[assistantMessageId]/cancel/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/chat/messages/[assistantMessageId]/status/route.ts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "app/api/generated-images/[generatedImageId]/route.ts",
+      "methods": [
+        "GET",
+        "DELETE"
+      ]
+    },
+    {
+      "path": "app/api/generation-runs/[runId]/route.ts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "app/api/generation-runs/[runId]/cancel/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/personas/generate/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/personas/[personaId]/avatar/route.ts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "app/api/personas/[personaId]/avatar/apply/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/personas/[personaId]/avatar/generate/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/tools/assets/[assetId]/route.ts",
+      "methods": [
+        "GET"
+      ]
+    },
+    {
+      "path": "app/api/tools/brainstorm/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/tools/image/run/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/tools/image-generate/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/tools/run/route.ts",
+      "methods": [
+        "POST"
+      ]
+    },
+    {
+      "path": "app/api/tools/runs/[runId]/route.ts",
+      "methods": [
+        "GET",
+        "DELETE"
+      ]
+    },
+    {
+      "path": "app/api/tools/runs/[runId]/cancel/route.ts",
+      "methods": [
+        "POST"
+      ]
+    }
+  ],
+  "migrations": [
+    "20260711173000_phase_2_foundation",
+    "20260712093000_add_message_superseded_at",
+    "20260712153000_add_persona_greeting_archived_at",
+    "20260712190000_add_persona_avatar_image",
+    "20260713010000_add_memory_foundation",
+    "20260713110000_add_memory_governance",
+    "20260713150000_add_memory_embeddings",
+    "20260713190000_add_tool_runs",
+    "20260713220000_add_tool_assets",
+    "20260716190000_add_image_generation_tool",
+    "20260717120000_add_generation_recovery",
+    "20260717180000_add_brainstorm_workers",
+    "20260718160000_add_agent_workers",
+    "20260722120000_security_hardening_rls_usage",
+    "20260722160000_strengthen_usage_idempotency",
+    "20260724120000_add_trusted_memory_proposals",
+    "20260727013753_add_memory_verification"
+  ]
+}

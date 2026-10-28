@@ -16,6 +16,11 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/ai/image/registry", () => ({ getImageProvider: () => ({ generateImage: mocks.generate }) }));
 vi.mock("@/lib/ai/image/config", () => ({ requireImageConfig: () => ({ size: "1280x1280" }), requireAvatarStorageConfig: () => ({ bucket: "persona-avatars" }), requireGeneratedImageStorageConfig: () => ({ bucket: "generated-images" }) }));
 vi.mock("@/lib/ai/image/download", () => ({ downloadRemoteImageSafely: mocks.download }));
+vi.mock("@/features/storage/deletion", () => ({
+  requestDeletion: vi.fn().mockResolvedValue("intent"),
+  markGeneratedDeletion: vi.fn().mockResolvedValue({ id: "intent" }),
+  performDeletion: async (_id: string, remove: () => Promise<void>) => remove(),
+}));
 vi.mock("@/features/tools/image-generation/storage", () => ({
   buildGeneratedImageStoragePath: (userId: string, imageId: string, extension: string) => `${userId}/${imageId}.${extension}`,
   uploadGeneratedImage: mocks.upload,

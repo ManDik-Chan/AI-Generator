@@ -1,0 +1,59 @@
+{
+  "date": "2026-10-28",
+  "timezone": "Asia/Singapore",
+  "base": "b7d1e1f05dda563a0179597078e1abb8b7c2f534",
+  "branch": "codex/platform-p1-limited-20261028",
+  "worktree": "D:\\AIGC\\platform-p1-20261028",
+  "initialState": "Clean immediately after git worktree add from b7d1e1f",
+  "main": "e33ac216bdcffc44d12d4b7315e0d6cc48decf5c",
+  "mainTree": "8372e935e331688d6007b3433849c8efa8f6d10e",
+  "openRemotePRs": [
+    {
+      "number": 1,
+      "branch": "test1",
+      "head": "5b521d64bd26c57c6a004d2deac4fb97379562d3",
+      "included": false
+    }
+  ],
+  "sourceCheckout": {
+    "path": "D:/AI-Generator",
+    "head": "317a01873d8638b98c5d371dd211041caa3b9e37",
+    "branch": "codex/ai-mdc-public-home",
+    "status": [
+      " M features/memory/proposal-service.test.ts",
+      " M playwright.config.ts",
+      " M tests/e2e/mobile/authenticated-mobile.spec.ts",
+      " M tests/e2e/mobile/chat-entry-performance.spec.ts",
+      " M tests/e2e/mobile/public-mobile.spec.ts",
+      " M tests/e2e/mobile/responsive-matrix.spec.ts",
+      "?? .agents/",
+      "?? .claude/",
+      "?? .impeccable/",
+      "?? AGENTS.md",
+      "?? DESIGN.md",
+      "?? PRODUCT.md",
+      "?? ai-generator-home/",
+      "?? app/design-preview/",
+      "?? app/phase3d-hero/",
+      "?? app/phase3d-prototype/",
+      "?? docs/handoffs/",
+      "?? docs/planning/",
+      "?? docs/qa/",
+      "?? features/marketing/",
+      "?? public/marketing/",
+      "?? scripts/capture-marketing-product.mjs",
+      "?? scripts/generate-marketing-art.mjs",
+      "?? scripts/phase3a-controlled-smoke.cjs",
+      "?? skills-lock.json",
+      "?? tests/e2e/mobile/marketing.spec.ts"
+    ]
+  },
+  "p05Checkout": {
+    "path": "D:/AIGC/platform-p05-20261028",
+    "head": "b7d1e1f05dda563a0179597078e1abb8b7c2f534",
+    "status": ""
+  },
+  "landingHashesUnchanged": true,
+  "ownerScope": "Limited internal development and isolated tests only; no deployment, production migration, merge, public access, BYOK, arbitrary execution, GPU or CTMR inference",
+  "browserAutomation": "NOT AUTHORIZED / NOT EXECUTED"
+}

@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aig:p05:futurerouting:0.5.0",
+  "$ref": "#/$defs/FutureRouting",
+  "$defs": {
+    "FutureRouting": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stage": {
+          "const": "FUTURE_NOT_IMPLEMENTED"
+        },
+        "operationClass": {
+          "enum": [
+            "ALGORITHM",
+            "PROVIDER"
+          ]
+        },
+        "compute": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "REGISTERED_REMOTE"
+            },
+            "endpointRevisionId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "operationId": {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_]{0,99}$"
+            }
+          },
+          "required": [
+            "kind",
+            "endpointRevisionId",
+            "operationId"
+          ]
+        },
+        "credential": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "NONE"
+                }
+              },
+              "required": [
+                "kind"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "PLATFORM_PROVIDER"
+                },
+                "providerRef": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "model": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                }
+              },
+              "required": [
+                "kind",
+                "providerRef",
+                "model"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "const": "USER_CREDENTIAL"
+                },
+                "credentialId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "grantId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "providerRef": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "model": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 500
+                }
+              },
+              "required": [
+                "kind",
+                "credentialId",
+                "grantId",
+                "providerRef",
+                "model"
+              ]
+            }
+          ]
+        }
+      },
+      "required": [
+        "stage",
+        "operationClass",
+        "compute",
+        "credential"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "operationClass": {
+                "const": "ALGORITHM"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "credential": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "NONE"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "credential": {
+                "not": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {
+                      "const": "NONE"
+                    }
+                  },
+                  "required": [
+                    "kind"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

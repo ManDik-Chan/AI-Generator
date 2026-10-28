@@ -1,0 +1,849 @@
+{
+  "result": "PASS",
+  "checkedAt": "2026-10-28T04:08:55.789595+00:00",
+  "scope": "Offline structural validation and executable specification examples only",
+  "validators": {
+    "jsonschema": "4.26.0",
+    "openapi-spec-validator": "0.9.0",
+    "openapi-schema-validator": "0.9.0"
+  },
+  "p0OriginalCases": [
+    {
+      "name": "manifest/generic-non-AI-showcase",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/remote-with-operation-schema-mapping",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/registered-embed-proposal",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-unknown-field",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-unknown-schema-version",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-slug-in-projectId",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-invalid-slug",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-noncanonical-version",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-duplicate-capability",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-arbitrary-hosted-runtime",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-negative-retention",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-without-consent",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-without-processor",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-arbitrary-endpoint-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-url-as-endpoint-ref",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-openapi-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-missing-operation-map",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-input-schema-ref",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/unpublished-no-fake-value",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/typed-static-viewer",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reported-with-provenance-fields",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-unpublished-zero",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-reported-without-evidence",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-arbitrary-component",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-iframe-section",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-medical-public-viewer",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-javascript-viewer",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/generic-parameter-only",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/upload-awaits-explicit-finalize",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/explicit-byok",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-caller-supplied-owner",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-missing-grant",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-missing-parameters",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-byok-missing-delegation",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-implicit-fallback",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-upload-with-presealed-inputs",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/complete-input-list",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/reject-empty",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/reject-duplicate",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "credential/reject-arbitrary-base-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "callback/typed-event",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "callback/reject-missing-fence",
+      "expected": "reject",
+      "result": "PASS"
+    }
+  ],
+  "p0OriginalPassed": 42,
+  "p05Cases": [
+    {
+      "name": "parser/reject-duplicate-key",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "parser/reject-nan",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "parser/reject-infinity",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/non-ai-manifest",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/draft-without-publishedAt",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/draft-reject-fake-publishedAt",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/draft-reject-owner-injection",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/draft-reject-storage-leak",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/manifest-reject-execution",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/manifest-reject-remote",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/manifest-reject-unknown-version",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/manifest-reject-endpoint",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/unsupported-viewer",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/no-fake-unpublished-zero",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/asset-approved-metadata",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/approved-asset-must-have-delivery-digest",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/asset-body-limit",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "future/algorithm-without-provider",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "future/explicit-user-credential",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "future/no-implicit-provider",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "future/no-key-on-algorithm",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "future/no-secret-field",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "future/no-arbitrary-endpoint",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "future/no-fallback",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/non-ai-accepted",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/reported-metric-evidence",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/reported-metric-closed-reference",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/duplicate-section",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/cross-project",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/version-mismatch",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/cross-project-asset",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/retired-asset",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/sensitive-asset",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/no-rights",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/rights-expired",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/changed-delivery-hash",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/missing-asset",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/unsupported-doc-type",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/self-review",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/stale-review",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/visibility-expansion",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/expired-review",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/expiry-offset-is-instant",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/stale-policy",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/revoked-publisher",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/external-developer",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/stale-epoch",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/archived-project",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/html",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/remote-image",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/dangerous-url",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/reference-link",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/research-reference-representable",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/research-reference",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "semantic/unbacked-experiment",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "structure/sealed-unpublished-version",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/release-schema",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/new-draft-not-read",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/record-fields-not-serialized",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/private-404",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/withdrawn-404",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/wrong-version-404",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/snapshot-digest-mismatch",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/unlisted-direct-read",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "projection/public-leak-field-rejected",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "catalog/public-listed",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "catalog/unlisted-not-listed",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/approved",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/private",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/withdrawn",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/cross-project",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/retired",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/unmapped-source",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/digest-mismatch",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "asset-read/expired",
+      "expected": false,
+      "result": "PASS"
+    },
+    {
+      "name": "state/submit",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "state/withdraw-review",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "state/publish-prepared",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "state/reject-no-approval",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "state/reject-copy-failure",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "state/reject-draft-direct-publish",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "state/reject-archived",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "api/no-future-execution-paths",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "api/public-read-only",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "api/internal-security",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "api/operationIds-unique",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "api/internal-asset-preview",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/embedded-Manifest",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/dependencies-Manifest",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/embedded-Presentation",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/dependencies-Presentation",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/embedded-Draft",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/dependencies-Draft",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/embedded-Version",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/dependencies-Version",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/embedded-Release",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/dependencies-Release",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/embedded-AssetMetadata",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "generation/dependencies-AssetMetadata",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "integrity/inputs",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "integrity/p0Archive",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "integrity/landing-source",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "source/baseline-tree",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "source/no-existing-source-diff",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "source/no-files-outside-docs-platform",
+      "expected": true,
+      "result": "PASS"
+    },
+    {
+      "name": "docs/local-links",
+      "expected": true,
+      "result": "PASS"
+    }
+  ],
+  "p05Passed": 106,
+  "openapi": {
+    "version": "3.1.0",
+    "paths": 21,
+    "operations": 25,
+    "result": "PASS"
+  },
+  "source": {
+    "head": "a0050aaf4fc16e1cadd110918c3354a29e8d99fe",
+    "branch": "codex/platform-p05-convergence-20261028",
+    "trackedBaselineFiles": 618,
+    "existingSourceChanges": [
+      "docs/platform/.gitattributes",
+      "docs/platform/README.md",
+      "docs/platform/archive/p0/00-product-vision.md",
+      "docs/platform/archive/p0/01-source-audit.md",
+      "docs/platform/archive/p0/02-architecture.md",
+      "docs/platform/archive/p0/03-permission-matrix.md",
+      "docs/platform/archive/p0/04-security-threat-model.md",
+      "docs/platform/archive/p0/05-data-model.md",
+      "docs/platform/archive/p0/06-project-manifest.schema.json",
+      "docs/platform/archive/p0/07-api-contract.openapi.yaml",
+      "docs/platform/archive/p0/08-presentation-schema.md",
+      "docs/platform/archive/p0/08-presentation.schema.json",
+      "docs/platform/archive/p0/09-ctmr-reference-adapter.md",
+      "docs/platform/archive/p0/10-release-and-test-gates.md",
+      "docs/platform/archive/p0/11-decisions-and-open-questions.md",
+      "docs/platform/archive/p0/12-ci-and-branch-audit.md",
+      "docs/platform/archive/p0/13-self-audit-and-verdict.md",
+      "docs/platform/archive/p0/README.md",
+      "docs/platform/archive/p0/design/landing-motion-invariants.md",
+      "docs/platform/archive/p0/design/platform-visual-contract.md",
+      "docs/platform/archive/p0/evidence/ci-and-branches.json",
+      "docs/platform/archive/p0/evidence/contract-validation.json",
+      "docs/platform/archive/p0/evidence/ctmr-capability-evidence.json",
+      "docs/platform/archive/p0/evidence/landing-source-hashes.json",
+      "docs/platform/archive/p0/evidence/source-inventory.json",
+      "docs/platform/archive/p0/evidence/source-lock.json",
+      "docs/platform/archive/p0/validation/README.md",
+      "docs/platform/archive/p0/validation/fixture-manifest-remote.json",
+      "docs/platform/archive/p0/validation/fixture-manifest-showcase.json",
+      "docs/platform/archive/p0/validation/fixture-presentation.json",
+      "docs/platform/archive/p0/validation/fixture-run-parameters.json",
+      "docs/platform/archive/p0/validation/fixture-run-upload.json",
+      "docs/platform/archive/p0/validation/generate_openapi.cjs",
+      "docs/platform/archive/p0/validation/validate_contracts.py",
+      "docs/platform/p05/README.md",
+      "docs/platform/p05/architecture.md",
+      "docs/platform/p05/assets.md",
+      "docs/platform/p05/claude-baseline.md",
+      "docs/platform/p05/contracts/README.md",
+      "docs/platform/p05/contracts/assetmetadata.schema.json",
+      "docs/platform/p05/contracts/draft.schema.json",
+      "docs/platform/p05/contracts/futurerouting.schema.json",
+      "docs/platform/p05/contracts/manifest.schema.json",
+      "docs/platform/p05/contracts/non-ai.fixture.json",
+      "docs/platform/p05/contracts/p1.openapi.json",
+      "docs/platform/p05/contracts/presentation.schema.json",
+      "docs/platform/p05/contracts/release.schema.json",
+      "docs/platform/p05/contracts/research.fixture.json",
+      "docs/platform/p05/contracts/version.schema.json",
+      "docs/platform/p05/ctmr-reference.md",
+      "docs/platform/p05/evidence/baseline.json",
+      "docs/platform/p05/evidence/current-ci.json",
+      "docs/platform/p05/evidence/final-audit.json",
+      "docs/platform/p05/evidence/landing-source.json",
+      "docs/platform/p05/evidence/validation.json",
+      "docs/platform/p05/inputs/AIG_P05_P1_Taskbook.md",
+      "docs/platform/p05/inputs/AIG_P0_Independent_Review.md",
+      "docs/platform/p05/inputs/AIG_Platform_Development_Roadmap_v1.0.md",
+      "docs/platform/p05/inputs/independent-validation.json",
+      "docs/platform/p05/inputs/source-checkout-AGENTS.md",
+      "docs/platform/p05/p1-tasks.md",
+      "docs/platform/p05/registry-publication.md",
+      "docs/platform/p05/remediation.md",
+      "docs/platform/p05/security-tests.md",
+      "docs/platform/p05/self-review.md",
+      "docs/platform/p05/validation/.gitignore",
+      "docs/platform/p05/validation/README.md",
+      "docs/platform/p05/validation/capture_baseline.py",
+      "docs/platform/p05/validation/generate_contracts.py",
+      "docs/platform/p05/validation/reference_rules.py",
+      "docs/platform/p05/validation/validate.py"
+    ]
+  },
+  "unexecuted": [
+    "application tests",
+    "new real Auth JWT/GRANT/RLS tests",
+    "storage/CDN/revocation fault tests",
+    "browser visual acceptance",
+    "JCS cross-language vectors",
+    "GPU/Provider/BYOK",
+    "production migrations/deployment"
+  ]
+}

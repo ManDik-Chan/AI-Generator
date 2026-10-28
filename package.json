@@ -14,7 +14,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run tests/integration/usage-ledger.integration.test.ts tests/integration/memory-proposals.integration.test.ts tests/integration/memory-verification.integration.test.ts",
+    "test:integration": "node scripts/run-security-integration.mjs",
     "test:rls": "vitest run tests/integration/rls.security.integration.test.ts",
     "test:e2e": "playwright test",
     "postinstall": "prisma generate",
@@ -23,7 +23,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "memory:embed:backfill": "tsx scripts/backfill-memory-embeddings.ts",
-    "tool-assets:cleanup": "tsx scripts/cleanup-tool-assets.ts"
+    "tool-assets:cleanup": "node --conditions=react-server --import tsx scripts/cleanup-tool-assets.ts"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",

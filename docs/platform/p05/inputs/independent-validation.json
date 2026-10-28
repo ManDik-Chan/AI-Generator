@@ -1,0 +1,251 @@
+{
+  "scope": "Independent read-only validation; original script prefix through 42 fixtures, no fixture writes; no application/DB/GPU tests",
+  "metaschemas": 2,
+  "openapi": "3.2.1",
+  "paths": 20,
+  "operations": 21,
+  "original_cases_passed": 42,
+  "cases": [
+    {
+      "name": "manifest/generic-non-AI-showcase",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/remote-with-operation-schema-mapping",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/registered-embed-proposal",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-unknown-field",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-unknown-schema-version",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-slug-in-projectId",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-invalid-slug",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-noncanonical-version",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-duplicate-capability",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-arbitrary-hosted-runtime",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-negative-retention",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-without-consent",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-without-processor",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-arbitrary-endpoint-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-url-as-endpoint-ref",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-openapi-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-missing-operation-map",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "manifest/reject-remote-input-schema-ref",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/unpublished-no-fake-value",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/typed-static-viewer",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reported-with-provenance-fields",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-unpublished-zero",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-reported-without-evidence",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-arbitrary-component",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-iframe-section",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-medical-public-viewer",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "presentation/reject-javascript-viewer",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/generic-parameter-only",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/upload-awaits-explicit-finalize",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/explicit-byok",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-caller-supplied-owner",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-missing-grant",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-missing-parameters",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-byok-missing-delegation",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-implicit-fallback",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "run/reject-upload-with-presealed-inputs",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/complete-input-list",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/reject-empty",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "finalize/reject-duplicate",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "credential/reject-arbitrary-base-url",
+      "expected": "reject",
+      "result": "PASS"
+    },
+    {
+      "name": "callback/typed-event",
+      "expected": "accept",
+      "result": "PASS"
+    },
+    {
+      "name": "callback/reject-missing-fence",
+      "expected": "reject",
+      "result": "PASS"
+    }
+  ],
+  "additional_probes": [
+    {
+      "probe": "Version cannot represent authorized unpublished draft",
+      "schema_accepts": false,
+      "errors": [
+        "'publishedAt' is a required property"
+      ]
+    },
+    {
+      "probe": "No execution selection for standalone GPU algorithm",
+      "schema_accepts": false,
+      "errors": [
+        "{'mode': 'REMOTE'} is not valid under any of the given schemas"
+      ]
+    },
+    {
+      "probe": "Duplicate presentation section IDs accepted structurally",
+      "schema_accepts": true,
+      "errors": []
+    },
+    {
+      "probe": "SHOWCASE execution capability accepted structurally",
+      "schema_accepts": true,
+      "errors": []
+    }
+  ],
+  "source_snapshot": {
+    "files": 618,
+    "mismatches": [],
+    "note": "Local audit snapshot compared with local PR25 immutable Git objects, not a new remote main verification"
+  }
+}

@@ -1,0 +1,277 @@
+{
+  "classification": "INTERNAL_PRIVATE_REPOSITORY_METADATA",
+  "auditDate": "2026-10-28",
+  "timezone": "Asia/Singapore",
+  "repository": "JNKL0620/CTMR_4C",
+  "commit": "ddb510499a690c286ca607dc876d757c62662813",
+  "tree": "15213cbf95e62d9c37840d4fd2378798df6ec41d",
+  "treeTruncated": false,
+  "treeEntryCount": 673,
+  "executedRuntimeTests": false,
+  "downloadedModelWeights": false,
+  "downloadedMedicalOrMeshAssets": false,
+  "filesRead": [
+    {
+      "path": ".gitattributes",
+      "blobSha": "6c59f74d5562269f4f93f28595921e4e56b765b5",
+      "size": 345
+    },
+    {
+      "path": "LightM-UNet-master/README.md",
+      "blobSha": "c52a018350748c6c8bacdb3bd120b5d0abfe24ab",
+      "size": 5203
+    },
+    {
+      "path": "LightM-UNet-master/infer_single_case.py",
+      "blobSha": "edcdd8ea5816b00db37805e496b1b867031d917b",
+      "size": 2679
+    },
+    {
+      "path": "LightM-UNet-master/lightm-unet/nnunetv2/inference/predict_from_raw_data.py",
+      "blobSha": "afc91e220b01b10cf721c27c30484bc635b3892a",
+      "size": 55211
+    },
+    {
+      "path": "LightM-UNet-master/lightm-unet/nnunetv2/nets/LightMUNet.py",
+      "blobSha": "d0d94ad0d68f367422df687e8400ea21029b0526",
+      "size": 10500
+    },
+    {
+      "path": "LightM-UNet-master/lightm-unet/nnunetv2/training/nnUNetTrainer/nnUNetTrainerLightMUNet.py",
+      "blobSha": "c54d103c75a33e4eade2b1c81f52b4dbd1f8240a",
+      "size": 4627
+    },
+    {
+      "path": "LightM-UNet-master/predictions/dataset.json",
+      "blobSha": "c37990ebc25f6e0867ee1f0bf06639518c0496b3",
+      "size": 287
+    },
+    {
+      "path": "app.py",
+      "blobSha": "c9452a132208b6104583b850004457aaeb4fa526",
+      "size": 22036
+    },
+    {
+      "path": "config.py",
+      "blobSha": "344733f3a1888c40a22a2bb4ffc01fadc0fce7fa",
+      "size": 801
+    },
+    {
+      "path": "core/__init__.py",
+      "blobSha": "1289a97fdc74c4dadc7abdb7429085222e894042",
+      "size": 166
+    },
+    {
+      "path": "core/detection.py",
+      "blobSha": "58e16703b1e02fa6d629b1623b52691a0fec8c14",
+      "size": 3089
+    },
+    {
+      "path": "core/reconstruction.py",
+      "blobSha": "c1b36b1b2b88919ac3d412a208b5e967b2e3287a",
+      "size": 2481
+    },
+    {
+      "path": "core/segmentation.py",
+      "blobSha": "dd944a139ba7168871e5a8b5d9365dad89b231e4",
+      "size": 1548
+    },
+    {
+      "path": "core/threads.py",
+      "blobSha": "4b282cd1902f3063e2c22fef297ef1bfb1fe466c",
+      "size": 4499
+    },
+    {
+      "path": "diagnose_rag.py",
+      "blobSha": "05da9f5170ba9e645f5345f810f5c6d665b7c6d0",
+      "size": 2673
+    },
+    {
+      "path": "improve_model_small/Hybrid_Ghost_MFAF.yaml",
+      "blobSha": "ababaf9f96f26f292f19f177719ce2eb1cce3e96",
+      "size": 2176
+    },
+    {
+      "path": "main.py",
+      "blobSha": "5c83244c6989e8e1a9af9fb9928d6242bb7cdc12",
+      "size": 238
+    },
+    {
+      "path": "models/__init__.py",
+      "blobSha": "3489300cf8b991f8414477470ba1cf91de9817a6",
+      "size": 72
+    },
+    {
+      "path": "models/lightunet_inference.py",
+      "blobSha": "04c8368971acdc1a9a4c0a70a95e62383b0a290c",
+      "size": 1513
+    },
+    {
+      "path": "models/nnunet.py",
+      "blobSha": "556f5f1e29008bf1eee7bc277a1ba29c4b7e0e95",
+      "size": 3195
+    },
+    {
+      "path": "models/yolo.py",
+      "blobSha": "7720d59265ab607792ecf57b453d1fdaa7ca6a8a",
+      "size": 319
+    },
+    {
+      "path": "requirements.txt",
+      "blobSha": "372a1011eacc0eb2710e07470e7976223905cc87",
+      "size": 5704
+    },
+    {
+      "path": "services/rag.py",
+      "blobSha": "47d926da4d892fe5d97085099b753c451e4257cf",
+      "size": 6966
+    },
+    {
+      "path": "setup.py",
+      "blobSha": "bd57cec2c7e388f50e29adb9da71bc3e8df7cd84",
+      "size": 3470
+    },
+    {
+      "path": "ui/advanced_reconstruction_widget.py",
+      "blobSha": "f10faab43abcd133f36cf634b4d0e3be7dcf2c23",
+      "size": 50588
+    },
+    {
+      "path": "ui/main_window.py",
+      "blobSha": "53e3f6b742c929b05bd517fc826f988e203d960b",
+      "size": 80568
+    },
+    {
+      "path": "ui/segmentation_widget.py",
+      "blobSha": "ee0c795dc02ab789c3e073b4e461c9ef49f5dc80",
+      "size": 29045
+    },
+    {
+      "path": "ui/smart_analysis_widget.py",
+      "blobSha": "5f6eaa57b6becda3019ae37f5e2df293dec02a54",
+      "size": 15048
+    },
+    {
+      "path": "ultralytics/__init__.py",
+      "blobSha": "06ee07e308632b8c2d786d772fd6943e832db936",
+      "size": 681
+    },
+    {
+      "path": "医学影像三维重建与病灶智能定位分析系统.md",
+      "blobSha": "869c177ebea9c3e0465fdb587064b08a1a7fa865",
+      "size": 3539
+    }
+  ],
+  "findings": [
+    {
+      "id": "CTMR-01",
+      "level": "Verified",
+      "finding": "PyQt5 desktop entry",
+      "path": "main.py",
+      "lines": [
+        1,
+        12
+      ]
+    },
+    {
+      "id": "CTMR-02",
+      "level": "Verified",
+      "finding": "Actual nnUNetPredictor invocation",
+      "path": "ui/main_window.py",
+      "lines": [
+        60,
+        104
+      ]
+    },
+    {
+      "id": "CTMR-03",
+      "level": "Verified",
+      "finding": "Simulated circular mask in deep segmentation UI",
+      "path": "ui/segmentation_widget.py",
+      "lines": [
+        208,
+        219,
+        551,
+        559
+      ]
+    },
+    {
+      "id": "CTMR-04",
+      "level": "Verified",
+      "finding": "Model metadata required; absent in configured model folder in complete tree",
+      "path": "LightM-UNet-master/lightm-unet/nnunetv2/inference/predict_from_raw_data.py",
+      "lines": [
+        77,
+        88
+      ]
+    },
+    {
+      "id": "CTMR-05",
+      "level": "Verified",
+      "finding": "RTDETR loader; configured detection .pt absent from tree",
+      "path": "models/yolo.py",
+      "lines": [
+        8,
+        12
+      ]
+    },
+    {
+      "id": "CTMR-06",
+      "level": "Verified",
+      "finding": "Mamba implementation in LightMUNet",
+      "path": "LightM-UNet-master/lightm-unet/nnunetv2/nets/LightMUNet.py",
+      "lines": [
+        14,
+        65
+      ]
+    },
+    {
+      "id": "CTMR-07",
+      "level": "Verified",
+      "finding": "No frontend/djangoFatigue/startserve paths in full tree; Web API unverified",
+      "evidence": "recursive tree"
+    },
+    {
+      "id": "CTMR-08",
+      "level": "Verified",
+      "finding": "Local Windows wheel and editable paths",
+      "path": "requirements.txt",
+      "lines": [
+        22,
+        105,
+        128,
+        226,
+        228
+      ]
+    },
+    {
+      "id": "CTMR-09",
+      "level": "Verified",
+      "finding": "GitHub Actions runs total_count=0 when queried",
+      "url": "https://api.github.com/repos/JNKL0620/CTMR_4C/actions/runs?per_page=1"
+    },
+    {
+      "id": "CTMR-10",
+      "level": "Unverified",
+      "finding": "Medical validity, benchmark performance, reproducible inference and public asset authorization not verified"
+    }
+  ],
+  "checkpointPointers": [
+    {
+      "name": "checkpoint_best.pth",
+      "gitBlobSha": "a7529ec8c45c6c44420aaaed0801fb39c9686495",
+      "gitBlobSize": 133,
+      "lfsDeclaredSha256": "1b539cfed3d5947702a8d91b5ca6c2e18710c71898c967f18c90fb8225f12890",
+      "lfsDeclaredSize": 60688223,
+      "objectFetched": false
+    },
+    {
+      "name": "checkpoint_final.pth",
+      "gitBlobSha": "a925a4b86ff688d6cb7f1a6e7511d7e324c45967",
+      "gitBlobSize": 133,
+      "lfsDeclaredSha256": "6e4aa9edf62fe9980ad5274c1374388a876e168a23eb26beb5591e874f410130",
+      "lfsDeclaredSize": 60692365,
+      "objectFetched": false
+    }
+  ]
+}

@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, relative, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash, randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { assertDisposableTarget, bindDisposableLoopback } from "./disposable-supabase.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const databaseUrl = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 assert(databaseUrl, "A disposable TEST_DATABASE_URL is required.");
 assert.equal(process.env.ALLOW_TEST_DATABASE_MUTATIONS, "true", "Mutation safety flag is required.");
 assert.equal(process.env.TEST_DATABASE_CONFIRMED_NON_PRODUCTION, "true", "Non-production confirmation is required.");
+const disposableTarget = assertDisposableTarget();
 
 const commandName = "pnpm";
 const useWindowsShell = process.platform === "win32";
@@ -38,17 +40,26 @@ function safeRun(command, args, options = {}) {
   }
 }
 
-function resetSupabase() {
+async function resetSupabase() {
+  assertDisposableTarget();
   safeRun(
     commandName,
-    ["exec", "supabase", "db", "reset", "--no-seed"],
+    ["exec", "supabase", "db", "reset", "--local", "--no-seed", "--workdir", disposableTarget.workdir],
     { label: "Supabase disposable database reset" },
   );
+  await bindDisposableLoopback(disposableTarget.workdir);
+  assertDisposableTarget();
 }
 
-function restoreCurrentDatabase() {
-  resetSupabase();
+async function restoreCurrentDatabase() {
+  await resetSupabase();
   deploy(join(root, "prisma", "schema.prisma"));
+}
+
+function removeTemporaryTree(directory) {
+  const target=resolve(directory), parent=resolve(tmpdir());
+  assert(relative(parent,target) && !relative(parent,target).startsWith("..") && basename(target).startsWith("ai-generator-migrations-"),"Refusing cleanup outside migration temporary directory");
+  rmSync(target,{recursive:true,force:true});
 }
 
 function makeMigrationTree(filter, mutate) {
@@ -100,7 +111,7 @@ async function seedOldDatabase(db) {
     { id: agentUserMessageId, conversationId, role: "USER", status: "COMPLETE", content: "historical agent" },
     { id: agentAssistantMessageId, conversationId, role: "ASSISTANT", status: "PENDING", content: "" },
   ] });
-  await db.toolRun.create({ data: { id: toolRunId, userId, type: "SUMMARIZE", status: "COMPLETE", options: {}, retainContent: true } });
+  await db.toolRun.create({ data: { id: toolRunId, userId, type: "SUMMARIZE", status: "COMPLETE", options: {}, retainContent: true }, select: { id: true } });
   await db.agentRun.create({ data: {
     id: agentRunId,
     userId,
@@ -139,7 +150,7 @@ async function seedOldDatabase(db) {
     model: "fixture",
     storagePath: `${userId}/synthetic.png`,
     storageBucket: "persona-avatars",
-  } });
+  }, select: { id: true } });
 
   return {
     ids: { userId, adminId, personaId, conversationId, chatMessageId, agentUserMessageId, agentAssistantMessageId, toolRunId, agentRunId, generationRunId, memoryId, generatedImageId },
@@ -158,7 +169,7 @@ async function seedOldDatabase(db) {
 }
 
 async function verifyCleanDatabase() {
-  restoreCurrentDatabase();
+  await restoreCurrentDatabase();
   deploy(join(root, "prisma", "schema.prisma"));
   const db = new PrismaClient({ datasourceUrl: databaseUrl });
   try {
@@ -455,7 +466,7 @@ async function deployWithLockSampling(db) {
 }
 
 async function verifyIncrementalUpgrade() {
-  resetSupabase();
+  await resetSupabase();
   const old = makeMigrationTree((name) => name < securityMigration);
   const beforeVerification = makeMigrationTree(
     (name) => name < verificationMigration,
@@ -562,11 +573,8 @@ async function verifyIncrementalUpgrade() {
       await db.$disconnect();
     }
   } finally {
-    rmSync(old.temporaryRoot, { recursive: true, force: true });
-    rmSync(beforeVerification.temporaryRoot, {
-      recursive: true,
-      force: true,
-    });
+    removeTemporaryTree(old.temporaryRoot);
+    removeTemporaryTree(beforeVerification.temporaryRoot);
   }
 }
 
@@ -579,7 +587,7 @@ async function verifyProposalTransactionalRollback(mode) {
     writeFileSync(migrationPath, sql.replace(/COMMIT;\s*$/, "SELECT 1 / 0;\n\nCOMMIT;\n"), "utf8");
   });
   try {
-    resetSupabase();
+    await resetSupabase();
     let fixture;
     if (mode === "incremental") {
       deploy(base.schema);
@@ -691,9 +699,9 @@ async function verifyProposalTransactionalRollback(mode) {
       await db.$disconnect();
     }
   } finally {
-    rmSync(base.temporaryRoot, { recursive: true, force: true });
-    rmSync(failing.temporaryRoot, { recursive: true, force: true });
-    restoreCurrentDatabase();
+    removeTemporaryTree(base.temporaryRoot);
+    removeTemporaryTree(failing.temporaryRoot);
+    await restoreCurrentDatabase();
   }
 }
 
@@ -715,7 +723,7 @@ async function verifyVerificationTransactionalRollback(mode) {
     );
   });
   try {
-    resetSupabase();
+    await resetSupabase();
     let fixture;
     let verificationFixture;
     if (mode === "incremental") {
@@ -833,10 +841,58 @@ async function verifyVerificationTransactionalRollback(mode) {
       await db.$disconnect();
     }
   } finally {
-    rmSync(base.temporaryRoot, { recursive: true, force: true });
-    rmSync(failing.temporaryRoot, { recursive: true, force: true });
-    restoreCurrentDatabase();
+    removeTemporaryTree(base.temporaryRoot);
+    removeTemporaryTree(failing.temporaryRoot);
+    await restoreCurrentDatabase();
   }
+}
+
+async function applicationSnapshot(db) {
+  const schema=await db.$queryRawUnsafe(`SELECT jsonb_build_object(
+    'columns',(SELECT jsonb_agg(to_jsonb(v) ORDER BY to_jsonb(v)::text) FROM (SELECT table_name,column_name,data_type,udt_name,is_nullable,column_default FROM information_schema.columns WHERE table_schema='public' AND table_name<>'_prisma_migrations') v),
+    'constraints',(SELECT jsonb_agg(to_jsonb(v) ORDER BY to_jsonb(v)::text) FROM (SELECT c.relname,p.conname,pg_get_constraintdef(p.oid) AS definition,p.convalidated FROM pg_constraint p JOIN pg_class c ON c.oid=p.conrelid WHERE c.relnamespace='public'::regnamespace AND c.relname<>'_prisma_migrations') v),
+    'indexes',(SELECT jsonb_agg(to_jsonb(v) ORDER BY to_jsonb(v)::text) FROM (SELECT tablename,indexname,indexdef FROM pg_indexes WHERE schemaname='public' AND tablename<>'_prisma_migrations') v),
+    'triggers',(SELECT jsonb_agg(pg_get_triggerdef(t.oid) ORDER BY pg_get_triggerdef(t.oid)) FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid WHERE c.relnamespace='public'::regnamespace AND NOT t.tgisinternal),
+    'functions',(SELECT jsonb_agg(pg_get_functiondef(p.oid) ORDER BY pg_get_functiondef(p.oid)) FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.prokind='f'),
+    'policies',(SELECT jsonb_agg(to_jsonb(v) ORDER BY to_jsonb(v)::text) FROM (SELECT tablename,policyname,roles,cmd,qual,with_check FROM pg_policies WHERE schemaname='public') v),
+    'grants',(SELECT jsonb_agg(to_jsonb(v) ORDER BY to_jsonb(v)::text) FROM (SELECT grantee,table_name,privilege_type FROM information_schema.role_table_grants WHERE table_schema='public' AND table_name<>'_prisma_migrations') v),
+    'rls',(SELECT jsonb_agg(to_jsonb(v) ORDER BY to_jsonb(v)::text) FROM (SELECT relname,relrowsecurity,relforcerowsecurity FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND relname<>'_prisma_migrations') v)
+  )::text AS snapshot`);
+  const tables=await db.$queryRawUnsafe(`SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations' ORDER BY tablename`);
+  const data=[];
+  for(const {tablename} of tables) {
+    assert(/^[a-z_]+$/.test(tablename));
+    const [row]=await db.$queryRawUnsafe(`SELECT count(*)::int AS count,md5(string_agg(to_jsonb(t)::text,E'\\n' ORDER BY to_jsonb(t)::text)) AS digest FROM public."${tablename}" t`);
+    data.push({table:tablename,...row});
+  }
+  return {schema:JSON.parse(schema[0].snapshot),data};
+}
+
+async function verifyAllTransactionalMigrations() {
+  await resetSupabase();
+  const migrations=readdirSync(join(root,"prisma/migrations"),{withFileTypes:true}).filter(e=>e.isDirectory()).map(e=>e.name).sort();
+  const transactional=migrations.filter(name=>/^BEGIN;/m.test(readFileSync(join(root,"prisma/migrations",name,"migration.sql"),"utf8")));
+  let fixtureSeeded=false;
+  for(const name of transactional) {
+    const prefix=makeMigrationTree(candidate=>candidate<name);
+    try { deploy(prefix.schema); } finally { removeTemporaryTree(prefix.temporaryRoot); }
+    const db=new PrismaClient({datasourceUrl:databaseUrl});
+    try {
+      if(!fixtureSeeded){await seedOldDatabase(db);fixtureSeeded=true;}
+      const before=await applicationSnapshot(db);
+      const original=readFileSync(join(root,"prisma/migrations",name,"migration.sql"),"utf8");
+      assert(/COMMIT;\s*$/.test(original));
+      const injected=original.replace(/COMMIT;\s*$/,"SELECT 1 / 0;\nCOMMIT;\n");
+      assertDisposableTarget();
+      const failed=spawnSync("docker",["exec","-i",`supabase_db_${disposableTarget.project}`,"psql","-U","postgres","-d","postgres","-v","ON_ERROR_STOP=1"],{input:injected,encoding:"utf8",windowsHide:true});
+      assert.notEqual(failed.status,0);
+      assert((failed.stderr??"").includes("division by zero"),"Injected failure must reach the final statement");
+      assert.deepEqual(await applicationSnapshot(db),before,"DDL, grants, policies, triggers and historical rows must roll back together");
+      console.log(`EVIDENCE ${JSON.stringify({kind:"transaction-rollback",migration:name,pass:true,dataLoss:0,snapshotSha256:createHash("sha256").update(JSON.stringify(before)).digest("hex")})}`);
+    } finally { await db.$disconnect(); }
+  }
+  deploy(join(root,"prisma/schema.prisma"));
+  console.log(`all_transactional_migrations_rollback_verified count=${transactional.length}`);
 }
 
 const mode = process.argv[2];
@@ -849,6 +905,8 @@ else if (mode === "incremental") {
   await verifyIncrementalUpgrade();
   await verifyProposalTransactionalRollback("incremental");
   await verifyVerificationTransactionalRollback("incremental");
+} else if(mode==="rollback-all") {
+  await verifyAllTransactionalMigrations();
 } else {
   throw new Error("Usage: node scripts/verify-security-migrations.mjs <clean|incremental>");
 }

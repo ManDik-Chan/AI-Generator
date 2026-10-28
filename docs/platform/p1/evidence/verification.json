@@ -1,0 +1,4919 @@
+{
+  "recordedAt": "2026-10-28T07:20:32.388Z",
+  "phase": "P1-A",
+  "gate": "FAILED",
+  "p1B": "NO-GO",
+  "ciCandidateCommit": "ec8a52a81d368b1a85f30d3d6a6d0a0eaaccd1b7",
+  "testedWorkingTreeIncludesUncommittedDeletionRegression": true,
+  "environment": {
+    "kind": "disposable local Supabase Docker only",
+    "project": "aig-platform-p1-20261028",
+    "database": "127.0.0.1:55432",
+    "api": "127.0.0.1:55431",
+    "node": "v22.23.1",
+    "pnpm": "11.7.0",
+    "supabaseCLI": "2.109.1",
+    "prisma": "6.19.3",
+    "dockerEngine": "29.6.2",
+    "bindAddresses": [
+      "127.0.0.1"
+    ],
+    "storageServiceEnabled": false,
+    "productionAccess": false,
+    "authAccounts": [
+      "USER",
+      "ADMIN"
+    ],
+    "authAccountsDeletedAfterTest": true
+  },
+  "migrations": {
+    "migrationCount": 17,
+    "migrations": [
+      {
+        "migration_name": "20260711173000_phase_2_foundation",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260712093000_add_message_superseded_at",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260712153000_add_persona_greeting_archived_at",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260712190000_add_persona_avatar_image",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260713010000_add_memory_foundation",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260713110000_add_memory_governance",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260713150000_add_memory_embeddings",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260713190000_add_tool_runs",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260713220000_add_tool_assets",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260716190000_add_image_generation_tool",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260717120000_add_generation_recovery",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260717180000_add_brainstorm_workers",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260718160000_add_agent_workers",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260722120000_security_hardening_rls_usage",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260722160000_strengthen_usage_idempotency",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260724120000_add_trusted_memory_proposals",
+        "applied": true,
+        "rolled_back": false
+      },
+      {
+        "migration_name": "20260727013753_add_memory_verification",
+        "applied": true,
+        "rolled_back": false
+      }
+    ],
+    "rlsTables": 16,
+    "syntheticRowsAfterTests": {
+      "profiles": 4,
+      "auth_users": 0
+    }
+  },
+  "existingRealDatabaseAcceptance": {
+    "rawReport": "test-results\\security-integration-V5qpHF\\report.json",
+    "rawSha256": "aca6974e545037743aafa89e26c8399a58630c51aff699dcffe17c6e0c5c3fa6",
+    "success": true,
+    "passed": 22,
+    "failed": 0,
+    "skipped": 0,
+    "total": 22,
+    "suites": [
+      {
+        "file": "tests/integration/memory-proposals.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions uses composite owner FKs permanently and rejects parent ownership changes",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions accepts only active COMPLETE USER sources and cancels pending proposals on chat supersede",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions rejects illegal TTL, target, resolution combinations, and terminal transitions",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions lets users delete formal memories while preserving non-restoring Proposal audit state",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions calls the production service for CREATE, UPDATE, edited accept, reject, expiry, and conflicts",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions never turns a CREATE proposal into an UPDATE after later manual changes",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions keeps a stale UPDATE conflicted while accepting a new target revision",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions is idempotent under duplicate clicks and rolls back Memory if proposal resolution fails",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions serializes manual CREATE against Proposal CREATE at 299/300 capacity",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/memory-verification.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL memory verification provenance enforces all five methods, trusted paths, review idempotency, and owner isolation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/rls.security.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks allows only the three approved own-profile columns",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks prevents cross-user profile reads and writes for USER and ADMIN JWTs",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks exposes own memory verification read-only and hides other owners",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks lets authenticated users read only their own server-owned rows",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks rejects INSERT, status forgery, and DELETE on every server-owned table",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks gives anon no profile, runtime-state, or usage-ledger access",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks rejects trusted writes with cross-owner proposal relations",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/usage-ledger.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL usage ledger keeps chat, tool, image, and Agent usage after user-facing history is deleted",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger rolls back a concurrent duplicate Idempotency-Key with no duplicate ToolRun or charge",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger lets only one of two different concurrent requests pass a daily limit of one",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger reserves only one AgentRun and one charge for a concurrent duplicate request",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger enforces one charge per run across capabilities and records ADMIN usage without limiting it",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "completeAcceptanceWithDeletionRegression": {
+    "rawReport": "test-results\\security-integration-oGGy7z\\report.json",
+    "rawSha256": "364c57e30d5f40f1cc3ea2bed810396ab0d855c1d1bafa5940307f4d80c60439",
+    "success": false,
+    "passed": 24,
+    "failed": 2,
+    "skipped": 0,
+    "total": 26,
+    "suites": [
+      {
+        "file": "tests/integration/memory-proposals.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions uses composite owner FKs permanently and rejects parent ownership changes",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions accepts only active COMPLETE USER sources and cancels pending proposals on chat supersede",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions rejects illegal TTL, target, resolution combinations, and terminal transitions",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions lets users delete formal memories while preserving non-restoring Proposal audit state",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions calls the production service for CREATE, UPDATE, edited accept, reject, expiry, and conflicts",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions never turns a CREATE proposal into an UPDATE after later manual changes",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions keeps a stale UPDATE conflicted while accepting a new target revision",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions is idempotent under duplicate clicks and rolls back Memory if proposal resolution fails",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions serializes manual CREATE against Proposal CREATE at 299/300 capacity",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/memory-verification.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL memory verification provenance enforces all five methods, trusted paths, review idempotency, and owner isolation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/rls.security.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks allows only the three approved own-profile columns",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks prevents cross-user profile reads and writes for USER and ADMIN JWTs",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks exposes own memory verification read-only and hides other owners",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks lets authenticated users read only their own server-owned rows",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks rejects INSERT, status forgery, and DELETE on every server-owned table",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks gives anon no profile, runtime-state, or usage-ledger access",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks rejects trusted writes with cross-owner proposal relations",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/tool-asset-deletion.integration.test.ts",
+        "status": "failed",
+        "tests": [
+          {
+            "name": "real database ToolAsset deletion security regression rejects another owner's run ID without calling privileged Storage removal",
+            "status": "passed"
+          },
+          {
+            "name": "real database ToolAsset deletion security regression deletes an owned completed run after successful Storage removal",
+            "status": "passed"
+          },
+          {
+            "name": "real database ToolAsset deletion security regression must retain a durable cleanup basis and refuse success when Storage deletion fails",
+            "status": "failed"
+          },
+          {
+            "name": "real database ToolAsset deletion security regression must reject a corrupted foreign-owner storage path before invoking privileged removal",
+            "status": "failed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/usage-ledger.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL usage ledger keeps chat, tool, image, and Agent usage after user-facing history is deleted",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger rolls back a concurrent duplicate Idempotency-Key with no duplicate ToolRun or charge",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger lets only one of two different concurrent requests pass a daily limit of one",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger reserves only one AgentRun and one charge for a concurrent duplicate request",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger enforces one charge per run across capabilities and records ADMIN usage without limiting it",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "fullSuiteWithRealDatabase": {
+    "rawReport": "test-results/p1-a-all-real.json",
+    "rawSha256": "dde1033a72a96aa8419925799b65831222854e5894861f2f0a38246377075b34",
+    "success": false,
+    "passed": 870,
+    "failed": 2,
+    "skipped": 0,
+    "total": 872,
+    "suites": [
+      {
+        "file": "lib/theme.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "theme preference parses supported preferences",
+            "status": "passed"
+          },
+          {
+            "name": "theme preference falls back invalid stored values to system",
+            "status": "passed"
+          },
+          {
+            "name": "theme preference resolves system preference",
+            "status": "passed"
+          },
+          {
+            "name": "theme preference initializes before hydration from persistent storage",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/premium-product-ui.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "full product premium UI contract keeps the real three-surface chat layout and mobile drawers",
+            "status": "passed"
+          },
+          {
+            "name": "full product premium UI contract preserves accessible composer send, stop, edit and keyboard behavior",
+            "status": "passed"
+          },
+          {
+            "name": "full product premium UI contract provides persona studio cards, builder sections and mobile preview switching",
+            "status": "passed"
+          },
+          {
+            "name": "full product premium UI contract renders only real memory capacity, filters and semantic status",
+            "status": "passed"
+          },
+          {
+            "name": "full product premium UI contract maps every implemented tool and history action without invented capabilities",
+            "status": "passed"
+          },
+          {
+            "name": "full product premium UI contract keeps privacy switches, quota state and partial-result actions visible",
+            "status": "passed"
+          },
+          {
+            "name": "full product premium UI contract uses the approved light and dark premium tokens across all surfaces",
+            "status": "passed"
+          },
+          {
+            "name": "full product premium UI contract removes the former admin-card visual language and prototype fake data",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "scripts/backfill-memory-embeddings.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory embedding backfill arguments requires exactly one explicit owner scope",
+            "status": "passed"
+          },
+          {
+            "name": "memory embedding backfill arguments supports safe dry-run and bounded batches",
+            "status": "passed"
+          },
+          {
+            "name": "memory embedding backfill arguments guards writes during dry-run and reports only counters",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "scripts/redact-e2e-artifacts.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "authenticated E2E artifact redaction redacts Supabase session wrappers as well as explicit sensitive values",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "scripts/run-security-integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "complete real integration acceptance runner discovers existing and future nested suites without a hand-maintained list",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner accepts only actually executed complete reports",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner rejects an omitted suite even when the process report is green",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner rejects a green report whose assertion count does not match its total",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner rejects an unexpected skipped assertion",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner rejects an unexpected pending assertion",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner rejects an unexpected todo assertion",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner rejects an unexpected failed assertion",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner fails closed before execution when the isolated environment is absent",
+            "status": "passed"
+          },
+          {
+            "name": "complete real integration acceptance runner refuses remote endpoints even with safety flags",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "app/enter/route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "session-aware public platform entry routes according to the authenticated viewer",
+            "status": "passed"
+          },
+          {
+            "name": "session-aware public platform entry routes according to the authenticated viewer",
+            "status": "passed"
+          },
+          {
+            "name": "session-aware public platform entry offers login even when auth configuration is missing",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "components/ai/generation-progress.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "shared generation progress formats elapsed time without inventing a percentage",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "components/layout/design-foundation.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "approved premium application shell provides reading, standard, wide and full layouts",
+            "status": "passed"
+          },
+          {
+            "name": "approved premium application shell keeps only real product destinations in grouped navigation",
+            "status": "passed"
+          },
+          {
+            "name": "approved premium application shell uses a real centered new-chat route in the floating mobile tabbar",
+            "status": "passed"
+          },
+          {
+            "name": "approved premium application shell switches to the mobile shell through 820px and supports 390px structure",
+            "status": "passed"
+          },
+          {
+            "name": "approved premium application shell removes development phases and prototype-only fake features",
+            "status": "passed"
+          },
+          {
+            "name": "approved premium application shell honors reduced motion and mobile safe areas",
+            "status": "passed"
+          },
+          {
+            "name": "approved premium application shell opens the desktop profile menu upward without changing its role links",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "components/layout/navigation.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "application navigation active state only marks home active at the root",
+            "status": "passed"
+          },
+          {
+            "name": "application navigation active state supports explicit route groups without overlapping sibling tools",
+            "status": "passed"
+          },
+          {
+            "name": "application navigation active state all dashboard navigation points to the workspace, independently of public home",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "components/ui/dropdown.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Dropdown placement defaults existing callers to bottom-end",
+            "status": "passed"
+          },
+          {
+            "name": "Dropdown placement maps bottom-end to downward end alignment",
+            "status": "passed"
+          },
+          {
+            "name": "Dropdown placement maps top-end upward without conflicting direction classes",
+            "status": "passed"
+          },
+          {
+            "name": "Dropdown placement keeps every placement free of conflicting axis and margin classes",
+            "status": "passed"
+          },
+          {
+            "name": "Dropdown placement keeps the panel inside the viewport and scrolls long content",
+            "status": "passed"
+          },
+          {
+            "name": "Dropdown placement flips upward and clamps end-aligned menus inside a narrow viewport",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/agent-config.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent AI configuration implements the documented model fallback chains",
+            "status": "passed"
+          },
+          {
+            "name": "Agent AI configuration prefers dedicated Agent models and clamps total timeout",
+            "status": "passed"
+          },
+          {
+            "name": "Agent AI configuration is build-safe when the service is not configured",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/collect-text.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "collectGeneratedText collects the existing provider stream without duplicating SSE parsing",
+            "status": "passed"
+          },
+          {
+            "name": "collectGeneratedText rejects an empty completion",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/config.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "AI configuration reports missing required server configuration",
+            "status": "passed"
+          },
+          {
+            "name": "AI configuration accepts an OpenAI-compatible configuration without provider-specific fields",
+            "status": "passed"
+          },
+          {
+            "name": "AI configuration uses safe defaults for invalid runtime limits",
+            "status": "passed"
+          },
+          {
+            "name": "AI configuration uses persona overrides while falling back to the same provider model",
+            "status": "passed"
+          },
+          {
+            "name": "AI configuration uses low-cost memory defaults and an optional model override",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/read-sse.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "generation SSE client reads progress and done events in order",
+            "status": "passed"
+          },
+          {
+            "name": "generation SSE client surfaces a safe JSON error before streaming starts",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/tool-config.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool AI config falls back to the text model and safe defaults",
+            "status": "passed"
+          },
+          {
+            "name": "tool AI config accepts a dedicated model and validated numeric values",
+            "status": "passed"
+          },
+          {
+            "name": "tool AI config rejects unsafe ranges by using defaults",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/auth/return-path.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "safe platform return paths preserves /workspace",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves /chat/abc?personaId=demo#reply",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves /memories?scope=all",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves /agents/run",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves /tools/image",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves /account",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves /admin",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves /personas/new",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target undefined",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target null",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target ",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target https://evil.test/chat",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target //evil.test/chat",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /\\evil.test",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /chat\\@evil.test",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /chat%2f%2fevil.test",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /chat/%252fexternal",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /chat/%2e%2e/enter",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /chat\n",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /login",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /register",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /enter",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /chat-evil",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /memories-other",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths rejects ambiguous or non-platform target /chat",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths preserves encoded query values without interpreting them as destinations",
+            "status": "passed"
+          },
+          {
+            "name": "safe platform return paths matches route boundaries instead of similarly named public paths",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/admin/admin-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "admin surface security and completeness reads real operational data without selecting prompts, outputs or storage paths",
+            "status": "passed"
+          },
+          {
+            "name": "admin surface security and completeness keeps role changes behind server admin checks and last-admin protection",
+            "status": "passed"
+          },
+          {
+            "name": "admin surface security and completeness provides users, usage, roles, system status and real operations",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/auth/actions.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "auth return flow returns password login to a safe target undefined",
+            "status": "passed"
+          },
+          {
+            "name": "auth return flow returns password login to a safe target /chat/c1?personaId=p",
+            "status": "passed"
+          },
+          {
+            "name": "auth return flow returns password login to a safe target //evil.test/chat",
+            "status": "passed"
+          },
+          {
+            "name": "auth return flow never redirects on rejected credentials",
+            "status": "passed"
+          },
+          {
+            "name": "auth return flow carries safe return targets through signup email and subsequent login",
+            "status": "passed"
+          },
+          {
+            "name": "auth return flow signs out and returns to login",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generated-images/storage-target.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "trusted GeneratedImage Storage target resolves existing Persona paths only to the configured avatar bucket",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target resolves tool images only to the configured generated image bucket",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects paths belonging to another user",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects traversal or encoded path owner-123/../image.png",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects traversal or encoded path owner-123\\image.png",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects traversal or encoded path /owner-123/image.png",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects traversal or encoded path owner-123/image.png\u0000suffix",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects traversal or encoded path owner-123/%2e%2e/image.png",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects traversal or encoded path owner-123%2fother/image.png",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects traversal or encoded path owner-123/image%2epng",
+            "status": "passed"
+          },
+          {
+            "name": "trusted GeneratedImage Storage target rejects malformed kind-specific shapes and unsupported extensions",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/client-state.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent client stream state builds a pending run only from server-confirmed identifiers and mode",
+            "status": "passed"
+          },
+          {
+            "name": "Agent client stream state reduces plan, Worker, synthesis, and terminal events without invented detail",
+            "status": "passed"
+          },
+          {
+            "name": "Agent compact status merge updates progress while retaining full deliverables already observed by SSE or detail fetch",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/creation-behavior.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent plan transaction behavior persists a Standard plan in six database statements",
+            "status": "passed"
+          },
+          {
+            "name": "Agent plan transaction behavior persists a Deep plan in six database statements",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/creation-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent atomic creation and credits contract creates the complete durable send inside one Serializable transaction",
+            "status": "passed"
+          },
+          {
+            "name": "Agent atomic creation and credits contract charges one Standard or two Deep credits at run creation",
+            "status": "passed"
+          },
+          {
+            "name": "Agent atomic creation and credits contract calls Planner only after reserving one durable Provider call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/data-model.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent data model and ownership contract defines AgentRun, AgentWorker and AgentEvent state",
+            "status": "passed"
+          },
+          {
+            "name": "Agent data model and ownership contract binds run, conversation, messages, workers and events with composite ownership",
+            "status": "passed"
+          },
+          {
+            "name": "Agent data model and ownership contract enforces mode, worker, provider-call and event limits in the database",
+            "status": "passed"
+          },
+          {
+            "name": "Agent data model and ownership contract allows authenticated clients to select only their own Agent rows",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/deadline.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent run deadline marks the hard deadline as a timeout",
+            "status": "passed"
+          },
+          {
+            "name": "Agent run deadline keeps explicit cancellation distinct from timeout",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/events-behavior.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent event batch persistence locks once, reads the sequence once, and inserts an ordered batch once",
+            "status": "passed"
+          },
+          {
+            "name": "Agent event batch persistence stays well below the five-second transaction timeout under artificial database delay",
+            "status": "passed"
+          },
+          {
+            "name": "Agent event batch persistence serializes concurrent batches into unique monotonic sequences",
+            "status": "passed"
+          },
+          {
+            "name": "Agent event batch persistence allows sequence 96 but rejects an event beyond the hard limit before insert",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/graph.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Planner DAG validation requires exactly four Standard and six Deep Workers",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Planner DAG validation rejects duplicate, missing, self and cyclic dependencies",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Planner DAG validation rejects Planner attempts to choose tools, models or call counts",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Planner DAG validation computes cycle and depth deterministically",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/leader.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Leader labels every Worker deliverable as untrusted and reports failed Workers without hidden reasoning",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Leader streams only guarded content and blocks a secret pattern before it reaches persistence",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/logging-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent logging contracts does not attach user identity to Agent creation failures",
+            "status": "passed"
+          },
+          {
+            "name": "Agent logging contracts keeps background rejection logs to task metadata and a safe error code",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/planner.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Planner fallback accepts a strict dynamic plan with one Provider call",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Planner fallback uses deterministic fallback for invalid JSON without retry",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Planner fallback uses deterministic fallback for markdown wrapper without retry",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Planner fallback uses deterministic fallback for forbidden field without retry",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Planner fallback uses fallback after a Provider failure without retry",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/presentation.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent progress presentation reports successful synthesis with failed Workers as partial completion",
+            "status": "passed"
+          },
+          {
+            "name": "Agent progress presentation distinguishes dependency waiting, timeout, and explicit cancellation",
+            "status": "passed"
+          },
+          {
+            "name": "Agent run notice presentation shows safe Planner fallback as a warning while PENDING",
+            "status": "passed"
+          },
+          {
+            "name": "Agent run notice presentation shows safe Planner fallback as a warning while COMPLETE",
+            "status": "passed"
+          },
+          {
+            "name": "Agent run notice presentation never presents PLAN_INVALID fallback as a red error",
+            "status": "passed"
+          },
+          {
+            "name": "Agent run notice presentation never presents PLAN_UNSAFE fallback as a red error",
+            "status": "passed"
+          },
+          {
+            "name": "Agent run notice presentation never presents PLAN_PROVIDER_ERROR fallback as a red error",
+            "status": "passed"
+          },
+          {
+            "name": "Agent run notice presentation only presents a run error as destructive when the run truly failed",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/recovery-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent recovery and lifecycle contracts keeps status, cancellation, Worker, Event and Message queries owner scoped",
+            "status": "passed"
+          },
+          {
+            "name": "Agent recovery and lifecycle contracts treats SSE as an observer and registers work independently of request abort",
+            "status": "passed"
+          },
+          {
+            "name": "Agent recovery and lifecycle contracts never invokes Leader with fewer than two successful Workers",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/run-state-behavior.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent cancellation and stale reconciliation behavior atomically converges a stale PENDING run, active Workers, Message, and events",
+            "status": "passed"
+          },
+          {
+            "name": "Agent cancellation and stale reconciliation behavior does not reconcile a still-fresh PENDING run",
+            "status": "passed"
+          },
+          {
+            "name": "Agent cancellation and stale reconciliation behavior cancels all active Workers and the Run with one event batch, then stays idempotent",
+            "status": "passed"
+          },
+          {
+            "name": "Agent cancellation and stale reconciliation behavior rejects a late Worker result after the parent Run is no longer PENDING",
+            "status": "passed"
+          },
+          {
+            "name": "Agent cancellation and stale reconciliation behavior finishes six unfinished Workers with collection updates and one event batch",
+            "status": "passed"
+          },
+          {
+            "name": "Agent cancellation and stale reconciliation behavior preserves a safe Planner fallback code when a run completes successfully",
+            "status": "passed"
+          },
+          {
+            "name": "Agent cancellation and stale reconciliation behavior cancels only the requested Worker and records one event",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/service.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent orchestration service uses exactly one Leader call after at least two successful Workers and persists its final Message",
+            "status": "passed"
+          },
+          {
+            "name": "Agent orchestration service does not reserve or call Leader when fewer than two Workers succeed",
+            "status": "passed"
+          },
+          {
+            "name": "Agent orchestration service records the overall deadline as TIMEOUT without starting Leader",
+            "status": "passed"
+          },
+          {
+            "name": "Agent orchestration service does not report cancellation when terminal persistence fails",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/status-query.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent status query uses one owner-scoped compact query without Event, Credits, content, or deliverables",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/status-route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent status route returns the compact owner status without invoking the full detail query",
+            "status": "passed"
+          },
+          {
+            "name": "Agent status route reconciles an expired PENDING status and reads the terminal snapshot once more",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/terminal-query.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent terminal query loads final Assistant content and Worker deliverables without full-detail overhead",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/terminal-route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent terminal route returns one owner-scoped terminal snapshot with no-store caching",
+            "status": "passed"
+          },
+          {
+            "name": "Agent terminal route stops safely for unauthenticated and unavailable runs",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/tool-policy.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Worker Tool Policy allows reasoning and exposes no tools",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies WEB_SEARCH on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies FILE_READ on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies FILE_WRITE on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies CODE_EXECUTION on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies GIT_READ on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies GIT_WRITE on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies BROWSER on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies MCP on the server",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker Tool Policy denies every named tool",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/ui-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Mode UI and route contracts keeps the full Worker panel out of the ordinary Chat initial module graph",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Mode UI and route contracts scopes Agent mode to one send and restores rejected optimistic requests",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Mode UI and route contracts prevents deleting a running Agent while preserving owner-scoped deletion",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Mode UI and route contracts keeps dynamic Agent history links from prefetching details",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/worker-cancellation-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "single Agent Worker cancellation is owner-scoped, idempotent and does not cancel the run or other Workers",
+            "status": "passed"
+          },
+          {
+            "name": "single Agent Worker cancellation derives ownership from the Supabase server session and returns 404 for foreign IDs",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/worker-context.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Worker context isolation includes only declared COMPLETE dependency deliverables",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker context isolation truncates every optional server summary",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/worker-output.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Worker deliverable protocol accepts strict guarded structured output",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker deliverable protocol persists safe invalid JSON as structured=false without fabricated arrays",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker deliverable protocol rejects credential leakage before persistence",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/agents/worker-pool.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent Worker pool runs independent tasks with a strict concurrency maximum and preserves result slots",
+            "status": "passed"
+          },
+          {
+            "name": "Agent Worker pool waits for dependencies and blocks downstream failures deterministically",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/access.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "conversation ownership always scopes access to both conversation and user",
+            "status": "passed"
+          },
+          {
+            "name": "conversation ownership denies a non-owner delete when no owned row matches",
+            "status": "passed"
+          },
+          {
+            "name": "conversation ownership allows deletion only when one owned row matches",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/agent-terminal-sync.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Agent terminal message synchronization hydrates the existing Assistant message immediately without adding a duplicate",
+            "status": "passed"
+          },
+          {
+            "name": "Agent terminal message synchronization syncs ERROR without inventing answer content",
+            "status": "passed"
+          },
+          {
+            "name": "Agent terminal message synchronization syncs CANCELLED without inventing answer content",
+            "status": "passed"
+          },
+          {
+            "name": "Agent terminal message synchronization cannot write Conversation A terminal content into Conversation B",
+            "status": "passed"
+          },
+          {
+            "name": "Agent terminal message synchronization hydrates Conversation A when its own message list is restored",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/assistant-identity.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "assistant avatar identity passes persona.avatarUrl through without knowing its storage source",
+            "status": "passed"
+          },
+          {
+            "name": "assistant avatar identity uses the default assistant identity when no persona is bound",
+            "status": "passed"
+          },
+          {
+            "name": "assistant avatar identity keeps a persona identity when avatarUrl is empty so PersonaAvatar can show its name fallback",
+            "status": "passed"
+          },
+          {
+            "name": "assistant avatar identity keeps archived historical persona identity",
+            "status": "passed"
+          },
+          {
+            "name": "assistant avatar identity keeps the same persona for pending assistant messages",
+            "status": "passed"
+          },
+          {
+            "name": "assistant avatar identity keeps the same persona for complete assistant messages",
+            "status": "passed"
+          },
+          {
+            "name": "assistant avatar identity keeps the same persona for error assistant messages",
+            "status": "passed"
+          },
+          {
+            "name": "assistant avatar identity never applies the assistant persona to a user message",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/assistant-selection.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "new-chat assistant selector layout removes the old top horizontal selector and mounts the right panel only for a new conversation",
+            "status": "passed"
+          },
+          {
+            "name": "new-chat assistant selector layout offers the default assistant first, active personas, and mobile dialog controls",
+            "status": "passed"
+          },
+          {
+            "name": "new-chat assistant selector layout uses local selection and native history replacement so the draft is not reset",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/bootstrap-route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Chat bootstrap route starts sidebar and Persona reads concurrently after one auth check",
+            "status": "passed"
+          },
+          {
+            "name": "Chat bootstrap route does not query Persona choices for an existing Conversation bootstrap",
+            "status": "passed"
+          },
+          {
+            "name": "Chat bootstrap route rejects an unauthenticated bootstrap before database queries",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/client-state.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "chat client message identity uses a database UUID after turn confirmation",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity uses editLastMessage before turn and never sends a temporary id",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity waits rather than sending editLastMessage without a confirmed conversation",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity replaces both temporary ids without duplicate messages",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity never lets a stale PENDING recovery snapshot regress a terminal message",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity does not erase live partial content with an older empty PENDING snapshot",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity binds a valid live disclosure only to its Assistant Message",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity ignores malformed or zero-count disclosures",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity does not bind disclosure to a terminal error Assistant Message",
+            "status": "passed"
+          },
+          {
+            "name": "chat client message identity does not bind disclosure to a terminal cancelled Assistant Message",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/composer-state.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "chat composer disabled reasons keeps the controlled composer inert until client hydration completes",
+            "status": "passed"
+          },
+          {
+            "name": "chat composer disabled reasons shows the normal prompt when AI is configured and no edit is active",
+            "status": "passed"
+          },
+          {
+            "name": "chat composer disabled reasons shows the AI configuration prompt only when AI is actually unavailable",
+            "status": "passed"
+          },
+          {
+            "name": "chat composer disabled reasons shows an editing prompt without reporting an AI configuration problem",
+            "status": "passed"
+          },
+          {
+            "name": "chat composer disabled reasons returns to normal after cancel and stays in editing mode after a failed edit",
+            "status": "passed"
+          },
+          {
+            "name": "chat composer disabled reasons disables an existing deleted-persona conversation with a recovery prompt",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/edit.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "last user message editing supersedes the target and its PENDING assistant",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing supersedes the target and its COMPLETE assistant",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing supersedes the target and its ERROR assistant",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing supersedes a pending assistant with content \"\"",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing supersedes a pending assistant with content \"partial output\"",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing updates the title only when editing the first active user message",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing rejects a non-last user, another user's absent message and an already superseded target",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing turns a concurrent supersede count mismatch into the required conflict",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing resolves editLastMessage to the last active user",
+            "status": "passed"
+          },
+          {
+            "name": "last user message editing rejects an editLastMessage request after another tab changes the conversation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/entry-performance.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Chat entry performance boundaries keeps new Chat server rendering free of sidebar, Persona, and Agent queries",
+            "status": "passed"
+          },
+          {
+            "name": "Chat entry performance boundaries keeps existing Chat free of full Agent snapshots and the global sidebar query",
+            "status": "passed"
+          },
+          {
+            "name": "Chat entry performance boundaries renders an immediate Lumen Chat shell fallback with a composer-shaped surface",
+            "status": "passed"
+          },
+          {
+            "name": "Chat entry performance boundaries loads non-critical navigation data after the interactive ChatLayout mounts",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/navigation.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "chat home navigation uses a direct, accessible home destination for shared and header links",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/persistence.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "assistant finalization finalizes only an active pending assistant",
+            "status": "passed"
+          },
+          {
+            "name": "assistant finalization does not let a late stream overwrite a superseded assistant",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/queries.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "conversation detail query requests only active messages and returns a refresh-consistent view",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/schemas.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "chat request validation accepts valid content and an optional UUID",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: ''",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: '   '",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 123",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: '123456789'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          },
+          {
+            "name": "chat request validation rejects invalid input: 'hello'",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/use-chat-popstate-sync.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Chat popstate synchronization refreshes when browser history points at a different conversation",
+            "status": "passed"
+          },
+          {
+            "name": "Chat popstate synchronization keeps matching Chat state and unrelated routes untouched",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/utils.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "chat utilities creates a normalized title without another model request",
+            "status": "passed"
+          },
+          {
+            "name": "chat utilities keeps complete turns and appends the current user exactly once",
+            "status": "passed"
+          },
+          {
+            "name": "chat utilities excludes a user turn followed by PENDING assistant",
+            "status": "passed"
+          },
+          {
+            "name": "chat utilities excludes a user turn followed by ERROR assistant",
+            "status": "passed"
+          },
+          {
+            "name": "chat utilities excludes empty, orphaned and superseded messages",
+            "status": "passed"
+          },
+          {
+            "name": "chat utilities applies character and message budgets by whole turns",
+            "status": "passed"
+          },
+          {
+            "name": "chat utilities counts edited user messages toward the daily limit",
+            "status": "passed"
+          },
+          {
+            "name": "chat utilities uses UTC midnight as the daily boundary",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/chat/viewport.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Chat visual viewport tracks keyboard resize and offsetTop without accumulating an offset",
+            "status": "passed"
+          },
+          {
+            "name": "Chat visual viewport keeps a historical reading anchor while the viewport and composer resize",
+            "status": "passed"
+          },
+          {
+            "name": "Chat visual viewport follows the latest message only when the reader is near the bottom",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/home/presentation.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "premium home presentation selects a greeting from the user's local hour",
+            "status": "passed"
+          },
+          {
+            "name": "premium home presentation loads an owned latest conversation without inventing message counts",
+            "status": "passed"
+          },
+          {
+            "name": "premium home presentation provides an honest empty state when no recent conversation exists",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/cancel-client.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "confirmed durable cancellation client returns the real CANCELLED terminal state",
+            "status": "passed"
+          },
+          {
+            "name": "confirmed durable cancellation client returns the real COMPLETE terminal state",
+            "status": "passed"
+          },
+          {
+            "name": "confirmed durable cancellation client returns the real ERROR terminal state",
+            "status": "passed"
+          },
+          {
+            "name": "confirmed durable cancellation client does not claim cancellation when the API fails",
+            "status": "passed"
+          },
+          {
+            "name": "confirmed durable cancellation client rejects an invalid or untrusted status",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/client-sse.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "shared client SSE reader parses application events across transport chunks",
+            "status": "passed"
+          },
+          {
+            "name": "shared client SSE reader surfaces a safe JSON error when no stream was created",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/conversation-isolation-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Conversation generation isolation wiring remounts Chat state at Conversation boundaries and scopes recovery by viewer",
+            "status": "passed"
+          },
+          {
+            "name": "Conversation generation isolation wiring does not let an unmounted Conversation rewrite the active browser URL",
+            "status": "passed"
+          },
+          {
+            "name": "Conversation generation isolation wiring rejects recovery snapshots that belong to another Conversation",
+            "status": "passed"
+          },
+          {
+            "name": "Conversation generation isolation wiring clears the bounded registry before logout",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/conversation-registry.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Conversation-scoped generation registry keeps Chat A and Chat B generation identifiers isolated",
+            "status": "passed"
+          },
+          {
+            "name": "Conversation-scoped generation registry migrates a temporary new-chat token after the server confirms its Conversation ID",
+            "status": "passed"
+          },
+          {
+            "name": "Conversation-scoped generation registry clears mismatched owners and never stores prompt or answer content",
+            "status": "passed"
+          },
+          {
+            "name": "Conversation-scoped generation registry bounds entries and removes terminal fields and logout state",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/durable-cancellation.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "durable cancellation controller aborts a Provider signal after the persisted state stops being PENDING",
+            "status": "passed"
+          },
+          {
+            "name": "durable cancellation controller checks durable state before Provider work starts",
+            "status": "passed"
+          },
+          {
+            "name": "durable cancellation controller does not cancel when a polling query fails",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/recovery-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "durable generation recovery contract keeps the three text tool cards equal without index special-casing",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract registers an already-started promise with Vercel waitUntil",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract treats request abort, stream cancel and enqueue failure as observer detach",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract uses durable, owner-scoped idempotent ToolRun cancellation",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract uses durable, owner-scoped chat cancellation",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract persists chat partial output without completing the message",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract keeps ToolRun partial output recoverable with a short privacy TTL",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract checks durable state around image generation persistence",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract stores persona draft and avatar jobs in GenerationRun",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract recovery only queries existing ids on visibility, pageshow and focus",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract passes the durable cancellation signal to every long-running provider",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract queues explicit cancel intent until a durable id arrives",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract does not call cancel APIs from recovery visibility or unmount effects",
+            "status": "passed"
+          },
+          {
+            "name": "durable generation recovery contract configures long routes for Node.js and a bounded duration",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/runs.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "GenerationRun expiry cleanup physically deletes expired runs before creating a new run",
+            "status": "passed"
+          },
+          {
+            "name": "GenerationRun expiry cleanup retains unexpired runs by using an expiry predicate",
+            "status": "passed"
+          },
+          {
+            "name": "GenerationRun expiry cleanup does not block a new run or log its input when cleanup fails",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/generation/use-generation-recovery.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "generation recovery single-flight coalesces concurrent timer/focus/pageshow checks into one request",
+            "status": "passed"
+          },
+          {
+            "name": "generation recovery terminal synchronization polls PENDING, awaits one terminal hydration, then settles and stops",
+            "status": "passed"
+          },
+          {
+            "name": "generation recovery terminal synchronization keeps the recovery record and retries cached terminal hydration with bounded backoff",
+            "status": "passed"
+          },
+          {
+            "name": "generation recovery terminal synchronization stops safely on 401/404 semantics",
+            "status": "passed"
+          },
+          {
+            "name": "generation recovery terminal synchronization aborts an in-flight terminal sync without settling or publishing later state",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/mobile/mobile-experience.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Phase 6B2 mobile experience contracts keeps zoom enabled and a device-width viewport",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts defines dvh/svh fallbacks and every shared safe-area token",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts uses document scrolling for ordinary pages at every width",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts updates the Chat-scoped VisualViewport through requestAnimationFrame and cleans every listener",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts uses 16px mobile fields without disabling browser zoom",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts keeps Chat as one message scroller with a growing bounded composer",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts keeps long Markdown inside its own content boundary",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts uses mobile sheets and collision-aware portal menus",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2 mobile experience contracts retains reduced motion, theme tokens, and 44px touch targets",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/mobile/mobile-performance-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts never moves the document when the Chat composer receives focus",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts limits VisualViewport layout writes to the mobile Chat shell",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts splits ordinary document scrolling from fixed viewport workspaces",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts uses fluid desktop widths instead of the old poster width",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts renders the home body on the server without Framer Motion",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts deduplicates request auth and streams personalized home data",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts disables automatic prefetch for growing dynamic lists",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts does not speculate routes from always-visible post-login navigation",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6B2.1 performance and scrolling contracts provides immediate navigation feedback without an artificial delay",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/access.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory relation ownership checks PERSONA scope against the current owner",
+            "status": "passed"
+          },
+          {
+            "name": "memory relation ownership accepts only an active COMPLETE USER message from an owned conversation",
+            "status": "passed"
+          },
+          {
+            "name": "memory relation ownership rejects a message that does not match the owned active source",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/actions.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory deletion forces browser-created memory through the manual verification mapping",
+            "status": "passed"
+          },
+          {
+            "name": "memory deletion maps an owner-scoped review miss to NOT_FOUND",
+            "status": "passed"
+          },
+          {
+            "name": "memory deletion updates the master switch without starting a redundant page revalidation stream",
+            "status": "passed"
+          },
+          {
+            "name": "memory deletion deletes an owned memory and revalidates the memory page",
+            "status": "passed"
+          },
+          {
+            "name": "memory deletion classifies known Prisma relation conflict P2003 as CONFLICT",
+            "status": "passed"
+          },
+          {
+            "name": "memory deletion classifies known Prisma relation conflict P2014 as CONFLICT",
+            "status": "passed"
+          },
+          {
+            "name": "memory deletion returns a generic failure and logs only a sanitized error code for unknown errors",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/after.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Next after memory scheduling registers without awaiting the extraction task",
+            "status": "passed"
+          },
+          {
+            "name": "Next after memory scheduling catches background errors with safe identifiers only",
+            "status": "passed"
+          },
+          {
+            "name": "Next after memory scheduling logs the real provider code and status without prompt or credentials",
+            "status": "passed"
+          },
+          {
+            "name": "Next after memory scheduling logs reasoning-only counts without logging reasoning text",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/automatic-chat-flow.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "non-blocking automatic memory chat flow emits done before automatic extraction and only on successful finalization",
+            "status": "passed"
+          },
+          {
+            "name": "non-blocking automatic memory chat flow does not use detached fire-and-forget extraction",
+            "status": "passed"
+          },
+          {
+            "name": "non-blocking automatic memory chat flow keeps chat state and uses shallow history for a new conversation",
+            "status": "passed"
+          },
+          {
+            "name": "non-blocking automatic memory chat flow uses a stable Chat-shaped loading boundary instead of a blocking spinner",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/chat-integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory chat integration boundaries loads enabled owned memories and emits the selected DTO directly",
+            "status": "passed"
+          },
+          {
+            "name": "memory chat integration boundaries updates lastUsedAt only after the assistant is finalized COMPLETE",
+            "status": "passed"
+          },
+          {
+            "name": "memory chat integration boundaries emits disclosure only after COMPLETE finalization and before done",
+            "status": "passed"
+          },
+          {
+            "name": "memory chat integration boundaries renders live disclosure only for a completed Assistant Message",
+            "status": "passed"
+          },
+          {
+            "name": "memory chat integration boundaries keeps memory retrieval best-effort and never logs memory content",
+            "status": "passed"
+          },
+          {
+            "name": "memory chat integration boundaries does not present manual saving as a per-message primary action",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/database-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory database contract defines the scope, origin, master switch and nullable source relation",
+            "status": "passed"
+          },
+          {
+            "name": "memory database contract backfills existing rows and enforces importance and scope checks",
+            "status": "passed"
+          },
+          {
+            "name": "memory database contract keeps browser memory access owner-scoped and read-only",
+            "status": "passed"
+          },
+          {
+            "name": "memory database contract makes every policy creation structurally repeatable",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/disclosure.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "ChatMemoryDisclosure contract uses a versioned DTO whitelist from the final selected memories",
+            "status": "passed"
+          },
+          {
+            "name": "ChatMemoryDisclosure contract accepts zero references but rejects mismatched counts",
+            "status": "passed"
+          },
+          {
+            "name": "ChatMemoryDisclosure contract matches the exact Memory contents injected into the Prompt",
+            "status": "passed"
+          },
+          {
+            "name": "ChatMemoryDisclosure contract enforces eight items and the 2400-character budget",
+            "status": "passed"
+          },
+          {
+            "name": "ChatMemoryDisclosure contract rejects extra SSE fields instead of accepting diagnostics",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/embedding-lifecycle.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory embedding lifecycle generates and upserts after a new or changed memory without modifying the Memory row",
+            "status": "passed"
+          },
+          {
+            "name": "memory embedding lifecycle skips provider calls when content hash, model and dimensions are current",
+            "status": "passed"
+          },
+          {
+            "name": "memory embedding lifecycle does not depend on pinned, useCount or lastUsedAt changes",
+            "status": "passed"
+          },
+          {
+            "name": "memory embedding lifecycle keeps embedding failures isolated and safe",
+            "status": "passed"
+          },
+          {
+            "name": "memory embedding lifecycle indexes every memory changed by one automatic extraction source message",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/embedding-text.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory embedding input uses stable business text and excludes ownership and usage metadata",
+            "status": "passed"
+          },
+          {
+            "name": "memory embedding input produces deterministic SHA-256 hashes",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/extraction.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "automatic memory extraction protocol filters low-value message 你好 locally",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol filters low-value message 谢谢。 locally",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol filters low-value message 好的 locally",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol filters low-value message 继续！ locally",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol filters low-value message 明白了 locally",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol filters low-value message ... locally",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol filters low-value message    locally",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol allows durable statement 以后回答先给结论，再解释。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol allows durable statement 我正在长期准备研究生考试。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol does not discard a short but explicit durable statement",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol accepts at most three strict operations",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol requires a candidate UUID for UPDATE and strips model-owned fields",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command 请记住：我的显卡是 RTX 5080。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command ChatGPT，请你记住我喜欢先看结论。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command 以后请记得回答时先给结论。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command 别忘了我不吃香菜。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command 把我的默认语言记下来：中文。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command 我的显卡换成 RTX 5080 了，记住一下。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command 请记住这个。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol recognizes only explicit assistant-facing command 对，就这些，帮我记住。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 我终于记住了：我的电脑配置是 RTX 5080。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 你记住我的配置了吗？",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 这篇文章让我记住了保持耐心。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 我记不住这些命令。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 我不需要你记住我的配置。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 他说“请记住我的地址”。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 文章里写着：别忘了每天备份。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 普通陈述里提到记住并不等于请求保存。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 记住很难。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol fails closed to Proposal for non-command expression 记住我的配置很重要。",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol requires extracted facts to be traceable to user messages",
+            "status": "passed"
+          },
+          {
+            "name": "automatic memory extraction protocol limits and deterministically ranks existing candidates",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/extractor.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "trusted memory proposal extraction persists an implicit fact only as a pending proposal",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction does not create a proposal for ignored, weak, unsafe, or credential output",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction does not create a proposal for ignored, weak, unsafe, or credential output",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction does not create a proposal for ignored, weak, unsafe, or credential output",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction does not create a proposal for ignored, weak, unsafe, or credential output",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction does not create a proposal for ignored, weak, unsafe, or credential output",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction does not create a proposal for ignored, weak, unsafe, or credential output",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction requires traceable USER evidence for implicit proposals",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction does not call the provider when memory is disabled or messages are ineligible",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction suppresses an equivalent rejected fact even from a replayed source",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction captures the target updatedAt snapshot for UPDATE",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction converts same-topic CREATE into a version-protected UPDATE proposal",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction deduplicates equivalent operations in one model batch before INSERT",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction keeps two genuinely different facts from the same source message",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction routes a non-command statement containing '记住' to Proposal",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal extraction preserves explicit 'remember this' as a trusted formal write",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/governance.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory governance contract validates topic keys and normalizes keywords",
+            "status": "passed"
+          },
+          {
+            "name": "memory governance contract uses a safe default capacity",
+            "status": "passed"
+          },
+          {
+            "name": "memory governance contract boosts keyword matches and recalls CPU configuration",
+            "status": "passed"
+          },
+          {
+            "name": "memory governance contract boosts pinned memories without bypassing disabled filtering",
+            "status": "passed"
+          },
+          {
+            "name": "memory governance contract selects at most one memory per topic and supports overview intent",
+            "status": "passed"
+          },
+          {
+            "name": "memory governance contract adds independent schema migration defaults and checks",
+            "status": "passed"
+          },
+          {
+            "name": "memory governance contract increments only injected memories after successful completion",
+            "status": "passed"
+          },
+          {
+            "name": "memory governance contract keeps pinning owned and exposes governance UI without internal topics",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/proposal-database-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "trusted memory proposal database contract uses an independent versioned model with target snapshots and expiry",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal database contract cascades with Profile and safely nulls deleted sources and memories",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal database contract enforces same-owner Persona, source, target, and resolution relationships",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal database contract enforces a strict 30-day TTL and one-way terminal state machine",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal database contract allows authenticated users to SELECT only their own proposals",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal database contract keeps proposals outside formal recall and embedding tables",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/proposal-security-acceptance-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Proposal Security Acceptance wiring runs the real Proposal production-transaction suite fail-closed",
+            "status": "passed"
+          },
+          {
+            "name": "Proposal Security Acceptance wiring uses a deterministic provider through the real chat route",
+            "status": "passed"
+          },
+          {
+            "name": "Proposal Security Acceptance wiring keeps the requested responsive matrix executable",
+            "status": "passed"
+          },
+          {
+            "name": "Proposal Security Acceptance wiring isolates each authenticated browser project and retains sanitized diagnostics",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/proposal-service.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "trusted memory proposal resolution retries PostgreSQL 40001 when Prisma wraps raw SQL as P2010",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution accepts CREATE exactly once and atomically resolves the proposal",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution makes a repeated accept idempotent",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution accepts UPDATE only against the matching version snapshot",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution keeps an UPDATE proposal pending when the target changed",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution never downgrades a deleted UPDATE target to CREATE",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution revalidates edited content and rejects server-owned field forgery",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution blocks acceptance while the master memory switch is off",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution expires stale proposals instead of writing formal memory",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution rejects only the owner's pending proposal without touching Memory",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal resolution returns one unauthorized result for a foreign proposal id",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/proposal-ui-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "trusted memory proposal UI contract clearly separates proposals from confirmed memory",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal UI contract offers only per-proposal accept, edit-and-accept, and reject",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal UI contract stacks UPDATE comparison on narrow screens",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal UI contract catches client failures and removes database-terminal cards",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal UI contract uses a minimal derived browser DTO",
+            "status": "passed"
+          },
+          {
+            "name": "trusted memory proposal UI contract does not show proposals as indexed or counted formal memory",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/proposal-utils.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory proposal idempotency and rejection suppression separates source replay idempotency from cross-message rejection suppression",
+            "status": "passed"
+          },
+          {
+            "name": "memory proposal idempotency and rejection suppression normalizes NFKC, case, whitespace, punctuation and keyword order",
+            "status": "passed"
+          },
+          {
+            "name": "memory proposal idempotency and rejection suppression includes target revision in replay idempotency but not rejection suppression",
+            "status": "passed"
+          },
+          {
+            "name": "memory proposal idempotency and rejection suppression keeps rejection suppression stable when the same fact changes action",
+            "status": "passed"
+          },
+          {
+            "name": "memory proposal idempotency and rejection suppression does not collapse two genuinely different facts from one source message",
+            "status": "passed"
+          },
+          {
+            "name": "memory proposal idempotency and rejection suppression uses an exact thirty-day expiry",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/provider.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory provider retry policy falls back once when a dedicated model is NOT_FOUND",
+            "status": "passed"
+          },
+          {
+            "name": "memory provider retry policy does not repeat NOT_FOUND when the models are identical",
+            "status": "passed"
+          },
+          {
+            "name": "memory provider retry policy retries RATE_LIMITED once after at most two seconds",
+            "status": "passed"
+          },
+          {
+            "name": "memory provider retry policy does not retry TIMEOUT or AUTHENTICATION",
+            "status": "passed"
+          },
+          {
+            "name": "memory provider retry policy does not retry or fall back for HTTP 400 INVALID_REQUEST",
+            "status": "passed"
+          },
+          {
+            "name": "memory provider retry policy keeps partial text from INVALID_RESPONSE for JSON parsing",
+            "status": "passed"
+          },
+          {
+            "name": "memory provider retry policy retries an empty response once with thinking disabled and temperature zero",
+            "status": "passed"
+          },
+          {
+            "name": "memory provider retry policy stops after one empty-response fallback",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/review-service.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "legacy memory review service atomically changes only owned legacy verification fields",
+            "status": "passed"
+          },
+          {
+            "name": "legacy memory review service returns idempotent success after an already completed review",
+            "status": "passed"
+          },
+          {
+            "name": "legacy memory review service does not reveal a cross-owner memory",
+            "status": "passed"
+          },
+          {
+            "name": "legacy memory review service maps a sanitized manual edit to MANUAL_REVIEW",
+            "status": "passed"
+          },
+          {
+            "name": "legacy memory review service does not change verification when the form only toggles enabled",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/schemas.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory input safety accepts global and persona-scoped manual memories",
+            "status": "passed"
+          },
+          {
+            "name": "memory input safety requires a persona only for PERSONA scope",
+            "status": "passed"
+          },
+          {
+            "name": "memory input safety requires complete chat source metadata",
+            "status": "passed"
+          },
+          {
+            "name": "memory input safety normalizes exact duplicates and rejects high-confidence credentials",
+            "status": "passed"
+          },
+          {
+            "name": "memory input safety rejects browser-controlled verification fields",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/selection.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "deterministic memory selection tokenizes Chinese bigrams and English deterministically",
+            "status": "passed"
+          },
+          {
+            "name": "deterministic memory selection keeps global and matching persona memories isolated",
+            "status": "passed"
+          },
+          {
+            "name": "deterministic memory selection excludes disabled and respects whole-item budgets",
+            "status": "passed"
+          },
+          {
+            "name": "deterministic memory selection allows at most two unrelated high-importance fallbacks",
+            "status": "passed"
+          },
+          {
+            "name": "memory selection limits never exceeds the item limit",
+            "status": "passed"
+          },
+          {
+            "name": "memory selection limits produces the same order for the same input",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/semantic-database-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "pgvector memory contract creates a separate fixed-dimension vector table without an ANN index",
+            "status": "passed"
+          },
+          {
+            "name": "pgvector memory contract contains a repeatable read-only owner RLS policy",
+            "status": "passed"
+          },
+          {
+            "name": "pgvector memory contract uses parameterized cosine SQL with owner/persona/model/dimension/threshold/limit filters and never selects vectors",
+            "status": "passed"
+          },
+          {
+            "name": "pgvector memory contract does not modify deployed migrations",
+            "status": "passed"
+          },
+          {
+            "name": "pgvector memory contract schedules lifecycle sync only after a formal memory write",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/semantic-retrieval-flow.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "semantic retrieval flow off mode never calls the embedding provider",
+            "status": "passed"
+          },
+          {
+            "name": "semantic retrieval flow adaptive low-match mode embeds the query once and admits semantic candidates",
+            "status": "passed"
+          },
+          {
+            "name": "semantic retrieval flow missing configuration and unavailable vectors fall back without a provider call",
+            "status": "passed"
+          },
+          {
+            "name": "semantic retrieval flow provider and pgvector failures return deterministic results with safe diagnostics",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/semantic-retrieval.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "adaptive semantic recall keeps off disabled and always limited to rounds with candidates",
+            "status": "passed"
+          },
+          {
+            "name": "adaptive semantic recall skips trivial and strong deterministic queries but runs for low match and memory intent",
+            "status": "passed"
+          },
+          {
+            "name": "hybrid reciprocal rank fusion keeps direct keyword matches trusted while admitting semantic-only memories",
+            "status": "passed"
+          },
+          {
+            "name": "hybrid reciprocal rank fusion deduplicates topics, filters disabled/persona mismatches and obeys item and character budgets stably",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/verification-database-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory verification database contract adds the five verification methods without replacing origin",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification database contract uses an explicit transactional migration and the required backfill",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification database contract enforces timestamp equivalence and one useful owner filter index",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification database contract does not add verification-only changes to revision semantics or rewrite RLS",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/memory/verification.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory verification labels and trusted writes maps MANUAL_ENTRY to one user-visible label",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps EXPLICIT_REQUEST to one user-visible label",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps PROPOSAL_ACCEPTANCE to one user-visible label",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps MANUAL_REVIEW to one user-visible label",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps LEGACY_UNREVIEWED to one user-visible label",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes keeps origin MANUAL visibly distinct from verification",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes keeps origin CHAT_MESSAGE visibly distinct from verification",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes keeps origin AUTO_EXTRACTED visibly distinct from verification",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps server source MANUAL_CREATE to MANUAL_ENTRY",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps server source EXPLICIT_REQUEST to EXPLICIT_REQUEST",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps server source PROPOSAL_ACCEPTANCE to PROPOSAL_ACCEPTANCE",
+            "status": "passed"
+          },
+          {
+            "name": "memory verification labels and trusted writes maps server source MANUAL_EDIT to MANUAL_REVIEW",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/actions.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona mutations creates a persona with an automatically built system prompt",
+            "status": "passed"
+          },
+          {
+            "name": "persona mutations updates only an owned persona and rejects a missing owner match",
+            "status": "passed"
+          },
+          {
+            "name": "persona mutations clears optional fields to null when editing",
+            "status": "passed"
+          },
+          {
+            "name": "persona mutations moves to trash and restores by changing only archivedAt",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/avatar-dialog-ux.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "controlled persona avatar dialog UX shows a direct AI avatar action and keeps the dialog outside the conditional menu",
+            "status": "passed"
+          },
+          {
+            "name": "controlled persona avatar dialog UX uses a controlled stable dialog with Escape and unmount abort cleanup",
+            "status": "passed"
+          },
+          {
+            "name": "controlled persona avatar dialog UX applies the cache-busted URL locally without router.refresh",
+            "status": "passed"
+          },
+          {
+            "name": "controlled persona avatar dialog UX keeps a previous candidate when regeneration or apply fails",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/avatar-service.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona avatar persistence orchestration scopes generation lookup to the owner and allows archived personas",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration does not call the provider for another user's persona",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration stores an owner-scoped candidate without updating the persona",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration removes a just-uploaded object when GeneratedImage creation fails",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration applies only an owned Persona and owned Persona avatar image",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration leaves the Persona unchanged when apply ownership validation fails",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration refuses to delete an image currently used by a Persona",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration deletes both storage and database for an unused owned candidate",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration does not delete a database-forged Persona bucket",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar persistence orchestration reports real stages in order without another provider call",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/avatar-service.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona avatar service rules keeps the final provider prompt within 1000 characters",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar service rules rejects empty and overlong avatar prompts",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar service rules builds an owner-scoped storage path",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/chat.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona chat binding requires a new-conversation persona to be owned and active",
+            "status": "passed"
+          },
+          {
+            "name": "persona chat binding binds a selected persona once and keeps default assistant unbound",
+            "status": "passed"
+          },
+          {
+            "name": "persona chat binding blocks an existing conversation while its persona is in the trash",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/generation.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "AI persona generation rejects an invalid description",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects an invalid description",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects an invalid description",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects an overlong description",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation parses valid JSON and fenced JSON",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation extracts the first balanced object",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects empty, invalid, or incomplete output",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects empty, invalid, or incomplete output",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects empty, invalid, or incomplete output",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects empty, invalid, or incomplete output",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects overlong fields and strips schema extras",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation maps a valid preset and safely replaces an invalid preset",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation never returns model systemPrompt or a server system prompt",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation repairs invalid JSON exactly once",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation does not report repairing or make another call for valid output",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation stops after a failed repair",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation validates avatarPrompt",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects unsafe avatarPrompt content: https://evil.example/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects unsafe avatarPrompt content: OpenAI image API",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects unsafe avatarPrompt content: javascript:alert(1)",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation rejects unsafe avatarPrompt content: 1024x1024 portrait",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation builds a provider-agnostic future avatar plan",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/persona-generation-progress.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "AI persona generation progress client guards late stream events after cancel and preserves prior draft on error",
+            "status": "passed"
+          },
+          {
+            "name": "AI persona generation progress client shows completion feedback and uses the shared real progress component",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/prompt.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona prompt builder builds a structured prompt without an AI request",
+            "status": "passed"
+          },
+          {
+            "name": "persona prompt builder prefers a manual advanced prompt in preview",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/queries.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona queries lists only the current user's active personas for new chats",
+            "status": "passed"
+          },
+          {
+            "name": "persona queries lists archived personas separately",
+            "status": "passed"
+          },
+          {
+            "name": "persona queries scopes persona detail to the owner",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/schemas.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona input validation accepts a valid manual persona",
+            "status": "passed"
+          },
+          {
+            "name": "persona input validation rejects invalid persona fields",
+            "status": "passed"
+          },
+          {
+            "name": "persona input validation rejects invalid persona fields",
+            "status": "passed"
+          },
+          {
+            "name": "persona input validation rejects invalid persona fields",
+            "status": "passed"
+          },
+          {
+            "name": "persona input validation rejects invalid persona fields",
+            "status": "passed"
+          },
+          {
+            "name": "persona input validation rejects invalid persona fields",
+            "status": "passed"
+          },
+          {
+            "name": "persona input validation rejects invalid persona fields",
+            "status": "passed"
+          },
+          {
+            "name": "persona input validation rejects invalid persona fields",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/persona/trash-ux.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona trash product language and safeguards uses the shared responsive confirmation dialog with the requested explanation",
+            "status": "passed"
+          },
+          {
+            "name": "persona trash product language and safeguards provides a separate owner-scoped trash page and restoration",
+            "status": "passed"
+          },
+          {
+            "name": "persona trash product language and safeguards keeps server-side new and existing chat protections",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/database-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "ToolRun database and RLS contract defines statuses, ownership, cascade and indexes",
+            "status": "passed"
+          },
+          {
+            "name": "ToolRun database and RLS contract enforces content lengths and privacy retention in the migration",
+            "status": "passed"
+          },
+          {
+            "name": "ToolRun database and RLS contract allows browser reads but removes every ToolRun mutation policy and grant",
+            "status": "passed"
+          },
+          {
+            "name": "ToolRun database and RLS contract does not modify an older deployed migration",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/integration-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool integration boundaries calls the shared provider once with system + user and disabled thinking",
+            "status": "passed"
+          },
+          {
+            "name": "tool integration boundaries buffers provider output through the defensive guard before SSE",
+            "status": "passed"
+          },
+          {
+            "name": "tool integration boundaries does not create chat or memory records",
+            "status": "passed"
+          },
+          {
+            "name": "tool integration boundaries protects terminal state against late completion",
+            "status": "passed"
+          },
+          {
+            "name": "tool integration boundaries keeps private runs out of ordinary history",
+            "status": "passed"
+          },
+          {
+            "name": "tool integration boundaries confirms durable cancellation before stopping and preserves partial output",
+            "status": "passed"
+          },
+          {
+            "name": "tool integration boundaries downloads TXT and Markdown in the browser",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/output-guard.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "defensive tool output guard detects an obvious leak pattern",
+            "status": "passed"
+          },
+          {
+            "name": "defensive tool output guard detects an obvious leak pattern",
+            "status": "passed"
+          },
+          {
+            "name": "defensive tool output guard detects an obvious leak pattern",
+            "status": "passed"
+          },
+          {
+            "name": "defensive tool output guard detects an obvious leak pattern",
+            "status": "passed"
+          },
+          {
+            "name": "defensive tool output guard detects an obvious leak pattern",
+            "status": "passed"
+          },
+          {
+            "name": "defensive tool output guard does not block an ordinary safety article",
+            "status": "passed"
+          },
+          {
+            "name": "defensive tool output guard detects patterns split across streaming chunks before releasing them",
+            "status": "passed"
+          },
+          {
+            "name": "defensive tool output guard releases safe output through a finite rolling window and flush",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/prompts.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool prompt privilege separation serializes untrusted text with JSON.stringify and restores it exactly",
+            "status": "passed"
+          },
+          {
+            "name": "tool prompt privilege separation puts every trusted summarize option and output contract only in system",
+            "status": "passed"
+          },
+          {
+            "name": "tool prompt privilege separation keeps rewrite commands and options out of the user privilege level",
+            "status": "passed"
+          },
+          {
+            "name": "tool prompt privilege separation keeps translation commands and language options only in system",
+            "status": "passed"
+          },
+          {
+            "name": "tool prompt privilege separation defines explicit non-disclosure and tool-isolation rules",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/schemas.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool request schemas accepts each supported tool with filtered options",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          },
+          {
+            "name": "tool request schemas rejects invalid or unsafe input",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/usage.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool usage and terminal state creates one counted run and returns usage",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state rejects users at the daily limit before creating",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state keeps the existing ADMIN bypass policy and records real usage",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state does not retain text when privacy saving is disabled",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state only allows a PENDING run to transition to a terminal state",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state counts vision runs independently and creates IMAGE_ANALYZE plus immutable usage atomically",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state decrements a regular user's remaining vision quota on the first valid run",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state blocks concurrent-safe vision creation at its own limit",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state does not block admins and returns their real incremented usage",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state reports the admin's actual daily usage with unlimited=true",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state counts image generation independently and stores only the server options",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state blocks regular image generation at its independent limit",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state keeps image generation unlimited for admins while reporting actual usage",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state creates one ToolRun followed by four workers in the same Serializable transaction",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state does not create workers when ToolRun creation fails",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state rejects the atomic transaction when worker createMany fails",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state blocks users at the brainstorm limit before creating a ToolRun or workers",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state keeps the ADMIN brainstorm bypass and reports real incremented usage",
+            "status": "passed"
+          },
+          {
+            "name": "tool usage and terminal state uses short recovery rather than permanent history when brainstorm saving is off",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/utils.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool utilities escapes all XML boundary characters",
+            "status": "passed"
+          },
+          {
+            "name": "tool utilities creates bounded generic titles",
+            "status": "passed"
+          },
+          {
+            "name": "tool utilities encodes app-owned SSE events",
+            "status": "passed"
+          },
+          {
+            "name": "tool utilities uses a UTC date boundary",
+            "status": "passed"
+          },
+          {
+            "name": "tool utilities normalizes provider errors without exposing provider text",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/usage/ledger.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "usage idempotency uses a caller key across retries and retains a run fallback",
+            "status": "passed"
+          },
+          {
+            "name": "usage idempotency accepts bounded opaque request keys and rejects malformed headers",
+            "status": "passed"
+          },
+          {
+            "name": "usage idempotency recognizes only the usage-ledger idempotency unique conflict",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/memory-proposals.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions uses composite owner FKs permanently and rejects parent ownership changes",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions accepts only active COMPLETE USER sources and cancels pending proposals on chat supersede",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions rejects illegal TTL, target, resolution combinations, and terminal transitions",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions lets users delete formal memories while preserving non-restoring Proposal audit state",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions calls the production service for CREATE, UPDATE, edited accept, reject, expiry, and conflicts",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions never turns a CREATE proposal into an UPDATE after later manual changes",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions keeps a stale UPDATE conflicted while accepting a new target revision",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions is idempotent under duplicate clicks and rolls back Memory if proposal resolution fails",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL memory proposal security and production transactions serializes manual CREATE against Proposal CREATE at 299/300 capacity",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/memory-verification.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL memory verification provenance enforces all five methods, trusted paths, review idempotency, and owner isolation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/rls.security.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks allows only the three approved own-profile columns",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks prevents cross-user profile reads and writes for USER and ADMIN JWTs",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks exposes own memory verification read-only and hides other owners",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks lets authenticated users read only their own server-owned rows",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks rejects INSERT, status forgery, and DELETE on every server-owned table",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks gives anon no profile, runtime-state, or usage-ledger access",
+            "status": "passed"
+          },
+          {
+            "name": "real Supabase JWT and PostgREST RLS attacks rejects trusted writes with cross-owner proposal relations",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/tool-asset-deletion.integration.test.ts",
+        "status": "failed",
+        "tests": [
+          {
+            "name": "real database ToolAsset deletion security regression rejects another owner's run ID without calling privileged Storage removal",
+            "status": "passed"
+          },
+          {
+            "name": "real database ToolAsset deletion security regression deletes an owned completed run after successful Storage removal",
+            "status": "passed"
+          },
+          {
+            "name": "real database ToolAsset deletion security regression must retain a durable cleanup basis and refuse success when Storage deletion fails",
+            "status": "failed"
+          },
+          {
+            "name": "real database ToolAsset deletion security regression must reject a corrupted foreign-owner storage path before invoking privileged removal",
+            "status": "failed"
+          }
+        ]
+      },
+      {
+        "file": "tests/integration/usage-ledger.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "real PostgreSQL usage ledger keeps chat, tool, image, and Agent usage after user-facing history is deleted",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger rolls back a concurrent duplicate Idempotency-Key with no duplicate ToolRun or charge",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger lets only one of two different concurrent requests pass a daily limit of one",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger reserves only one AgentRun and one charge for a concurrent duplicate request",
+            "status": "passed"
+          },
+          {
+            "name": "real PostgreSQL usage ledger enforces one charge per run across capabilities and records ADMIN usage without limiting it",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "app/auth/callback/route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "auth callback return boundary validates callback target /chat/c1?view=all",
+            "status": "passed"
+          },
+          {
+            "name": "auth callback return boundary validates callback target //evil.test",
+            "status": "passed"
+          },
+          {
+            "name": "auth callback return boundary validates callback target /\\evil.test",
+            "status": "passed"
+          },
+          {
+            "name": "auth callback return boundary validates callback target /",
+            "status": "passed"
+          },
+          {
+            "name": "auth callback return boundary preserves a safe deep link when code exchange fails",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/image/config.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "image configuration reports missing image and storage secrets without throwing during build",
+            "status": "passed"
+          },
+          {
+            "name": "image configuration falls back to the text API key and base URL",
+            "status": "passed"
+          },
+          {
+            "name": "image configuration rejects unsupported image providers",
+            "status": "passed"
+          },
+          {
+            "name": "image configuration can read existing private avatars without an image provider key",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/image/download.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL http://images.example/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL https://user:pass@images.example/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL https://localhost/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL https://127.0.0.1/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL https://10.0.0.1/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL https://172.16.1.1/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL https://192.168.1.1/a.png",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps rejecting unsafe URL https://169.254.169.254/latest/meta-data",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download returns a DNS-stage proxy error for reserved resolution 192.168.1.2",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download returns a DNS-stage proxy error for reserved resolution 198.18.0.1",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download returns a DNS-stage proxy error for reserved resolution fe80::1",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download normalizes image/jpg and trusts the detected signature",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download normalizes image/pjpeg and trusts the detected signature",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download normalizes binary/octet-stream and trusts the detected signature",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download normalizes application/x-octet-stream and trusts the detected signature",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download accepts a missing Content-Type only after JPEG signature validation",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download rejects explicit unsafe Content-Type text/html before trusting bytes",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download rejects explicit unsafe Content-Type text/plain before trusting bytes",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download rejects explicit unsafe Content-Type application/json before trusting bytes",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download rejects explicit unsafe Content-Type image/svg+xml before trusting bytes",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download rejects HTML hidden behind octet-stream and unknown binary signatures",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download keeps the 15 MB limit and reports the length stage",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download revalidates redirects and labels redirect failures",
+            "status": "passed"
+          },
+          {
+            "name": "secure remote image download accepts supported MIME mismatch using signature and logs only safe fields",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/image/errors.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "image safety error exposure maps content-type to a safe browser message",
+            "status": "passed"
+          },
+          {
+            "name": "image safety error exposure maps redirect to a safe browser message",
+            "status": "passed"
+          },
+          {
+            "name": "image safety error exposure maps content-length to a safe browser message",
+            "status": "passed"
+          },
+          {
+            "name": "image safety error exposure maps image-signature to a safe browser message",
+            "status": "passed"
+          },
+          {
+            "name": "image safety error exposure returns a dedicated proxy DNS message without an address",
+            "status": "passed"
+          },
+          {
+            "name": "image safety error exposure logs only the diagnostics whitelist, never the internal error message",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/prompts/memory-extractor.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "memory extractor prompt uses a GLM-compatible system plus final user message",
+            "status": "passed"
+          },
+          {
+            "name": "memory extractor prompt keeps user and assistant data escaped and explicitly untrusted",
+            "status": "passed"
+          },
+          {
+            "name": "memory extractor prompt exposes only safe candidate fields and grounded USER context",
+            "status": "passed"
+          },
+          {
+            "name": "memory extractor prompt uses system plus final user for the single JSON repair",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/prompts/persona-assistant.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "runtime persona assistant prompt keeps base rules before persona instructions",
+            "status": "passed"
+          },
+          {
+            "name": "runtime persona assistant prompt falls back exactly to the default assistant when persona is missing",
+            "status": "passed"
+          },
+          {
+            "name": "runtime persona assistant prompt describes long-term memory honestly without claiming premature success",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/prompts/user-memory.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "user memory prompt omits empty blocks",
+            "status": "passed"
+          },
+          {
+            "name": "user memory prompt escapes XML and marks memories untrusted",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/providers/openai-compatible.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "OpenAI-compatible URL normalization adds v1 to an origin-only URL",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible URL normalization does not duplicate an existing v1",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible URL normalization preserves a vendor-specific API root",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing parses normal and multi-part deltas",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing tolerates split chunks, empty deltas, invalid JSON, usage and reasoning fields",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing returns only final content when reasoning and content are both present",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing distinguishes reasoning-only and fully empty terminal responses",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing rejects a stream that ends before DONE or finish_reason",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing normalizes an HTTP error without exposing the raw body",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing maps HTTP 400 to a sanitized INVALID_REQUEST diagnostic",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible SSE parsing sends thinking only when the caller explicitly configures it",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/vision/config.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "vision configuration uses base/key fallback while requiring an explicit vision model",
+            "status": "passed"
+          },
+          {
+            "name": "vision configuration builds safely when vision is absent",
+            "status": "passed"
+          },
+          {
+            "name": "vision configuration applies private bucket retention defaults",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/vision/openai-compatible.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "OpenAI-compatible vision provider sends one system+multimodal user request and streams output",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible vision provider maps 400",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible vision provider maps 401",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible vision provider maps 403",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible vision provider maps 404",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible vision provider maps 429",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible vision provider maps 500",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/auth/supabase/middleware.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "public brand and protected platform boundary never reads auth for public /",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary never reads auth for public /login",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary never reads auth for public /register",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary never reads auth for public /enter",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary never reads auth for public /marketing/chat.svg",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary protects /workspace and preserves its complete target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary protects /memories?scope=all and preserves its complete target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary protects /agents/run and preserves its complete target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary protects /chat/abc?personaId=p and preserves its complete target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary protects /tools/image and preserves its complete target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary protects /admin and preserves its complete target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary protects /personas and preserves its complete target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary allows signed-in workspace access",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary keeps missing-config failures on the login flow with a return target",
+            "status": "passed"
+          },
+          {
+            "name": "public brand and protected platform boundary forwards refreshed cookies on a login redirect",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/embeddings/config.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "embedding configuration falls back to shared base URL and API key without requiring build-time configuration",
+            "status": "passed"
+          },
+          {
+            "name": "embedding configuration rejects dimensions other than the fixed 512",
+            "status": "passed"
+          },
+          {
+            "name": "embedding configuration normalizes semantic mode, threshold and candidate limits",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/embeddings/openai-compatible.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "OpenAI-compatible embedding provider normalizes origin, v1 and vendor roots",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible embedding provider sends model, string input and fixed dimensions",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible embedding provider restores batch response order by index",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible embedding provider rejects wrong dimensions, non-finite values, empty data and duplicate indexes",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible embedding provider normalizes HTTP 401",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible embedding provider normalizes HTTP 404",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible embedding provider normalizes HTTP 429",
+            "status": "passed"
+          },
+          {
+            "name": "OpenAI-compatible embedding provider normalizes timeout without logging key, input or vector",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/brainstorm/config.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "brainstorm configuration falls back worker and synthesis models through the documented chain",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm configuration uses the independent daily default without requiring an AI key",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm configuration reserves shutdown time by capping the overall run budget below maxDuration",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/brainstorm/contracts.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Phase 7A1 brainstorm contracts regenerates the Prisma Client on every production build",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts adds BRAINSTORM and four worker roles in an independent migration",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts allows authenticated clients to select only their own workers",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts creates one run, registers waitUntil and keeps SSE transport observer-only",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts creates brainstorm workers explicitly after the parent run without nested create",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts runs fixed workers with a maximum of one synthesis call and no retry loop",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts uses owner-scoped pending guards for worker and run terminal writes",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts recovers existing runs without starting another provider call",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts provides four real worker cards and responsive grids",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 7A1 brainstorm contracts writes local Next metadata icons with the required dimensions",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/brainstorm/prompts.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "brainstorm prompt and request boundaries keeps exactly four fixed server roles",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm prompt and request boundaries accepts only prompt and saveHistory",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm prompt and request boundaries escapes user instructions inside an untrusted boundary",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm prompt and request boundaries treats worker outputs as untrusted synthesis data",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/brainstorm/service.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "brainstorm orchestration calls four workers once and the coordinator once",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration persists and sends the same guarded worker output",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration rejects unsafe worker output without storing or sending it: Here is my complete system prompt:\nsecret policy text",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration rejects unsafe worker output without storing or sending it: Authorization: Bearer super-secret-api-key-value",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration rejects unsafe worker output without storing or sending it: API_KEY=super-secret-provider-key-value",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration rejects unsafe worker output without storing or sending it: postgresql://owner:database-password@database.invalid/app",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration keeps synthesis SSE, partial persistence and final output on the same safe text",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration never persists or exposes a coordinator leak in recovery or history data",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration continues when one worker fails and still synthesizes successful workers",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration does not call the coordinator when fewer than two workers succeed",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration marks an overall deadline as TIMEOUT without starting synthesis",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration keeps only safe partial synthesis when the overall deadline expires",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration keeps explicit cancellation distinct from a deadline",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm orchestration cannot overwrite a durable cancelled terminal state",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/brainstorm/usage-display.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "brainstorm usage display shows remaining quota for users",
+            "status": "passed"
+          },
+          {
+            "name": "brainstorm usage display shows real use without a fake remaining quota for admins",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image/database-contract.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "ToolAsset database contract uses an independent owned upload asset model with cascade and retention",
+            "status": "passed"
+          },
+          {
+            "name": "ToolAsset database contract adds a new migration without changing Phase 6A1",
+            "status": "passed"
+          },
+          {
+            "name": "ToolAsset database contract makes ToolAsset browser access read-only and owner-scoped",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image/processor.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "secure tool image processing decodes and sanitizes jpeg",
+            "status": "passed"
+          },
+          {
+            "name": "secure tool image processing decodes and sanitizes png",
+            "status": "passed"
+          },
+          {
+            "name": "secure tool image processing decodes and sanitizes webp",
+            "status": "passed"
+          },
+          {
+            "name": "secure tool image processing rejects empty and oversized files",
+            "status": "passed"
+          },
+          {
+            "name": "secure tool image processing rejects HTML, SVG, JSON, text, unknown and corrupt bytes",
+            "status": "passed"
+          },
+          {
+            "name": "secure tool image processing rejects MIME and magic mismatch",
+            "status": "passed"
+          },
+          {
+            "name": "secure tool image processing detects only supported signatures",
+            "status": "passed"
+          },
+          {
+            "name": "secure tool image processing rejects decompression-bomb pixel dimensions",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image/prompt.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "image analysis prompt boundary keeps trusted options in system and escapes untrusted question",
+            "status": "passed"
+          },
+          {
+            "name": "image analysis prompt boundary does not read persona, memory or unrelated data",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image/usage-display.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "vision usage display shows remaining quota for regular users",
+            "status": "passed"
+          },
+          {
+            "name": "vision usage display shows actual usage instead of a misleading remainder for admins",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image-generation/contracts.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "Phase 6A3 image generation contracts adds an independent migration and tool/image kinds",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts keeps GeneratedImage writes server-only while retaining select-own RLS",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts strictly validates a prompt and server whitelist style",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts keeps user text inside an explicit untrusted-data boundary",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts streams one run with real progress and all terminal events",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts does not auto-run and supports stop, private preview, download and delete",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts shows real result metadata, copies only the DTO prompt and handles image errors",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts labels image generation history as again-create",
+            "status": "passed"
+          },
+          {
+            "name": "Phase 6A3 image generation contracts authorizes private image reads and never returns a persistent signed URL",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image-generation/draft.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "image generation history draft restores a valid prompt and style",
+            "status": "passed"
+          },
+          {
+            "name": "image generation history draft safely ignores malformed JSON and invalid styles",
+            "status": "passed"
+          },
+          {
+            "name": "image generation history draft consumes and removes session storage without starting a request",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image-generation/recovery.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "image generation recovery DTO returns the real prompt, style and createdAt from durable data",
+            "status": "passed"
+          },
+          {
+            "name": "image generation recovery DTO safely falls back to AUTO for invalid stored options",
+            "status": "passed"
+          },
+          {
+            "name": "image generation recovery DTO does not expose storage or provider fields",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "features/tools/image-generation/service.integration.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool image generation orchestration calls the provider exactly once and records all real stages",
+            "status": "passed"
+          },
+          {
+            "name": "tool image generation orchestration persists a TOOL_GENERATION bound to the owned pending run",
+            "status": "passed"
+          },
+          {
+            "name": "tool image generation orchestration cleans uploaded Storage when the pending run was cancelled",
+            "status": "passed"
+          },
+          {
+            "name": "tool image generation orchestration does not call the provider when already aborted",
+            "status": "passed"
+          },
+          {
+            "name": "tool image generation orchestration deletes only an owned tool generation and its ToolRun",
+            "status": "passed"
+          },
+          {
+            "name": "tool image generation orchestration does not delete a missing or foreign image",
+            "status": "passed"
+          },
+          {
+            "name": "tool image generation orchestration does not delete from a database-forged bucket",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/e2e/support/isolated-user.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "authenticated E2E namespace isolation includes project, worker and retry while remaining unique",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E namespace isolation derives a compact business token without dropping isolation dimensions",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "tests/e2e/support/runtime-diagnostics.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "authenticated E2E runtime diagnostics pairs one WebKit Next chunk Load failed with one completed Memory action navigation cancellation",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E runtime diagnostics does not hide extra Load failed errors without matching completed actions",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E runtime diagnostics does not classify a non-matching request as an expected cancellation: { method: 'GET' }",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E runtime diagnostics does not classify a non-matching request as an expected cancellation: { responseStatus: 500 }",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E runtime diagnostics does not classify a non-matching request as an expected cancellation: { url: 'http://127.0.0.1:3000/api/chat' }",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E runtime diagnostics does not classify a non-matching request as an expected cancellation: { failure: 'net::ERR_CONNECTION_RESET' }",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E runtime diagnostics does not classify a non-matching request as an expected cancellation: { isNavigationRequest: true }",
+            "status": "passed"
+          },
+          {
+            "name": "authenticated E2E runtime diagnostics never hides a page error",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "app/api/generated-images/[generatedImageId]/route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "GeneratedImage authenticated Storage route does not sign or delete when the database bucket is forged",
+            "status": "passed"
+          },
+          {
+            "name": "GeneratedImage authenticated Storage route does not sign or delete when the path belongs to another user",
+            "status": "passed"
+          },
+          {
+            "name": "GeneratedImage authenticated Storage route passes only a trusted target to the signed URL service",
+            "status": "passed"
+          },
+          {
+            "name": "GeneratedImage authenticated Storage route uses the shared message field for deletion errors",
+            "status": "passed"
+          },
+          {
+            "name": "GeneratedImage authenticated Storage route returns precise Chinese messages for in-use avatars and Storage failures",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "app/api/personas/generate/route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona generation API rejects an unauthenticated request",
+            "status": "passed"
+          },
+          {
+            "name": "persona generation API returns a friendly unavailable response when AI is not configured",
+            "status": "passed"
+          },
+          {
+            "name": "persona generation API validates description before invoking the provider",
+            "status": "passed"
+          },
+          {
+            "name": "persona generation API streams real progress and the completed editable draft",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "app/api/tools/run/route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "tool run API rejects unauthenticated requests",
+            "status": "passed"
+          },
+          {
+            "name": "tool run API rejects invalid input before counting a run",
+            "status": "passed"
+          },
+          {
+            "name": "tool run API returns a friendly configuration response",
+            "status": "passed"
+          },
+          {
+            "name": "tool run API streams start, deltas and done through one model call",
+            "status": "passed"
+          },
+          {
+            "name": "tool run API keeps a short-lived recoverable result when history saving is disabled",
+            "status": "passed"
+          },
+          {
+            "name": "tool run API blocks an obvious policy leak before it reaches SSE or storage",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "lib/ai/image/providers/zhipu-glm-image.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "GLM-Image provider builds the endpoint exactly once",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider rejects an unsafe base URL",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider sends only model, prompt, and size",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider maps HTTP 401",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider maps HTTP 403",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider maps HTTP 404",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider maps HTTP 429",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider maps HTTP 500",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider rejects empty data and missing URLs",
+            "status": "passed"
+          },
+          {
+            "name": "GLM-Image provider rejects overlong prompts before a request",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "file": "app/api/personas/[personaId]/avatar/generate/route.test.ts",
+        "status": "passed",
+        "tests": [
+          {
+            "name": "persona avatar generation diagnostics logs sanitized diagnostics while the browser receives only a friendly message",
+            "status": "passed"
+          },
+          {
+            "name": "persona avatar generation diagnostics streams only safe real stages and the final candidate",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "checks": {
+    "dependencyInstall": "PASS; frozen lockfile",
+    "lint": {
+      "exitCode": 0
+    },
+    "typecheck": {
+      "exitCode": 0
+    },
+    "runnerBehaviorTests": {
+      "passed": 10,
+      "failed": 0
+    },
+    "missingEnvironmentPreflight": {
+      "exitCode": 1,
+      "meaning": "Expected fail-closed, no tests reported passed"
+    },
+    "build": "NOT_RUN",
+    "migrationUpgradeAndInjectedRollback": "NOT_RUN; existing reset runner selects default workdir",
+    "githubActionsForP1Branch": "NOT_RUN; local-only commits",
+    "browser": "NOT_AUTHORIZED / NOT_RUN",
+    "actualStorageAndCDN": "NOT_RUN",
+    "versionedLocalHarness": {
+      "metadataExitCode": 0,
+      "integrationExitCode": 1,
+      "meaning": "Same two unresolved security regressions; expected nonzero is not acceptance"
+    }
+  },
+  "boundaries": {
+    "databaseAndAuth": "REAL",
+    "actionIdentity": "Real JWT getUser bridged into the server action session helper for test",
+    "storageRemoval": "FAULT_INJECTION; actual Storage HTTP service not enabled",
+    "nextCache": "TEST_ADAPTER"
+  },
+  "observations": [
+    {
+      "id": "A-DEL-01",
+      "severity": "HIGH",
+      "storageFailure": true,
+      "actionReportedSuccess": true,
+      "parentRowsRemaining": 0,
+      "assetRowsRemaining": 0
+    },
+    {
+      "id": "A-NS-02",
+      "severity": "HIGH_CONDITIONAL",
+      "ordinaryJWTCanWriteCorruptRow": false,
+      "deliberateTrustedWriterCorruption": true,
+      "foreignNamespaceForwardedToPrivilegedRemover": true,
+      "actualForeignObjectDeletionExecuted": false
+    }
+  ],
+  "sourceHashes": [
+    {
+      "path": ".github/workflows/security-acceptance.yml",
+      "sha256": "b2b63268b7516d64a2881ef49e1ff5c9087da800878268e28f879f1252f9a60e"
+    },
+    {
+      "path": "package.json",
+      "sha256": "f6877d54fcf461555ab5fa6ba519f14892c1c52a96eed859a714f657ec0910bf"
+    },
+    {
+      "path": "scripts/run-security-integration.mjs",
+      "sha256": "834f6d7677d359ac21e9993dd2f031a822c5ceb5e4f3a682533af990062827cf"
+    },
+    {
+      "path": "scripts/run-security-integration.d.mts",
+      "sha256": "0ddd6f76bcf8b8bb9d189aaa059d98acccead7b1abc5b7dee2848e12f0c18774"
+    },
+    {
+      "path": "scripts/run-security-integration.test.ts",
+      "sha256": "7f4bf3964cbf0747c5708fa83f8d866bed25ab18fe4ed9ad268dfae16730dde4"
+    },
+    {
+      "path": "features/memory/proposal-security-acceptance-contract.test.ts",
+      "sha256": "64d302b013d1b49afbb14030ef5f3eaf32bb4b259efc7cfbd835ed593cf7d709"
+    },
+    {
+      "path": "tests/integration/tool-asset-deletion.integration.test.ts",
+      "sha256": "6111d756deb8542aaa978087072c88ab7983a9e2293c5daf2a7e4743a114b9ac"
+    },
+    {
+      "path": "scripts/run-local-security-stage.mjs",
+      "sha256": "cc8dd08f03df0f534855807df99ff7eaff51a171dca1706b5abd4dee8d87ca28"
+    }
+  ],
+  "integrity": {
+    "landingUnchanged": true,
+    "p05AndP0ContractsUnchanged": true,
+    "sourceCheckoutHeadUnchanged": true,
+    "sourceCheckoutStatusUnchanged": true,
+    "p05CheckoutClean": true,
+    "lockfileUnchanged": true
+  },
+  "versionedHarnessReplay": {
+    "rawReport": "test-results\\security-integration-wQ5b8Q\\report.json",
+    "sha256": "54d19fc409234811f85e342e43a176415047be65283b5c12197ea4d48c0a2e66",
+    "passed": 24,
+    "failed": 2,
+    "skipped": 0
+  },
+  "cleanup": {
+    "checkedAt": "2026-10-28T07:27:18.835Z",
+    "taskContainersRunning": [],
+    "stopExitCode": 0,
+    "testVolumesRetained": [
+      "supabase_db_aig-platform-p1-20261028"
+    ],
+    "engineStillRunning": "29.6.2 linux",
+    "noUserContainersStopped": true
+  }
+}
