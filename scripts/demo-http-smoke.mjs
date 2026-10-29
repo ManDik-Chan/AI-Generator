@@ -97,6 +97,10 @@ async function main() {
       const memoryPage = await request("/memories");
       assert.equal(memoryPage.status,200);
       assert((await memoryPage.text()).includes(token),"Memory page did not load saved data");
+      const extractionToken = `CopperPine${randomUUID().slice(0,8)}`;
+      await stream("/api/chat",{content:`请记住：我正在长期开发的开源项目名是 ${extractionToken}，用于研究分布式系统。`});
+      assert(await db.memory.findFirst({where:{userId,verificationMethod:"EXPLICIT_REQUEST",content:{contains:extractionToken}}}),"Explicit real chat memory extraction did not persist a verified fact");
+      console.log("PASS explicit real chat memory extraction persisted with EXPLICIT_REQUEST provenance");
       await db.profile.update({where:{id:userId},data:{memoryEnabled:false}});
 
       const persona = await db.persona.create({data:{userId,name:"Integration smoke persona",personality:"清晰简洁",systemPrompt:"你是一位简洁的助手。"}});
