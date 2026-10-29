@@ -17,7 +17,7 @@ export default async function PersonaTrashPage() {
   return <AppShell>
     <PageHeader
       description="这里的人格不会再出现在新对话助手列表中，但历史对话与原头像仍会保留。"
-      eyebrow="ARCHIVED PERSONAS"
+      eyebrow="已归档人格"
       primaryAction={<Button asChild variant="outline"><Link href="/personas"><ArrowLeft className="size-4" />返回助手列表</Link></Button>}
       title="人格回收站"
     />

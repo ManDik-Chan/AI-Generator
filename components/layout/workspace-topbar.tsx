@@ -11,7 +11,7 @@ import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Dialog } from "@/components/ui/dialog";
 
 const routeMeta = [
-  { path: "/agents", title: "Agent 运行", subtitle: "动态 Worker、依赖、事件与最终回答" },
+  { path: "/agents", title: "Agent 运行", subtitle: "开发中 · 动态 Worker、依赖、事件与最终回答" },
   { path: "/chat", title: "AI 对话", subtitle: "连续上下文 · 流式生成 · 长期记忆" },
   { path: "/personas", title: "专属人格", subtitle: "创建、编辑与管理不同的 AI 助手" },
   { path: "/memories", title: "长期记忆", subtitle: "你决定 AI 记住什么" },
@@ -67,7 +67,7 @@ export function WorkspaceTopbar({ viewer }: { viewer?: ShellViewer }) {
           <input autoFocus className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground" onChange={(event) => setQuery(event.target.value)} placeholder="输入页面名称…" value={query} />
         </label>
         <div className="mt-3 space-y-1">
-          {commands.map((item) => <Link className="group flex min-h-12 items-center gap-3 rounded-full px-2 text-sm text-muted-foreground transition-colors duration-300 hover:bg-surface hover:text-foreground" href={item.href} key={item.href} onClick={() => setOpen(false)} prefetch={false}><span className="premium-icon-tile size-9 rounded-full"><item.icon className="size-4" /></span><span className="min-w-0 flex-1 truncate">{item.label}</span><Command className="mr-2 size-3.5 opacity-35" /></Link>)}
+          {commands.map((item) => <Link className="group flex min-h-12 items-center gap-3 rounded-full px-2 text-sm text-muted-foreground transition-colors duration-300 hover:bg-surface hover:text-foreground" href={item.href} key={item.href} onClick={() => setOpen(false)} prefetch={false}><span className="premium-icon-tile size-9 rounded-full"><item.icon className="size-4" /></span><span className="min-w-0 flex-1 truncate">{item.label}</span>{item.badge ? <span className="shrink-0 rounded-full border border-border/16 px-1.5 py-px text-[.625rem] text-muted-foreground">{item.badge}</span> : null}<Command className="mr-2 size-3.5 opacity-35" /></Link>)}
           {!commands.length ? <p className="px-3 py-8 text-center text-sm text-muted-foreground">没有匹配的真实功能。</p> : null}
         </div>
       </Dialog>

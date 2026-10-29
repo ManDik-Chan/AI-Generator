@@ -82,7 +82,7 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     for (let n = 0; n < 14; n++) {
       x = rand(-1, 1) * S.vw * 0.62;
       y = rand(-1, 1) * S.vh * 0.58;
-      if (!(Math.abs(x) < S.vw * 0.27 && Math.abs(y) < S.vh * 0.17)) break; // keep the headline clear
+      if (!(Math.abs(x) < S.vw * 0.27 && Math.abs(y) < S.vh * 0.22)) break; // keep the headline and CTA clear
     }
     it.x = x;
     it.y = y;
@@ -531,11 +531,12 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     if (odoO) odoO.style.transform = `translate3d(0,${-(full ? 0 : v % 10)}em,0)`;
   };
   const t0 = performance.now();
-  const MIN = reduce ? 200 : 1600;
+  // Keep the intro short: the page must be usable within a couple of seconds even on slow devices.
+  const MIN = reduce ? 200 : 1100;
   let assetsReady = false;
   Promise.race([
     Promise.all([document.fonts?.ready, artPromise]),
-    new Promise((r) => window.setTimeout(r, 4500)),
+    new Promise((r) => window.setTimeout(r, 2800)),
   ]).then(() => { assetsReady = true; });
 
   let shown = -1;

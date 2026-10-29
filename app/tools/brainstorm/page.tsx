@@ -20,7 +20,7 @@ export default async function BrainstormPage() {
     <PageHeader
       back={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm text-muted-foreground hover:text-foreground" href="/tools"><ArrowLeft className="size-4" />返回工具中心</Link>}
       description="每次运行由四个固定 Worker 独立分析，再由协调器综合。不会读取聊天、Persona 或长期记忆，不联网搜索；结果只基于你的输入和模型已有知识。切到手机后台后，任务会在平台执行时限内继续。"
-      eyebrow="PRIVATE MULTI-AGENT WORKSPACE"
+      eyebrow="多 Agent 协作"
       primaryAction={<Button asChild variant="outline"><Link href="/tools/history?type=BRAINSTORM"><History className="size-4" />头脑风暴历史</Link></Button>}
       title="多 Agent 头脑风暴"
     />

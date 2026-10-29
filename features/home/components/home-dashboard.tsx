@@ -74,10 +74,12 @@ async function HomeOverview() {
     <div className="grid gap-x-0.5 gap-y-10 min-[1024px]:grid-cols-[minmax(0,1.7fr)_minmax(18rem,1fr)]">
       <section aria-labelledby="quick-title">
         <BlockLabel action={<Link className="link-grow text-xs text-muted-foreground hover:text-foreground" href="/tools" prefetch={false}>全部工具</Link>} id="quick-title">快速启动</BlockLabel>
-        <div className="grid gap-0.5 sm:grid-cols-3">
-          <QuickTile href={recentConversations[0] ? `/chat/${recentConversations[0].id}` : "/chat"} icon={MessageSquareText}><p className="mt-5 text-card-title">{recentConversations[0] ? "继续上次对话" : "开始第一段对话"}</p><p className="mt-1 line-clamp-2 text-caption">{recentConversations[0]?.title ?? "选择默认助手或专属人格"}</p></QuickTile>
-          <QuickTile href="/tools/image-generate" icon={ImagePlus}><p className="mt-5 text-card-title">生成视觉素材</p><p className="mt-1 text-caption">创建单张私有图片作品</p></QuickTile>
-          <QuickTile href="/personas" icon={Sparkles}><p className="mt-5 text-card-title">切换专属人格</p><p className="mt-1 text-caption">用不同角色处理任务</p></QuickTile>
+        {/* The four core entry points: chat, personas, memory and tools. */}
+        <div className="grid grid-cols-2 gap-0.5 xl:grid-cols-4">
+          <QuickTile href={recentConversations[0] ? `/chat/${recentConversations[0].id}` : "/chat"} icon={MessageSquareText}><p className="mt-5 text-card-title">{recentConversations[0] ? "继续上次对话" : "AI 对话"}</p><p className="mt-1 line-clamp-2 text-caption">{recentConversations[0]?.title ?? "流式回答，连续上下文"}</p></QuickTile>
+          <QuickTile href="/personas" icon={Sparkles}><p className="mt-5 text-card-title">专属人格</p><p className="mt-1 text-caption">为任务设定角色与语气</p></QuickTile>
+          <QuickTile href="/memories" icon={Brain}><p className="mt-5 text-card-title">长期记忆</p><p className="mt-1 text-caption">确认后才会被记住</p></QuickTile>
+          <QuickTile href="/tools" icon={PenLine}><p className="mt-5 text-card-title">AI 工具</p><p className="mt-1 text-caption">总结、改写、翻译与图片</p></QuickTile>
         </div>
       </section>
       <section aria-labelledby="recent-title" className="min-[1024px]:pl-6">

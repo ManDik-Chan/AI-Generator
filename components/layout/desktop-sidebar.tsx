@@ -24,6 +24,20 @@ import { cn } from "@/lib/utils";
 const menuLink =
   "flex min-h-10 items-center gap-2 rounded-full px-3 text-sm text-muted-foreground transition-colors duration-300 hover:bg-surface hover:text-foreground";
 
+/** Small status pill next to a navigation label, e.g. "开发中". */
+export function NavBadge({ children, active = false }: { children: string; active?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "ml-auto shrink-0 rounded-full px-1.5 py-px text-[.625rem] font-medium leading-4",
+        active ? "bg-[hsl(213_21%_10%/.1)] text-current" : "border border-border/16 text-muted-foreground",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
   const pathname = usePathname();
   const displayName = viewer?.displayName || viewer?.email || "我的空间";
@@ -80,6 +94,7 @@ export function DesktopSidebar({ viewer }: { viewer?: ShellViewer }) {
                       )}
                     />
                     <RollText className="truncate" text={item.label} />
+                    {item.badge ? <NavBadge active={active}>{item.badge}</NavBadge> : null}
                   </Link>
                 );
               })}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
+import { NavBadge } from "@/components/layout/desktop-sidebar";
 import { navigationGroups, navigationItemActive } from "@/components/layout/navigation";
 import type { ShellViewer } from "@/components/layout/shell-viewer";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ export function MobileWorkspaceMenu({ viewer }: { viewer?: ShellViewer }) {
             if (!items.length) return null;
             return <section key={group.label}><p className="premium-kicker mb-2 px-2">{group.label}</p><div className="grid gap-1">{items.map((item) => {
               const active = navigationItemActive(pathname, item.href, "matches" in item ? item.matches : undefined);
-              return <Link aria-current={active ? "page" : undefined} className={cn("flex min-h-12 items-center gap-3 rounded-control px-3 text-sm font-semibold", active ? "bg-primary-subtle text-primary-subtle-foreground" : "text-muted-foreground hover:bg-surface-muted hover:text-foreground")} href={item.href} key={item.href} onClick={() => setOpen(false)} prefetch={false}><item.icon className="size-4" /><span>{item.label}</span></Link>;
+              return <Link aria-current={active ? "page" : undefined} className={cn("flex min-h-12 items-center gap-3 rounded-control px-3 text-sm font-semibold", active ? "bg-primary-subtle text-primary-subtle-foreground" : "text-muted-foreground hover:bg-surface-muted hover:text-foreground")} href={item.href} key={item.href} onClick={() => setOpen(false)} prefetch={false}><item.icon className="size-4" /><span>{item.label}</span>{item.badge ? <NavBadge>{item.badge}</NavBadge> : null}</Link>;
             })}</div></section>;
           })}
         </nav>
