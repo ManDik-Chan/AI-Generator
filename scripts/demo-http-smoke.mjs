@@ -22,6 +22,7 @@ async function main() {
   });
   const email = `demo-${randomUUID()}@example.test`, password = `D!${randomUUID()}a9`;
   let userId;
+  let avatarFixture;
   const request = (path, body, signedIn = true) => fetch(base + path, {
     redirect: "manual", signal: AbortSignal.timeout(180000),
     headers: { ...(body ? {"Content-Type":"application/json"} : {}), ...(signedIn ? {Cookie:[...cookies].map(([k,v])=>`${k}=${v}`).join("; ")} : {}) },
@@ -84,6 +85,44 @@ async function main() {
     const runId = tool.events.find(e=>e.event==="start")?.data.runId;
     const run = await db.toolRun.findUnique({where:{id:runId}});
     assert(run?.status==="COMPLETE" && run.outputText===tool.output,"Tool persistence mismatch");
+    if (process.argv.includes("--extended")) {
+      // Explicit synthetic memory/image fixtures; neither is an AI-generated result.
+      const token = `AmberLeaf${randomUUID().slice(0,8)}`;
+      await db.profile.update({where:{id:userId},data:{memoryEnabled:true}});
+      const memory = await db.memory.create({data:{userId,content:`我的演示项目名称是 ${token}。`,category:"other",scope:"GLOBAL",origin:"MANUAL",verificationMethod:"MANUAL_ENTRY",verifiedAt:new Date(),importance:5,keywords:["演示项目","项目名称"],topicKey:"demo.project",pinned:true}});
+      const recalled = await stream("/api/chat",{content:"我之前保存的演示项目名称是什么？请只回答项目名称。"});
+      assert(recalled.events.some(e=>e.event==="memory"&&e.data.items.some(item=>item.id===memory.id)),"Saved memory missing from real chat disclosure");
+      assert(recalled.output.includes(token),"Provider did not recall the unique saved project name");
+      assert((await db.memory.findUnique({where:{id:memory.id}})).useCount>0,"Memory usage not persisted");
+      const memoryPage = await request("/memories");
+      assert.equal(memoryPage.status,200);
+      assert((await memoryPage.text()).includes(token),"Memory page did not load saved data");
+      await db.profile.update({where:{id:userId},data:{memoryEnabled:false}});
+
+      const persona = await db.persona.create({data:{userId,name:"Integration smoke persona",personality:"清晰简洁",systemPrompt:"你是一位简洁的助手。"}});
+      const imageId = randomUUID(), bucket = process.env.SUPABASE_PERSONA_AVATAR_BUCKET ?? "persona-avatars";
+      const bucketInfo = await service.storage.getBucket(bucket);
+      assert(!bucketInfo.error && bucketInfo.data.public===false,"Avatar bucket must exist and remain private");
+      const path = `${userId}/${persona.id}/${imageId}.png`;
+      const bytes = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a9ioAAAAASUVORK5CYII=","base64");
+      await db.assetDeletion.create({data:{ownerId:userId,resourceId:imageId,scopeId:persona.id,kind:"PERSONA_AVATAR",bucket,path,state:"RESERVED"}});
+      avatarFixture = {bucket,path};
+      assert(!(await service.storage.from(bucket).upload(path,bytes,{contentType:"image/png",upsert:false})).error,"Real private avatar upload failed");
+      await db.generatedImage.create({data:{id:imageId,userId,kind:"PERSONA_AVATAR",prompt:"Synthetic upload fixture; not AI generated",provider:"upload-fixture",model:"not-ai-generated",storagePath:path,storageBucket:bucket,mimeType:"image/png",sizeBytes:bytes.length,width:1,height:1}});
+      assert.equal((await request(`/api/personas/${persona.id}/avatar/apply`,{generatedImageId:imageId,prompt:"Synthetic upload fixture"})).status,200,"Avatar apply failed");
+      assert.equal((await request(`/api/personas/${persona.id}/avatar`,undefined,false)).status,401);
+      assert.equal((await request(`/api/personas/${randomUUID()}/avatar`)).status,404);
+      const avatar = await request(`/api/personas/${persona.id}/avatar`);
+      assert.equal(avatar.status,307,"Private avatar did not issue a signed redirect");
+      const location = avatar.headers.get("location");
+      assert.equal(new URL(location).origin,new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin,"Unexpected signed URL origin");
+      const signedImage = await fetch(location,{signal:AbortSignal.timeout(15000)});
+      assert.equal(signedImage.status,200);
+      assert(Buffer.from(await signedImage.arrayBuffer()).equals(bytes),"Signed avatar bytes mismatch");
+      const anonymous = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`,{signal:AbortSignal.timeout(15000)});
+      assert(!anonymous.ok,"Private avatar bytes exposed through public storage URL");
+      console.log("PASS saved-memory recall/disclosure and private avatar upload/apply/signed read/access checks; avatar fixture was not AI generated");
+    }
     assert(!(await auth.auth.refreshSession()).error,"Session refresh failed");
     assert.equal((await request("/api/chat/bootstrap?personas=0")).status,200);
     assert(!(await auth.auth.signOut()).error,"Sign-out failed");
@@ -92,11 +131,13 @@ async function main() {
   } finally {
     try {
       if(userId) {
+        if(avatarFixture) assert(!(await service.storage.from(avatarFixture.bucket).remove([avatarFixture.path])).error,"Owned avatar fixture cleanup failed");
         const deleted = await service.auth.admin.deleteUser(userId);
         assert(!deleted.error,"Disposable account cleanup failed");
         // Auth deletion does not cascade to the application's Prisma profile.
         // Delete only this invocation's synthetic profile and its child rows.
         await db.profile.deleteMany({where:{id:userId,email}});
+        if(avatarFixture) await db.assetDeletion.deleteMany({where:{ownerId:userId,bucket:avatarFixture.bucket,path:avatarFixture.path}});
       }
     } finally { await db.$disconnect(); }
   }

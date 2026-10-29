@@ -84,9 +84,19 @@ export async function createIsolatedE2eUser(
     await page.goto("/login", { waitUntil: "domcontentloaded" });
     await page.getByLabel("邮箱").fill(email);
     await page.locator("#password").fill(password);
+    const loginResponsePromise = page.waitForResponse((response) =>
+      new URL(response.url()).pathname === "/login"
+      && response.request().method() === "POST",
+    );
     await page.getByRole("button", { name: "登录" }).click();
+    const loginResponse = await loginResponsePromise;
+    expect([200, 303], "Login Server Action must succeed.").toContain(loginResponse.status());
     await page.waitForURL((url) => url.pathname !== "/login", { timeout: 30_000 });
-    await expect(page.locator("body")).toBeVisible();
+    // WebKit can update the URL before the action/redirect transport settles.
+    // A caller's immediate page.goto must not cancel that in-flight response.
+    expect(await loginResponse.finished(), "Login transport must finish before another navigation.").toBeNull();
+    await expect(page.locator("[data-app-scroll-region]")).toBeVisible();
+    await expect(page.getByRole("button", { name: "登录", exact: true })).toHaveCount(0);
   } catch (loginError) {
     const cleanupDb = new PrismaClient();
     let cleanupError: unknown;
