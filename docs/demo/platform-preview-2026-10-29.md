@@ -72,6 +72,33 @@ Hero 标题「懂你所想，守你所藏。」、浮动卡片内的气泡与标
 
 - `pnpm lint`、`pnpm typecheck`、`pnpm build` 通过；`pnpm test`：150 个文件 / 863 个测试通过，7 个需数据库的集成文件按原样跳过。
 - HTTP 冒烟（`next start`，无浏览器）：主页中英文与 17 个 `/platform` 页面返回 200（构建共预渲染 25 个 `/platform` 页面） 并包含预期文字；主页不含 `hero__cta`、「开始体验」「查看源码」；`/workspace`、`/chat`、`/agents` 仍 307 跳转登录；未知项目 404；`/platform` 不设置 Cookie；42 个内部链接全部可达。测试服务器已按 PID 结束并确认端口释放。
-- **未做浏览器视觉验收与截图。** 仓库 `AGENTS.md` 暂停了浏览器自动化，需 Owner 明确恢复授权后才能进行桌面与移动端实际页面截图。
+- 浏览器截图：Owner 于 2026-10-29 明确授权本任务使用一个受控浏览器实例。见第 6 节。
+
+## 6. 桌面与移动端截图（受控单实例）
+
+截图位于 [`screenshots/platform-20261029/`](screenshots/platform-20261029/)，对应提交 `08eb37d` 的 `next start` 生产构建，共 42 张。
+
+| 前缀 | 视口 | 内容 |
+|---|---|---|
+| `desktop-landing-zh-01…09` | 1440×900 | Hero、对话 / 工具 / Agent 章节、About、已上线能力、AI Hub 索引、Forest、页脚 |
+| `desktop-landing-en-01` | 1440×900 | 英文 Hero |
+| `desktop-platform-01…11` | 1440 宽整页 | 控制台、项目列表与详情、Agent 与运行详情、Skills 与详情、Chat、Personas、Memory、Tools |
+| `mobile-landing-zh-01…10`、`mobile-landing-en-01` | 390×844 @2x，触屏 | 同上主页位置 + 移动菜单 |
+| `mobile-platform-01…12` | 390 宽整页（缩放为 1.5x 存储） | 9 个平台页面 + 平台预览菜单 |
+
+对照：PR #32 留下的 [`screenshots/landing-desktop-hero.jpg`](screenshots/landing-desktop-hero.jpg) 中标题下方有「开始体验 / 查看源码」两个按钮；新截图 `desktop-landing-zh-01-hero.jpg` 中已恢复为基线的纯标题布局，底部说明为平台定位文案。
+
+运行记录（遵守 `AGENTS.md`）：
+
+- 一次 `launchServer`（已安装 Edge，headless，Playwright 临时资料目录），一个浏览器内先后一个桌面、一个移动上下文，各一页；一次性锁文件防止重复启动；无重试。
+- 启动前内存 56.7%，峰值 58.9%；自有 Edge 进程峰值工作集 892 MiB。
+- 0 个失败步骤、0 个页面错误、0 条控制台警告或错误；所有截图的页面横向溢出为 0。
+- 关闭后核对：12 个自有进程（按 PID + 创建时间记录）全部退出，根进程退出码 0，临时资料目录已删除；用户自有 Edge 进程未被触碰（其中一个在运行前几秒新建的用户子进程自行结束，脚本不操作非自有进程）。应用服务器按 PID 结束，端口释放。
+
+截图中观察到的情况：
+
+- 以下为 `0e13d32` 基线原有表现，按「禁止未经授权继续优化」保持不变：手机上 Hero 随机卡片偶尔会压到标题；滚动到 About / 结尾时 Header 与正文重叠；手机章节不显示插图。PR #32 针对这些的改动已撤销，如需调整请另行授权。
+- 新增页面：Skills「管理」表在手机上需在表格内横向滑动才能看到「底层能力」「启用」两列（页面本身不溢出）。可后续改为手机端堆叠布局。
+- 整页截图中固定定位的侧边栏 / 底部导航只按首屏位置渲染，真机上分别固定在屏幕左侧和底部。
 
 未修改数据库、Prisma migrations、Supabase 配置、Provider、环境变量或 Vercel 配置；未合并 main，未部署。
