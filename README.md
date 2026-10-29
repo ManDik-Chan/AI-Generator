@@ -1,81 +1,108 @@
-# AI-Generator V2
+# AI-Generator
 
-> Phase 6B3 — Lumen 全站前端集成与应用基础架构审计已由项目所有者真实验收通过：Lumen 视觉、完整桌面/移动导航、真实数据表面、账户隐私、管理员控制台与 Chat-only VisualViewport 均已接入既有业务。详见 `docs/lumen-integration-map.md`、`docs/application-foundation-audit.md` 与 `docs/mobile-experience.md`。
+**A full-stack AI workspace built with Next.js, TypeScript, Supabase and Prisma.**
 
-> Phase 7A1 多 Agent 头脑风暴已进入 Draft：一次明确点击固定创建四个独立 Worker，并在至少两个成功后调用一次协调器，总模型调用最多五次。任务复用 ToolRun、waitUntil、durable cancellation 与恢复机制，不读取聊天、Persona、Memory，不联网或调用工具。当前等待项目所有者部署独立 migration/RLS 并完成真实模型、后台恢复和响应式验收；Phase 7A2 Vibe Coding 尚未开始。详见 `docs/multi-agent-brainstorm.md`。
+一个持续迭代的全栈 AI 工作平台：将流式对话、自定义 AI 人格、可信长期记忆和实用 AI 工具整合到统一工作台，并探索多 Agent 协作与可扩展的应用架构。
 
-> Phase 7A1.1 — Chat Agent Mode + Codex 风格 Worker 编排底座为 Draft：Chat 可针对当前一次发送选择标准 4 Worker 或深度 6 Worker，服务端完成 Planner、DAG、隔离 Worker Pool、单 Worker/全局取消、Leader、SSE、waitUntil、恢复、Credits、`/agents` 历史与最终 Assistant Message 持久化。当前 Worker 只有 `REASONING`，没有搜索、文件、代码执行、Shell、Git、Browser 或 MCP。Phase 7A1.2 与 Phase 7A2 均未开始。详见 `docs/agent-mode.md`、`docs/worker-orchestration.md`、`docs/agent-threat-model.md` 与 `docs/agent-data-model.md`。
+[项目网站](https://www.ai-mdc.com) · [源代码](https://github.com/ManDik-Chan/AI-Generator) · [技术架构](docs/architecture.md) · [本地部署](#本地运行)
 
-正式域名为 <https://www.ai-mdc.com>。
+> **项目状态：持续开发 / Work in Progress。** 仓库中已实现的模块不代表线上部署全部通过验收。部分功能需要正确配置认证、数据库、模型服务及私有存储。多 Agent、项目 Registry 等新能力仍在独立分支或验收阶段，不应视为已上线功能。
 
-> Phase 6A3 通用 AI 图片生成工作台已完成项目所有者真实验收：单图文生图、private `generated-images`、停止与 durable recovery、移动后台继续、Prompt/Storage 隔离和响应式均已通过。当前不包含图片编辑、多图、视频、OCR 或 RAG。详见 `docs/image-generation-tool.md`。
+## 项目简介
 
-> Phase 6B1 已按项目所有者批准的 Premium 高保真原型扩展为全产品 UI 迁移：纸张/深炭主题、翡翠强调、双星品牌、响应式应用外壳，以及首页、认证、聊天、人格、长期记忆、文本工具、图片分析、工具历史、账号和管理页面均已统一。所有页面只展示真实数据或诚实空状态；原型中的假数据和未实现功能没有进入生产。此次仅调整界面与交互呈现，不改变业务语义、API、Provider、数据库结构、RLS 或 migration，当前等待项目所有者第三轮真实视觉验收。详见 `docs/design-system.md`、`docs/ui-redesign-roadmap.md` 与 `docs/full-product-ui-redesign.md`。
+AI-Generator 从早期 Python / Streamlit 原型逐步迁移至基于 Next.js App Router 的模块化全栈应用。项目关注的不只是模型调用，还包括真实用户在 AI 产品中需要的登录、数据隔离、流式响应、人格配置、记忆治理、异步任务与跨设备交互。
 
-> Phase 6A2 已完成项目所有者真实验收：单图图片理解、私有 `ToolAsset`、服务端安全净化、private Storage、独立视觉限额、OpenAI-compatible 多模态 Provider、SSE/停止/历史/到期清理、图片 Prompt 注入隔离和响应式均已通过。当前仍不包含 PDF/DOCX、专业 OCR、RAG、多图、视频、图片生成或编辑；Phase 6A3 与 Phase 7 尚未开始。详见 `docs/image-understanding-tool.md`。
+**核心目标：** 在一致的产品体验下，让不同 AI 能力复用认证、Provider、数据、权限和交互基础设施，而不是为每一种能力制作互不相连的页面。
 
-> Phase 5A3-2 已完成真实验收：长期记忆采用确定性关键词、`topicKey` / `keywords`、512 维 Embedding 语义召回与 Hybrid RRF；未配置或运行失败时安全退回关键词召回。这不是外部文件 RAG。详见 `docs/memory-semantic-retrieval.md`。
+## 主要功能
 
-> Phase 5B1 可信长期记忆提案层已完成并合入主线：普通隐式提取只创建待确认 `MemoryProposal`，用户接受后才通过可信事务写入正式 `Memory`。Pending/Rejected/Expired/Cancelled Proposal 不参与 Prompt、召回、统计或 Embedding。详见 `docs/trusted-memory-proposals.md`。
+| 模块 | 功能与实现 | 当前状态 |
+| --- | --- | --- |
+| AI 对话 | 流式消息、会话历史、Markdown / 代码渲染，服务端 OpenAI-compatible Provider | 已实现，依赖模型配置 |
+| 自定义人格 | 人格创建与管理、AI 辅助生成草稿、会话人格绑定 | 已实现 |
+| 长期记忆 | 用户确认的记忆提案、作用域隔离、关键词与 Embedding 混合召回 | 已实现，依赖数据库与向量配置 |
+| 文本工具 | 总结、改写、翻译及工具历史 | 已实现 |
+| 视觉工具 | 单图图片理解、文生单图、私有资源存储与访问控制 | 已实现，依赖服务配置 |
+| Agent 协作 | 多 Worker 推理编排、协调器及任务生命周期探索 | Draft / 验收中；非通用代码执行 Agent |
+| 平台 Registry | 面向后续平台化的项目与资源数据模型、安全边界 | 开发分支中，尚未完成安全验收 |
 
-面向亲朋好友使用的私人 AI 助手平台。V2 使用 Next.js 15、TypeScript 与 Tailwind CSS 重构，目标是简单、稳定、美观和易维护。
+## 技术栈
 
-## 本地开发
+- **前端：** Next.js 15 (App Router)、React、TypeScript、Tailwind CSS
+- **交互与视觉：** 响应式组件体系、GSAP、Radix UI 相关组件
+- **后端与数据：** Next.js Route Handlers / Server Actions、Prisma、PostgreSQL、Supabase Auth / Storage
+- **AI 接入：** 服务端 OpenAI-compatible Provider、流式响应、Embedding 语义检索
+- **质量保障：** ESLint、TypeScript、Vitest、Playwright、GitHub Actions
+- **部署：** Vercel，线上环境需单独配置密钥和数据库
 
-唯一受支持的开发和部署运行时为 Node.js 22.x LTS 与 pnpm 11.7.0；`package.json`、本地开发、主要 CI、Vercel Preview 与 Production 均应使用 Node.js 22.x。仓库中的 Node.js 24.x 兼容性门禁仅提供额外的前向兼容信号，不扩大受支持运行时范围。建议使用仓库的 `.nvmrc`，不要依赖系统默认 Node 版本。
+### 结构概览
+
+```text
+Browser
+  └─ Next.js App Router
+      ├─ app/             路由、页面、API
+      ├─ components/      共享 UI 与应用框架
+      ├─ features/        Chat / Persona / Memory / Tools / Landing
+      ├─ lib/             Auth / AI Provider / Database / Storage
+      ├─ prisma/          Schema 与版本化数据库迁移
+      └─ tests/           单元、集成及 E2E 测试
+            │
+            ├─ Supabase Auth + PostgreSQL + private Storage
+            └─ OpenAI-compatible AI Providers
+```
+
+## 关键工程实践
+
+**模块化演进。** 从 Streamlit 原型迁移至 Next.js 全栈架构，拆分产品路由、业务模块、共享服务及数据层，降低后续扩展新 AI 工具的耦合度。
+
+**可信记忆。** 区分模型提案与用户确认的正式记忆；采用关键词和向量混合召回，并为不同用户、人格作用域和数据资源设置隔离边界。
+
+**流式与异步执行。** 对话和工具围绕服务端流式输出、运行状态、停止与恢复机制设计；多 Agent 部分仍处于功能验收中。
+
+**安全与验证。** 敏感 Provider Key 仅在服务端读取，数据库和存储访问按用户范围校验；对迁移、RLS 与集成流程保持独立测试与验收，不因 UI 演示完成而宣称安全验收通过。
+
+## 演示与截图
+
+- [项目站点：ai-mdc.com](https://www.ai-mdc.com)（请以实际部署状态为准）
+- 建议演示路径：**Landing → 登录 → Workspace → AI 对话 → 工具工作台**。
+- 项目截图将在演示版本视觉验收后补充，避免使用设计稿冒充实际运行画面。
+- 未开放体验账户时，请勿将私人的登录信息、API Key 或后台配置写入仓库。
+
+## 本地运行
+
+**环境要求：** Node.js 22.x LTS、pnpm 11.7.0；PostgreSQL / Supabase 与模型配置按具体功能准备。
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-访问 `http://localhost:3000`。环境变量参考 `.env.example`，真实密钥只写入 `.env.local`。
+打开 `http://localhost:3000`。复制 `.env.example` 为 `.env.local` 并按需填写环境变量。禁止将真实密钥提交至 GitHub。
 
-数据库与认证配置见 `docs/authentication.md`。RLS、grants、trigger 与约束必须随版本化 Prisma migration 部署；`prisma/rls.sql` 只用于灾难恢复基准，不能作为正常发布步骤。
+需要数据库迁移、认证或 AI Provider 设置时，参见：
 
-## AI 聊天
+- [认证与数据库](docs/authentication.md)
+- [AI Provider](docs/ai-provider.md)
+- [部署说明](docs/deployment.md)
+- [整体架构](docs/architecture.md)
 
-Phase 3 提供 `/chat` 流式聊天、历史记录、删除、Markdown 与代码块。Provider 使用 OpenAI-compatible Chat Completions；GLM-5.2 与未来 OpenAI 均通过服务端环境变量切换，不需要改写聊天页面或 API。配置与联调步骤见 `docs/ai-provider.md` 和 `docs/chat-system.md`。
-
-## AI 人格
-
-Phase 4A 提供 `/personas` 私有人格管理：手动创建、编辑、预设头像、归档恢复，并可将人格绑定到新对话。人格 Prompt 只在服务端拼装，不返回浏览器；详细设计见 `docs/persona-system.md`。
-
-Phase 4A2 在 `/personas/new` 增加可选的 AI 草稿模式：自然语言描述经现有 OpenAI-compatible Provider 转为严格结构化草稿，用户修改并确认后才使用原创建流程保存。配置和错误排查见 `docs/ai-persona-generation.md`。
-
-## 长期记忆
-
-Phase 5B1 将模型建议与正式记忆彻底分离。助手成功完成回复后，普通隐式事实只创建 30 天有效的待确认 `MemoryProposal`；用户可接受、编辑后接受或拒绝。确认前不会用于未来对话、不会占用正式容量，也不会建立向量。明确“请记住”继续支持即时正式保存，但与 Proposal 接受共用同一可信写入治理函数。
-
-Phase 5B2a 为正式 Memory 增加可读的核验来源：用户手动添加、明确要求记住、确认 AI 建议、手动核对，以及带 warning 的旧版未复核。旧版未复核记忆暂时继续按当前设置召回；用户可在 `/memories` 逐条核对。聊天只在当前流式会话的 Assistant Message 下展示本轮实际注入 Prompt 的正式 Memory，刷新后不重建，不保存排名分数、向量或新的引用审计表。详见 `docs/memory-provenance-and-reference-transparency.md`。
-
-Phase 5A3-2 使用通用 OpenAI-compatible Embedding Provider 和独立 `MemoryEmbedding` 表，为 Memory 内容建立固定 512 维索引。默认 `adaptive` 模式只在关键词结果不足、无直接匹配或出现记忆意图时生成一次 query embedding，再以稳定 RRF 融合确定性与语义排名。没有配置 Key、pgvector 不可用或 Provider 失败时聊天继续使用原确定性召回。当前不包含文件、网页、Message 向量化或外部知识库 RAG。
-
-真实 Supabase migration/vector extension、Embedding-3 回填、不同表达语义召回、Memory 更新后向量重建、隔离、Cascade 和安全降级均已通过项目所有者验收。没有自动删除或自动批量合并。
-
-在经过确认的非 Production/部署环境中，按顺序应用 versioned migrations：
-
-```bash
-pnpm db:deploy
-```
-
-## 质量检查
+### 质量检查
 
 ```bash
 pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm exec prisma validate
 ```
 
-移动浏览器回归测试：
+## 当前开发方向
 
-```bash
-pnpm exec playwright install chromium webkit
-pnpm test:e2e
-```
+1. 打磨独立可展示的产品主页、工作台和响应式体验。
+2. 强化多 Agent 执行、恢复、可观测性与真实运行验收。
+3. 在安全与迁移验收完成后推进项目 Registry 等平台化模块。
 
-未提供登录态时会运行公开认证页面的 Chromium/WebKit 测试；受保护页面需要将真实测试账号的 Playwright storage state 路径写入本地 `PLAYWRIGHT_AUTH_STATE`，该文件不得提交。
+历史设计决策、阶段验收和深入技术文档保留在 [docs/](docs/)；旧版 Streamlit 原型位于 [legacy/streamlit/](legacy/streamlit/)。
 
-架构、迁移、数据库与部署决策见 `docs/`。旧 Streamlit 原型保存在 `legacy/streamlit/`，仅供迁移参考。
+---
+
+*AI-Generator is an evolving personal full-stack project. Feature availability and deployment status may change between branches and environments.*
