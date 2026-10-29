@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     default: "AI-Generator",
     template: "%s · AI-Generator",
   },
-  description: "简单、私密、低成本的私人 AI 助手平台。",
+  description: "统一 AI 工作平台：Workspace、Projects、Agent、Skills，以及 Chat、Persona、Memory 与 Tools。",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon.png", type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
