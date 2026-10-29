@@ -90,11 +90,15 @@ async function main() {
     assert.equal((await request("/api/chat/bootstrap?personas=0")).status,401);
     console.log("PASS real chat/tool SSE, persistence, history reload, session refresh/sign-out, protected routes and invalid input (HTTP; browser UI not exercised)");
   } finally {
-    if(userId) {
-      const deleted = await service.auth.admin.deleteUser(userId);
-      assert(!deleted.error,"Disposable account cleanup failed");
-    }
-    await db.$disconnect();
+    try {
+      if(userId) {
+        const deleted = await service.auth.admin.deleteUser(userId);
+        assert(!deleted.error,"Disposable account cleanup failed");
+        // Auth deletion does not cascade to the application's Prisma profile.
+        // Delete only this invocation's synthetic profile and its child rows.
+        await db.profile.deleteMany({where:{id:userId,email}});
+      }
+    } finally { await db.$disconnect(); }
   }
 }
 main().catch((error)=>{console.error("FAIL demo HTTP smoke", error instanceof assert.AssertionError ? error.message : error?.code ?? error?.name, "(raw SDK errors withheld to protect credentials)");process.exitCode=1;});
