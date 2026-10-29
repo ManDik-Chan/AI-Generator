@@ -229,6 +229,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Initialization can fail before GITHUB_ENV receives this path.
+          E2E_SENSITIVE_VALUES_FILE="${E2E_SENSITIVE_VALUES_FILE:-$RUNNER_TEMP/e2e-sensitive-${{ matrix.project }}.txt}"
           artifact_dir="$RUNNER_TEMP/e2e-artifacts/${{ matrix.project }}"
           mkdir -p "$artifact_dir"
           if [[ -e "playwright-report/${{ matrix.project }}" ]]; then
