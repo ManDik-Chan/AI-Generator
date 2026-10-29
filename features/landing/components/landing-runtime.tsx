@@ -82,7 +82,7 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     for (let n = 0; n < 14; n++) {
       x = rand(-1, 1) * S.vw * 0.62;
       y = rand(-1, 1) * S.vh * 0.58;
-      if (!(Math.abs(x) < S.vw * 0.27 && Math.abs(y) < S.vh * 0.17)) break; // keep the headline clear
+      if (!(Math.abs(x) < Math.max(S.vw * 0.27, 170) && Math.abs(y) < S.vh * 0.22)) break; // keep the headline and CTA clear
     }
     it.x = x;
     it.y = y;
@@ -338,8 +338,10 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     return tone;
   };
   const updateTone = () => {
-    const top = toneAt(S.y + 40) === "dark" ? "dark" : "light";
+    const surface = toneAt(S.y + 40);
+    const top = surface === "dark" ? "dark" : "light";
     if (header && header.dataset.tone !== top) header.dataset.tone = top;
+    if (header && header.dataset.surface !== surface) header.dataset.surface = surface;
     const bottom = toneAt(S.y + S.vh - 40);
     if (fab && fab.dataset.tone !== bottom) fab.dataset.tone = bottom;
   };
@@ -531,16 +533,21 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     if (odoO) odoO.style.transform = `translate3d(0,${-(full ? 0 : v % 10)}em,0)`;
   };
   const t0 = performance.now();
-  const MIN = reduce ? 200 : 1600;
+  // Keep the intro short: the page must be usable within a couple of seconds even on slow devices.
+  const MIN = reduce ? 200 : 1100;
   let assetsReady = false;
   Promise.race([
     Promise.all([document.fonts?.ready, artPromise]),
-    new Promise((r) => window.setTimeout(r, 4500)),
+    new Promise((r) => window.setTimeout(r, 2800)),
   ]).then(() => { assetsReady = true; });
 
   let shown = -1;
   let preRaf = 0;
+  let finished = false;
   const finish = () => {
+    if (finished) return;
+    finished = true;
+    cancelAnimationFrame(preRaf);
     setOdo(100);
     later(() => {
       root.classList.remove("is-loading");
@@ -562,6 +569,8 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
   measure();
   raf = requestAnimationFrame(frame);
   preRaf = requestAnimationFrame(preFrame);
+  // Frames can be paused (background tabs, some in-app WebViews); never keep the page behind the preloader.
+  later(finish, 4000);
   document.fonts?.ready.then(() => { if (!disposed) measure(); });
   on(window, "load", measure);
 

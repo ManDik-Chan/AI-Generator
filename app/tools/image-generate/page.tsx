@@ -27,7 +27,7 @@ export default async function ImageGeneratePage({ searchParams }: { searchParams
     <PageHeader
       back={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm text-muted-foreground hover:text-foreground" href="/tools"><ArrowLeft className="size-4" />返回工具中心</Link>}
       description="输入画面描述并选择服务端白名单风格，每次明确点击只生成一张图片，结果仅保存在当前用户的私有空间。"
-      eyebrow="PRIVATE IMAGE STUDIO"
+      eyebrow="图片工作室"
       primaryAction={<Button asChild variant="outline"><Link href="/tools/history?type=IMAGE_GENERATE"><History className="size-4" />工具历史</Link></Button>}
       title="AI 图片创作"
     />

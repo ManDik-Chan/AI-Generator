@@ -43,10 +43,10 @@ function SplitCta({ href, icon, label }: { href: string; icon: LandingIcon; labe
   );
 }
 
-function Catalog({ href, title, sub, thumb }: { href: string; title: string; sub: string; thumb: ReactNode }) {
+function Catalog({ href, title, sub, thumb, badge }: { href: string; title: string; sub: string; thumb: ReactNode; badge?: string }) {
   return (
     <A className="catalog" href={href}>
-      <span className="catalog__txt"><b>{title}</b><span>{sub} <Loop dir="dr" name="dr" /></span></span>
+      <span className="catalog__txt"><b>{title}{badge ? <em className="dev-badge">{badge}</em> : null}</b><span>{sub} <Loop dir="dr" name="dr" /></span></span>
       {thumb}
     </A>
   );
@@ -154,10 +154,19 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
             <div aria-hidden="true" className="hero__field"><div className="hero__cam" data-cam="" /></div>
             <div className="hero__shade" data-hero-shade="" />
             <div className="hero__center" data-hero-center="">
-              <h1 className="hero__title t-display" id="lp-hero-title">
-                <span className="line"><span>{c.hero.lines[0]}</span></span>
-                <span className="line" style={vars({ "--d": 110 })}><span>{c.hero.lines[1]}</span></span>
-              </h1>
+              <div className="hero__stack">
+                <h1 className="hero__title t-display" id="lp-hero-title">
+                  <span className="line"><span>{c.hero.lines[0]}</span></span>
+                  <span className="line" style={vars({ "--d": 110 })}><span>{c.hero.lines[1]}</span></span>
+                </h1>
+                {/* /enter sends signed-in visitors to the workspace and everyone else to login. */}
+                <div className="hero__cta">
+                  <SplitCta href="/enter" icon="chat" label={c.hero.start} />
+                  <a className="link hero__source" href="https://github.com/ManDik-Chan/AI-Generator" rel="noopener noreferrer" target="_blank">
+                    <span className="ul">{c.hero.source}</span><Loop dir="ur" name="ur" />
+                  </a>
+                </div>
+              </div>
             </div>
             <div className="hero__foot">
               <p>{c.hero.foot[0]}<br />{c.hero.foot[1]}</p>
@@ -165,7 +174,7 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
             </div>
           </section>
 
-          {/* Pinned chapters — product shots are placeholders */}
+          {/* Pinned chapters — product shots are illustrations of the real pages they link to */}
           <section aria-label={ch.label} className="chapters" data-chapters="" data-theme="dark" style={vars({ "--n": 5 })}>
             <div className="chapters__sticky">
               <Chapter
@@ -229,7 +238,7 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
               </Chapter>
 
               <Chapter
-                art="agents" catalog={<Catalog href="/agents" sub={ch.agents.catalog[1]} thumb={<span className="catalog__thumb art" data-art="agents" />} title={ch.agents.catalog[0]} />}
+                art="agents" catalog={<Catalog badge={ch.agents.badge} href="/agents" sub={ch.agents.catalog[1]} thumb={<span className="catalog__thumb art" data-art="agents" />} title={ch.agents.catalog[0]} />}
                 cta={ch.agents.cta} hint={ch.hint} href="/tools/brainstorm" icon="agents" tag={ch.agents.tag} tagColor="#E9E778" title={ch.agents.title}
               >
                 <svg className="comp-graph" viewBox="0 0 400 320">
@@ -263,12 +272,12 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
           </section>
         </div>
 
-        {/* About — paragraph and update cards are placeholder copy */}
+        {/* About */}
         <section className="about" data-theme="light">
           <div className="rule" data-rule="" />
           <div className="grid">
             <div className="about__main">
-              <p className="about__meta" data-reveal="">AI-Generator<sup>®</sup><br />V2<br />Lumen</p>
+              <p className="about__meta" data-reveal="">AI-Generator<sup>®</sup><br />{c.about.meta[0]}<br />{c.about.meta[1]}</p>
               <Art className="about__img" k="stone" media />
               <p className="about__text" data-chars=""><Chars lines={[c.about.text]} /></p>
             </div>

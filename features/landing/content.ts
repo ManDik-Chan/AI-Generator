@@ -1,7 +1,7 @@
 /*
  * Landing page copy (Chinese + English).
- * Product shots, the About paragraph, update cards and the quote are placeholders
- * until the final content is confirmed.
+ * Product shots illustrate real features; anything unfinished is labelled
+ * "in development" instead of being shown as live.
  */
 
 export type LandingLang = "zh" | "en";
@@ -30,7 +30,7 @@ export interface LandingCopy {
     close: string;
   };
   menu: { label: string; links: { href: string; label: string }[]; register: string };
-  hero: { lines: Pair; foot: Pair; scroll: string };
+  hero: { lines: Pair; foot: Pair; scroll: string; start: string; source: string };
   chapters: {
     label: string;
     hint: string;
@@ -42,9 +42,9 @@ export interface LandingCopy {
       items: { text: string; meta: string }[]; confirmedItem: { text: string; meta: string }; catalog: Pair;
     };
     image: { tag: string; title: Pair; cta: string; prompt: string; status: string; meta: string; catalog: Pair };
-    agents: { tag: string; title: Pair; cta: string; nodes: string[]; lead: Pair; catalog: Pair };
+    agents: { tag: string; title: Pair; cta: string; nodes: string[]; lead: Pair; catalog: Pair; badge: string };
   };
-  about: { text: string; news: string; cards: { title: string; meta: string; href: string }[] };
+  about: { meta: Pair; text: string; news: string; cards: { title: string; meta: string; href: string }[] };
   features: {
     label: string;
     image: { tag: string; title: string; styles: string; go: string };
@@ -101,7 +101,7 @@ const zh: LandingCopy = {
     ],
     register: "注册账号",
   },
-  hero: { lines: ["懂你所想，", "守你所藏。"], foot: ["私人 AI 助手平台", "对话 · 人格 · 记忆 · 创作"], scroll: "向下滚动" },
+  hero: { lines: ["懂你所想，", "守你所藏。"], foot: ["私人 AI 助手平台", "对话 · 人格 · 记忆 · 创作"], scroll: "向下滚动", start: "开始体验", source: "查看源码" },
   chapters: {
     label: "核心能力",
     hint: "继续滚动",
@@ -158,14 +158,16 @@ const zh: LandingCopy = {
       nodes: ["W1 · 发散视角", "W2 · 反方质疑", "W3 · 落地路径", "W4 · 类比迁移"],
       lead: ["协调器", "综合 4 份结论"],
       catalog: ["Agent 运行", "查看运行记录"],
+      badge: "开发中",
     },
   },
   about: {
+    meta: ["私人 AI 工作室", "Next.js · Supabase"],
     text: "我们相信，好的 AI 不该喧宾夺主。它应该安静地待在身边，理解你的语气，记住你确认过的事，在需要时把对话、人格、记忆与创作工具连接成一条完整的工作流，并且始终把你的数据留在属于你的边界之内。",
     news: "最近更新",
     cards: [
-      { title: "Chat Agent 模式：标准 4 Worker 与深度 6 Worker 编排", meta: "Phase 7A1.1 · 草案", href: "/agents" },
-      { title: "AI 图片生成工作台通过真实验收", meta: "Phase 6A3 · 已上线", href: "/tools/image-generate" },
+      { title: "Chat Agent 模式：标准 4 Worker 与深度 6 Worker 编排", meta: "开发中 · 可在对话中预览", href: "/agents" },
+      { title: "图片生成工作台：一句话生成，保存在私有空间", meta: "已上线", href: "/tools/image-generate" },
     ],
   },
   features: {
@@ -217,12 +219,12 @@ const zh: LandingCopy = {
   },
   footer: {
     cols: [
-      { title: "工作空间", links: [{ href: "/workspace", label: "控制中心" }, { href: "/chat", label: "AI 对话" }, { href: "/agents", label: "Agent 运行" }, { href: "/personas", label: "AI 助手" }, { href: "/memories", label: "长期记忆" }] },
+      { title: "工作空间", links: [{ href: "/workspace", label: "控制中心" }, { href: "/chat", label: "AI 对话" }, { href: "/agents", label: "Agent 运行 · 开发中" }, { href: "/personas", label: "AI 助手" }, { href: "/memories", label: "长期记忆" }] },
       { title: "创作实验室", links: [{ href: "/tools", label: "文本工具" }, { href: "/tools/image", label: "图片理解" }, { href: "/tools/image-generate", label: "图片生成" }, { href: "/tools/brainstorm", label: "多 Agent 头脑风暴" }] },
       { title: "系统", links: [{ href: "/tools/history", label: "运行历史" }, { href: "/account", label: "账户与隐私" }, { href: "/login", label: "登录" }, { href: "/register", label: "注册" }] },
     ],
     site: "站点",
-    bottom: ["© 2026 AI-Generator", "Lumen Interface · 私有 · 安全"],
+    bottom: ["© 2026 AI-Generator", "私有 · 安全 · 可追溯"],
   },
   fab: "快速开始对话",
   runtime: {
@@ -266,7 +268,7 @@ const en: LandingCopy = {
     ],
     register: "Create account",
   },
-  hero: { lines: ["Knows your mind,", "keeps your trust."], foot: ["A private AI assistant platform", "Chat · Personas · Memory · Create"], scroll: "Scroll down" },
+  hero: { lines: ["Knows your mind,", "keeps your trust."], foot: ["A private AI assistant platform", "Chat · Personas · Memory · Create"], scroll: "Scroll down", start: "Try it now", source: "View source" },
   chapters: {
     label: "Core features",
     hint: "Keep scrolling",
@@ -323,14 +325,16 @@ const en: LandingCopy = {
       nodes: ["W1 · Divergent", "W2 · Skeptic", "W3 · Practical", "W4 · Analogies"],
       lead: ["Coordinator", "Merges 4 answers"],
       catalog: ["Agent runs", "View run history"],
+      badge: "In development",
     },
   },
   about: {
+    meta: ["Private AI studio", "Next.js · Supabase"],
     text: "We believe good AI shouldn’t steal the show. It should stay quietly by your side, understand your tone, remember what you’ve confirmed, link chat, personas, memory and creative tools into one workflow when you need them, and always keep your data inside your own boundaries.",
     news: "Recent updates",
     cards: [
-      { title: "Chat Agent mode: standard 4-worker and deep 6-worker runs", meta: "Phase 7A1.1 · Draft", href: "/agents" },
-      { title: "AI image studio passes owner acceptance", meta: "Phase 6A3 · Live", href: "/tools/image-generate" },
+      { title: "Chat Agent mode: standard 4-worker and deep 6-worker runs", meta: "In development · preview in chat", href: "/agents" },
+      { title: "Image studio: describe it once, keep it in private storage", meta: "Live", href: "/tools/image-generate" },
     ],
   },
   features: {
@@ -382,12 +386,12 @@ const en: LandingCopy = {
   },
   footer: {
     cols: [
-      { title: "Workspace", links: [{ href: "/workspace", label: "Dashboard" }, { href: "/chat", label: "AI chat" }, { href: "/agents", label: "Agent runs" }, { href: "/personas", label: "AI assistants" }, { href: "/memories", label: "Long-term memory" }] },
+      { title: "Workspace", links: [{ href: "/workspace", label: "Dashboard" }, { href: "/chat", label: "AI chat" }, { href: "/agents", label: "Agent runs · in development" }, { href: "/personas", label: "AI assistants" }, { href: "/memories", label: "Long-term memory" }] },
       { title: "Creative lab", links: [{ href: "/tools", label: "Text tools" }, { href: "/tools/image", label: "Image understanding" }, { href: "/tools/image-generate", label: "Image generation" }, { href: "/tools/brainstorm", label: "Multi-agent brainstorm" }] },
       { title: "System", links: [{ href: "/tools/history", label: "Run history" }, { href: "/account", label: "Account & privacy" }, { href: "/login", label: "Log in" }, { href: "/register", label: "Sign up" }] },
     ],
     site: "Site",
-    bottom: ["© 2026 AI-Generator", "Lumen Interface · Private · Secure"],
+    bottom: ["© 2026 AI-Generator", "Private · Secure · Traceable"],
   },
   fab: "Start a chat",
   runtime: {

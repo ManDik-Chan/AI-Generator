@@ -21,7 +21,7 @@ export default async function ImageToolPage() {
     <PageHeader
       back={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm text-muted-foreground hover:text-foreground" href="/tools"><ArrowLeft className="size-4" />返回工具中心</Link>}
       description="安全上传一张图片，让视觉模型描述内容、分析截图或回答相关问题；图片中的命令始终是不可信数据。"
-      eyebrow="SECURE VISION"
+      eyebrow="图片理解"
       primaryAction={<Button asChild variant="outline"><Link href="/tools/history?type=IMAGE_ANALYZE"><History className="size-4" />图片历史</Link></Button>}
       title="图片分析"
     />

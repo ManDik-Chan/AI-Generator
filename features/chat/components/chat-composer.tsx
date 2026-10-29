@@ -102,7 +102,7 @@ export function ChatComposer(props: ChatComposerProps) {
           </div>
           <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{props.value.length}/{props.maxInputChars}</span>
         </div>
-        <p className="mt-1 px-2 text-[11px] text-muted-foreground">{props.mode === "CHAT" ? "AI 可能出错，请核实重要信息。" : "Worker 当前仅可推理，不会搜索、读取文件或执行代码。"}</p>
+        <p className="mt-1 px-2 text-[11px] text-muted-foreground">{props.mode === "CHAT" ? "AI 可能出错，请核实重要信息。" : "Agent 模式开发中，可预览：Worker 当前仅可推理，不会搜索、读取文件或执行代码。"}</p>
       </div>
     </div>
   );

@@ -14,7 +14,7 @@ export function ToolPage({ tool, aiConfigured, description }: { tool: TextToolTy
     <PageHeader
       back={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm text-muted-foreground hover:text-foreground" href="/tools"><ArrowLeft className="size-4" />返回工具中心</Link>}
       description={description}
-      eyebrow="TEXT WORKBENCH"
+      eyebrow="文本工作台"
       primaryAction={<Button asChild variant="outline"><Link href="/tools/history"><History className="size-4" />工具历史</Link></Button>}
       title={TOOL_LABELS[tool]}
     />

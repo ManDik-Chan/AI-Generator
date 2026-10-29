@@ -21,7 +21,7 @@ export default async function EditPersonaPage({ params }: { params: Promise<{ pe
     <PageHeader
       back={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm text-muted-foreground hover:text-foreground" href={`/personas/${persona.id}`}><ArrowLeft className="size-4" />返回人格详情</Link>}
       description="分区调整身份、性格、表达和高级边界；右侧预览只反映当前真实输入。"
-      eyebrow="PERSONA BUILDER"
+      eyebrow="人格编辑"
       title={`编辑 ${persona.name}`}
     />
     <div className="mt-8"><PersonaForm initial={persona} /></div>

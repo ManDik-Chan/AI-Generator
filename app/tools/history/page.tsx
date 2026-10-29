@@ -23,7 +23,7 @@ export default async function ToolHistoryPage({ searchParams }: { searchParams: 
     <PageHeader
       back={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm text-muted-foreground hover:text-foreground" href="/tools"><ArrowLeft className="size-4" />返回工具中心</Link>}
       description="只显示开启了历史保存的真实运行；打开、复制和下载记录都不会重新调用模型。"
-      eyebrow="PRIVATE ACTIVITY"
+      eyebrow="运行记录"
       title="工具历史"
     />
     <div className="mt-8"><ToolHistory filter={filter} items={history.items} page={history.page} pages={history.pages} /></div>
