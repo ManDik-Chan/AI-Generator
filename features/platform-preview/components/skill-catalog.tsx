@@ -59,30 +59,35 @@ export function SkillCatalog() {
   );
 }
 
-/** Demo management table: switches only change local state and are never saved. */
+const managerColumns = "gap-x-4 min-[640px]:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)_6.5rem_3.5rem]";
+
+/** Demo management list: switches only change local state and are never saved. */
 export function SkillManager() {
   const [enabled, setEnabled] = useState<Record<string, boolean>>(() => Object.fromEntries(previewSkills.map((skill) => [skill.slug, skill.enabled])));
   const [touched, setTouched] = useState(false);
   return (
     <div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[36rem] border-t border-border/14 text-left text-sm">
-          <thead className="text-[.6875rem] text-muted-foreground">
-            <tr className="border-b border-border/14"><th className="py-2.5 font-normal">Skill</th><th className="py-2.5 font-normal">所需权限</th><th className="py-2.5 font-normal">底层能力</th><th className="py-2.5 text-right font-normal">启用</th></tr>
-          </thead>
-          <tbody>
-            {previewSkills.map((skill) => (
-              <tr className="border-b border-border/14" key={skill.slug}>
-                <td className="py-3 pr-4"><Link className="link-grow font-medium" href={`/platform/skills/${skill.slug}`} prefetch={false}>{skill.name}</Link></td>
-                <td className="py-3 pr-4 text-caption">{skill.permissions.join("、")}</td>
-                <td className="py-3 pr-4"><StatusBadge status={skill.capability} /></td>
-                <td className="py-3 text-right">
-                  <DemoSwitch checked={enabled[skill.slug]} disabled={skill.capability !== "live"} label={`启用 ${skill.name}`} onChange={(next) => { setEnabled((value) => ({ ...value, [skill.slug]: next })); setTouched(true); }} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Phones: name + switch, then permissions, then capability. From 640px: one four-column row. */}
+      <div className="border-t border-border/14 text-sm">
+        <div aria-hidden="true" className={cn(managerColumns, "hidden border-b border-border/14 py-2.5 text-[.6875rem] text-muted-foreground min-[640px]:grid")}>
+          <span>Skill</span><span>所需权限</span><span>底层能力</span><span className="text-right">启用</span>
+        </div>
+        <ul>
+          {previewSkills.map((skill) => (
+            <li className={cn(managerColumns, "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-y-1.5 border-b border-border/14 py-3")} key={skill.slug}>
+              <Link className="link-grow col-start-1 row-start-1 w-fit font-medium" href={`/platform/skills/${skill.slug}`} prefetch={false}>{skill.name}</Link>
+              <span className="col-span-2 row-start-2 text-caption min-[640px]:col-span-1 min-[640px]:col-start-2 min-[640px]:row-start-1">
+                <span className="min-[640px]:hidden">权限：</span>{skill.permissions.join("、")}
+              </span>
+              <span className="col-span-2 row-start-3 flex items-center gap-1.5 min-[640px]:col-span-1 min-[640px]:col-start-3 min-[640px]:row-start-1">
+                <span className="text-caption min-[640px]:hidden">底层能力</span><StatusBadge status={skill.capability} />
+              </span>
+              <span className="col-start-2 row-start-1 justify-self-end min-[640px]:col-start-4">
+                <DemoSwitch checked={enabled[skill.slug]} disabled={skill.capability !== "live"} label={`启用 ${skill.name}`} onChange={(next) => { setEnabled((value) => ({ ...value, [skill.slug]: next })); setTouched(true); }} />
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
       <p aria-live="polite" className="mt-3 text-caption">{touched ? "演示预览：开关只在本页切换，刷新后恢复，不会保存或影响任何账户。" : "规划中的 Skill 不能启用；已上线能力目前以 Tools 形式使用。"}</p>
     </div>
