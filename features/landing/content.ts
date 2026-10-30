@@ -1,7 +1,9 @@
 /*
  * Landing page copy (Chinese + English).
- * Product shots illustrate real features; anything unfinished is labelled
- * "in development" instead of being shown as live.
+ * Product positioning: a unified AI workspace platform. Copy must keep the
+ * capability status honest: Chat / Personas / Memory / Tools are live,
+ * Agent mode and Projects are in development, Skills are planned.
+ * Platform links point at the public, read-only /platform preview.
  */
 
 export type LandingLang = "zh" | "en";
@@ -30,7 +32,7 @@ export interface LandingCopy {
     close: string;
   };
   menu: { label: string; links: { href: string; label: string }[]; register: string };
-  hero: { lines: Pair; foot: Pair; scroll: string; start: string; source: string };
+  hero: { lines: Pair; foot: Pair; scroll: string };
   chapters: {
     label: string;
     hint: string;
@@ -42,9 +44,9 @@ export interface LandingCopy {
       items: { text: string; meta: string }[]; confirmedItem: { text: string; meta: string }; catalog: Pair;
     };
     image: { tag: string; title: Pair; cta: string; prompt: string; status: string; meta: string; catalog: Pair };
-    agents: { tag: string; title: Pair; cta: string; nodes: string[]; lead: Pair; catalog: Pair; badge: string };
+    agents: { tag: string; title: Pair; cta: string; nodes: string[]; lead: Pair; catalog: Pair };
   };
-  about: { meta: Pair; text: string; news: string; cards: { title: string; meta: string; href: string }[] };
+  about: { text: string; news: string; cards: { title: string; meta: string; href: string }[] };
   features: {
     label: string;
     image: { tag: string; title: string; styles: string; go: string };
@@ -68,18 +70,18 @@ export interface LandingCopy {
 
 const zh: LandingCopy = {
   meta: {
-    title: "AI-Generator — 懂你所想，守你所藏。",
-    description: "AI-Generator：面向亲朋好友的私人 AI 助手平台。对话、人格、长期记忆与创作工具，安静地连接在一起。",
+    title: "AI-Generator — 统一 AI 工作平台",
+    description: "AI-Generator：统一 AI 工作平台。Workspace 汇集 Projects、Agent 与 Skills，Chat、Persona、Memory 与 Tools 共享同一套身份与数据边界。",
   },
-  preloader: ["AI-Generator", "私人 AI 工作室"],
+  preloader: ["AI-Generator", "统一 AI 工作平台"],
   header: {
     home: "AI-Generator 首页",
     mainNav: "主导航",
     links: [
-      { href: "/chat", label: "对话" },
-      { href: "/personas", label: "助手" },
-      { href: "/tools", label: "工具" },
-      { href: "/memories", label: "记忆" },
+      { href: "/platform", label: "平台" },
+      { href: "/platform/projects", label: "项目" },
+      { href: "/platform/agent", label: "Agent" },
+      { href: "/platform/skills", label: "Skills" },
     ],
     login: "登录",
     langLabel: "切换语言",
@@ -92,23 +94,23 @@ const zh: LandingCopy = {
   menu: {
     label: "移动端导航",
     links: [
+      { href: "/platform", label: "平台总览" },
+      { href: "/platform/projects", label: "项目" },
+      { href: "/platform/agent", label: "Agent" },
+      { href: "/platform/skills", label: "Skills" },
       { href: "/chat", label: "AI 对话" },
-      { href: "/personas", label: "专属人格" },
-      { href: "/memories", label: "长期记忆" },
-      { href: "/tools", label: "文本工具" },
-      { href: "/tools/image-generate", label: "图片生成" },
-      { href: "/tools/brainstorm", label: "多 Agent" },
+      { href: "/tools", label: "AI 工具" },
     ],
     register: "注册账号",
   },
-  hero: { lines: ["懂你所想，", "守你所藏。"], foot: ["私人 AI 助手平台", "对话 · 人格 · 记忆 · 创作"], scroll: "向下滚动", start: "开始体验", source: "查看源码" },
+  hero: { lines: ["懂你所想，", "守你所藏。"], foot: ["统一 AI 工作平台", "工作台 · 项目 · Agent · Skills"], scroll: "向下滚动" },
   chapters: {
-    label: "核心能力",
+    label: "平台能力",
     hint: "继续滚动",
     index: "Private by design",
     chat: {
       tag: "对话",
-      title: ["连续对话，", "跨设备延续你的上下文"],
+      title: ["对话是工作台的入口，", "上下文跨设备延续"],
       cta: "开始新对话",
       user: "帮我把这周的会议纪要整理成三个重点。",
       persona: "写作搭子",
@@ -118,7 +120,7 @@ const zh: LandingCopy = {
     },
     persona: {
       tag: "人格",
-      title: ["为每一项任务，", "建立独立的角色与语气"],
+      title: ["每项任务一个人格，", "角色、语气与边界各自独立"],
       cta: "管理助手",
       cards: [
         { name: "写作搭子", desc: "润色、提纲与表达", chips: ["温和", "简洁"] },
@@ -143,8 +145,8 @@ const zh: LandingCopy = {
       catalog: ["来源可追溯", "逐条核对记忆"],
     },
     image: {
-      tag: "图片",
-      title: ["一句话描述，", "生成属于你的画面"],
+      tag: "工具",
+      title: ["工具接入同一工作台，", "一句话生成你的画面"],
       cta: "开始创作",
       prompt: "晨雾中的玻璃温室，柔和自然光",
       status: "生成中",
@@ -152,45 +154,43 @@ const zh: LandingCopy = {
       catalog: ["图片理解", "分析截图与图表"],
     },
     agents: {
-      tag: "多 Agent",
-      title: ["四个 Worker 并行思考，", "一位协调者收束答案"],
+      tag: "Agent",
+      title: ["Agent 拆解任务，", "Worker 并行、协调器收束"],
       cta: "启动头脑风暴",
       nodes: ["W1 · 发散视角", "W2 · 反方质疑", "W3 · 落地路径", "W4 · 类比迁移"],
       lead: ["协调器", "综合 4 份结论"],
-      catalog: ["Agent 运行", "查看运行记录"],
-      badge: "开发中",
+      catalog: ["Agent 模式 · 开发中", "查看运行编排"],
     },
   },
   about: {
-    meta: ["私人 AI 工作室", "Next.js · Supabase"],
-    text: "我们相信，好的 AI 不该喧宾夺主。它应该安静地待在身边，理解你的语气，记住你确认过的事，在需要时把对话、人格、记忆与创作工具连接成一条完整的工作流，并且始终把你的数据留在属于你的边界之内。",
-    news: "最近更新",
+    text: "AI-Generator 正在从私人助手成长为统一的 AI 工作平台：Workspace 是唯一入口，Projects 组织目标与资料，Agent 拆解并执行任务，Skills 让能力可以复用；Chat、Persona、Memory 与 Tools 作为基础能力，共享同一套身份、权限与数据边界。",
+    news: "发展方向",
     cards: [
-      { title: "Chat Agent 模式：标准 4 Worker 与深度 6 Worker 编排", meta: "开发中 · 可在对话中预览", href: "/agents" },
-      { title: "图片生成工作台：一句话生成，保存在私有空间", meta: "已上线", href: "/tools/image-generate" },
+      { title: "Projects：以项目组织对话、资料、Agent 运行与产物", meta: "开发中 · 数据模型与权限验收中", href: "/platform/projects" },
+      { title: "Skills：把常用能力封装为可复用、可授权的模块", meta: "规划中 · 可浏览演示预览", href: "/platform/skills" },
     ],
   },
   features: {
-    label: "新近能力",
+    label: "已上线能力",
     image: { tag: "图片", title: "图片生成工作台", styles: "画面风格", go: "去创作" },
     persona: { tag: "人格", title: "专属人格", avatars: "预设头像", go: "去创建" },
   },
   index: {
-    label: "完整工作空间",
+    label: "AI Hub · 平台基础能力",
     rows: [
-      { href: "/chat", word: "对话" },
-      { href: "/personas", word: "人格" },
-      { href: "/memories", word: "记忆" },
-      { href: "/tools", word: "文本" },
-      { href: "/tools/image", word: "图片" },
-      { href: "/tools/brainstorm", word: "Agent" },
+      { href: "/platform/chat", word: "对话" },
+      { href: "/platform/personas", word: "人格" },
+      { href: "/platform/memory", word: "记忆" },
+      { href: "/platform/tools", word: "工具" },
+      { href: "/platform/tools#image", word: "图片" },
+      { href: "/platform/agent", word: "Agent" },
     ],
   },
   forest: {
     name: "AI-Generator V2",
-    role: "私人 AI 助手平台",
+    role: "统一 AI 工作平台",
     copy: [
-      "面向亲朋好友使用的私人 AI 助手平台，目标是简单、稳定、美观和易维护。",
+      "从私人 AI 助手出发，成长为统一的 AI 工作平台：一个工作台承载项目、Agent、Skills 与日常 AI 能力。",
       "人格 Prompt 只在服务端拼装；长期记忆在你确认后才会写入；生成的图片保存在私有存储中。",
     ],
     quote: ["“好的 AI 应该安静地", "待在身边，在需要时出现，", "只记住你允许它记住的事。”"],
@@ -206,25 +206,25 @@ const zh: LandingCopy = {
     workers: { labels: ["发散", "质疑", "落地", "类比"], lead: "协调器 · 汇总中" },
     history: [["图片生成", "已完成 · 可下载"], ["翻译 · 保持语气", "已完成"], ["多 Agent 头脑风暴", "已恢复"]],
     steps: [
-      ["你来描述", "用自然语言说出任务，选择默认助手或专属人格。"],
-      ["它来协作", "记忆、工具与多 Agent 在需要时自然接力。"],
-      ["结果沉淀", "对话、图片与运行记录保存在私有空间，随时追溯。"],
+      ["你来描述", "在工作台用自然语言说出任务，选择默认助手或专属人格。"],
+      ["它来协作", "记忆、工具与 Agent 按需接力；Skills 将把常用能力封装成可复用模块。"],
+      ["结果沉淀", "对话、图片与运行记录保存在私有空间；Projects 将按项目归档它们。"],
     ],
   },
   closing: {
     title: ["简单、私密，", "长久地好用。"],
-    lead: ["开启你的私人工作室", "使用邮箱登录，或创建一个新账号。"],
+    lead: ["进入你的 AI 工作台", "使用邮箱登录，或创建一个新账号。"],
     field: "前往登录",
     small: ["还没有账号？", "注册", " · 你的内容按用途彼此隔离。"],
   },
   footer: {
     cols: [
-      { title: "工作空间", links: [{ href: "/workspace", label: "控制中心" }, { href: "/chat", label: "AI 对话" }, { href: "/agents", label: "Agent 运行 · 开发中" }, { href: "/personas", label: "AI 助手" }, { href: "/memories", label: "长期记忆" }] },
-      { title: "创作实验室", links: [{ href: "/tools", label: "文本工具" }, { href: "/tools/image", label: "图片理解" }, { href: "/tools/image-generate", label: "图片生成" }, { href: "/tools/brainstorm", label: "多 Agent 头脑风暴" }] },
+      { title: "平台预览", links: [{ href: "/platform", label: "平台总览" }, { href: "/platform/projects", label: "项目 · 开发中" }, { href: "/platform/agent", label: "Agent · 开发中" }, { href: "/platform/skills", label: "Skills · 规划中" }, { href: "/workspace", label: "进入工作台" }] },
+      { title: "AI Hub", links: [{ href: "/chat", label: "AI 对话" }, { href: "/personas", label: "专属人格" }, { href: "/memories", label: "长期记忆" }, { href: "/tools", label: "AI 工具" }] },
       { title: "系统", links: [{ href: "/tools/history", label: "运行历史" }, { href: "/account", label: "账户与隐私" }, { href: "/login", label: "登录" }, { href: "/register", label: "注册" }] },
     ],
     site: "站点",
-    bottom: ["© 2026 AI-Generator", "私有 · 安全 · 可追溯"],
+    bottom: ["© 2026 AI-Generator", "Lumen Interface · 私有 · 安全"],
   },
   fab: "快速开始对话",
   runtime: {
@@ -235,18 +235,18 @@ const zh: LandingCopy = {
 
 const en: LandingCopy = {
   meta: {
-    title: "AI-Generator — Knows your mind, keeps your trust.",
-    description: "AI-Generator: a private AI assistant platform for family and friends. Chat, personas, long-term memory and creative tools, quietly connected.",
+    title: "AI-Generator — A unified AI workspace",
+    description: "AI-Generator: a unified AI workspace platform. One workspace brings together Projects, Agent and Skills, while Chat, Personas, Memory and Tools share one identity and data boundary.",
   },
-  preloader: ["AI-Generator", "Private AI studio"],
+  preloader: ["AI-Generator", "Unified AI workspace"],
   header: {
     home: "AI-Generator home",
     mainNav: "Main navigation",
     links: [
-      { href: "/chat", label: "Chat" },
-      { href: "/personas", label: "Assistants" },
-      { href: "/tools", label: "Tools" },
-      { href: "/memories", label: "Memory" },
+      { href: "/platform", label: "Platform" },
+      { href: "/platform/projects", label: "Projects" },
+      { href: "/platform/agent", label: "Agent" },
+      { href: "/platform/skills", label: "Skills" },
     ],
     login: "Log in",
     langLabel: "Change language",
@@ -259,23 +259,23 @@ const en: LandingCopy = {
   menu: {
     label: "Mobile navigation",
     links: [
+      { href: "/platform", label: "Platform overview" },
+      { href: "/platform/projects", label: "Projects" },
+      { href: "/platform/agent", label: "Agent" },
+      { href: "/platform/skills", label: "Skills" },
       { href: "/chat", label: "AI chat" },
-      { href: "/personas", label: "Personas" },
-      { href: "/memories", label: "Long-term memory" },
-      { href: "/tools", label: "Text tools" },
-      { href: "/tools/image-generate", label: "Image generation" },
-      { href: "/tools/brainstorm", label: "Multi-agent" },
+      { href: "/tools", label: "AI tools" },
     ],
     register: "Create account",
   },
-  hero: { lines: ["Knows your mind,", "keeps your trust."], foot: ["A private AI assistant platform", "Chat · Personas · Memory · Create"], scroll: "Scroll down", start: "Try it now", source: "View source" },
+  hero: { lines: ["Knows your mind,", "keeps your trust."], foot: ["A unified AI workspace", "Projects · Agent · Skills · Chat"], scroll: "Scroll down" },
   chapters: {
-    label: "Core features",
+    label: "Platform capabilities",
     hint: "Keep scrolling",
     index: "Private by design",
     chat: {
       tag: "Chat",
-      title: ["Chats that follow you,", "across every device"],
+      title: ["Chat opens the workspace,", "context follows you"],
       cta: "Start a chat",
       user: "Turn this week’s meeting notes into three key points.",
       persona: "Writing buddy",
@@ -285,7 +285,7 @@ const en: LandingCopy = {
     },
     persona: {
       tag: "Personas",
-      title: ["For every task,", "its own role and voice"],
+      title: ["One persona per task,", "each with its own voice"],
       cta: "Manage assistants",
       cards: [
         { name: "Writing buddy", desc: "Editing, outlines, wording", chips: ["Gentle", "Concise"] },
@@ -310,8 +310,8 @@ const en: LandingCopy = {
       catalog: ["Traceable sources", "Review memories one by one"],
     },
     image: {
-      tag: "Images",
-      title: ["Describe it in a line,", "get an image that’s yours"],
+      tag: "Tools",
+      title: ["Tools in the same workspace,", "an image from one line"],
       cta: "Start creating",
       prompt: "Glass greenhouse in morning mist, soft light",
       status: "Generating",
@@ -319,45 +319,43 @@ const en: LandingCopy = {
       catalog: ["Image understanding", "Read screenshots and charts"],
     },
     agents: {
-      tag: "Multi-agent",
-      title: ["Four workers in parallel,", "one coordinator to decide"],
+      tag: "Agent",
+      title: ["Agents split the task,", "workers run, a lead decides"],
       cta: "Start brainstorming",
       nodes: ["W1 · Divergent", "W2 · Skeptic", "W3 · Practical", "W4 · Analogies"],
       lead: ["Coordinator", "Merges 4 answers"],
-      catalog: ["Agent runs", "View run history"],
-      badge: "In development",
+      catalog: ["Agent mode · in development", "View orchestration"],
     },
   },
   about: {
-    meta: ["Private AI studio", "Next.js · Supabase"],
-    text: "We believe good AI shouldn’t steal the show. It should stay quietly by your side, understand your tone, remember what you’ve confirmed, link chat, personas, memory and creative tools into one workflow when you need them, and always keep your data inside your own boundaries.",
-    news: "Recent updates",
+    text: "AI-Generator is growing from a private assistant into a unified AI workspace: one Workspace as the entry point, Projects to organize the work, Agents to carry it out and Skills to reuse it, with Chat, Personas, Memory and Tools as a shared, private foundation.",
+    news: "What’s next",
     cards: [
-      { title: "Chat Agent mode: standard 4-worker and deep 6-worker runs", meta: "In development · preview in chat", href: "/agents" },
-      { title: "Image studio: describe it once, keep it in private storage", meta: "Live", href: "/tools/image-generate" },
+      { title: "Projects: organize chats, files, agent runs and outputs by project", meta: "In development · data model and access review", href: "/platform/projects" },
+      { title: "Skills: package everyday capabilities as reusable, permissioned modules", meta: "Planned · browsable preview", href: "/platform/skills" },
     ],
   },
   features: {
-    label: "New capabilities",
+    label: "Live today",
     image: { tag: "Images", title: "Image studio", styles: "Styles", go: "Create" },
     persona: { tag: "Personas", title: "Personas", avatars: "Preset avatars", go: "Create one" },
   },
   index: {
-    label: "The full workspace",
+    label: "AI Hub · the platform foundations",
     rows: [
-      { href: "/chat", word: "Chat" },
-      { href: "/personas", word: "Personas" },
-      { href: "/memories", word: "Memory" },
-      { href: "/tools", word: "Text" },
-      { href: "/tools/image", word: "Images" },
-      { href: "/tools/brainstorm", word: "Agent" },
+      { href: "/platform/chat", word: "Chat" },
+      { href: "/platform/personas", word: "Personas" },
+      { href: "/platform/memory", word: "Memory" },
+      { href: "/platform/tools", word: "Tools" },
+      { href: "/platform/tools#image", word: "Images" },
+      { href: "/platform/agent", word: "Agent" },
     ],
   },
   forest: {
     name: "AI-Generator V2",
-    role: "Private AI assistant platform",
+    role: "Unified AI workspace platform",
     copy: [
-      "A private AI assistant platform for family and friends, built to be simple, stable, beautiful and easy to maintain.",
+      "Started as a private AI assistant, now growing into a unified AI workspace: one place for projects, agents, skills and everyday AI work.",
       "Persona prompts are assembled only on the server; long-term memory is saved only after you confirm it; generated images stay in private storage.",
     ],
     quote: ["“Good AI stays quietly by your side, shows up when needed, and remembers only what you allow.”"],
@@ -373,25 +371,25 @@ const en: LandingCopy = {
     workers: { labels: ["Diverge", "Question", "Ground", "Compare"], lead: "Coordinator · merging" },
     history: [["Image generation", "Done · download"], ["Translate · keep tone", "Done"], ["Multi-agent brainstorm", "Resumed"]],
     steps: [
-      ["You describe", "Say what you need in plain words, with the default assistant or a persona."],
-      ["It collaborates", "Memory, tools and agents hand off to each other when needed."],
-      ["Results stay", "Chats, images and run history stay in your private space, ready to revisit."],
+      ["You describe", "Say what you need in the workspace, with the default assistant or a persona."],
+      ["It collaborates", "Memory, tools and agents hand off when needed; Skills will package them as reusable modules."],
+      ["Results stay", "Chats, images and run history stay in your private space; Projects will file them by project."],
     ],
   },
   closing: {
     title: ["Simple, private,", "and built to last."],
-    lead: ["Open your private studio", "Log in with email, or create a new account."],
+    lead: ["Open your AI workspace", "Log in with email, or create a new account."],
     field: "Go to log in",
     small: ["No account yet? ", "Sign up", " · Your content stays separated by purpose."],
   },
   footer: {
     cols: [
-      { title: "Workspace", links: [{ href: "/workspace", label: "Dashboard" }, { href: "/chat", label: "AI chat" }, { href: "/agents", label: "Agent runs · in development" }, { href: "/personas", label: "AI assistants" }, { href: "/memories", label: "Long-term memory" }] },
-      { title: "Creative lab", links: [{ href: "/tools", label: "Text tools" }, { href: "/tools/image", label: "Image understanding" }, { href: "/tools/image-generate", label: "Image generation" }, { href: "/tools/brainstorm", label: "Multi-agent brainstorm" }] },
+      { title: "Platform preview", links: [{ href: "/platform", label: "Overview" }, { href: "/platform/projects", label: "Projects · in development" }, { href: "/platform/agent", label: "Agent · in development" }, { href: "/platform/skills", label: "Skills · planned" }, { href: "/workspace", label: "Open the workspace" }] },
+      { title: "AI Hub", links: [{ href: "/chat", label: "AI chat" }, { href: "/personas", label: "Personas" }, { href: "/memories", label: "Long-term memory" }, { href: "/tools", label: "AI tools" }] },
       { title: "System", links: [{ href: "/tools/history", label: "Run history" }, { href: "/account", label: "Account & privacy" }, { href: "/login", label: "Log in" }, { href: "/register", label: "Sign up" }] },
     ],
     site: "Site",
-    bottom: ["© 2026 AI-Generator", "Private · Secure · Traceable"],
+    bottom: ["© 2026 AI-Generator", "Lumen Interface · Private · Secure"],
   },
   fab: "Start a chat",
   runtime: {
