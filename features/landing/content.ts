@@ -161,7 +161,7 @@ const zh: LandingCopy = {
   },
   about: {
     meta: ["AI-Generator®", "Platform", "2026"],
-    text: "AI-Generator 正在成为一个隐私优先的项目平台：研究、算法、工具与 AI 应用都可以在这里拥有一页完整的成果、一组不可变的版本和一份如实的证据清单。项目可以只展示、不运行，也可以在你明确授权后提供能力；对话、人格、记忆与工具组成的 AI Hub，是平台内置、已经上线的第一个模块。",
+    text: "AI-Generator 正在成为一个隐私优先的项目平台：研究、算法、工具与 AI 应用，都可以在这里拥有一页完整的成果、一组不可变的版本和一份如实的证据清单。对话、人格、记忆与工具组成的 AI Hub，是平台内置、已经上线的第一个模块。",
     news: "发展方向",
     cards: [
       { title: "项目 Registry：草稿、独立审核、不可变版本与可撤回发布", meta: "开发中 · 数据模型与权限验收中", href: "/platform/projects" },
@@ -324,7 +324,7 @@ const en: LandingCopy = {
   },
   about: {
     meta: ["AI-Generator®", "Platform", "2026"],
-    text: "AI-Generator is becoming a privacy-first project platform: research, algorithms, tools and AI apps each get a complete page, immutable versions and an honest list of evidence. A project can simply be shown, or offer capabilities once you explicitly allow it. The AI Hub of chat, personas, memory and tools is the first module, built in and already live.",
+    text: "AI-Generator is becoming a privacy-first project platform: research, algorithms, tools and AI apps each get a complete page, immutable versions and an honest list of evidence. The built-in AI Hub of chat, personas, memory and tools is the first module, and it is already live.",
     news: "What’s next",
     cards: [
       { title: "Project registry: drafts, independent review, immutable versions, revocable releases", meta: "In development · access review", href: "/platform/projects" },
