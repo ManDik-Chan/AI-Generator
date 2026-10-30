@@ -143,8 +143,10 @@ Keep the flag false and leave the tables empty in environments that have not
 received separate migration approval. Roll back application code/disable its flag;
 retain schema, immutable history, ACLs and slug reservations. Do not undo by
 granting client writes, dropping tables or rewriting applied migration files.
-A migration error rolls back the entire new transaction. Backup/restore and
-production rollout need a separate approved runbook.
+An error rolls back that migration's transaction, not the whole two-file batch.
+If the qualification follow-up fails, the committed foundation remains installed;
+keep access disabled and investigate a forward repair before acceptance.
+Backup/restore and production rollout need a separate approved runbook.
 
 B2 must implement DraftDTO/semantic schemas, expected revision CAS, complete
 independent review commands, policy/asset authorization freshness, canonical
