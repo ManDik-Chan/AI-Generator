@@ -92,6 +92,9 @@ jobs:
       - name: Verify clean migration metadata
         run: node scripts/verify-security-migrations.mjs clean
 
+      - name: Verify Registry clean install, main upgrade and transaction rollback
+        run: node scripts/verify-registry-migrations.mjs
+
       - name: Run all discovered real database, JWT and PostgREST suites
         run: pnpm test:integration
 

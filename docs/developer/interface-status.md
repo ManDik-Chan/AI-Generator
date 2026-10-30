@@ -2,7 +2,7 @@
 
 哪些已经实现、哪些只是设计契约，以及下一阶段需要谁做什么。本清单与 [API Reference](/docs/api) 使用同一套状态标记；更新任何接口时请同步这里。
 
-更新日期：2026-10-30 · 分支 `claude/developer-platform-20261030`（等待 Owner 验收，未合并 main）
+更新日期：2026-10-30 · Demo 与文档已随 PR #36 合并 main；Registry P1-B1 为隔离开发候选，未批准生产迁移或部署。
 
 ## 已实现
 
@@ -19,6 +19,7 @@
 | `status:implemented` | 浏览器协议 `aig.worker/1` | `features/demos/neural-network/protocol.ts` | 入站校验、生命周期、取消、重配置、发散、超时 |
 | `status:implemented` | 运行状态机 | `features/platform/run-lifecycle.ts` | 既有测试 + 两个运行时共用 |
 | `status:implemented` | P0.5 Manifest 校验器与 CLI | `features/platform/manifest.ts`、`scripts/manifest-validate.ts` | 既有测试；与 JSON Schema 副本的枚举一致性测试 |
+| `status:internal` | Registry P1-B1 八实体、RLS/GRANT、内部资格与创建函数（本分支实现） | `prisma/schema.prisma`、`features/registry/internal.ts` | 隔离验收记录见 `docs/registry-validation.md`；默认关闭，无 HTTP 路由，尚未生产迁移 |
 | `status:internal` | 本站对话、工具、人格、记忆、Agent 接口 | `app/api/*` | 既有测试；本轮未修改 |
 
 ## Demo 专用的取舍
@@ -38,8 +39,8 @@
 
 | 状态 | 接口 | 依赖 | 建议负责 |
 | --- | --- | --- | --- |
-| `status:design` | Registry 公开读取 `GET /api/v1/projects…`（4 个） | P1-B 数据模型迁移与安全验收 | Codex |
-| `status:design` | Registry 内部命令 `/internal/v1/projects…`（21 个） | 内部白名单、项目角色、幂等与 If-Match | Codex |
+| `status:design` | Registry 公开读取 `GET /api/v1/projects…`（4 个） | B1 基础之外的发布协议、资产授权与白名单投影 | Codex |
+| `status:design` | Registry 内部命令 `/internal/v1/projects…`（21 个） | B2：DraftDTO、完整动作定权、幂等与 If-Match；B1 函数未接入路由 | Codex |
 | `status:design` | 资产上传、净化与独立 origin 读取 | 存储隔离、净化器 | Codex |
 | `status:design` | 异步运行 `POST /api/v1/projects/{projectId}/runs`（202）、`GET /api/v1/runs/{runId}`、取消 | 持久队列、超时与回调签名 | Codex |
 | `status:design` | Grant：安装、授权、撤销 | 身份与授权服务 | Codex |
