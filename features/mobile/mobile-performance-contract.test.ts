@@ -50,7 +50,9 @@ describe("Phase 6B2.1 performance and scrolling contracts", () => {
     const page = read("app/(platform)/workspace/page.tsx");
     expect(home).not.toContain('"use client"');
     expect(home).not.toContain("framer-motion");
-    expect(home).toContain("懂你所想");
+    const blocks = read("features/home/components/workspace-home.tsx");
+    expect(blocks).not.toContain('"use client"');
+    expect(blocks).toContain("把想法做成项目");
     expect(home).toContain("Suspense");
     expect(page).toContain("<HomeDashboard />");
   });
@@ -77,8 +79,15 @@ describe("Phase 6B2.1 performance and scrolling contracts", () => {
     const home = read("features/home/components/home-dashboard.tsx");
     const chatLayout = read("features/chat/components/chat-layout.tsx");
     const chatComposer = read("features/chat/components/chat-composer.tsx");
+    const blocks = read("features/home/components/workspace-home.tsx");
+    const header = read("components/layout/shell-header.tsx");
+    const mobile = read("components/layout/mobile-navigation.tsx");
     expect(home).toContain('<Link href="/chat" prefetch={false}>');
-    expect(home).toContain('<Link href="/tools/brainstorm" prefetch={false}>');
+    expect(home).toContain('<Link href="/projects/new" prefetch={false}>');
+    // Every always-visible post-login link opts out of speculative prefetch.
+    for (const source of [blocks, header, mobile]) {
+      expect((source.match(/prefetch={false}/g) ?? []).length).toBeGreaterThanOrEqual((source.match(/<Link/g) ?? []).length);
+    }
     expect(chatLayout.match(/prefetch=\{false\}/g)?.length).toBeGreaterThanOrEqual(2);
     expect(chatComposer).toContain('href="/tools/image" prefetch={false}');
   });

@@ -3,9 +3,11 @@
 @tailwind utilities;
 
 /*
- * Editorial paper / ink / jade system shared with the public landing page.
- * Light: warm paper canvas, ink text, flat tonal tiles, jade for meaning, lime for
- * hover and highlight. Dark: deep forest-ink canvas with the same accents.
+ * AIG platform tokens. The workspace uses the exact paper / ink / lime / forest palette
+ * of the public landing page (features/landing/landing.css), so the product and the
+ * site read as one object. Light: warm paper (#f2efea), warm ink (#241f21), flat tonal
+ * tiles, lime for the active state, forest for the deep privacy band, emerald for
+ * meaning. Dark: warm charcoal with the same accents.
  */
 :root {
   --app-height: 100vh;
@@ -15,44 +17,54 @@
   --safe-area-left: env(safe-area-inset-left, 0px);
   --mobile-header-height: 4.25rem;
   --mobile-nav-height: 4.125rem;
-  --background: 42 31% 94%;
-  --background-subtle: 40 21% 90%;
-  --foreground: 213 21% 10%;
-  --surface: 40 20% 90%;
-  --surface-foreground: 213 21% 10%;
-  --surface-raised: 40 40% 98%;
-  --surface-subtle: 41 27% 92%;
-  --surface-muted: 38 17% 86%;
-  --overlay: 213 21% 8%;
-  --primary: 164 77% 30%;
-  --primary-hover: 164 80% 24%;
+  --shell-header-height: 4rem;
+  --background: 36 22% 93%;
+  --background-subtle: 37 18% 90%;
+  --foreground: 336 8% 13%;
+  --surface: 37 18% 89%;
+  --surface-foreground: 336 8% 13%;
+  --surface-raised: 40 40% 99%;
+  --surface-subtle: 37 20% 91%;
+  --surface-muted: 39 16% 85%;
+  --overlay: 336 10% 7%;
+  --primary: 166 68% 32%;
+  --primary-hover: 166 72% 26%;
   --primary-foreground: 0 0% 100%;
-  --primary-subtle: 152 32% 89%;
-  --primary-subtle-foreground: 164 72% 20%;
-  --secondary: 59 72% 69%;
-  --secondary-foreground: 213 21% 10%;
-  --accent: 59 72% 69%;
-  --accent-foreground: 213 21% 10%;
+  --primary-subtle: 152 30% 88%;
+  --primary-subtle-foreground: 166 70% 20%;
+  --secondary: 59 73% 69%;
+  --secondary-foreground: 336 8% 13%;
+  --accent: 59 73% 69%;
+  --accent-foreground: 336 8% 13%;
   --accent-gold: 36 86% 62%;
-  --muted: 38 17% 86%;
-  --muted-foreground: 330 4% 37%;
-  --border: 213 21% 10%;
-  --border-strong: 213 21% 10%;
-  --success: 160 55% 32%;
+  --muted: 39 16% 85%;
+  --muted-foreground: 340 4% 36%;
+  --border: 336 8% 13%;
+  --border-strong: 336 8% 13%;
+  --success: 160 55% 30%;
   --success-foreground: 160 60% 18%;
-  --success-subtle: 140 30% 88%;
-  --warning: 36 86% 50%;
+  --success-subtle: 140 30% 87%;
+  --warning: 36 86% 48%;
   --warning-foreground: 30 70% 22%;
-  --warning-subtle: 44 75% 88%;
-  --destructive: 6 68% 50%;
+  --warning-subtle: 44 75% 87%;
+  --destructive: 6 68% 48%;
   --destructive-foreground: 6 62% 28%;
   --destructive-subtle: 10 70% 92%;
-  --info: 212 45% 42%;
-  --info-foreground: 214 45% 24%;
-  --info-subtle: 214 45% 91%;
-  --focus-ring: 213 21% 10%;
-  --lime: 59 72% 69%;
-  --forest: 165 47% 11%;
+  --info: 222 42% 44%;
+  --info-foreground: 222 45% 26%;
+  --info-subtle: 222 48% 91%;
+  --focus-ring: 336 8% 13%;
+  --lime: 59 73% 69%;
+  --forest: 167 47% 11%;
+  --ink: 336 8% 13%;
+  --paper: 36 22% 93%;
+  /* Category tints taken from the landing chapter tags */
+  --tint-peach: 22 72% 74%;
+  --tint-sage: 105 21% 75%;
+  --tint-sky: 224 55% 82%;
+  --tint-rose: 17 73% 82%;
+  --tint-lime: 59 73% 69%;
+  --tint-stone: 36 20% 86%;
   --radius-control: .875rem;
   --radius-card: .25rem;
   --radius-panel: .25rem;
@@ -61,46 +73,47 @@
   --radius-overlay: 1.25rem;
   --radius-display: .25rem;
   --ease-out: cubic-bezier(.19, 1, .22, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .18, 1);
   color-scheme: light;
 }
 
 .dark {
-  --background: 192 14% 7%;
-  --background-subtle: 190 13% 9%;
-  --foreground: 42 31% 94%;
-  --surface: 190 12% 11%;
-  --surface-foreground: 42 31% 94%;
-  --surface-raised: 190 11% 14%;
-  --surface-subtle: 190 12% 10%;
-  --surface-muted: 190 10% 17%;
-  --overlay: 192 30% 3%;
-  --primary: 162 54% 50%;
-  --primary-hover: 162 58% 58%;
-  --primary-foreground: 192 14% 7%;
-  --primary-subtle: 164 35% 15%;
-  --primary-subtle-foreground: 160 55% 72%;
-  --secondary: 59 72% 69%;
-  --secondary-foreground: 213 21% 10%;
-  --accent: 59 72% 69%;
-  --accent-foreground: 213 21% 10%;
+  --background: 340 6% 8%;
+  --background-subtle: 340 5% 10%;
+  --foreground: 36 22% 93%;
+  --surface: 340 5% 11.5%;
+  --surface-foreground: 36 22% 93%;
+  --surface-raised: 340 5% 14%;
+  --surface-subtle: 340 5% 10%;
+  --surface-muted: 340 4% 18%;
+  --overlay: 340 20% 3%;
+  --primary: 162 50% 52%;
+  --primary-hover: 162 55% 60%;
+  --primary-foreground: 340 6% 8%;
+  --primary-subtle: 164 30% 15%;
+  --primary-subtle-foreground: 160 50% 74%;
+  --secondary: 59 73% 69%;
+  --secondary-foreground: 336 8% 13%;
+  --accent: 59 73% 69%;
+  --accent-foreground: 336 8% 13%;
   --accent-gold: 38 90% 66%;
-  --muted: 190 10% 17%;
-  --muted-foreground: 40 8% 64%;
-  --border: 42 31% 94%;
-  --border-strong: 42 31% 94%;
-  --success: 158 50% 60%;
+  --muted: 340 4% 18%;
+  --muted-foreground: 36 7% 64%;
+  --border: 36 22% 93%;
+  --border-strong: 36 22% 93%;
+  --success: 158 48% 58%;
   --success-foreground: 158 55% 80%;
-  --success-subtle: 160 30% 14%;
-  --warning: 40 90% 66%;
+  --success-subtle: 160 28% 14%;
+  --warning: 40 88% 64%;
   --warning-foreground: 42 90% 82%;
-  --warning-subtle: 38 35% 15%;
-  --destructive: 8 85% 68%;
+  --warning-subtle: 38 32% 15%;
+  --destructive: 8 82% 66%;
   --destructive-foreground: 8 90% 84%;
-  --destructive-subtle: 6 35% 16%;
-  --info: 205 60% 68%;
-  --info-foreground: 205 70% 84%;
-  --info-subtle: 208 30% 16%;
-  --focus-ring: 59 72% 69%;
+  --destructive-subtle: 6 32% 16%;
+  --info: 222 60% 72%;
+  --info-foreground: 222 70% 86%;
+  --info-subtle: 222 28% 17%;
+  --focus-ring: 59 73% 69%;
   color-scheme: dark;
 }
 
@@ -197,6 +210,55 @@ p, li, dd, blockquote, figcaption { overflow-wrap: anywhere; }
 }
 
 @keyframes rule-draw { from { transform: scaleX(0); } }
+
+/* ---------------------------------------------------------------------------
+   AIG platform primitives (components/platform/*). Motion is short, eased like the
+   landing page and fully disabled by the reduced-motion rule at the end of the file.
+   --------------------------------------------------------------------------- */
+
+/* "Label ↓" kicker used above every block, as on the landing page */
+:where(.kicker) { display: inline-flex; align-items: center; gap: .4rem; font-size: .8125rem; line-height: 1.4; font-weight: 500; letter-spacing: 0; }
+:where(.kicker__arrow) { display: inline-block; color: hsl(var(--muted-foreground)); animation: kicker-bob 2.4s var(--ease-in-out) infinite; }
+@keyframes kicker-bob { 50% { transform: translateY(3px); } }
+
+/* Load-in: copy rises, media unveils from the bottom, title lines slide up */
+.enter { animation: enter-up 1s var(--ease-out) both; animation-delay: calc(var(--d, 0) * 1ms); }
+.enter-media { animation: enter-clip 1.35s var(--ease-in-out) both; animation-delay: calc(var(--d, 0) * 1ms); }
+.title-line { display: block; overflow: hidden; padding-bottom: .1em; margin-bottom: -.1em; }
+.title-line > span { display: block; animation: line-up 1.15s var(--ease-out) both; animation-delay: calc(120ms + var(--d, 0) * 1ms); }
+@keyframes enter-up { from { opacity: 0; transform: translate3d(0, 18px, 0); } }
+@keyframes enter-clip { from { clip-path: inset(100% 0 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes line-up { from { transform: translate3d(0, 112%, 0); } }
+
+/* Procedural artwork surfaces (same shader as the landing page).
+   Base rules use :where() so Tailwind utilities passed by components always win. */
+:where(.art-surface) { position: relative; overflow: hidden; isolation: isolate; background-color: hsl(var(--surface-muted)); background-size: cover; background-position: center; }
+.art-surface__img { position: absolute; inset: 0; z-index: -1; background-size: cover; background-position: center; opacity: 0; transform: scale(1.06); transition: opacity .9s var(--ease-out), transform 1.6s var(--ease-out); }
+.art-surface[data-ready="true"] .art-surface__img { opacity: 1; transform: none; }
+.group:hover .art-surface--zoom[data-ready="true"] .art-surface__img { transform: scale(1.045); }
+
+/* Looping arrow: slides out one side and back in from the other on hover */
+:where(.loop-ic) { position: relative; display: inline-grid; overflow: hidden; flex: none; }
+.loop-ic > svg { grid-area: 1 / 1; transition: transform .7s var(--ease-out); }
+.loop-ic > svg:last-child { transform: translate3d(-130%, 0, 0); }
+.loop-ic--ur > svg:last-child { transform: translate3d(-130%, 130%, 0); }
+:is(a, button):hover .loop-ic > svg:first-child, .group:hover .loop-ic > svg:first-child { transform: translate3d(130%, 0, 0); }
+:is(a, button):hover .loop-ic--ur > svg:first-child, .group:hover .loop-ic--ur > svg:first-child { transform: translate3d(130%, -130%, 0); }
+:is(a, button):hover .loop-ic > svg:last-child, .group:hover .loop-ic > svg:last-child { transform: none; transition-delay: .06s; }
+
+/* Hairline spec rows ("规格表") */
+:where(.spec-row) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 1rem; border-bottom: 1px solid hsl(var(--border) / .12); padding: .8rem 0; }
+
+/* Dashed outline that marks every demo-state block */
+:where(.demo-outline) { border: 1px dashed hsl(var(--foreground) / .22); }
+
+/* Horizontal scrollers without visible scrollbars (sub-navigation, chips) */
+.scroll-x { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.scroll-x::-webkit-scrollbar { display: none; }
+
+/* Monospace for slugs, manifests and API paths */
+.font-code { font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; font-feature-settings: "calt" 0; }
+
 
 /* Rolling characters (components/ui/roll-text.tsx) */
 .rt { display: inline-flex; white-space: nowrap; vertical-align: top; }

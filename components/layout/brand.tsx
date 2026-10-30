@@ -15,7 +15,7 @@ export function Brand({
 }) {
   return (
     <Link
-      aria-label={href === "/" ? "AI-MDC 官网首页" : "AI-Generator 工作台"}
+      aria-label={href === "/" ? "AI-Generator 官网首页" : "AI-Generator 工作台"}
       className={cn(
         "group flex min-w-0 items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
         className,

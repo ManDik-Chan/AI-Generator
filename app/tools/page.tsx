@@ -67,7 +67,7 @@ export default async function ToolsPage() {
         <ToolTile action="开始头脑风暴" description="四个独立 Worker 并行思考，再由协调器综合结论。不会读取聊天、人格或长期记忆。" href="/tools/brainstorm" icon={BrainCircuit} number="04" tag="4 Worker · 1 协调器" title="多 Agent 头脑风暴">
           <span aria-hidden="true" className="mt-5 flex flex-wrap gap-1.5">
             {["发散视角", "反方质疑", "落地路径", "类比迁移"].map((role) => <span className="rounded-full bg-background px-2.5 py-1 text-[.6875rem] text-muted-foreground" key={role}>{role}</span>)}
-            <span className="rounded-full bg-lime px-2.5 py-1 text-[.6875rem] font-medium text-[hsl(213_21%_10%)]">协调器综合</span>
+            <span className="rounded-full bg-lime px-2.5 py-1 text-[.6875rem] font-medium text-[hsl(var(--ink))]">协调器综合</span>
           </span>
         </ToolTile>
       </div>
