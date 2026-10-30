@@ -25,7 +25,10 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "memory:embed:backfill": "tsx scripts/backfill-memory-embeddings.ts",
-    "tool-assets:cleanup": "node --conditions=react-server --import tsx scripts/cleanup-tool-assets.ts"
+    "tool-assets:cleanup": "node --conditions=react-server --import tsx scripts/cleanup-tool-assets.ts",
+    "docs:sync": "node --import tsx scripts/docs-sync.ts",
+    "manifest:validate": "node --import tsx scripts/manifest-validate.ts",
+    "demo:api-smoke": "node scripts/demo-api-smoke.mjs"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
@@ -49,6 +52,7 @@
     "zod": "4.4.3"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "12.1.0",
     "@playwright/test": "1.61.1",
     "@types/node": "22.19.1",
     "@types/react": "19.1.16",

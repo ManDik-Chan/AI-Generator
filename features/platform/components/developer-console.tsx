@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FolderPlus } from "lucide-react";
 
 import type { ShellMode } from "@/components/layout/navigation";
-import { DemoNotice, PageIntro, SectionHead, StatusPill, ToneBadge, delay } from "@/components/platform/primitives";
+import { ArrowLink, DemoNotice, PageIntro, SectionHead, StatusPill, ToneBadge, delay } from "@/components/platform/primitives";
 import { Button } from "@/components/ui/button";
 import { ManifestValidator } from "@/features/platform/components/manifest-validator";
 import { runStatusMeta } from "@/features/platform/labels";
@@ -73,6 +73,22 @@ export function DeveloperConsole({ mode }: { mode: ShellMode }) {
         meta={<StatusPill status="dev" />}
         title={["先有契约，", "再有运行。"]}
       />
+
+      <div className="mb-14 grid gap-0.5 min-[821px]:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="rounded-card bg-surface p-5">
+          <p className="flex flex-wrap items-center gap-2 text-[.75rem] text-muted-foreground"><ToneBadge dot tone="success">已上线</ToneBadge>开发者文档与可运行 Demo</p>
+          <p className="mt-3 text-[1.25rem] font-medium leading-snug tracking-[-.02em]">完整的开发者手册、API Reference 与两个可直接运行的参考实现已经公开。</p>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+            <ArrowLink href="/docs">开发者文档</ArrowLink>
+            <ArrowLink href="/docs/api">API Reference</ArrowLink>
+            <ArrowLink href="/demos">运行 Demo</ArrowLink>
+          </div>
+        </div>
+        <div className="flex flex-col justify-between rounded-card bg-surface p-5">
+          <p className="font-code text-[.75rem] text-muted-foreground">POST /api/demo/v1/runs</p>
+          <p className="mt-3 text-[.8125rem] leading-5 text-muted-foreground">Demo 运行接口已实现并公开（同步执行，可选事件流）。下方的“平台 API”仍是设计契约，尚未部署。</p>
+        </div>
+      </div>
 
       <section aria-labelledby="dev-manifest" className="scroll-mt-28" id="manifest">
         <SectionHead id="dev-manifest" meta={<ToneBadge tone="success">可用 · 浏览器内</ToneBadge>}>Manifest 校验</SectionHead>

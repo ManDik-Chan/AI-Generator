@@ -603,6 +603,31 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 .lp .fcard:hover .fcard__stage--avatars img { transform: translateY(-6px) rotate(-5deg); }
 .lp .fcard:hover .fcard__stage--avatars img:nth-child(even) { transform: translateY(8px) rotate(5deg); }
 
+/* Wide card: the two runnable demos */
+.lp .fcard--wide { grid-column: 1 / -1; min-height: clamp(380px, 56vh, 600px); }
+.lp .fcard__stage--demos { grid-template-columns: 1fr 1fr; gap: var(--gap); place-items: stretch; width: 100%; }
+.lp .demo-tile { position: relative; overflow: hidden; border-radius: 3px; min-height: 220px; isolation: isolate; }
+.lp .demo-tile__art { position: absolute; inset: 0; z-index: -1; transition: transform 1.4s var(--ease); }
+.lp .fcard:hover .demo-tile__art { transform: scale(1.045); }
+.lp .demo-tile__viz { position: absolute; inset: 10% 8% 30%; width: 84%; height: 60%; overflow: visible; }
+.lp .demo-tile__viz circle { fill: #fff; stroke: var(--ink); stroke-width: 1.2; }
+.lp .demo-route { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linejoin: round; stroke-dasharray: 760; stroke-dashoffset: 760; animation: lp-route 7s var(--ease-io) infinite; }
+@keyframes lp-route { 0% { stroke-dashoffset: 760; } 45%, 80% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -760; } }
+.lp .demo-tile__viz--nn .dot-a { fill: #fff; }
+.lp .demo-tile__viz--nn .dot-b { fill: var(--ink); stroke: #fff; }
+.lp .demo-boundary { fill: none; stroke: #fff; stroke-width: 2; stroke-dasharray: 6 6; animation: lp-boundary 5s ease-in-out infinite; }
+@keyframes lp-boundary { 50% { transform: translateY(-6px); } }
+.lp .demo-tile__label {
+  position: absolute; left: 12px; bottom: 12px; right: 12px; max-width: 320px;
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+  background: rgba(242, 239, 234, 0.94); color: var(--ink); border-radius: 12px;
+  transform: translate3d(0, 6px, 0); transition: transform 0.9s var(--ease);
+}
+.lp .fcard:hover .demo-tile__label { transform: none; }
+.lp .demo-tile__label b { font-size: 15px; font-weight: 500; letter-spacing: -0.01em; }
+.lp .demo-tile__label small { font-size: 12px; color: var(--ink-2); }
+.lp .demo-chips { margin-top: 0; }
+
 /* ==========================================================================
    Index list
    ========================================================================== */
@@ -787,6 +812,8 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
   .lp .news { grid-template-columns: 1fr 1fr; }
   .lp .features__grid { grid-template-columns: 1fr; }
   .lp .fcard__go { opacity: 1; transform: none; }
+  .lp .fcard__stage--demos { grid-template-columns: 1fr; }
+  .lp .fcard--wide { min-height: 0; }
   .lp .forest__left, .lp .forest__right { grid-column: 1 / -1; }
   .lp .process__grid { grid-template-columns: 1fr; gap: 40px; }
   .lp .closing__title, .lp .closing__cta { grid-column: 1 / -1; }

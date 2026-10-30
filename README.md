@@ -25,6 +25,8 @@ AI-Generator 从早期 Python / Streamlit 原型逐步迁移至基于 Next.js Ap
 | 视觉工具 | 单图图片理解、文生单图、私有资源存储与访问控制 | 已实现，依赖服务配置 |
 | Agent 协作 | 多 Worker 推理编排、协调器及任务生命周期探索 | Draft / 验收中；非通用代码执行 Agent |
 | 平台 Registry | 面向后续平台化的项目与资源数据模型、安全边界 | 开发分支中，尚未完成安全验收 |
+| 可运行 Demo | 服务端路线优化求解器（JSON / SSE 运行接口）与浏览器内神经网络训练（Web Worker），无需登录 | 已实现，Demo 专用接口，按实例限流 |
+| 开发者文档 | 开发者手册、API Reference、Manifest 与能力描述符、接口清单，OpenAPI 3.1 规范由代码生成 | 已实现，见 [docs/developer](docs/developer/README.md) |
 
 ## 技术栈
 

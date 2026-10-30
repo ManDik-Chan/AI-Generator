@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 import { ArtSurface } from "@/components/platform/art";
-import { PageIntro, SampleTag, SectionHead, StatusPill, delay } from "@/components/platform/primitives";
+import { ArrowLink, PageIntro, SampleTag, SectionHead, StatusPill, delay } from "@/components/platform/primitives";
 import { Button } from "@/components/ui/button";
 import { ExploreBrowser } from "@/features/platform/components/explore-browser";
 import { formatVersion, integrationMeta } from "@/features/platform/labels";
@@ -27,7 +27,7 @@ export default function ExplorePage() {
       <PageIntro
         description="公开项目目录。每个项目都是一页完整的成果：动机、架构、如实的证据等级、可交互的实验室，以及不可变的版本记录。不公开列出与私有项目不会出现在这里。"
         kicker="探索 · Explore"
-        meta={<SampleTag>Registry 部署前展示示例项目</SampleTag>}
+        meta={<SampleTag>Registry 部署前：真实项目与示例项目并列，均有标注</SampleTag>}
         title={["被认真展示的项目，", "值得被认真阅读。"]}
       />
 
@@ -64,7 +64,7 @@ export default function ExplorePage() {
       </section>
 
       <section aria-labelledby="publish-steps" className="mt-24">
-        <SectionHead id="publish-steps" meta={<StatusPill status="dev" />}>上架你的项目</SectionHead>
+        <SectionHead action={<ArrowLink href="/docs">开发者文档</ArrowLink>} id="publish-steps" meta={<StatusPill status="dev" />}>上架你的项目</SectionHead>
         <div className="grid gap-0.5 min-[821px]:grid-cols-3">
           {steps.map(([n, title, detail, href], index) => (
             <Link className="enter group flex min-h-[13rem] flex-col rounded-card bg-surface p-5 transition-colors duration-500 hover:bg-surface-muted" href={href} key={n} prefetch={false} style={delay(80 + index * 70)}>
