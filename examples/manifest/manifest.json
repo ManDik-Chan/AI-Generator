@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "0.5.0",
+  "projectId": "3d6f9a2b-7c41-4e8d-9b2a-5f0e1c7d8a96",
+  "slug": "route-optimizer",
+  "version": "1.0.0",
+  "name": "路线优化求解器",
+  "summary": "为一组城市求尽量短的闭合路线，并用最小生成树给出下界。",
+  "category": "algorithm",
+  "visibility": "PUBLIC",
+  "integration": { "mode": "SHOWCASE" },
+  "capabilities": ["documentation.read", "presentation.read"],
+  "researchClaims": [
+    {
+      "topic": "2-opt 局部最优",
+      "status": "SOURCE_IMPLEMENTED",
+      "description": "2-opt、Or-opt 与模拟退火的结果都经过 2-opt 打磨，单元测试逐对检查没有可改进的交换。",
+      "evidenceAssetIds": ["8a1c4e2f-6b3d-4f7a-9c5e-0d2b1a3f4e6c"]
+    }
+  ]
+}

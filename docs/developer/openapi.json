@@ -1,0 +1,1231 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI-Generator Demo Runtime API",
+    "version": "1.0.0",
+    "summary": "Public, rate-limited API behind the two runnable demos.",
+    "description": "Status: **demo**. Implemented and publicly reachable, no account needed, no API key. It is not the production Registry API:\nthe Registry, Grants, BYOK credentials and the asynchronous 202 + polling run contract are design contracts that are not deployed (see /docs/status).\n\nRuns execute synchronously within one request. Send `Accept: text/event-stream` to receive the run lifecycle and progress as Server-Sent Events.\nLimits are enforced per function instance and are best effort: 20 runs per 60 s and 2 concurrent runs per client, a 64 KiB body and a 5 s run deadline.",
+    "license": {
+      "name": "Source available in the AI-Generator repository",
+      "url": "https://github.com/ManDik-Chan/AI-Generator"
+    }
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "The site serving this document"
+    }
+  ],
+  "tags": [
+    {
+      "name": "capabilities",
+      "description": "Discover what can run and how"
+    },
+    {
+      "name": "runs",
+      "description": "Execute a server capability"
+    },
+    {
+      "name": "meta",
+      "description": "This document"
+    }
+  ],
+  "paths": {
+    "/api/demo/v1/capabilities": {
+      "get": {
+        "operationId": "listCapabilities",
+        "tags": [
+          "capabilities"
+        ],
+        "summary": "List capabilities",
+        "description": "Both demo capabilities: route-optimizer.solve (execution: server) and neural-network.train (execution: browser).",
+        "responses": {
+          "200": {
+            "description": "Capability descriptors",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Unique id of this request; quote it when reporting a problem",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "Cache-Control": {
+                "description": "Every response, including errors, is no-store",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityList"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/demo/v1/capabilities/{capabilityId}": {
+      "get": {
+        "operationId": "getCapability",
+        "tags": [
+          "capabilities"
+        ],
+        "summary": "Get one capability",
+        "parameters": [
+          {
+            "name": "capabilityId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "examples": [
+                "route-optimizer.solve"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capability descriptor with input and output JSON Schema",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Unique id of this request; quote it when reporting a problem",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilityDescriptor"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown capability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "message": "没有这个能力。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/demo/v1/runs": {
+      "post": {
+        "operationId": "createRun",
+        "tags": [
+          "runs"
+        ],
+        "summary": "Run a server capability",
+        "description": "Validates the input, executes the capability and returns the terminal Run (`200`).\n\nA run that executed always returns 200, whatever its status: SUCCEEDED, TIMED_OUT (with a partial `output` when the capability supplied one), FAILED or CANCELLED. HTTP errors mean no run was executed.\n\nWith `Accept: text/event-stream` the response is a stream of `run.status` events (schema RunStatusEvent) and `run.progress` events (schema RunProgressEvent); the stream ends after the terminal `run.status`.",
+        "parameters": [
+          {
+            "name": "Accept",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "application/json",
+                "text/event-stream"
+              ],
+              "default": "application/json"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunRequest"
+              },
+              "examples": {
+                "instance": {
+                  "summary": "Let the server generate 120 clustered cities",
+                  "value": {
+                    "capability": "route-optimizer.solve",
+                    "input": {
+                      "instance": {
+                        "kind": "clustered",
+                        "count": 120,
+                        "seed": 7
+                      },
+                      "improvement": "or-opt",
+                      "deadlineMs": 2000
+                    }
+                  }
+                },
+                "points": {
+                  "summary": "Send your own points",
+                  "value": {
+                    "capability": "route-optimizer.solve",
+                    "input": {
+                      "points": [
+                        [
+                          120,
+                          80
+                        ],
+                        [
+                          860,
+                          140
+                        ],
+                        [
+                          500,
+                          520
+                        ],
+                        [
+                          180,
+                          760
+                        ],
+                        [
+                          900,
+                          880
+                        ],
+                        [
+                          420,
+                          240
+                        ],
+                        [
+                          640,
+                          700
+                        ],
+                        [
+                          300,
+                          420
+                        ]
+                      ],
+                      "improvement": "or-opt",
+                      "startIndex": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The run executed. Inspect `status`.",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Unique id of this request; quote it when reporting a problem",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "X-Run-Id": {
+                "description": "Id of the run",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Every response, including errors, is no-store",
+                "schema": {
+                  "type": "string",
+                  "const": "no-store"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Runs allowed per window for this client (per function instance)",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Runs left in the current window",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until a slot frees up",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Run"
+                },
+                "example": {
+                  "object": "run",
+                  "id": "run_593b7515-0fcd-4ae4-9483-129cf61b8b19",
+                  "capability": "route-optimizer.solve",
+                  "capabilityVersion": "1.0.0",
+                  "status": "SUCCEEDED",
+                  "createdAt": "2026-10-30T09:55:14.276Z",
+                  "startedAt": "2026-10-30T09:55:14.276Z",
+                  "finishedAt": "2026-10-30T09:55:14.280Z",
+                  "durationMs": 4,
+                  "transitions": [
+                    {
+                      "status": "PENDING",
+                      "at": "2026-10-30T09:55:14.276Z"
+                    },
+                    {
+                      "status": "ACCEPTED",
+                      "at": "2026-10-30T09:55:14.276Z"
+                    },
+                    {
+                      "status": "RUNNING",
+                      "at": "2026-10-30T09:55:14.276Z"
+                    },
+                    {
+                      "status": "SUCCEEDED",
+                      "at": "2026-10-30T09:55:14.280Z"
+                    }
+                  ],
+                  "output": {
+                    "tour": [
+                      0,
+                      5,
+                      1,
+                      4,
+                      6,
+                      2,
+                      3,
+                      7
+                    ],
+                    "length": 3221.827,
+                    "initialLength": 3716.78,
+                    "improvement": 0.13317,
+                    "lowerBound": 2135.978,
+                    "gap": 0.50836,
+                    "iterations": 205,
+                    "appliedMoves": 4,
+                    "passes": 4,
+                    "stopReason": "converged",
+                    "partial": false,
+                    "elapsedMs": 1.1,
+                    "convergence": [
+                      {
+                        "at": 0.3,
+                        "length": 3716.78
+                      },
+                      {
+                        "at": 0.8,
+                        "length": 3221.827
+                      }
+                    ]
+                  },
+                  "error": null,
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "Server-Sent Events: run.status (RunStatusEvent) and run.progress (RunProgressEvent)"
+                },
+                "example": "event: run.status\ndata: {\"object\":\"run\",\"id\":\"run_593b7515-0fcd-4ae4-9483-129cf61b8b19\",\"status\":\"PENDING\",…}\n\nevent: run.status\ndata: {\"object\":\"run\",\"id\":\"run_593b7515-0fcd-4ae4-9483-129cf61b8b19\",\"status\":\"ACCEPTED\",…}\n\nevent: run.status\ndata: {\"object\":\"run\",\"id\":\"run_593b7515-0fcd-4ae4-9483-129cf61b8b19\",\"status\":\"RUNNING\",…}\n\nevent: run.progress\ndata: {\"runId\":\"run_593b7515-0fcd-4ae4-9483-129cf61b8b19\",\"data\":{\"phase\":\"two-opt\",\"elapsedMs\":0.3,\"length\":3716.78,\"iterations\":0,\"tour\":[0,5,1,4,2,6,3,7]}}\n\nevent: run.status\ndata: {\"object\":\"run\",\"id\":\"run_593b7515-0fcd-4ae4-9483-129cf61b8b19\",\"status\":\"SUCCEEDED\",\"output\":{…},…}\n\n"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed JSON, wrong envelope or input outside the schema",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "INVALID_REQUEST",
+                  "message": "input 不符合该能力的输入契约。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f",
+                  "issues": [
+                    {
+                      "path": "input.points",
+                      "message": "Too big: expected array to have <=400 items"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown capability",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "NOT_FOUND",
+                  "message": "没有这个能力。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body larger than 64 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "PAYLOAD_TOO_LARGE",
+                  "message": "请求体不能超过 65536 字节。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Content-Type is not application/json",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "UNSUPPORTED_MEDIA_TYPE",
+                  "message": "请求体必须是 application/json。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Valid shape but not executable (browser capability, startIndex ≥ number of points)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "SEMANTIC_REJECTION",
+                  "message": "这个能力在访客的浏览器中运行，服务端不执行它。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f",
+                  "issues": [
+                    {
+                      "path": "capability",
+                      "message": "neural-network.train 的 execution 是 browser。"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too many runs in the window, or too many concurrent runs",
+            "headers": {
+              "Retry-After": {
+                "description": "Seconds to wait",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Runs allowed per window for this client (per function instance)",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Runs left in the current window",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until a slot frees up",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "RATE_LIMITED",
+                  "message": "请求过于频繁：每 60 秒最多 20 次运行。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected server error; nothing about the input is echoed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "code": "INTERNAL_ERROR",
+                  "message": "服务端出错，请稍后重试。",
+                  "requestId": "6f0c1d2e-3b4a-4c5d-8e9f-0a1b2c3d4e5f"
+                }
+              }
+            }
+          }
+        },
+        "x-sse-events": {
+          "run.status": {
+            "$ref": "#/components/schemas/RunStatusEvent"
+          },
+          "run.progress": {
+            "$ref": "#/components/schemas/RunProgressEvent"
+          }
+        }
+      }
+    },
+    "/api/demo/v1/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "tags": [
+          "meta"
+        ],
+        "summary": "This OpenAPI document",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.1 document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RunStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING",
+          "ACCEPTED",
+          "RUNNING",
+          "SUCCEEDED",
+          "FAILED",
+          "CANCELLED",
+          "TIMED_OUT"
+        ]
+      },
+      "RouteOptimizerOutput": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "description": "Echoed only when the input used instance",
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "items": false,
+              "minItems": 2
+            }
+          },
+          "tour": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "description": "Visiting order as point indices, starting at startIndex; the tour returns to its start"
+          },
+          "length": {
+            "type": "number",
+            "minimum": 0
+          },
+          "initialLength": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Length after construction, before improvement"
+          },
+          "improvement": {
+            "type": "number",
+            "description": "1 - length / initialLength"
+          },
+          "lowerBound": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Minimum spanning tree weight; no tour can be shorter"
+          },
+          "gap": {
+            "type": "number",
+            "minimum": 0,
+            "description": "length / lowerBound - 1: an upper bound on the distance from optimal"
+          },
+          "iterations": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Candidate moves evaluated"
+          },
+          "appliedMoves": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "passes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "stopReason": {
+            "type": "string",
+            "enum": [
+              "construction-only",
+              "converged",
+              "schedule-complete",
+              "deadline"
+            ]
+          },
+          "partial": {
+            "type": "boolean",
+            "description": "True when the deadline stopped the solver"
+          },
+          "elapsedMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "convergence": {
+            "maxItems": 120,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "length": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "at",
+                "length"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Best length over time (ms since the solver started), at most 120 samples"
+          }
+        },
+        "required": [
+          "tour",
+          "length",
+          "initialLength",
+          "improvement",
+          "lowerBound",
+          "gap",
+          "iterations",
+          "appliedMoves",
+          "passes",
+          "stopReason",
+          "partial",
+          "elapsedMs",
+          "convergence"
+        ],
+        "additionalProperties": false
+      },
+      "Run": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "run"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "capabilityVersion": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "durationMs": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transitions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "$ref": "#/components/schemas/RunStatus"
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "status",
+                "at"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RouteOptimizerOutput"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Present on SUCCEEDED; on TIMED_OUT only when the capability returned a partial result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "enum": [
+                      "DEADLINE_EXCEEDED",
+                      "CANCELLED",
+                      "CAPABILITY_ERROR",
+                      "INVALID_OUTPUT",
+                      "DIVERGED",
+                      "INVALID_STATE"
+                    ]
+                  },
+                  "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": [
+          "object",
+          "id",
+          "capability",
+          "capabilityVersion",
+          "status",
+          "createdAt",
+          "startedAt",
+          "finishedAt",
+          "durationMs",
+          "transitions",
+          "output",
+          "error",
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "INVALID_REQUEST",
+              "NOT_FOUND",
+              "PAYLOAD_TOO_LARGE",
+              "UNSUPPORTED_MEDIA_TYPE",
+              "SEMANTIC_REJECTION",
+              "RATE_LIMITED",
+              "INTERNAL_ERROR"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "issues": {
+            "description": "Demo extension: present for INVALID_REQUEST and SEMANTIC_REJECTION",
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "maxLength": 200,
+                  "description": "Dot path into the request body, e.g. input.points.3"
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 300
+                }
+              },
+              "required": [
+                "path",
+                "message"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "requestId"
+        ],
+        "additionalProperties": false
+      },
+      "CapabilityDescriptor": {
+        "type": "object",
+        "properties": {
+          "schema": {
+            "type": "string",
+            "const": "aig.capability/0.1"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{1,40}(\\.[a-z][a-z0-9-]{1,40}){1,3}$",
+            "description": "Stable dotted id, e.g. route-optimizer.solve"
+          },
+          "project": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{2,62}$",
+            "description": "Project slug, same rule as the P0.5 manifest"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$",
+            "description": "Semantic version of the capability implementation"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300
+          },
+          "execution": {
+            "type": "string",
+            "enum": [
+              "server",
+              "browser"
+            ],
+            "description": "server: runs in the platform's function runtime. browser: runs on the visitor's device"
+          },
+          "transports": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "http-json",
+                "http-sse",
+                "worker"
+              ]
+            }
+          },
+          "dataFlow": {
+            "type": "string",
+            "enum": [
+              "none",
+              "platform",
+              "developer"
+            ],
+            "description": "none: input never leaves the browser. platform: processed by AI-Generator, not stored. developer: sent to the project's own service"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "demo",
+              "live",
+              "design"
+            ]
+          },
+          "limits": {
+            "type": "object",
+            "properties": {
+              "maxInputBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "defaultDeadlineMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "maxDeadlineMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "rateLimit": {
+                "type": "object",
+                "properties": {
+                  "requests": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "windowSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "requests",
+                  "windowSeconds"
+                ],
+                "additionalProperties": false
+              },
+              "concurrentRunsPerClient": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "maxInputBytes",
+              "defaultDeadlineMs",
+              "maxDeadlineMs"
+            ],
+            "additionalProperties": false
+          },
+          "inputSchema": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {},
+            "description": "JSON Schema (draft 2020-12)"
+          },
+          "outputSchema": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {},
+            "description": "JSON Schema (draft 2020-12)"
+          },
+          "sourcePath": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Repository path of the implementation"
+          },
+          "docsPath": {
+            "type": "string",
+            "maxLength": 200,
+            "description": "Website path of the documentation"
+          }
+        },
+        "required": [
+          "schema",
+          "id",
+          "project",
+          "version",
+          "title",
+          "summary",
+          "execution",
+          "transports",
+          "dataFlow",
+          "status",
+          "limits",
+          "inputSchema",
+          "outputSchema",
+          "sourcePath",
+          "docsPath"
+        ],
+        "additionalProperties": false
+      },
+      "CapabilityList": {
+        "type": "object",
+        "properties": {
+          "object": {
+            "type": "string",
+            "const": "list"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CapabilityDescriptor"
+            }
+          }
+        },
+        "required": [
+          "object",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "RouteOptimizerProgress": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": [
+              "two-opt",
+              "or-opt",
+              "annealing",
+              "polish",
+              "done"
+            ]
+          },
+          "elapsedMs": {
+            "type": "number",
+            "minimum": 0
+          },
+          "length": {
+            "type": "number",
+            "minimum": 0
+          },
+          "iterations": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tour": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "required": [
+          "phase",
+          "elapsedMs",
+          "length",
+          "iterations",
+          "tour"
+        ],
+        "additionalProperties": false
+      },
+      "RunStatusEvent": {
+        "description": "`event: run.status` — the whole Run after every transition; the last one is terminal",
+        "$ref": "#/components/schemas/Run"
+      },
+      "RunProgressEvent": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RouteOptimizerProgress"
+          }
+        },
+        "required": [
+          "runId",
+          "data"
+        ],
+        "additionalProperties": false,
+        "description": "`event: run.progress` — capability-defined progress, at most every 60 ms"
+      },
+      "RouteOptimizerInput": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "description": "Cities as [x, y] pairs in a 0–10000 plane. Send either points or instance",
+            "minItems": 3,
+            "maxItems": 400,
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10000
+                }
+              ],
+              "items": false,
+              "minItems": 2
+            }
+          },
+          "instance": {
+            "description": "Let the server generate a seeded point set instead of sending points",
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "uniform",
+                  "clustered",
+                  "circle",
+                  "grid"
+                ],
+                "description": "Seeded generator: uniform, clustered, circle or grid"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 3,
+                "maximum": 400
+              },
+              "seed": {
+                "default": 1,
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              }
+            },
+            "required": [
+              "kind",
+              "count"
+            ],
+            "additionalProperties": false
+          },
+          "construction": {
+            "default": "nearest-neighbor",
+            "type": "string",
+            "enum": [
+              "nearest-neighbor",
+              "random"
+            ]
+          },
+          "improvement": {
+            "default": "two-opt",
+            "type": "string",
+            "enum": [
+              "none",
+              "two-opt",
+              "or-opt",
+              "annealing"
+            ]
+          },
+          "annealingIterations": {
+            "default": 200000,
+            "description": "Only used by improvement=annealing",
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 3000000
+          },
+          "seed": {
+            "default": 1,
+            "description": "Seeds the random construction and annealing",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "startIndex": {
+            "default": 0,
+            "description": "Index of the city the tour starts from; must be < number of points",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 399
+          },
+          "deadlineMs": {
+            "default": 3000,
+            "description": "When reached, the run ends TIMED_OUT with the best tour so far",
+            "type": "integer",
+            "minimum": 50,
+            "maximum": 5000
+          }
+        },
+        "additionalProperties": false
+      },
+      "RunRequest": {
+        "type": "object",
+        "properties": {
+          "capability": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "input": {
+            "$ref": "#/components/schemas/RouteOptimizerInput"
+          }
+        },
+        "required": [
+          "capability",
+          "input"
+        ],
+        "additionalProperties": false,
+        "description": "Run request. `input` must match the input schema of the chosen capability; the only server capability today is route-optimizer.solve."
+      }
+    }
+  },
+  "x-aig-status": "demo"
+}
