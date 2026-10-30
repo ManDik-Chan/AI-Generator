@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     default: "AI-Generator",
     template: "%s · AI-Generator",
   },
-  description: "统一 AI 工作平台：Workspace、Projects、Agent、Skills，以及 Chat、Persona、Memory 与 Tools。",
+  description: "隐私优先的项目平台：展示、发布并在授权后运行你的项目；内置 AI Hub 提供对话、人格、长期记忆与工具。",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }, { url: "/icon.png", type: "image/png", sizes: "512x512" }],
     apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
