@@ -1,7 +1,12 @@
 /*
  * Landing page copy (Chinese + English).
- * Product shots, the About paragraph, update cards and the quote are placeholders
- * until the final content is confirmed.
+ *
+ * Positioning: AI-Generator is a privacy-first project platform. Developers showcase
+ * their work, publish immutable versions and offer capabilities under explicit
+ * authorization; the built-in AI Hub (Chat, Personas, Memory, Tools, Agent) is the first
+ * live module. Copy keeps capability status honest: the AI Hub is live, the Registry and
+ * publishing are in development, BYOK and remote runs are planned. Sample projects and
+ * the demo workspace are labelled as such on their own pages.
  */
 
 export type LandingLang = "zh" | "en";
@@ -35,20 +40,17 @@ export interface LandingCopy {
     label: string;
     hint: string;
     index: string;
-    chat: { tag: string; title: Pair; cta: string; user: string; persona: string; intro: string; points: string[]; catalog: Pair };
-    persona: { tag: string; title: Pair; cta: string; cards: { name: string; desc: string; chips: Pair }[]; catalog: Pair };
-    memory: {
-      tag: string; title: Pair; cta: string; head: Pair; accept: string; decline: string; confirmed: string;
-      items: { text: string; meta: string }[]; confirmedItem: { text: string; meta: string }; catalog: Pair;
-    };
-    image: { tag: string; title: Pair; cta: string; prompt: string; status: string; meta: string; catalog: Pair };
-    agents: { tag: string; title: Pair; cta: string; nodes: string[]; lead: Pair; catalog: Pair };
+    showcase: { tag: string; title: Pair; cta: string; catalog: Pair; head: Pair; claims: { text: string; meta: string; status: string; ok: boolean }[] };
+    lab: { tag: string; title: Pair; cta: string; catalog: Pair; prompt: string; status: string; meta: string };
+    publish: { tag: string; title: Pair; cta: string; catalog: Pair; nodes: string[]; lead: Pair };
+    privacy: { tag: string; title: Pair; cta: string; catalog: Pair; cards: { name: string; desc: string; chips: Pair }[] };
+    hub: { tag: string; title: Pair; cta: string; catalog: Pair; user: string; persona: string; intro: string; points: string[] };
   };
-  about: { text: string; news: string; cards: { title: string; meta: string; href: string }[] };
+  about: { meta: [string, string, string]; text: string; news: string; cards: { title: string; meta: string; href: string }[] };
   features: {
     label: string;
-    image: { tag: string; title: string; styles: string; go: string };
-    persona: { tag: string; title: string; avatars: string; go: string };
+    explore: { tag: string; title: string; styles: string; go: string };
+    hub: { tag: string; title: string; avatars: string; go: string };
   };
   index: { label: string; rows: { href: string; word: string }[] };
   /** quote: one entry per forced line break (English lets the browser balance a single line). */
@@ -68,18 +70,18 @@ export interface LandingCopy {
 
 const zh: LandingCopy = {
   meta: {
-    title: "AI-Generator — 懂你所想，守你所藏。",
-    description: "AI-Generator：面向亲朋好友的私人 AI 助手平台。对话、人格、长期记忆与创作工具，安静地连接在一起。",
+    title: "AI-Generator — 隐私优先的项目平台",
+    description: "AI-Generator：隐私优先的项目平台。展示你的研究与作品，发布不可变版本，在明确授权下提供可运行的能力；内置的 AI Hub 已经上线。",
   },
-  preloader: ["AI-Generator", "私人 AI 工作室"],
+  preloader: ["AI-Generator", "隐私优先的项目平台"],
   header: {
     home: "AI-Generator 首页",
     mainNav: "主导航",
     links: [
-      { href: "/chat", label: "对话" },
-      { href: "/personas", label: "助手" },
-      { href: "/tools", label: "工具" },
-      { href: "/memories", label: "记忆" },
+      { href: "/explore", label: "探索" },
+      { href: "/platform/projects", label: "项目" },
+      { href: "/platform/developer", label: "开发者" },
+      { href: "/platform/hub", label: "AI Hub" },
     ],
     login: "登录",
     langLabel: "切换语言",
@@ -92,159 +94,157 @@ const zh: LandingCopy = {
   menu: {
     label: "移动端导航",
     links: [
-      { href: "/chat", label: "AI 对话" },
-      { href: "/personas", label: "专属人格" },
-      { href: "/memories", label: "长期记忆" },
-      { href: "/tools", label: "文本工具" },
-      { href: "/tools/image-generate", label: "图片生成" },
-      { href: "/tools/brainstorm", label: "多 Agent" },
+      { href: "/explore", label: "探索项目" },
+      { href: "/platform", label: "演示工作台" },
+      { href: "/platform/projects", label: "项目" },
+      { href: "/platform/developer", label: "开发者" },
+      { href: "/platform/hub", label: "AI Hub" },
+      { href: "/platform/connections", label: "连接与授权" },
     ],
     register: "注册账号",
   },
-  hero: { lines: ["懂你所想，", "守你所藏。"], foot: ["私人 AI 助手平台", "对话 · 人格 · 记忆 · 创作"], scroll: "向下滚动" },
+  hero: { lines: ["展你所作，", "守你所藏。"], foot: ["隐私优先的项目平台", "展示 · 发布 · 受控运行 · AI Hub"], scroll: "向下滚动" },
   chapters: {
-    label: "核心能力",
+    label: "平台能力",
     hint: "继续滚动",
     index: "Private by design",
-    chat: {
-      tag: "对话",
-      title: ["连续对话，", "跨设备延续你的上下文"],
-      cta: "开始新对话",
-      user: "帮我把这周的会议纪要整理成三个重点。",
-      persona: "写作搭子",
-      intro: "好的，整理为三点：",
-      points: ["目标对齐：本季度聚焦留存", "排期调整：设计评审提前到周三", "风险提示：接口联调依赖外部团队"],
-      catalog: ["最近对话", "继续上次的话题"],
+    showcase: {
+      tag: "项目",
+      title: ["每个项目，", "一页完整的成果"],
+      cta: "探索项目",
+      catalog: ["探索目录", "公开项目一览"],
+      head: ["体数据三维重建 · v0.3.0", "已发布"],
+      claims: [
+        { text: "阈值分割与连通域去噪", meta: "声明 · 源码中可定位", status: "源码已实现", ok: true },
+        { text: "学习型分割模型", meta: "声明 · 权重与实验待核验", status: "仅有文档", ok: false },
+        { text: "分割精度", meta: "没有可复现实验，不发布数值", status: "未发布", ok: false },
+      ],
     },
-    persona: {
-      tag: "人格",
-      title: ["为每一项任务，", "建立独立的角色与语气"],
-      cta: "管理助手",
+    lab: {
+      tag: "实验室",
+      title: ["可交互的样例，", "就在你的浏览器里运行"],
+      cta: "打开实验室",
+      catalog: ["排序实验", "可复现的浏览器内运行"],
+      prompt: "合成体数据 64³ · 分割阈值 0.42",
+      status: "实验室运行中",
+      meta: "浏览器内 · 不上传 · 非临床",
+    },
+    publish: {
+      tag: "发布",
+      title: ["先有契约，", "再有版本与运行"],
+      cta: "校验 Manifest",
+      catalog: ["新建项目", "四步生成合格草稿"],
+      nodes: ["Manifest 校验", "资产已批准", "独立审核", "版本封存"],
+      lead: ["已发布", "v1.0.0 · 不可变"],
+    },
+    privacy: {
+      tag: "隐私",
+      title: ["可见性、数据与授权，", "分开治理"],
+      cta: "连接与授权",
+      catalog: ["数据去向", "每次运行前告知"],
       cards: [
-        { name: "写作搭子", desc: "润色、提纲与表达", chips: ["温和", "简洁"] },
-        { name: "代码审查员", desc: "只说重点，不绕弯子", chips: ["严谨", "直接"] },
-        { name: "旅行规划师", desc: "行程、预算与清单", chips: ["热情", "细致"] },
+        { name: "项目可见性", desc: "私有 · 不公开列出 · 公开", chips: ["项目层", "可切换"] },
+        { name: "你的数据", desc: "输入与结果只属于你", chips: ["用户层", "不随项目公开"] },
+        { name: "运行授权", desc: "逐项授权，随时撤销", chips: ["能力层", "可撤销"] },
       ],
-      catalog: ["12 款预设头像", "创建新人格"],
     },
-    memory: {
-      tag: "记忆",
-      title: ["只记住", "你确认过的事"],
-      cta: "管理记忆",
-      head: ["记忆提案", "2 条待确认"],
-      accept: "接受",
-      decline: "拒绝",
-      confirmed: "已确认",
-      items: [
-        { text: "偏好分点、简洁的回答", meta: "来自 3 天前的对话 · 30 天内有效" },
-        { text: "计划 11 月去京都旅行", meta: "来自昨天的对话 · 30 天内有效" },
-      ],
-      confirmedItem: { text: "常用语言：中文", meta: "来源：明确要求记住" },
-      catalog: ["来源可追溯", "逐条核对记忆"],
-    },
-    image: {
-      tag: "图片",
-      title: ["一句话描述，", "生成属于你的画面"],
-      cta: "开始创作",
-      prompt: "晨雾中的玻璃温室，柔和自然光",
-      status: "生成中",
-      meta: "1024 × 1024 · 私有存储",
-      catalog: ["图片理解", "分析截图与图表"],
-    },
-    agents: {
-      tag: "多 Agent",
-      title: ["四个 Worker 并行思考，", "一位协调者收束答案"],
-      cta: "启动头脑风暴",
-      nodes: ["W1 · 发散视角", "W2 · 反方质疑", "W3 · 落地路径", "W4 · 类比迁移"],
-      lead: ["协调器", "综合 4 份结论"],
-      catalog: ["Agent 运行", "查看运行记录"],
+    hub: {
+      tag: "AI Hub",
+      title: ["内置的 AI Hub，", "对话、记忆与工具已上线"],
+      cta: "进入 AI Hub",
+      catalog: ["Agent 编排", "Planner 与 Worker · 开发中"],
+      user: "帮我把这周的实验记录整理成三个重点。",
+      persona: "研究助理",
+      intro: "好的，整理为三点（参考了 1 条已确认记忆）：",
+      points: ["阈值从 0.5 调到 0.42 后掩膜更完整", "合成样例 v0.3.0 已发布", "下一步：补充模型卡的限制说明"],
     },
   },
   about: {
-    text: "我们相信，好的 AI 不该喧宾夺主。它应该安静地待在身边，理解你的语气，记住你确认过的事，在需要时把对话、人格、记忆与创作工具连接成一条完整的工作流，并且始终把你的数据留在属于你的边界之内。",
-    news: "最近更新",
+    meta: ["AI-Generator®", "Platform", "2026"],
+    text: "AI-Generator 正在成为一个隐私优先的项目平台：研究、算法、工具与 AI 应用，都可以在这里拥有一页完整的成果、一组不可变的版本和一份如实的证据清单。对话、人格、记忆与工具组成的 AI Hub，是平台内置、已经上线的第一个模块。",
+    news: "发展方向",
     cards: [
-      { title: "Chat Agent 模式：标准 4 Worker 与深度 6 Worker 编排", meta: "Phase 7A1.1 · 草案", href: "/agents" },
-      { title: "AI 图片生成工作台通过真实验收", meta: "Phase 6A3 · 已上线", href: "/tools/image-generate" },
+      { title: "项目 Registry：草稿、独立审核、不可变版本与可撤回发布", meta: "开发中 · 数据模型与权限验收中", href: "/platform/projects" },
+      { title: "连接与授权：自带模型凭据（BYOK）与逐项能力授权", meta: "规划中 · 先完成安全设计", href: "/platform/connections" },
     ],
   },
   features: {
-    label: "新近能力",
-    image: { tag: "图片", title: "图片生成工作台", styles: "画面风格", go: "去创作" },
-    persona: { tag: "人格", title: "专属人格", avatars: "预设头像", go: "去创建" },
+    label: "从这里开始",
+    explore: { tag: "项目", title: "探索公开项目", styles: "项目类别", go: "去探索" },
+    hub: { tag: "AI Hub", title: "内置 AI Hub", avatars: "专属人格", go: "进入" },
   },
   index: {
-    label: "完整工作空间",
+    label: "平台地图",
     rows: [
-      { href: "/chat", word: "对话" },
-      { href: "/personas", word: "人格" },
-      { href: "/memories", word: "记忆" },
-      { href: "/tools", word: "文本" },
-      { href: "/tools/image", word: "图片" },
-      { href: "/tools/brainstorm", word: "Agent" },
+      { href: "/explore", word: "探索" },
+      { href: "/platform/projects", word: "项目" },
+      { href: "/explore/volume-reconstruction#lab", word: "实验室" },
+      { href: "/platform/developer", word: "开发者" },
+      { href: "/platform/connections", word: "授权" },
+      { href: "/platform/hub", word: "AI Hub" },
     ],
   },
   forest: {
-    name: "AI-Generator V2",
-    role: "私人 AI 助手平台",
+    name: "AI-Generator",
+    role: "隐私优先的项目平台",
     copy: [
-      "面向亲朋好友使用的私人 AI 助手平台，目标是简单、稳定、美观和易维护。",
-      "人格 Prompt 只在服务端拼装；长期记忆在你确认后才会写入；生成的图片保存在私有存储中。",
+      "公开一个项目，不等于公开使用者的数据；项目作者也不能因为“是作者”就读取任何人的输入、结果或凭据。",
+      "人格 Prompt 只在服务端拼装，长期记忆在你确认后才写入，生成的图片保存在私有存储中——这些规则从 AI Hub 延续到整个平台。",
     ],
-    quote: ["“好的 AI 应该安静地", "待在身边，在需要时出现，", "只记住你允许它记住的事。”"],
-    link: "查看账户与隐私",
+    quote: ["“好的平台让作品站到台前，", "把边界留在使用者手里，", "只做被允许做的事。”"],
+    link: "查看连接与授权",
     panel: {
       title: "数据边界",
-      rows: [["对话", "仅你可见"], ["人格 Prompt", "只在服务端"], ["长期记忆", "确认后写入"], ["生成图片", "私有存储"]],
+      rows: [["项目可见性", "由作者决定"], ["你的数据", "仅你可见"], ["运行授权", "逐项可撤销"], ["模型凭据", "不交给作者"]],
     },
   },
   process: {
     label: "工作方式",
-    composer: { persona: "写作搭子", input: "帮我把会议纪要整理成三点…" },
-    workers: { labels: ["发散", "质疑", "落地", "类比"], lead: "协调器 · 汇总中" },
-    history: [["图片生成", "已完成 · 可下载"], ["翻译 · 保持语气", "已完成"], ["多 Agent 头脑风暴", "已恢复"]],
+    composer: { persona: "新建项目", input: "排序算法对照实验" },
+    workers: { labels: ["契约", "资产", "审核", "封存"], lead: "发布 · v1.0.0" },
+    history: [["运行 run_7Hq2", "成功 · 38 秒"], ["授权 · 空气质量摘要", "可撤销"], ["结果", "仅你可见"]],
     steps: [
-      ["你来描述", "用自然语言说出任务，选择默认助手或专属人格。"],
-      ["它来协作", "记忆、工具与多 Agent 在需要时自然接力。"],
-      ["结果沉淀", "对话、图片与运行记录保存在私有空间，随时追溯。"],
+      ["写下你的项目", "名称、类别与可见性；Manifest 随输入生成，并在浏览器里按契约校验。"],
+      ["审核后发布", "独立审核人检查草稿与资产，通过后封存为不可变版本，再由发布人发布。"],
+      ["授权后运行", "使用者逐项授权能力；运行异步执行，结果只属于发起的人。"],
     ],
   },
   closing: {
-    title: ["简单、私密，", "长久地好用。"],
-    lead: ["开启你的私人工作室", "使用邮箱登录，或创建一个新账号。"],
+    title: ["把作品带到台前，", "把边界握在手里。"],
+    lead: ["进入你的工作台", "使用邮箱登录，或先浏览演示工作台。"],
     field: "前往登录",
-    small: ["还没有账号？", "注册", " · 你的内容按用途彼此隔离。"],
+    small: ["还没有账号？", "注册", " · 演示工作台无需登录。"],
   },
   footer: {
     cols: [
-      { title: "工作空间", links: [{ href: "/workspace", label: "控制中心" }, { href: "/chat", label: "AI 对话" }, { href: "/agents", label: "Agent 运行" }, { href: "/personas", label: "AI 助手" }, { href: "/memories", label: "长期记忆" }] },
-      { title: "创作实验室", links: [{ href: "/tools", label: "文本工具" }, { href: "/tools/image", label: "图片理解" }, { href: "/tools/image-generate", label: "图片生成" }, { href: "/tools/brainstorm", label: "多 Agent 头脑风暴" }] },
-      { title: "系统", links: [{ href: "/tools/history", label: "运行历史" }, { href: "/account", label: "账户与隐私" }, { href: "/login", label: "登录" }, { href: "/register", label: "注册" }] },
+      { title: "平台", links: [{ href: "/explore", label: "探索项目" }, { href: "/platform", label: "演示工作台" }, { href: "/platform/projects", label: "项目 · 开发中" }, { href: "/platform/developer", label: "开发者 · 开发中" }, { href: "/platform/connections", label: "连接与授权 · 规划中" }] },
+      { title: "AI Hub", links: [{ href: "/chat", label: "AI 对话" }, { href: "/personas", label: "专属人格" }, { href: "/memories", label: "长期记忆" }, { href: "/tools", label: "AI 工具" }] },
+      { title: "账户", links: [{ href: "/workspace", label: "进入工作台" }, { href: "/account", label: "账户与隐私" }, { href: "/login", label: "登录" }, { href: "/register", label: "注册" }] },
     ],
     site: "站点",
-    bottom: ["© 2026 AI-Generator", "Lumen Interface · 私有 · 安全"],
+    bottom: ["© 2026 AI-Generator", "隐私优先 · 展示 · 发布 · 受控运行"],
   },
   fab: "快速开始对话",
   runtime: {
-    bubbles: ["总结这篇文章的三个要点", "把这段话改得更口语一点", "翻译成英文，保持原来的语气", "这张图表说明了什么？", "生成一张晨雾中的玻璃温室", "帮我列一份旅行清单"],
-    chips: [["人格", "写作搭子"], ["记忆", "偏好简洁回答"], ["Agent", "Worker 3/4 完成"], ["图片", "1024 × 1024"], ["工具", "翻译"], ["协调器", "汇总中"]],
+    bubbles: ["v1.0.0 已发布", "Manifest 校验通过", "202 Accepted · run_7Hq2", "帮我总结这份实验记录", "仅成员可见", "授权：仅本次"],
+    chips: [["项目", "体数据三维重建"], ["实验室", "合成样例 64³"], ["授权", "可撤销"], ["版本", "v0.3.0"], ["AI Hub", "已上线"], ["运行", "SUCCEEDED"]],
   },
 };
 
 const en: LandingCopy = {
   meta: {
-    title: "AI-Generator — Knows your mind, keeps your trust.",
-    description: "AI-Generator: a private AI assistant platform for family and friends. Chat, personas, long-term memory and creative tools, quietly connected.",
+    title: "AI-Generator — A privacy-first home for projects",
+    description: "AI-Generator is a privacy-first project platform: showcase research and work, publish immutable versions, and offer capabilities only under explicit authorization. The built-in AI Hub is live.",
   },
-  preloader: ["AI-Generator", "Private AI studio"],
+  preloader: ["AI-Generator", "Privacy-first project platform"],
   header: {
     home: "AI-Generator home",
     mainNav: "Main navigation",
     links: [
-      { href: "/chat", label: "Chat" },
-      { href: "/personas", label: "Assistants" },
-      { href: "/tools", label: "Tools" },
-      { href: "/memories", label: "Memory" },
+      { href: "/explore", label: "Explore" },
+      { href: "/platform/projects", label: "Projects" },
+      { href: "/platform/developer", label: "Developers" },
+      { href: "/platform/hub", label: "AI Hub" },
     ],
     login: "Log in",
     langLabel: "Change language",
@@ -257,142 +257,140 @@ const en: LandingCopy = {
   menu: {
     label: "Mobile navigation",
     links: [
-      { href: "/chat", label: "AI chat" },
-      { href: "/personas", label: "Personas" },
-      { href: "/memories", label: "Long-term memory" },
-      { href: "/tools", label: "Text tools" },
-      { href: "/tools/image-generate", label: "Image generation" },
-      { href: "/tools/brainstorm", label: "Multi-agent" },
+      { href: "/explore", label: "Explore projects" },
+      { href: "/platform", label: "Demo workspace" },
+      { href: "/platform/projects", label: "Projects" },
+      { href: "/platform/developer", label: "Developers" },
+      { href: "/platform/hub", label: "AI Hub" },
+      { href: "/platform/connections", label: "Connections" },
     ],
     register: "Create account",
   },
-  hero: { lines: ["Knows your mind,", "keeps your trust."], foot: ["A private AI assistant platform", "Chat · Personas · Memory · Create"], scroll: "Scroll down" },
+  hero: { lines: ["Show what you make,", "keep what you hold."], foot: ["A privacy-first project platform", "Showcase · Publish · Run · AI Hub"], scroll: "Scroll down" },
   chapters: {
-    label: "Core features",
+    label: "Platform capabilities",
     hint: "Keep scrolling",
     index: "Private by design",
-    chat: {
-      tag: "Chat",
-      title: ["Chats that follow you,", "across every device"],
-      cta: "Start a chat",
-      user: "Turn this week’s meeting notes into three key points.",
-      persona: "Writing buddy",
-      intro: "Sure, here are the three points:",
-      points: ["Goals: focus on retention this quarter", "Schedule: design review moves to Wednesday", "Risk: API testing depends on another team"],
-      catalog: ["Recent chats", "Pick up where you left off"],
+    showcase: {
+      tag: "Projects",
+      title: ["One project,", "one complete page"],
+      cta: "Explore projects",
+      catalog: ["Directory", "Every public project"],
+      head: ["Volume reconstruction · v0.3.0", "Published"],
+      claims: [
+        { text: "Threshold segmentation", meta: "Claim · traceable in source", status: "In source", ok: true },
+        { text: "Learned segmentation model", meta: "Claim · weights not verified", status: "Docs only", ok: false },
+        { text: "Segmentation accuracy", meta: "No reproducible experiment yet", status: "Unpublished", ok: false },
+      ],
     },
-    persona: {
-      tag: "Personas",
-      title: ["For every task,", "its own role and voice"],
-      cta: "Manage assistants",
+    lab: {
+      tag: "Lab",
+      title: ["Interactive samples,", "running in your browser"],
+      cta: "Open the lab",
+      catalog: ["Sorting lab", "Reproducible, in-browser"],
+      prompt: "Synthetic volume 64³ · threshold 0.42",
+      status: "Lab running",
+      meta: "In-browser · nothing uploaded · not clinical",
+    },
+    publish: {
+      tag: "Publish",
+      title: ["Contract first,", "then versions and runs"],
+      cta: "Validate a manifest",
+      catalog: ["New project", "A valid draft in four steps"],
+      nodes: ["Manifest check", "Assets approved", "Review passed", "Version sealed"],
+      lead: ["Published", "v1.0.0 · immutable"],
+    },
+    privacy: {
+      tag: "Privacy",
+      title: ["Visibility, data and grants,", "governed separately"],
+      cta: "Connections",
+      catalog: ["Data destinations", "Disclosed before each run"],
       cards: [
-        { name: "Writing buddy", desc: "Editing, outlines, wording", chips: ["Gentle", "Concise"] },
-        { name: "Code reviewer", desc: "Straight to the point", chips: ["Rigorous", "Direct"] },
-        { name: "Trip planner", desc: "Routes, budgets, checklists", chips: ["Warm", "Thorough"] },
+        { name: "Project visibility", desc: "Private · Unlisted · Public", chips: ["Project", "Switchable"] },
+        { name: "Your data", desc: "Inputs and results stay yours", chips: ["User", "Never made public"] },
+        { name: "Run grants", desc: "Per capability, revocable", chips: ["Capability", "Revocable"] },
       ],
-      catalog: ["12 preset avatars", "Create a persona"],
     },
-    memory: {
-      tag: "Memory",
-      title: ["It only remembers", "what you’ve confirmed"],
-      cta: "Manage memory",
-      head: ["Memory proposals", "2 to review"],
-      accept: "Accept",
-      decline: "Decline",
-      confirmed: "Confirmed",
-      items: [
-        { text: "Prefers short, bulleted answers", meta: "From a chat 3 days ago · valid 30 days" },
-        { text: "Planning a Kyoto trip in November", meta: "From yesterday’s chat · valid 30 days" },
-      ],
-      confirmedItem: { text: "Preferred language: Chinese", meta: "Source: asked to remember" },
-      catalog: ["Traceable sources", "Review memories one by one"],
-    },
-    image: {
-      tag: "Images",
-      title: ["Describe it in a line,", "get an image that’s yours"],
-      cta: "Start creating",
-      prompt: "Glass greenhouse in morning mist, soft light",
-      status: "Generating",
-      meta: "1024 × 1024 · private storage",
-      catalog: ["Image understanding", "Read screenshots and charts"],
-    },
-    agents: {
-      tag: "Multi-agent",
-      title: ["Four workers in parallel,", "one coordinator to decide"],
-      cta: "Start brainstorming",
-      nodes: ["W1 · Divergent", "W2 · Skeptic", "W3 · Practical", "W4 · Analogies"],
-      lead: ["Coordinator", "Merges 4 answers"],
-      catalog: ["Agent runs", "View run history"],
+    hub: {
+      tag: "AI Hub",
+      title: ["A built-in AI Hub,", "chat, memory and tools live"],
+      cta: "Open AI Hub",
+      catalog: ["Agent orchestration", "Planner and workers · in development"],
+      user: "Turn this week’s lab notes into three key points.",
+      persona: "Research assistant",
+      intro: "Sure, three points (using 1 confirmed memory):",
+      points: ["Threshold 0.42 gives a fuller mask than 0.5", "Synthetic sample v0.3.0 is published", "Next: add limits to the model card"],
     },
   },
   about: {
-    text: "We believe good AI shouldn’t steal the show. It should stay quietly by your side, understand your tone, remember what you’ve confirmed, link chat, personas, memory and creative tools into one workflow when you need them, and always keep your data inside your own boundaries.",
-    news: "Recent updates",
+    meta: ["AI-Generator®", "Platform", "2026"],
+    text: "AI-Generator is becoming a privacy-first project platform: research, algorithms, tools and AI apps each get a complete page, immutable versions and an honest list of evidence. The built-in AI Hub of chat, personas, memory and tools is the first module, and it is already live.",
+    news: "What’s next",
     cards: [
-      { title: "Chat Agent mode: standard 4-worker and deep 6-worker runs", meta: "Phase 7A1.1 · Draft", href: "/agents" },
-      { title: "AI image studio passes owner acceptance", meta: "Phase 6A3 · Live", href: "/tools/image-generate" },
+      { title: "Project registry: drafts, independent review, immutable versions, revocable releases", meta: "In development · access review", href: "/platform/projects" },
+      { title: "Connections: bring your own model key and per-capability grants", meta: "Planned · security design first", href: "/platform/connections" },
     ],
   },
   features: {
-    label: "New capabilities",
-    image: { tag: "Images", title: "Image studio", styles: "Styles", go: "Create" },
-    persona: { tag: "Personas", title: "Personas", avatars: "Preset avatars", go: "Create one" },
+    label: "Start here",
+    explore: { tag: "Projects", title: "Explore public projects", styles: "Categories", go: "Explore" },
+    hub: { tag: "AI Hub", title: "The built-in AI Hub", avatars: "Personas", go: "Open" },
   },
   index: {
-    label: "The full workspace",
+    label: "Platform map",
     rows: [
-      { href: "/chat", word: "Chat" },
-      { href: "/personas", word: "Personas" },
-      { href: "/memories", word: "Memory" },
-      { href: "/tools", word: "Text" },
-      { href: "/tools/image", word: "Images" },
-      { href: "/tools/brainstorm", word: "Agent" },
+      { href: "/explore", word: "Explore" },
+      { href: "/platform/projects", word: "Projects" },
+      { href: "/explore/volume-reconstruction#lab", word: "Lab" },
+      { href: "/platform/developer", word: "Developers" },
+      { href: "/platform/connections", word: "Grants" },
+      { href: "/platform/hub", word: "AI Hub" },
     ],
   },
   forest: {
-    name: "AI-Generator V2",
-    role: "Private AI assistant platform",
+    name: "AI-Generator",
+    role: "Privacy-first project platform",
     copy: [
-      "A private AI assistant platform for family and friends, built to be simple, stable, beautiful and easy to maintain.",
-      "Persona prompts are assembled only on the server; long-term memory is saved only after you confirm it; generated images stay in private storage.",
+      "Publishing a project never publishes its users’ data, and being the author never grants access to anyone’s inputs, results or keys.",
+      "Persona prompts are assembled on the server, memory is saved only after you confirm it, generated images stay private — rules that now extend from the AI Hub to the whole platform.",
     ],
-    quote: ["“Good AI stays quietly by your side, shows up when needed, and remembers only what you allow.”"],
-    link: "Account & privacy",
+    quote: ["“A good platform puts the work in front and leaves the boundaries with the people using it.”"],
+    link: "Connections & grants",
     panel: {
       title: "Data boundaries",
-      rows: [["Chat", "Only you"], ["Persona prompt", "Server only"], ["Long-term memory", "After you confirm"], ["Generated images", "Private storage"]],
+      rows: [["Project visibility", "Set by the author"], ["Your data", "Only you"], ["Run grants", "Revocable"], ["Model keys", "Never shared"]],
     },
   },
   process: {
     label: "How it works",
-    composer: { persona: "Writing buddy", input: "Turn the meeting notes into three points…" },
-    workers: { labels: ["Diverge", "Question", "Ground", "Compare"], lead: "Coordinator · merging" },
-    history: [["Image generation", "Done · download"], ["Translate · keep tone", "Done"], ["Multi-agent brainstorm", "Resumed"]],
+    composer: { persona: "New project", input: "Sorting lab" },
+    workers: { labels: ["Contract", "Assets", "Review", "Seal"], lead: "Published · v1.0.0" },
+    history: [["Run run_7Hq2", "Succeeded · 38s"], ["Grant · Air quality", "Revocable"], ["Result", "Only you"]],
     steps: [
-      ["You describe", "Say what you need in plain words, with the default assistant or a persona."],
-      ["It collaborates", "Memory, tools and agents hand off to each other when needed."],
-      ["Results stay", "Chats, images and run history stay in your private space, ready to revisit."],
+      ["Describe the project", "Name, category and visibility; the manifest is generated and validated in your browser."],
+      ["Review, then publish", "An independent reviewer checks the draft and its assets before it is sealed as an immutable version."],
+      ["Grant, then run", "Users grant each capability; runs are asynchronous and results belong to whoever started them."],
     ],
   },
   closing: {
-    title: ["Simple, private,", "and built to last."],
-    lead: ["Open your private studio", "Log in with email, or create a new account."],
+    title: ["Put the work in front,", "keep the boundaries yours."],
+    lead: ["Open your workspace", "Log in with email, or browse the demo workspace first."],
     field: "Go to log in",
-    small: ["No account yet? ", "Sign up", " · Your content stays separated by purpose."],
+    small: ["No account yet? ", "Sign up", " · The demo workspace needs no login."],
   },
   footer: {
     cols: [
-      { title: "Workspace", links: [{ href: "/workspace", label: "Dashboard" }, { href: "/chat", label: "AI chat" }, { href: "/agents", label: "Agent runs" }, { href: "/personas", label: "AI assistants" }, { href: "/memories", label: "Long-term memory" }] },
-      { title: "Creative lab", links: [{ href: "/tools", label: "Text tools" }, { href: "/tools/image", label: "Image understanding" }, { href: "/tools/image-generate", label: "Image generation" }, { href: "/tools/brainstorm", label: "Multi-agent brainstorm" }] },
-      { title: "System", links: [{ href: "/tools/history", label: "Run history" }, { href: "/account", label: "Account & privacy" }, { href: "/login", label: "Log in" }, { href: "/register", label: "Sign up" }] },
+      { title: "Platform", links: [{ href: "/explore", label: "Explore projects" }, { href: "/platform", label: "Demo workspace" }, { href: "/platform/projects", label: "Projects · in development" }, { href: "/platform/developer", label: "Developers · in development" }, { href: "/platform/connections", label: "Connections · planned" }] },
+      { title: "AI Hub", links: [{ href: "/chat", label: "AI chat" }, { href: "/personas", label: "Personas" }, { href: "/memories", label: "Long-term memory" }, { href: "/tools", label: "AI tools" }] },
+      { title: "Account", links: [{ href: "/workspace", label: "Open the workspace" }, { href: "/account", label: "Account & privacy" }, { href: "/login", label: "Log in" }, { href: "/register", label: "Sign up" }] },
     ],
     site: "Site",
-    bottom: ["© 2026 AI-Generator", "Lumen Interface · Private · Secure"],
+    bottom: ["© 2026 AI-Generator", "Privacy-first · Showcase · Publish · Run"],
   },
   fab: "Start a chat",
   runtime: {
-    bubbles: ["Summarize this article in three points", "Make this paragraph more casual", "Translate to Chinese, keep the tone", "What does this chart show?", "A glass greenhouse in morning mist", "Make me a packing list"],
-    chips: [["Persona", "Writing buddy"], ["Memory", "Prefers short answers"], ["Agent", "Worker 3/4 done"], ["Image", "1024 × 1024"], ["Tool", "Translate"], ["Coordinator", "Merging"]],
+    bubbles: ["v1.0.0 published", "Manifest valid", "202 Accepted · run_7Hq2", "Summarize these lab notes", "Members only", "Grant: this run only"],
+    chips: [["Project", "Volume reconstruction"], ["Lab", "Synthetic 64³"], ["Grant", "Revocable"], ["Version", "v0.3.0"], ["AI Hub", "Live"], ["Run", "SUCCEEDED"]],
   },
 };
 

@@ -22,7 +22,7 @@ export default async function PersonasPage({ searchParams }: { searchParams: Pro
       {trashed && <StatusBanner className="mb-5" title="已移至回收站" variant="success">人格已从新对话助手列表中移除，已有历史对话仍会保留。</StatusBanner>}
       <PageHeader
         description="创建只属于你的 AI 角色、表达方式与专业边界。每个人格都可以独立聊天和管理记忆。"
-        eyebrow="PERSONA STUDIO"
+        eyebrow="人格工作室"
         primaryAction={<Button asChild><Link href="/personas/new"><Plus className="size-4" />创建助手</Link></Button>}
         secondaryAction={<Button asChild variant="outline"><Link href="/personas/trash"><Trash2 className="size-4" />回收站</Link></Button>}
         title="我的私人助手"

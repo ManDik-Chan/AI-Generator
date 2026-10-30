@@ -15,7 +15,7 @@ export default async function NewPersonaPage() {
     <PageHeader
       back={<Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm text-muted-foreground hover:text-foreground" href="/personas"><ArrowLeft className="size-4" />返回助手工作室</Link>}
       description="手动建立清晰的角色边界，或让 AI 先生成一份完全可编辑的结构化草稿。"
-      eyebrow="PERSONA BUILDER"
+      eyebrow="人格编辑"
       title="创建专属助手"
     />
     <div className="mt-8"><PersonaCreation aiConfigured={getAiConfigurationStatus().configured} /></div>

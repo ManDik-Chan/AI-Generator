@@ -3,7 +3,9 @@
   "git": {
     "deploymentEnabled": {
       "codex/p1-a-final-evidence-20261028": false,
-      "codex/p1-a-final-integration-20261028": false
+      "codex/p1-a-final-integration-20261028": false,
+      "codex/recruitment-demo-runtime-20261029": false,
+      "codex/recruitment-final-integration-20261029": false
     }
   }
 }

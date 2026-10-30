@@ -267,6 +267,16 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
   transition: color 0.5s var(--ease);
 }
 .lp .header > * { pointer-events: auto; }
+/* Soft frosted band behind the fixed header so scrolled copy never collides with the
+   wordmark or the pills. Colour-neutral (blur only), so it works over paper, art and lime. */
+.lp .header::before {
+  content: ""; position: absolute; inset: 0 0 -28px; z-index: -1; pointer-events: none;
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent);
+  opacity: 0; transition: opacity 0.6s var(--ease);
+}
+.lp:not(.is-loading) .header[data-tone="light"]::before { opacity: 1; }
 .lp .header[data-tone="dark"] { color: var(--paper); --goo: var(--lime); }
 .lp .header[data-tone="dark"] .nav__group .pill { --glow: rgba(255, 255, 255, 0.9); }
 .lp .header[data-tone="dark"] .pill--ink { background: var(--paper); color: var(--ink); --glow: var(--lime); }
@@ -464,6 +474,8 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 .lp .chapter.is-active .pcard:nth-child(2) { top: 108px; transform: rotate(1.6deg) translateX(18px); transition-delay: 0.25s; }
 .lp .chapter.is-active .pcard:nth-child(3) { top: 216px; transform: rotate(-1deg); transition-delay: 0.4s; }
 .lp .pcard img { width: 56px; height: 56px; border-radius: 14px; }
+.lp .pcard__mark { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 14px; background: var(--paper-2); color: var(--ink); }
+.lp .pcard__mark svg { width: 22px; height: 22px; }
 .lp .pcard b { display: block; font-size: 16px; font-weight: 500; }
 .lp .pcard small { display: block; font-size: 12px; color: var(--ink-2); }
 .lp .chips { display: flex; gap: 6px; margin-top: 6px; }

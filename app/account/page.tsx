@@ -35,7 +35,7 @@ export default async function AccountPage() {
     <AppShell mobileTitle="我的" variant="reading" viewer={viewer}>
       <PageHeader
         description="管理你的个人资料、外观和 AI 可以使用的长期记忆。"
-        eyebrow="PERSONAL SPACE"
+        eyebrow="个人空间"
         title="账号与设置"
       />
 

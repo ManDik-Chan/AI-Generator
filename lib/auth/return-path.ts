@@ -1,5 +1,5 @@
 /** Only return to existing platform route families, never a supplied origin. */
-export const platformPrefixes = ["/workspace", "/account", "/admin", "/chat", "/memories", "/personas", "/settings", "/tools", "/agents"] as const;
+export const platformPrefixes = ["/workspace", "/account", "/admin", "/chat", "/memories", "/personas", "/settings", "/tools", "/agents", "/hub", "/projects", "/developer", "/connections"] as const;
 
 export function isPlatformPath(pathname: string) {
   return platformPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

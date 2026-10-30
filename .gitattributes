@@ -5,3 +5,4 @@ legacy/streamlit/** -text
 
 *.png binary
 *.pyc binary
+*.woff2 binary

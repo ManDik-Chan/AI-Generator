@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 // Small pill tags in the landing page's tag style.
 export const badgeVariants = cva("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[.6875rem] font-medium leading-5", { variants: { variant: {
-  default: "border-transparent bg-lime text-[hsl(213_21%_10%)]",
+  default: "border-transparent bg-lime text-[hsl(var(--ink))]",
   neutral: "border-border/10 bg-surface-raised text-muted-foreground",
   success: "border-transparent bg-success-subtle text-success-foreground",
   warning: "border-transparent bg-warning-subtle text-warning-foreground",

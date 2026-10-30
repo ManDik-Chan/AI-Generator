@@ -10,6 +10,7 @@ describe("application navigation active state", () => {
   });
   it("all dashboard navigation points to the workspace, independently of public home", () => {
     expect(navigationGroups[0].items[0].href).toBe("/workspace");
+    expect(navigationGroups[0].items[0].demoHref).toBe("/platform");
     expect(mobileNavigation[0].href).toBe("/workspace");
     expect(navigationItemActive("/", "/workspace")).toBe(false);
     expect(navigationItemActive("/workspace", "/workspace")).toBe(true);

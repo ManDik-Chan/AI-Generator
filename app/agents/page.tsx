@@ -2,7 +2,9 @@ import Link from "next/link";
 import { ArrowRight, BrainCircuit, MessageSquareText, Search } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { IN_DEVELOPMENT_LABEL } from "@/components/layout/navigation";
 import { Button } from "@/components/ui/button";
+import { StatusBanner } from "@/components/ui/status-banner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import type { AgentModeView, AgentRunStatusView } from "@/features/agents/client-types";
@@ -23,7 +25,8 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
   const query = search.q?.trim().slice(0, 200);
   const runs = await getAgentRunList({ userId: user.id, mode, status, query });
   return <AppShell variant="wide">
-    <PageHeader description="查看动态 Worker、真实 Provider 调用数、事件与最终回答。打开历史不会重新调用模型或重复扣除 Credits。" eyebrow="AGENT ACTIVITY" primaryAction={<Button asChild><Link href="/chat"><MessageSquareText className="size-4" />在 Chat 中启动 Agent</Link></Button>} title="Agent 运行" />
+    <PageHeader description="查看动态 Worker、真实 Provider 调用数、事件与最终回答。打开历史不会重新调用模型或重复扣除 Credits。" eyebrow="Agent 运行记录" primaryAction={<Button asChild><Link href="/chat"><MessageSquareText className="size-4" />在 Chat 中启动 Agent</Link></Button>} title="Agent 运行" />
+    <StatusBanner className="mt-6" title={`${IN_DEVELOPMENT_LABEL} · 可预览`} variant="info">Chat Agent 模式仍在验收中：每个 Worker 只做推理，不联网、不读文件、不执行代码。稳定的多角色分析请使用已上线的「多 Agent 头脑风暴」。</StatusBanner>
 
     <form className="premium-panel mt-7 grid gap-3 p-4 sm:grid-cols-[minmax(12rem,1fr)_10rem_10rem_auto]" method="get">
       <label className="relative"><span className="sr-only">搜索问题</span><Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-muted-foreground" /><input className="min-h-11 w-full rounded-control border border-border/14 bg-background px-10 text-sm outline-none focus:border-primary/45" defaultValue={query} name="q" placeholder="搜索原始问题" /></label>

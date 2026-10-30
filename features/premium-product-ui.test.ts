@@ -78,9 +78,9 @@ describe("full product premium UI contract", () => {
     expect(history).toContain("downloadResult");
   });
 
-  it("uses the approved light and dark premium tokens across all surfaces", () => {
-    // Editorial paper / ink / jade system shared with the public landing page.
-    for (const token of ["42 31% 94%", "213 21% 10%", "164 77% 30%", "192 14% 7%", "162 54% 50%", "--radius-card: .25rem", "--radius-display: .25rem"]) {
+  it("uses the landing page palette as the platform tokens in light and dark", () => {
+    // Paper #f2efea, warm ink #241f21, emerald, lime and forest, shared with features/landing.
+    for (const token of ["--background: 36 22% 93%", "--foreground: 336 8% 13%", "--primary: 166 68% 32%", "--lime: 59 73% 69%", "--forest: 167 47% 11%", "--background: 340 6% 8%", "--radius-card: .25rem", "--radius-display: .25rem"]) {
       expect(globals).toContain(token);
     }
     expect(globals).toContain("prefers-reduced-motion");

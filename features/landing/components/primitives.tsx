@@ -4,7 +4,8 @@ import type { CSSProperties, ImgHTMLAttributes, ReactNode } from "react";
 
 export type LandingIcon =
   | "spark" | "twin" | "chat" | "persona" | "memory" | "image" | "agents" | "pen"
-  | "down" | "right" | "dr" | "ur" | "send" | "check" | "lock" | "chev";
+  | "down" | "right" | "dr" | "ur" | "send" | "check" | "lock" | "chev"
+  | "folder" | "flask" | "doc" | "key" | "eye" | "compass";
 
 const ICON_PREFIX = "lpi-";
 
@@ -47,6 +48,12 @@ export function IconSprite() {
         <symbol id="lpi-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" /></symbol>
         <symbol id="lpi-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" /></symbol>
         <symbol id="lpi-lock" viewBox="0 0 24 24"><rect height="10" rx="2" width="14" x="5" y="10" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></symbol>
+        <symbol id="lpi-folder" viewBox="0 0 24 24"><path d="M3 6.5h6.5l2 2.5H21v9.5H3z" /><path d="M3 11h18" /></symbol>
+        <symbol id="lpi-flask" viewBox="0 0 24 24"><path d="M9.5 3h5M10.5 3v6L5 19.5h14L13.5 9V3" /><path d="M7.4 15h9.2" /></symbol>
+        <symbol id="lpi-doc" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v4h4M9 12h6M9 16h4" /></symbol>
+        <symbol id="lpi-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4" /><path d="m11 12 8-8M16 7l2.5 2.5M14 9l2 2" /></symbol>
+        <symbol id="lpi-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></symbol>
+        <symbol id="lpi-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></symbol>
       </defs>
     </svg>
   );

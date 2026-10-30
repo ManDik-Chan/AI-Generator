@@ -17,6 +17,8 @@
     "test:integration": "node scripts/run-security-integration.mjs",
     "test:rls": "vitest run tests/integration/rls.security.integration.test.ts",
     "test:e2e": "playwright test",
+    "demo:preflight": "node --import tsx scripts/demo-preflight.ts",
+    "demo:smoke": "node scripts/demo-http-smoke.mjs",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
