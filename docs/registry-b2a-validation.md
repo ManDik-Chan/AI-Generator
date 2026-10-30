@@ -62,7 +62,9 @@ Version、文档、Draft 与 receipt 整体回滚；finally 精确删除并核�
 最终代码还将文档行 ID 与 snapshot.documentation.id 对齐；全局已占用 ID 返回 CONFLICT，不泄露所属项目。
 跨版本复制需要新的 document UUID。普通 CI unit 的集成 skip 不能计为安全通过；独立 security runner 对 skip/TODO/空套件直接失败。
 
-JCS 向量 fixture SHA-256：`59bc0a046a5eb4496cf77aaf17801423f070e9ad3f6142d2fc9896efcaa6d546`。
+Git 中 LF 编码的 JCS 向量 fixture SHA-256：`d7dfb686c592d0ad3f27c8140601bd9e4da43818bda7ad34e8b673a01bbab501`。
+本地最初 CRLF 文件字节的 SHA-256 为 `59bc0a046a5eb4496cf77aaf17801423f070e9ad3f6142d2fc9896efcaa6d546`；
+二者 JSON 内容与固定 canonical bytes/hash 向量一致，不应将 checkout 行尾差异误记为向量内容改变。
 固定参考验证新增独立 `Registry JCS Python reference` CI job；网络或校验失败必须失败，未替换或放宽既有六门。
 
 ## 证据与收尾
