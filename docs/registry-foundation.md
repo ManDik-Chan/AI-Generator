@@ -1,6 +1,10 @@
 # P1-B1 Registry foundation
 
-Scope: Issue #28, additive foundation on `main@0e13d32fdcfd1555172c7d93aa74c036466d0943`.
+Scope: Issue #28, original PR #29 foundation on
+`main@0e13d32fdcfd1555172c7d93aa74c036466d0943`, integrated with
+`main@c79b6a78d30b5697a842f9491a2a0667cc3168dd` after PR #36. Current
+compatibility, delivery boundaries and B2 sequence are in
+[the 2026-10-30 handoff](handoffs/2026-10-30-codex-registry-b1.md).
 Design inputs are read-only historical `codex/p1-a-final-evidence-20261028` (`d616364`):
 `docs/platform/p05/{registry-publication,architecture,p1-tasks}.md` and
 `contracts/{manifest,draft,version,release}.schema.json`. They are not cherry-picked migrations.
@@ -13,9 +17,13 @@ Profile relations reuse existing Auth user UUIDs; SQL cross-schema FKs require
 operator and membership subjects to exist in auth.users as well. Existing enum semantics, tables,
 routes, services, Landing and Workspace are unchanged.
 
-The ordered migration is one transaction. It includes Prisma-generated FKs and
-indexes plus SQL-only checks, partial indexes and triggers. Do not use `db push`
-to recreate this schema: Prisma cannot express all these constraints.
+The unchanged `20261028135224_project_registry_foundation` migration is one
+transaction. It includes Prisma-generated FKs and indexes plus SQL-only checks,
+partial indexes and triggers. The additive
+`20261030120001_registry_sealing_qualification` migration independently wraps its
+qualification guards in a transaction. The complete chain is main's unchanged
+21-migration prefix plus these two migrations. Do not use `db push` to recreate
+this schema: Prisma cannot express all these constraints.
 
 - Slug and owner are immutable. Projects cannot be hard deleted; slugs are never
   reused, including after archival. Foreign keys restrict removal of history.
@@ -33,6 +41,10 @@ to recreate this schema: Prisma cannot express all these constraints.
 - Version numbers are unique per project. Versions cannot be updated/deleted.
   An eligible independent reviewer, current approved review, matching hash,
   draft revision and epoch are required for insertion. Versions have no publishedAt.
+- Version and Release insertion recheck the submitter's current OWNER/EDITOR and
+  reviewer's current REVIEWER qualification and membership. Natural operator
+  expiry does not fire an UPDATE trigger or advance epoch, so the follow-up
+  migration explicitly checks both actors at sealing time.
 - Releases require publishedAt, matching version hash and approval visibility.
   They can only transition once from PUBLISHED to WITHDRAWN, with a timestamp;
   clear the current pointer first. No resurrection or overwrite of history.
@@ -84,6 +96,14 @@ No route imports the command. There is no public Draft DTO, publication command,
 asset origin, new UI, execution, BYOK or GPU feature. B1 tests create synthetic
 review/version/release rows through the trusted disposable DB to exercise constraints;
 that does not enable a runtime release feature.
+
+Supabase `getUser(accessToken)` verifies the token; B1 does not promise immediate
+invalidation of already-issued access tokens after session logout. Auth session
+revocation and internal qualification revocation are different operations. The
+live operator/membership revoke and expiry guarantees above are the B1 boundary.
+If B2 requires immediate session revocation on sensitive commands, it must also
+validate the token's `session_id` against current session state; that check is not
+implemented by B1.
 
 ## Verification and operations
 

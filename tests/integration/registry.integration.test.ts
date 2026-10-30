@@ -103,6 +103,33 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
     expect(constraints).toHaveLength(7);
     expect(constraints.every(c => c.convalidated)).toBe(true);
   });
+  it("keeps qualification data and every privileged helper private with one read-only definer", async () => {
+    const [schema] = await db.$queryRaw<{ anon: boolean; authenticated: boolean; service: boolean }[]>`
+      SELECT has_schema_privilege('anon','registry_private','USAGE') AS anon,
+        has_schema_privilege('authenticated','registry_private','USAGE') AS authenticated,
+        has_schema_privilege('service_role','registry_private','USAGE') AS service`;
+    expect(schema).toEqual({ anon: false, authenticated: true, service: false });
+    const [qualification] = await db.$queryRaw<{ rls: boolean; exposed: boolean }[]>`
+      SELECT relrowsecurity AS rls,
+        has_table_privilege('authenticated',oid,'SELECT,INSERT,UPDATE,DELETE') AS exposed
+      FROM pg_class WHERE oid='registry_private.internal_operators'::regclass`;
+    expect(qualification).toEqual({ rls: true, exposed: false });
+    const helpers = await db.$queryRaw<{ proname: string; prosecdef: boolean; proconfig: string[]; anon: boolean; authenticated: boolean; service: boolean }[]>`
+      SELECT proname,prosecdef,proconfig,has_function_privilege('anon',p.oid,'EXECUTE') AS anon,
+        has_function_privilege('authenticated',p.oid,'EXECUTE') AS authenticated,
+        has_function_privilege('service_role',p.oid,'EXECUTE') AS service
+      FROM pg_proc p WHERE pronamespace='registry_private'::regnamespace`;
+    expect(helpers.length).toBeGreaterThanOrEqual(8);
+    expect(helpers.filter(h => h.prosecdef).map(h => h.proname)).toEqual(["can_read"]);
+    for (const helper of helpers) {
+      expect(helper.proconfig).toContain('search_path=""');
+      expect(helper.anon).toBe(false); expect(helper.service).toBe(false);
+      expect(helper.authenticated).toBe(helper.proname === "can_read");
+    }
+    for (const name of ["eligible", "has_role", "can_read"]) {
+      expect((await actors[0].client.rpc(name, { subject: actors[2].id, project: other })).error).not.toBeNull();
+    }
+  });
   it("denies anon and service-role reads and writes on every Registry table", async () => {
     for (const table of tables) for (const denied of [anon, service]) {
       expect((await denied.from(table).select("*")).error).not.toBeNull();
@@ -128,6 +155,28 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
     for (const table of tables) {
       const result = await actors[1].client.from(table).select("*");
       expect(result.error).toBeNull(); expect(result.data).toEqual([]);
+    }
+  });
+  it("rejects tampered JWT roles, subjects and unsigned tokens before Registry access", async () => {
+    const [header, payload, signature] = actors[0].token.split(".");
+    const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
+    const forged = [
+      `${header}.${encode({ ...claims, role: "service_role" })}.${signature}`,
+      `${header}.${encode({ ...claims, sub: actors[2].id })}.${signature}`,
+      `${encode({ alg: "none", typ: "JWT" })}.${payload}.`,
+    ];
+    vi.stubEnv("REGISTRY_INTERNAL_ACCESS_ENABLED", "true");
+    try {
+      for (const token of forged) {
+        const response = await fetch(`${process.env.SUPABASE_TEST_URL}/rest/v1/projects?select=id`, {
+          headers: { apikey: process.env.SUPABASE_TEST_ANON_KEY!, Authorization: `Bearer ${token}` },
+        });
+        expect(response.status).toBe(401);
+        await expect(createInternalRegistryProject(token, { slug: `r-${randomUUID()}` })).rejects.toThrow("Registry authentication required");
+      }
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
   it("rechecks internal eligibility and project membership on existing unrefreshed JWTs", async () => {
@@ -156,6 +205,20 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
     await reject(() => createInternalRegistryProject(actors[0].token, { slug: `r-${randomUUID()}` }));
     await db.$executeRaw`UPDATE registry_private.internal_operators SET active=true WHERE subject_id=${actors[0].id}::uuid`;
     vi.unstubAllEnvs();
+  });
+  it("requires current can_create and expiry independently from an active project OWNER role", async () => {
+    vi.stubEnv("REGISTRY_INTERNAL_ACCESS_ENABLED", "true");
+    try {
+      await db.$executeRaw`UPDATE registry_private.internal_operators SET can_create=false WHERE subject_id=${actors[0].id}::uuid`;
+      const member = await actors[0].client.from("projects").select("id").eq("id", p);
+      expect(member.error).toBeNull(); expect(member.data).toEqual([{ id: p }]);
+      await expect(createInternalRegistryProject(actors[0].token, { slug: `r-${randomUUID()}` })).rejects.toThrow("Eligible internal creator required");
+      await db.$executeRaw`UPDATE registry_private.internal_operators SET can_create=true,expires_at=statement_timestamp()-interval '1 second' WHERE subject_id=${actors[0].id}::uuid`;
+      await expect(createInternalRegistryProject(actors[0].token, { slug: `r-${randomUUID()}` })).rejects.toThrow("Eligible internal creator required");
+    } finally {
+      await db.$executeRaw`UPDATE registry_private.internal_operators SET can_create=true,expires_at=statement_timestamp()+interval '1 hour' WHERE subject_id=${actors[0].id}::uuid`;
+      vi.unstubAllEnvs();
+    }
   });
   it("reserves immutable non-reusable slug and ownership", async () => {
     const row = await db.project.findUniqueOrThrow({ where: { id: p } });
@@ -212,4 +275,36 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
     await reject(() => db.projectDocumentation.create({ data: { ...data, draftId: draft, versionId: version } }));
     await reject(() => db.projectDocumentation.create({ data: { ...data, versionId: version, contentHash: "b".repeat(64) } }));
   });
+  it.each(["submitter", "reviewer"] as const)("rejects new versions and releases after %s qualification naturally expires without an epoch update", async (expiredRole) => {
+    const subject = actors[expiredRole === "submitter" ? 0 : 2].id;
+    try {
+      // Establish expiry BEFORE creating the approval, so epoch binding remains
+      // valid throughout. Only passage of database time causes the rejection.
+      await db.$executeRaw`UPDATE registry_private.internal_operators SET expires_at=statement_timestamp()+interval '5 seconds' WHERE subject_id=${subject}::uuid`;
+      const projectId = await newProject(actors[0].id);
+      await db.projectMembership.create({ data: { projectId, subjectId: actors[2].id, roles: ["REVIEWER"] } });
+      const editable = await db.projectDraft.create({ data: { projectId, updatedBy: actors[0].id } });
+      const submitted = await db.projectDraft.update({ where: { id: editable.id }, data: { state: "IN_REVIEW" } });
+      const approvedProject = await db.project.findUniqueOrThrow({ where: { id: projectId } });
+      const approval = await db.publicationReview.create({ data: {
+        projectId, draftId: submitted.id, draftRevision: submitted.revision,
+        authzEpoch: approvedProject.authzEpoch, snapshotHash: hash, visibility: "PRIVATE", assetDigestSet: [],
+        submitterId: actors[0].id, policyRevision: 1, expiresAt: new Date(Date.now() + 3600000),
+      } });
+      await db.publicationReview.update({ where: { id: approval.id }, data: { decision: "APPROVED", reviewerId: actors[2].id, decidedAt: new Date() } });
+      const sealed = await db.projectVersion.create({ data: { projectId, version: "1.0.0", snapshot: {}, contentHash: hash, reviewId: approval.id } });
+      await db.$queryRaw`SELECT 1 AS waited FROM (SELECT pg_sleep(greatest(0,extract(epoch FROM (expires_at-statement_timestamp())))+0.025)
+        FROM registry_private.internal_operators WHERE subject_id=${subject}::uuid) AS delay`;
+      const [eligibility] = await db.$queryRaw<{ eligible: boolean }[]>`SELECT registry_private.eligible(${subject}::uuid) AS eligible`;
+      expect(eligibility.eligible).toBe(false);
+      expect((await db.project.findUniqueOrThrow({ where: { id: projectId } })).authzEpoch).toBe(approvedProject.authzEpoch);
+      await expect(db.projectVersion.create({ data: { projectId, version: "1.0.1", snapshot: {}, contentHash: hash, reviewId: approval.id } })).rejects.toThrow(
+        expiredRole === "reviewer" ? "Current approved review required" : "Current sealing qualifications required",
+      );
+      await expect(db.projectRelease.create({ data: { projectId, versionId: sealed.id, contentHash: hash,
+        visibilityAtApproval: "PRIVATE", publishedAt: new Date() } })).rejects.toThrow("Current sealing qualifications required");
+    } finally {
+      await db.$executeRaw`UPDATE registry_private.internal_operators SET expires_at=statement_timestamp()+interval '1 hour' WHERE subject_id=${subject}::uuid`;
+    }
+  }, 15000);
 });
