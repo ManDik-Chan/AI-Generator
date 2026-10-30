@@ -63,6 +63,10 @@
 - PR #35 的第一轮 CI 中，E2E 有两类失败，已在后续提交修复，修复后的结果以 CI 为准：
   - **旧文案断言**：`public-mobile`、`responsive-matrix`、`authenticated-mobile` 仍在断言旧主页标题和旧的移动端菜单链接，已同步为新标题与新菜单。原来的「路由到受保护页面并保留 `next`」检查改用 Landing 的浮动对话入口（`/chat`）。
   - **对话入口性能**：从 `/workspace` 进入对话，输入框可用耗时 2.7 秒，超过 1.5 秒的预算。CI trace 显示，`ArtSurface` 在页面加载 40ms 后，于主线程一次性渲染全部画作（5 个色块、3 张封面，均为 1200×800），在软件 WebGL 下阻塞约 2.1 秒。现在每张画作按自身显示尺寸渲染，在空闲时间逐张执行，组件卸载后跳过。
+- **字体改为本地托管**（经 Owner 同意）：第二轮 CI 中，webkit-iphone 在 `next build` 阶段因 `next/font/google` 拉取失败而中断，本地首次构建也出现过同样的错误。现在 Figtree 与 Noto Sans SC 的文件都放在 `app/fonts/`（4.8MB，SIL OFL 1.1）。
+  - 文件字节与此前线上一致，`@font-face` 声明逐字保留，中文仍按 101 个分片按需下载。
+  - Figtree 只保留拉丁子集，扩展拉丁字符（如 ő）改由后备字体显示。
+  - 本地 Windows 构建的字体预加载清单为空，这是 Next 自身的路径判断问题，换回 Google 字体时同样如此；Linux（CI、Vercel）不受影响。详见 `app/fonts/README.md`。
 
 ## 7. 需要 Owner 决定或知悉
 
