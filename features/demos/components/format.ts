@@ -10,14 +10,24 @@ export function prettyJson(value: unknown, maxItems = 8) {
   return shortened.replace(/\[\s+((?:-?[\d.e+-]+,\s*)*-?[\d.e+-]+)\s+\]/g, (_whole, inner: string) => `[${inner.replace(/\s+/g, " ")}]`);
 }
 
-/** A copy-pasteable curl command for a JSON POST. Single quotes in the body are escaped for POSIX shells. */
-export function curlCommand(url: string, body: unknown, options: { stream?: boolean } = {}) {
-  const json = JSON.stringify(body).replace(/'/g, "'\\''");
+/** Single-quote a value for POSIX shells. */
+const shellQuote = (text: string) => `'${text.replace(/'/g, "'\\''")}'`;
+
+/**
+ * A copy-pasteable curl command: a GET when there is no body, otherwise a JSON POST.
+ * URL and body are single-quoted for POSIX shells.
+ */
+export function curlCommand(url: string, body?: unknown, options: { stream?: boolean } = {}) {
+  const flags = `-sS${options.stream ? "N" : ""}`;
+  const accept = "-H 'Accept: text/event-stream'";
+  if (body === undefined) {
+    return options.stream ? `curl ${flags} ${shellQuote(url)} \\\n  ${accept}` : `curl ${flags} ${shellQuote(url)}`;
+  }
   return [
-    `curl -sS${options.stream ? "N" : ""} -X POST '${url}' \\`,
+    `curl ${flags} -X POST ${shellQuote(url)} \\`,
     "  -H 'Content-Type: application/json' \\",
-    ...(options.stream ? ["  -H 'Accept: text/event-stream' \\"] : []),
-    `  -d '${json}'`,
+    ...(options.stream ? [`  ${accept} \\`] : []),
+    `  -d ${shellQuote(JSON.stringify(body))}`,
   ].join("\n");
 }
 

@@ -56,8 +56,9 @@ tests/e2e/mobile/demos.spec.ts       CI 中运行的浏览器用例（本地未�
 | --- | --- |
 | `pnpm typecheck` | 通过 |
 | `pnpm lint`（零警告） | 通过 |
-| `pnpm test` | 156 文件 / 987 测试通过；51 个需数据库的集成测试照旧跳过 |
-| 其中新增 | 5 个文件 / 90 项：运行时与 API 30、路线优化 19、神经网络 24、示例 7、文档一致性 10 |
+| `pnpm test` | 158 文件 / 1002 测试通过；51 个需数据库的集成测试照旧跳过 |
+| 其中新增 | 7 个文件 / 105 项：运行时与 API 30、路线优化 19、神经网络 24、示例 7、文档一致性 10、curl 生成 7、在线请求预设 8 |
+| CI 首轮（a70d294） | 6 个 E2E 任务均只失败 `/docs/api` 一项：选择 GET「能力列表」时 `curlCommand(url, undefined)` 在渲染中抛出 `JSON.stringify(undefined).replace` 的 TypeError，页面落入错误边界（Trace 中 Chromium 与 WebKit 报错一致）。已修复为无请求体时生成 GET 命令，并补回归测试；其余 35 项在三种浏览器中通过 |
 | `pnpm build` | 通过；`/demos/*`、`/docs/*`、`/explore/{route-optimizer,neural-network}` 均为静态预渲染；Worker 打包为独立 chunk |
 | `pnpm demo:api-smoke`（本地 `next start`，真实 HTTP） | 12/12 通过：能力列表、404、openapi、同步运行、SSE 生命周期、截止时间 → TIMED_OUT（partial）、415、400×2、404、422、413 |
 | 预渲染 HTML 静态检查 | 13 个页面 200、标题正确、无 `undefined`/`NaN`；状态标记全部渲染为徽章；在线请求与校验器组件存在；Landing 无旧的实验室链接 |

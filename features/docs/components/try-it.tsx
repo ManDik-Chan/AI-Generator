@@ -6,26 +6,9 @@ import { Send, Square } from "lucide-react";
 import { ToneBadge } from "@/components/platform/primitives";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/features/demos/components/ui";
-import { curlCommand, prettyJson } from "@/features/demos/components/format";
+import { prettyJson } from "@/features/demos/components/format";
+import { presetCurl, presets } from "@/features/docs/try-it-presets";
 import { cn } from "@/lib/utils";
-
-interface Preset {
-  id: string;
-  label: string;
-  method: "GET" | "POST";
-  path: string;
-  stream?: boolean;
-  body?: unknown;
-  note: string;
-}
-
-const presets: Preset[] = [
-  { id: "list", label: "能力列表", method: "GET", path: "/api/demo/v1/capabilities", note: "列出两个能力及其输入输出 Schema。" },
-  { id: "run", label: "同步运行", method: "POST", path: "/api/demo/v1/runs", body: { capability: "route-optimizer.solve", input: { instance: { kind: "clustered", count: 120, seed: 7 }, improvement: "or-opt" } }, note: "一次返回终态 Run。" },
-  { id: "stream", label: "事件流", method: "POST", path: "/api/demo/v1/runs", stream: true, body: { capability: "route-optimizer.solve", input: { instance: { kind: "uniform", count: 250, seed: 3 }, improvement: "annealing", annealingIterations: 600000 } }, note: "Accept: text/event-stream，逐条显示 run.status 与 run.progress。" },
-  { id: "timeout", label: "截止时间", method: "POST", path: "/api/demo/v1/runs", body: { capability: "route-optimizer.solve", input: { instance: { kind: "uniform", count: 400 }, improvement: "annealing", annealingIterations: 3000000, deadlineMs: 50 } }, note: "50 ms 内无法完成 → TIMED_OUT，带部分结果。" },
-  { id: "invalid", label: "错误示例", method: "POST", path: "/api/demo/v1/runs", body: { capability: "route-optimizer.solve", input: { points: [[1, 2]], color: "red" } }, note: "输入不符合契约 → 400，issues 指出问题位置。" },
-];
 
 const RESPONSE_HEADERS = ["content-type", "x-request-id", "x-run-id", "ratelimit-remaining", "retry-after"];
 
@@ -137,7 +120,7 @@ export function TryIt() {
               {result ? <ToneBadge tone={tone}>HTTP {result.status}</ToneBadge> : <span className="text-[hsl(var(--paper)/.5)]">{busy ? "请求中…" : "响应"}</span>}
               {result ? <span className="text-[hsl(var(--paper)/.55)]">{result.ms} ms</span> : null}
             </span>
-            <CopyButton text={curlCommand(`${typeof window === "undefined" ? "" : window.location.origin}${preset.path}`, preset.method === "POST" ? safeParse(body) : undefined, { stream: preset.stream })} />
+            <CopyButton text={presetCurl(preset, body, typeof window === "undefined" ? "" : window.location.origin)} />
           </div>
           <pre aria-live="polite" className="premium-scrollbar max-h-[24rem] min-h-[14rem] flex-1 overflow-auto p-4 font-code text-[.6875rem] leading-5 text-[hsl(var(--paper)/.85)]">
             {error ? <span className="text-[hsl(var(--lime))]">{error}</span> : result ? `${result.headers.map(([name, value]) => `${name}: ${value}`).join("\n")}\n\n${result.body}` : <span className="text-[hsl(var(--paper)/.45)]">选择一个示例并发送。右上角按钮复制等价的 curl 命令。</span>}
@@ -148,10 +131,3 @@ export function TryIt() {
   );
 }
 
-function safeParse(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return text;
-  }
-}
