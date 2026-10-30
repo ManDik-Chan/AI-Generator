@@ -1,4 +1,4 @@
-// Targeted B1 migration proof. No .env, remote URLs or unlabelled containers.
+// Registry migration proof. No .env, remote URLs or unlabelled containers.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
@@ -11,6 +11,7 @@ import { assertDisposableTarget, bindDisposableLoopback } from "./disposable-sup
 
 const root = process.cwd(), target = assertDisposableTarget();
 const name = "20261028135224_project_registry_foundation";
+const lastB1Migration = "20261030120001_registry_sealing_qualification";
 const migrationsRoot = join(root, "prisma/migrations");
 const migrations = readdirSync(migrationsRoot, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
 const boundary = migrations.indexOf(name);
@@ -29,14 +30,56 @@ async function reset() {
   await bindDisposableLoopback(target.workdir);
 }
 async function snapshot(db) {
-  const tables = await db.$queryRaw`SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'_prisma_migrations'
-    AND tablename NOT IN ('projects','project_drafts','project_versions','project_releases','project_assets','project_documentation','project_memberships','publication_reviews') ORDER BY tablename`;
+  const tables = await db.$queryRaw`SELECT schemaname,tablename FROM pg_tables
+    WHERE schemaname IN ('public','registry_private') AND tablename<>'_prisma_migrations' ORDER BY schemaname,tablename`;
   const data = [];
-  for (const { tablename } of tables) {
-    assert(/^[a-z_]+$/.test(tablename));
-    data.push(...await db.$queryRawUnsafe(`SELECT '${tablename}' AS name,count(*)::int AS count,md5(string_agg(to_jsonb(t)::text,E'\n' ORDER BY to_jsonb(t)::text)) AS digest FROM public.${tablename} t`));
+  for (const { schemaname,tablename } of tables) {
+    assert(/^[a-z_]+$/.test(schemaname) && /^[a-z_]+$/.test(tablename));
+    const relation = `${schemaname}.${tablename}`;
+    data.push(...await db.$queryRawUnsafe(`SELECT '${relation}' AS name,count(*)::int AS count,md5(string_agg(to_jsonb(t)::text,E'\n' ORDER BY to_jsonb(t)::text)) AS digest FROM ${relation} t`));
   }
   return data;
+}
+async function assertPreservedData(db, before) {
+  const names = new Set(before.map(row => row.name));
+  assert.deepEqual((await snapshot(db)).filter(row => names.has(row.name)), before);
+}
+async function seedB1Registry(db) {
+  // Data-preservation fixtures only, not authentication evidence. Real Auth
+  // issuance/JWT/session/RLS behavior is exercised by the integration suites.
+  // All writes use the inspected disposable database, with no other API target.
+  await db.$transaction(async tx => {
+    const owner = randomUUID(), reviewer = randomUUID(), digest = "a".repeat(64);
+    for (const subject of [owner,reviewer]) {
+      await tx.$executeRaw`INSERT INTO auth.users(id,instance_id,aud,role,email,raw_app_meta_data,raw_user_meta_data,created_at,updated_at)
+        VALUES(${subject}::uuid,'00000000-0000-0000-0000-000000000000'::uuid,'authenticated','authenticated',
+          ${`${subject}@example.test`},'{}'::jsonb,'{}'::jsonb,statement_timestamp(),statement_timestamp())`;
+      await tx.$executeRaw`INSERT INTO registry_private.internal_operators(subject_id,active,can_create,expires_at)
+        VALUES(${subject}::uuid,true,true,statement_timestamp()+interval '1 hour')`;
+    }
+    const project = await tx.project.create({ data: { slug: `migration-${randomUUID()}`, ownerId: owner } });
+    await tx.projectMembership.create({ data: { projectId: project.id, subjectId: reviewer, roles: ["REVIEWER"] } });
+    const draft = await tx.projectDraft.create({ data: { projectId: project.id, updatedBy: owner } });
+    const asset = await tx.projectAsset.create({ data: { projectId: project.id, sourceDigest: digest, mime: "text/markdown", size: 10,
+      dataClass: "CURATED", storageRef: `private/${randomUUID()}`, provenance: {}, rightsRef: "migration-fixture" } });
+    await tx.projectAsset.update({ where: { id: asset.id }, data: { state: "VALIDATED", deliveryDigest: digest } });
+    await tx.projectAsset.update({ where: { id: asset.id }, data: { state: "APPROVED" } });
+    await tx.projectDocumentation.create({ data: { projectId: project.id, draftId: draft.id, title: "preserve draft document",
+      language: "en", assetId: asset.id, contentHash: digest } });
+    const submitted = await tx.projectDraft.update({ where: { id: draft.id }, data: { state: "IN_REVIEW" } });
+    const current = await tx.project.findUniqueOrThrow({ where: { id: project.id } });
+    const review = await tx.publicationReview.create({ data: { projectId: project.id, draftId: draft.id, draftRevision: submitted.revision,
+      authzEpoch: current.authzEpoch, snapshotHash: digest, visibility: "PRIVATE", assetDigestSet: [], submitterId: owner,
+      policyRevision: 1, expiresAt: new Date(Date.now()+3600000) } });
+    await tx.publicationReview.update({ where: { id: review.id }, data: { decision: "APPROVED", reviewerId: reviewer, decidedAt: new Date() } });
+    const version = await tx.projectVersion.create({ data: { projectId: project.id, version: "1.0.0", snapshot: {}, contentHash: digest, reviewId: review.id } });
+    await tx.projectDocumentation.create({ data: { projectId: project.id, versionId: version.id, title: "preserve sealed document",
+      language: "en", assetId: asset.id, contentHash: digest } });
+    const release = await tx.projectRelease.create({ data: { projectId: project.id, versionId: version.id, contentHash: digest,
+      visibilityAtApproval: "PRIVATE", publishedAt: new Date() } });
+    await tx.project.update({ where: { id: project.id }, data: { currentReleaseId: release.id } });
+  });
+  console.info("Seeded all eight B1 entities plus qualification/Auth subjects before the B2 upgrade");
 }
 async function catalogSnapshot(db) {
   // Preserve existing ACLs, RLS/policies, constraints, types, routines and
@@ -104,10 +147,15 @@ try {
     await db.message.create({ data: { conversationId: conversation.id, role: "USER", content: "preserve historical chat" } });
     await db.toolRun.create({ data: { userId, type: "SUMMARIZE", options: {}, outputText: "historical output" } });
     await db.memory.create({ data: { userId, content: "historical memory", category: "fixture", verificationMethod: "MANUAL_ENTRY", verifiedAt: new Date() } });
-    const before = await snapshot(db);
     await verifyMigrations(db, mainPrefix);
     const expected = [...mainPrefix];
+    let seededB1 = false;
     for (const migration of registrySuffix) {
+      if (migration > lastB1Migration && !seededB1) {
+        await seedB1Registry(db);
+        seededB1 = true;
+      }
+      const before = await snapshot(db);
       const beforeCatalog = await catalogSnapshot(db);
       const sql = readFileSync(join(migrationsRoot, migration, "migration.sql"), "utf8");
       assert(/^BEGIN;/m.test(sql) && /COMMIT;\s*$/.test(sql), "Registry migrations must be explicitly transactional");
@@ -116,16 +164,16 @@ try {
       });
       assert.notEqual(failed.status, 0); assert(failed.stderr.includes("division by zero"));
       assert.deepEqual(await catalogSnapshot(db), beforeCatalog, "Failed Registry migration changed schema or permissions");
-      assert.deepEqual(await snapshot(db), before);
+      await assertPreservedData(db, before);
       await verifyMigrations(db, expected);
       cpSync(join(migrationsRoot,migration), join(temporary,"prisma/migrations",migration), { recursive: true });
       run([cli, "migrate", "deploy", "--schema", schema]);
       expected.push(migration);
       await verifyMigrations(db, expected);
-      assert.deepEqual(await snapshot(db), before);
+      await assertPreservedData(db, before);
       console.info(`Registry incremental + injected transaction rollback passed: ${migration}`);
+      console.info(`Preserved prefix data snapshot: ${createHash("sha256").update(JSON.stringify(before)).digest("hex")}`);
     }
-    console.info(`Legacy snapshot unchanged: ${createHash("sha256").update(JSON.stringify(before)).digest("hex")}`);
   } finally { await db.$disconnect(); }
   await reset();
   run([cli, "migrate", "deploy"]); run([cli, "migrate", "deploy"]);
@@ -134,6 +182,18 @@ try {
     const [row] = await clean.$queryRaw`SELECT count(*)::int AS count FROM pg_class WHERE relnamespace='public'::regnamespace
       AND relname IN ('projects','project_drafts','project_versions','project_releases','project_assets','project_documentation','project_memberships','publication_reviews') AND relrowsecurity`;
     assert.equal(row.count, 8);
+    const [privateTables] = await clean.$queryRaw`SELECT count(*)::int AS count FROM pg_class
+      WHERE relnamespace='registry_private'::regnamespace
+        AND relname IN ('operator_actions','command_receipts','review_invalidations') AND relrowsecurity
+        AND NOT has_table_privilege('anon',oid,'SELECT,INSERT,UPDATE,DELETE')
+        AND NOT has_table_privilege('authenticated',oid,'SELECT,INSERT,UPDATE,DELETE')
+        AND NOT has_table_privilege('service_role',oid,'SELECT,INSERT,UPDATE,DELETE')`;
+    assert.equal(privateTables.count, 3, "Private command tables must have RLS and no client privileges");
+    const [seedless] = await clean.$queryRaw`SELECT
+      (SELECT count(*) FROM registry_private.operator_actions)+
+      (SELECT count(*) FROM registry_private.command_receipts)+
+      (SELECT count(*) FROM registry_private.review_invalidations) AS count`;
+    assert.equal(seedless.count, 0n, "Command tables must not provision privileges or records on install");
     await verifyMigrations(clean, migrations);
     console.info(`Registry clean install + repeat deploy + eight RLS tables + all ${migrations.length} migration checksums passed`);
   } finally { await clean.$disconnect(); }

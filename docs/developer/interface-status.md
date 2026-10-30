@@ -2,7 +2,7 @@
 
 哪些已经实现、哪些只是设计契约，以及下一阶段需要谁做什么。本清单与 [API Reference](/docs/api) 使用同一套状态标记；更新任何接口时请同步这里。
 
-更新日期：2026-10-30 · Demo 与文档已随 PR #36 合并 main；Registry P1-B1 为隔离开发候选，未批准生产迁移或部署。
+更新日期：2026-10-31 · Demo 与文档已随 PR #36 合并 main，Registry P1-B1 已随 PR #29 合并；P1-B2-A 在本分支实现内部库协议，默认关闭、无 HTTP 路由。本轮不授权生产迁移或部署。
 
 ## 已实现
 
@@ -19,7 +19,9 @@
 | `status:implemented` | 浏览器协议 `aig.worker/1` | `features/demos/neural-network/protocol.ts` | 入站校验、生命周期、取消、重配置、发散、超时 |
 | `status:implemented` | 运行状态机 | `features/platform/run-lifecycle.ts` | 既有测试 + 两个运行时共用 |
 | `status:implemented` | P0.5 Manifest 校验器与 CLI | `features/platform/manifest.ts`、`scripts/manifest-validate.ts` | 既有测试；与 JSON Schema 副本的枚举一致性测试 |
-| `status:internal` | Registry P1-B1 八实体、RLS/GRANT、内部资格与创建函数（本分支实现） | `prisma/schema.prisma`、`features/registry/internal.ts` | 隔离验收记录见 `docs/registry-validation.md`；默认关闭，无 HTTP 路由，尚未生产迁移 |
+| `status:internal` | Registry P1-B1 八实体、RLS/GRANT、内部资格与创建函数（已合并 main） | `prisma/schema.prisma`、`features/registry/internal.ts` | B1 隔离验收记录见 `docs/registry-validation.md`；默认关闭，无 HTTP 路由，生产操作另行授权 |
+| `status:internal` | Registry P1-B2-A 八个 server-only 函数：Draft 头/DTO/Review 读取、编辑、提交、撤审、独立决策、Version 封存（本分支实现） | `features/registry/protocol.ts` | 实际验收见 `docs/registry-b2a-validation.md`；双 flag 默认关闭，无 HTTP；会话/动作/项目定权、CAS、幂等与审核事务 |
+| `status:implemented` | P1-B2-A 严格 DraftDTO / VersionDTO、语义校验与 `JCS-SHA256-v1` | `features/registry/contracts.ts`、`features/registry/canonical.ts` | 同份 B2-A 验收记录；ReleaseDTO 仅有边界 schema，不代表公开投影或发布功能已实现 |
 | `status:internal` | 本站对话、工具、人格、记忆、Agent 接口 | `app/api/*` | 既有测试；本轮未修改 |
 
 ## Demo 专用的取舍
@@ -39,8 +41,9 @@
 
 | 状态 | 接口 | 依赖 | 建议负责 |
 | --- | --- | --- | --- |
-| `status:design` | Registry 公开读取 `GET /api/v1/projects…`（4 个） | B1 基础之外的发布协议、资产授权与白名单投影 | Codex |
-| `status:design` | Registry 内部命令 `/internal/v1/projects…`（21 个） | B2：DraftDTO、完整动作定权、幂等与 If-Match；B1 函数未接入路由 | Codex |
+| `status:design` | Registry 公开读取 `GET /api/v1/projects…`（4 个） | B2-B 发布协议、资产授权闭环与白名单投影；B2-A 不公开内部 Draft/Version | Codex |
+| `status:design` | Registry 内部 HTTP 命令 `/internal/v1/projects…`（21 个） | B2-A 已实现内部 Draft/Review/Version 库，尚未接入 HTTP；路由认证、限流及字节解码等仍需实现 | Codex |
+| `status:design` | B2-B Release 的 publish / withdraw / rollback | 当前授权与资产新鲜性、发布状态机、幂等与失效投影；B2-A 的撤审/Version 封存不构成这些命令 | Codex |
 | `status:design` | 资产上传、净化与独立 origin 读取 | 存储隔离、净化器 | Codex |
 | `status:design` | 异步运行 `POST /api/v1/projects/{projectId}/runs`（202）、`GET /api/v1/runs/{runId}`、取消 | 持久队列、超时与回调签名 | Codex |
 | `status:design` | Grant：安装、授权、撤销 | 身份与授权服务 | Codex |
