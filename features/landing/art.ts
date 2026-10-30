@@ -4,7 +4,7 @@
  * as a JPEG object URL for elements carrying data-art="<key>".
  */
 
-export type ArtKey = "chat" | "persona" | "memory" | "image" | "agents" | "stone" | "dawn" | "moss";
+export type ArtKey = "chat" | "persona" | "memory" | "image" | "agents" | "stone" | "dawn" | "moss" | "ember" | "tide" | "slate" | "bloom" | "citron";
 
 interface Palette {
   /** shadow, mid, light, highlight */
@@ -23,6 +23,12 @@ export const ART_PALETTES: Record<ArtKey, Palette> = {
   stone: { c: ["#1f1d1f", "#6b6669", "#c9c3ba", "#f2efea"], scale: 2.4, warp: 3.4, seed: 3.3 },
   dawn: { c: ["#3a2a3f", "#c98a7a", "#f0d1b0", "#fbf3e6"], scale: 1.5, warp: 3.9, seed: 5.5 },
   moss: { c: ["#1c2416", "#6b7d3f", "#c9cf8f", "#f1efd6"], scale: 2.2, warp: 3.7, seed: 9.4 },
+  // Project cover palettes for the platform (same shader and lighting as the landing art).
+  ember: { c: ["#24130f", "#a3452a", "#e9a77a", "#f8e6d2"], scale: 1.9, warp: 3.5, seed: 7.3 },
+  tide: { c: ["#0d1c22", "#2f6f7e", "#9fd0cf", "#eef1e4"], scale: 1.7, warp: 4.1, seed: 3.9 },
+  slate: { c: ["#16181d", "#4b5468", "#b5bccb", "#eeeef0"], scale: 2.3, warp: 3.3, seed: 10.7 },
+  bloom: { c: ["#2a1530", "#8e4d8f", "#e3b0cf", "#f6e9ef"], scale: 1.8, warp: 3.9, seed: 12.1 },
+  citron: { c: ["#1d2210", "#7f8a2a", "#dfe27a", "#f6f5df"], scale: 2.0, warp: 3.6, seed: 14.2 },
 };
 
 export function isArtKey(value: string | undefined): value is ArtKey {

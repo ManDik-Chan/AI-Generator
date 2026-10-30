@@ -165,32 +165,70 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
             </div>
           </section>
 
-          {/* Pinned chapters — product shots are placeholders */}
+          {/* Pinned chapters — platform capabilities; the small product shots are illustrative */}
           <section aria-label={ch.label} className="chapters" data-chapters="" data-theme="dark" style={vars({ "--n": 5 })}>
             <div className="chapters__sticky">
               <Chapter
-                art="chat" catalog={<Catalog href="/chat" sub={ch.chat.catalog[1]} thumb={<span className="catalog__thumb art" data-art="dawn" />} title={ch.chat.catalog[0]} />}
-                cta={ch.chat.cta} hint={ch.hint} href="/chat" icon="chat" tag={ch.chat.tag} tagColor="#EDB08F" title={ch.chat.title}
+                art="memory" catalog={<Catalog href="/explore" sub={ch.showcase.catalog[1]} thumb={<span className="catalog__thumb art" data-art="tide" />} title={ch.showcase.catalog[0]} />}
+                cta={ch.showcase.cta} hint={ch.hint} href="/explore" icon="folder" tag={ch.showcase.tag} tagColor="#B8C6EA" title={ch.showcase.title}
               >
-                <div className="comp-chat">
-                  <div className="bubble bubble--user">{ch.chat.user}</div>
-                  <div className="bubble bubble--ai">
-                    <span className="bubble__who"><Img src={avatar(1)} />{ch.chat.persona}</span>
-                    {ch.chat.intro}
-                    <ol>{ch.chat.points.map((p) => <li key={p}>{p}</li>)}</ol>
-                  </div>
-                  <div className="typing"><i /><i /><i /></div>
+                <div className="panel comp-memory">
+                  <div className="panel__head"><span>{ch.showcase.head[0]}</span><span>{ch.showcase.head[1]}</span></div>
+                  {ch.showcase.claims.map((m) => (
+                    <div className="mitem" key={m.text}>
+                      <p>{m.text}</p><small>{m.meta}</small>
+                      <span className="acts">{m.ok ? <span className="badge-ok"><Icon name="check" />{m.status}</span> : <span className="btn-xs">{m.status}</span>}</span>
+                    </div>
+                  ))}
                 </div>
               </Chapter>
 
               <Chapter
-                art="persona" catalog={<Catalog href="/personas/new" sub={ch.persona.catalog[1]} thumb={<span className="catalog__thumb catalog__thumb--avatar"><Img src={avatar(3)} /></span>} title={ch.persona.catalog[0]} />}
-                cta={ch.persona.cta} hint={ch.hint} href="/personas" icon="persona" tag={ch.persona.tag} tagColor="#B9CDB2" title={ch.persona.title}
+                art="persona" catalog={<Catalog href="/explore/sorting-lab#lab" sub={ch.lab.catalog[1]} thumb={<span className="catalog__thumb art" data-art="citron" />} title={ch.lab.catalog[0]} />}
+                cta={ch.lab.cta} hint={ch.hint} href="/explore/volume-reconstruction#lab" icon="flask" tag={ch.lab.tag} tagColor="#B9CDB2" title={ch.lab.title}
+              >
+                <div className="panel comp-gen">
+                  <div className="gen__prompt"><Icon name="flask" />{ch.lab.prompt}</div>
+                  <div className="gen__img art" data-art="tide"><i className="gen__scan" /></div>
+                  <div className="gen__meta"><span>{ch.lab.status}</span><span>{ch.lab.meta}</span></div>
+                  <div className="gen__bar"><i /></div>
+                </div>
+              </Chapter>
+
+              <Chapter
+                art="agents" catalog={<Catalog href="/platform/projects/new" sub={ch.publish.catalog[1]} thumb={<span className="catalog__thumb art" data-art="stone" />} title={ch.publish.catalog[0]} />}
+                cta={ch.publish.cta} hint={ch.hint} href="/platform/developer#manifest" icon="doc" tag={ch.publish.tag} tagColor="#E9E778" title={ch.publish.title}
+              >
+                <svg className="comp-graph" viewBox="0 0 400 320">
+                  <g className="graph__lines">
+                    {[52, 127, 202, 277].map((y, i) => <path d={`M150 ${y}C${i % 3 ? 200 : 205} ${y} ${i % 3 ? 205 : 200} 160 252 160`} key={y} />)}
+                  </g>
+                  {ch.publish.nodes.map((label, i) => {
+                    const y = 30 + i * 75;
+                    return (
+                      <g className="graph__node" key={label}>
+                        <rect height="44" rx="22" width="150" x="0" y={y} />
+                        <circle className={i < 3 ? "dot dot--done" : "dot dot--run"} cx="22" cy={y + 22} r="5" />
+                        <text x="36" y={y + 27}>{label}</text>
+                      </g>
+                    );
+                  })}
+                  <g className="graph__lead">
+                    <rect height="72" rx="20" width="148" x="252" y="124" />
+                    <text x="272" y="155">{ch.publish.lead[0]}</text>
+                    <text className="sub" x="272" y="176">{ch.publish.lead[1]}</text>
+                  </g>
+                </svg>
+              </Chapter>
+
+              <Chapter
+                art="image" catalog={<Catalog href="/platform/connections" sub={ch.privacy.catalog[1]} thumb={<span className="catalog__thumb art" data-art="ember" />} title={ch.privacy.catalog[0]} />}
+                cta={ch.privacy.cta} hint={ch.hint} href="/platform/connections" icon="key" tag={ch.privacy.tag} tagColor="#F2C2AE" title={ch.privacy.title}
               >
                 <div className="comp-persona">
-                  {ch.persona.cards.map((p, i) => (
+                  {ch.privacy.cards.map((p, i) => (
                     <div className="pcard" key={p.name}>
-                      <Img src={avatar([1, 5, 9][i])} />
+                      <span className="pcard__mark"><Icon name={(["eye", "lock", "key"] as const)[i]} /></span>
                       <div><b>{p.name}</b><small>{p.desc}</small><span className="chips"><span>{p.chips[0]}</span><span>{p.chips[1]}</span></span></div>
                     </div>
                   ))}
@@ -198,60 +236,18 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
               </Chapter>
 
               <Chapter
-                art="memory" catalog={<Catalog href="/memories" sub={ch.memory.catalog[1]} thumb={<span className="catalog__thumb art" data-art="memory" />} title={ch.memory.catalog[0]} />}
-                cta={ch.memory.cta} hint={ch.hint} href="/memories" icon="memory" tag={ch.memory.tag} tagColor="#B8C6EA" title={ch.memory.title}
+                art="chat" catalog={<Catalog href="/platform/agent" sub={ch.hub.catalog[1]} thumb={<span className="catalog__thumb art" data-art="agents" />} title={ch.hub.catalog[0]} />}
+                cta={ch.hub.cta} hint={ch.hint} href="/platform/hub" icon="chat" tag={ch.hub.tag} tagColor="#EDB08F" title={ch.hub.title}
               >
-                <div className="panel comp-memory">
-                  <div className="panel__head"><span>{ch.memory.head[0]}</span><span>{ch.memory.head[1]}</span></div>
-                  {ch.memory.items.map((m) => (
-                    <div className="mitem" key={m.text}>
-                      <p>{m.text}</p><small>{m.meta}</small>
-                      <span className="acts"><span className="btn-xs btn-xs--ink">{ch.memory.accept}</span><span className="btn-xs">{ch.memory.decline}</span></span>
-                    </div>
-                  ))}
-                  <div className="mitem">
-                    <p>{ch.memory.confirmedItem.text}</p><small>{ch.memory.confirmedItem.meta}</small>
-                    <span className="acts"><span className="badge-ok"><Icon name="check" />{ch.memory.confirmed}</span></span>
+                <div className="comp-chat">
+                  <div className="bubble bubble--user">{ch.hub.user}</div>
+                  <div className="bubble bubble--ai">
+                    <span className="bubble__who"><Img src={avatar(3)} />{ch.hub.persona}</span>
+                    {ch.hub.intro}
+                    <ol>{ch.hub.points.map((p) => <li key={p}>{p}</li>)}</ol>
                   </div>
+                  <div className="typing"><i /><i /><i /></div>
                 </div>
-              </Chapter>
-
-              <Chapter
-                art="image" catalog={<Catalog href="/tools/image" sub={ch.image.catalog[1]} thumb={<span className="catalog__thumb art" data-art="image" />} title={ch.image.catalog[0]} />}
-                cta={ch.image.cta} hint={ch.hint} href="/tools/image-generate" icon="image" tag={ch.image.tag} tagColor="#F2C2AE" title={ch.image.title}
-              >
-                <div className="panel comp-gen">
-                  <div className="gen__prompt"><Icon name="pen" />{ch.image.prompt}</div>
-                  <div className="gen__img art" data-art="dawn"><i className="gen__scan" /></div>
-                  <div className="gen__meta"><span>{ch.image.status}</span><span>{ch.image.meta}</span></div>
-                  <div className="gen__bar"><i /></div>
-                </div>
-              </Chapter>
-
-              <Chapter
-                art="agents" catalog={<Catalog href="/platform/agent" sub={ch.agents.catalog[1]} thumb={<span className="catalog__thumb art" data-art="agents" />} title={ch.agents.catalog[0]} />}
-                cta={ch.agents.cta} hint={ch.hint} href="/tools/brainstorm" icon="agents" tag={ch.agents.tag} tagColor="#E9E778" title={ch.agents.title}
-              >
-                <svg className="comp-graph" viewBox="0 0 400 320">
-                  <g className="graph__lines">
-                    {[52, 127, 202, 277].map((y, i) => <path d={`M150 ${y}C${i % 3 ? 200 : 205} ${y} ${i % 3 ? 205 : 200} 160 252 160`} key={y} />)}
-                  </g>
-                  {ch.agents.nodes.map((label, i) => {
-                    const y = 30 + i * 75;
-                    return (
-                      <g className="graph__node" key={label}>
-                        <rect height="44" rx="22" width="150" x="0" y={y} />
-                        <circle className={i < 2 ? "dot dot--done" : "dot dot--run"} cx="22" cy={y + 22} r="5" />
-                        <text x="36" y={y + 27}>{label}</text>
-                      </g>
-                    );
-                  })}
-                  <g className="graph__lead">
-                    <rect height="72" rx="20" width="148" x="252" y="124" />
-                    <text x="272" y="155">{ch.agents.lead[0]}</text>
-                    <text className="sub" x="272" y="176">{ch.agents.lead[1]}</text>
-                  </g>
-                </svg>
               </Chapter>
 
               <div aria-hidden="true" className="chapters__index">
@@ -263,12 +259,12 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
           </section>
         </div>
 
-        {/* About — paragraph and update cards are placeholder copy */}
+        {/* About — platform narrative and honest roadmap cards */}
         <section className="about" data-theme="light">
           <div className="rule" data-rule="" />
           <div className="grid">
             <div className="about__main">
-              <p className="about__meta" data-reveal="">AI-Generator<sup>®</sup><br />V2<br />Lumen</p>
+              <p className="about__meta" data-reveal="">AI-Generator<sup>®</sup><br />{c.about.meta[1]}<br />{c.about.meta[2]}</p>
               <Art className="about__img" k="stone" media />
               <p className="about__text" data-chars=""><Chars lines={[c.about.text]} /></p>
             </div>
@@ -291,26 +287,26 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
         <section aria-labelledby="lp-features-title" className="features" data-theme="light">
           <p className="label features__label" id="lp-features-title">{c.features.label} <Icon name="down" /></p>
           <div className="features__grid">
-            <A attrs={{ "data-reveal": "" }} className="fcard" href="/tools/image-generate">
-              <span className="fcard__top"><span className="tag tag--sm" style={vars({ "--tag": "#F2C2AE" })}><Icon name="image" />{c.features.image.tag}</span><Loop className="fcard__arrow" dir="ur" name="ur" /></span>
-              <span className="fcard__title">{c.features.image.title}</span>
+            <A attrs={{ "data-reveal": "" }} className="fcard" href="/explore">
+              <span className="fcard__top"><span className="tag tag--sm" style={vars({ "--tag": "#B8C6EA" })}><Icon name="folder" />{c.features.explore.tag}</span><Loop className="fcard__arrow" dir="ur" name="ur" /></span>
+              <span className="fcard__title">{c.features.explore.title}</span>
               <span className="fcard__stage fcard__stage--fan">
-                {(["moss", "image", "dawn"] as const).map((k) => <span className="fan art" data-art={k} key={k} />)}
+                {(["tide", "citron", "bloom"] as const).map((k) => <span className="fan art" data-art={k} key={k} />)}
               </span>
               <span className="fcard__bottom">
-                <span><small>{c.features.image.styles}</small><span className="swatches">{["#C98A7A", "#6B7D3F", "#34507F", "#E9E778"].map((col) => <i key={col} style={vars({ "--c": col })} />)}<em>+4</em></span></span>
-                <span className="pill pill--ink fcard__go"><Roll text={c.features.image.go} /><Loop dir="right" name="right" /></span>
+                <span><small>{c.features.explore.styles}</small><span className="swatches">{["#2F6F7E", "#7F8A2A", "#8E4D8F", "#A3452A"].map((col) => <i key={col} style={vars({ "--c": col })} />)}<em>+2</em></span></span>
+                <span className="pill pill--ink fcard__go"><Roll text={c.features.explore.go} /><Loop dir="right" name="right" /></span>
               </span>
             </A>
-            <A attrs={{ "data-reveal": "" }} className="fcard" href="/personas" style={vars({ "--d": 120 })}>
-              <span className="fcard__top"><span className="tag tag--sm" style={vars({ "--tag": "#B9CDB2" })}><Icon name="persona" />{c.features.persona.tag}</span><Loop className="fcard__arrow" dir="ur" name="ur" /></span>
-              <span className="fcard__title">{c.features.persona.title}</span>
+            <A attrs={{ "data-reveal": "" }} className="fcard" href="/platform/hub" style={vars({ "--d": 120 })}>
+              <span className="fcard__top"><span className="tag tag--sm" style={vars({ "--tag": "#EDB08F" })}><Icon name="spark" />{c.features.hub.tag}</span><Loop className="fcard__arrow" dir="ur" name="ur" /></span>
+              <span className="fcard__title">{c.features.hub.title}</span>
               <span className="fcard__stage fcard__stage--avatars">
                 {Array.from({ length: 12 }, (_, i) => <Img key={i} src={avatar(i + 1)} style={vars({ "--i": i + 1 })} />)}
               </span>
               <span className="fcard__bottom">
-                <span><small>{c.features.persona.avatars}</small><span className="swatches swatches--avatars">{[2, 4, 6, 8].map((n) => <Img key={n} src={avatar(n)} />)}<em>+8</em></span></span>
-                <span className="pill pill--ink fcard__go"><Roll text={c.features.persona.go} /><Loop dir="right" name="right" /></span>
+                <span><small>{c.features.hub.avatars}</small><span className="swatches swatches--avatars">{[2, 4, 6, 8].map((n) => <Img key={n} src={avatar(n)} />)}<em>+8</em></span></span>
+                <span className="pill pill--ink fcard__go"><Roll text={c.features.hub.go} /><Loop dir="right" name="right" /></span>
               </span>
             </A>
           </div>
@@ -322,8 +318,8 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
           <p className="label index__label" id="lp-index-title">{c.index.label}</p>
           <ul className="index__list">
             {c.index.rows.map((row, i) => {
-              const icons: LandingIcon[] = ["chat", "persona", "memory", "pen", "image", "agents"];
-              const arts: (ArtKey | null)[] = ["chat", null, "memory", "stone", "dawn", "agents"];
+              const icons: LandingIcon[] = ["compass", "folder", "flask", "doc", "key", "spark"];
+              const arts: (ArtKey | null)[] = ["tide", null, "memory", "stone", "ember", "agents"];
               const art = arts[i];
               const thumb = art ? <span className="index__thumb art" data-art={art} /> : <span className="index__thumb index__thumb--avatar"><Img src={avatar(7)} /></span>;
               const thumbFirst = i % 2 === 1;
@@ -342,7 +338,7 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
           </ul>
         </section>
 
-        {/* Forest — quote and side copy are placeholder copy */}
+        {/* Forest — the privacy boundaries of the platform */}
         <section aria-labelledby="lp-forest-quote" className="forest" data-theme="dark">
           <div className="grid forest__grid">
             <div className="forest__left">
@@ -358,7 +354,7 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
               </div>
               <div className="forest__bottom">
                 <h2 className="forest__quote t-h2" data-chars="" id="lp-forest-quote"><Chars lines={c.forest.quote} /></h2>
-                <A className="link" href="/account"><Roll text={c.forest.link} /><Loop dir="right" name="right" /></A>
+                <A className="link" href="/platform/connections"><Roll text={c.forest.link} /><Loop dir="right" name="right" /></A>
               </div>
             </div>
             <figure className="forest__right">

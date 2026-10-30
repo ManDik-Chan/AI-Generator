@@ -1,46 +1,49 @@
-import type { ReactNode } from "react";
-import { Brain, MessageSquareText, ShieldCheck } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+import Link from "next/link";
+import { ArrowRight, Brain, FolderKanban, ShieldCheck } from "lucide-react";
+
 import { Brand } from "@/components/layout/brand";
+import { ArtSurface } from "@/components/platform/art";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 const promises = [
-  { icon: MessageSquareText, text: "持续、私密的对话空间" },
-  { icon: Brain, text: "由你掌控的长期记忆" },
-  { icon: ShieldCheck, text: "聊天、人格与工具清晰隔离" },
+  { icon: FolderKanban, text: "以项目组织你的成果、版本与运行" },
+  { icon: Brain, text: "长期记忆只在你确认后写入" },
+  { icon: ShieldCheck, text: "可见性、数据与授权分开治理" },
 ];
-
-const SPARK = "M32 13c1.8 10.5 7.5 16.2 18 18-10.5 1.8-16.2 7.5-18 18-1.8-10.5-7.5-16.2-18-18 10.5-1.8 16.2-7.5 18-18Z";
-const SPARK_SMALL = "M50 41c.6 3.5 2.5 5.4 6 6-3.5.6-5.4 2.5-6 6-.6-3.5-2.5-5.4-6-6 3.5-.6 5.4-2.5 6-6Z";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <main className="relative grid min-h-[var(--app-height)] overflow-x-clip bg-background lg:grid-cols-[minmax(0,1.04fr)_minmax(30rem,.96fr)]">
-      {/* Deep green editorial panel, same voice as the landing page */}
-      <aside className="relative hidden overflow-hidden bg-forest p-10 text-[hsl(42_31%_94%)] lg:flex lg:flex-col xl:p-14">
-        <svg aria-hidden="true" className="premium-orbit pointer-events-none absolute -bottom-40 -right-40 size-[34rem] fill-current text-[hsl(42_31%_94%/.05)] [animation-duration:60s]" viewBox="12 11 46 44">
-          <path d={SPARK} /><path d={SPARK_SMALL} />
-        </svg>
-        <Brand href="/" className="relative z-10" />
+      {/* Forest panel with the landing page's procedural art, same voice as the site */}
+      <aside className="relative hidden overflow-hidden bg-forest p-10 text-[hsl(var(--paper))] lg:flex lg:flex-col xl:p-14">
+        <ArtSurface className="absolute inset-0 opacity-70" k="agents" />
+        <div aria-hidden="true" className="absolute inset-0 bg-[linear-gradient(160deg,hsl(var(--forest)/.55),hsl(var(--forest)/.92)_70%)]" />
+        <Brand href="/" className="relative z-10 text-[hsl(var(--paper))]" />
 
         <div className="relative z-10 my-auto max-w-xl py-16">
-          <p className="text-[.8125rem] font-medium text-[hsl(42_31%_94%/.7)]">Private AI studio <span aria-hidden="true">↓</span></p>
+          <p className="kicker text-[hsl(var(--paper)/.75)]">AIG Platform<span aria-hidden="true" className="kicker__arrow text-[hsl(var(--paper)/.6)]">↓</span></p>
           <h1 className="mt-5 text-[clamp(2.6rem,4.2vw,4.6rem)] font-medium leading-[1.03] tracking-[-.04em] text-lime">
-            懂你所想，
-            <span className="block">守你所藏。</span>
+            <span className="title-line"><span>展你所作，</span></span>
+            <span className="title-line" style={{ "--d": 90 } as CSSProperties}><span>守你所藏。</span></span>
           </h1>
-          <p className="mt-6 max-w-lg text-body text-[hsl(42_31%_94%/.72)]">
-            从持续对话到独立工具，每项能力都有明确边界，只在你需要时出现。
+          <p className="enter mt-6 max-w-lg text-[.9375rem] leading-7 text-[hsl(var(--paper)/.75)]" style={{ "--d": 260 } as CSSProperties}>
+            登录后进入你的工作台：项目、开发者控制台，以及已经上线的 AI Hub。
           </p>
-          <ul className="mt-10 border-t border-[hsl(42_31%_94%/.16)]">
+          <ul className="mt-10 border-t border-[hsl(var(--paper)/.16)]">
             {promises.map((item) => (
-              <li className="flex items-center gap-3 border-b border-[hsl(42_31%_94%/.16)] py-3.5 text-sm" key={item.text}>
+              <li className="flex items-center gap-3 border-b border-[hsl(var(--paper)/.16)] py-3.5 text-sm" key={item.text}>
                 <item.icon aria-hidden="true" className="size-4 text-lime" />
                 {item.text}
               </li>
             ))}
           </ul>
+          <Link className="group mt-8 inline-flex items-center gap-2 text-sm text-[hsl(var(--paper))]" href="/platform" prefetch={false}>
+            <span className="link-grow">还没准备好？先浏览演示工作台</span>
+            <ArrowRight aria-hidden="true" className="size-4 transition-transform duration-500 ease-out-expo group-hover:translate-x-1" />
+          </Link>
         </div>
-        <p className="relative z-10 text-caption text-[hsl(42_31%_94%/.6)]">简单使用，也经得起长期使用。</p>
+        <p className="relative z-10 text-caption text-[hsl(var(--paper)/.6)]">www.ai-mdc.com · 隐私优先的项目平台</p>
       </aside>
 
       <section className="relative z-10 flex min-h-[var(--app-height)] flex-col">

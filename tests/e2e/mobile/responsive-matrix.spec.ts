@@ -34,7 +34,7 @@ test("public Lumen surfaces remain fluid across the acceptance viewport matrix",
   await page.goto("/");
   for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    await expect(page.getByRole("heading", { level: 1, name: /懂你所想，\s*守你所藏。/ })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: /展你所作，\s*守你所藏。/ })).toBeVisible();
     await expectNoHorizontalOverflow(page);
   }
 
