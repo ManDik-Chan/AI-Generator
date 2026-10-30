@@ -9,6 +9,7 @@ import { ProjectCard } from "@/features/platform/components/project-card";
 import { ArchitectureDiagram, BenchmarksPanel, CapabilityList, ClaimsList, DocsList, OverviewSections, ReleasesTimeline } from "@/features/platform/components/sections";
 import { ApiLab } from "@/features/platform/labs/api-lab";
 import { HubLab } from "@/features/platform/labs/hub-lab";
+import { LaunchLab } from "@/features/platform/labs/launch-lab";
 import { SortingLab } from "@/features/platform/labs/sorting-lab";
 import { VolumeLab } from "@/features/platform/labs/volume-lab";
 import { categoryLabels, formatVersion, integrationMeta, visibilityMeta } from "@/features/platform/labels";
@@ -19,6 +20,8 @@ function Lab({ project }: { project: PlatformProject }) {
   if (project.lab === "sorting") return <SortingLab />;
   if (project.lab === "api") return <ApiLab />;
   if (project.lab === "hub") return <HubLab project={project} />;
+  if (project.lab === "route") return <LaunchLab slug="route-optimizer" />;
+  if (project.lab === "nn") return <LaunchLab slug="neural-network" />;
   return <EmptyBlock title="这个项目只展示，不运行">L0 展示型项目没有可交互的实验室；阅读概览、文档与版本记录即可了解它。</EmptyBlock>;
 }
 
@@ -79,9 +82,10 @@ export function ProjectShowcase({ project, related }: { project: PlatformProject
       </section>
 
       <div className="mx-auto max-w-[100rem] px-4 min-[521px]:px-6 min-[1024px]:px-[clamp(1.5rem,3vw,3rem)]">
-        {project.provenance === "sample" || project.visibility === "UNLISTED" ? (
+        {project.provenance === "sample" || project.visibility === "UNLISTED" || project.draftState === "IN_REVIEW" ? (
           <div className="mt-8 space-y-2">
             {project.provenance === "sample" ? <DemoNotice label="示例项目">这是为展示平台能力而编写的示例：人物、版本与运行记录均为示例；实验室里的计算在你的浏览器中真实进行，不发送任何数据。</DemoNotice> : null}
+            {project.provenance === "real" && project.draftState === "IN_REVIEW" ? <DemoNotice label="等待验收">这个项目的代码与 Demo 都是真实可运行的；首个版本所在的 PR 还在等待 Owner 验收，因此版本状态显示为审核中。</DemoNotice> : null}
             {project.visibility === "UNLISTED" ? <DemoNotice label="不公开列出">这个项目不会出现在探索目录里，只有持有链接的人能看到它的公开内容。</DemoNotice> : null}
           </div>
         ) : null}

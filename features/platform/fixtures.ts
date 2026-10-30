@@ -3,12 +3,14 @@
  *
  * - "ai-generator" is real: it describes this repository. Its releases are the merged
  *   pull requests on main and its documents link to files that exist in the repo.
+ * - "route-optimizer" and "neural-network" (demo-projects.ts) are real runnable demos.
  * - Every other project is a hand-written sample (provenance: "sample"). Sample projects
  *   never claim measured results: metrics stay UNPUBLISHED unless they are computed live
  *   in the visitor's browser by code on the page itself.
  *
  * Nothing here is read from or written to a database. The Registry is not deployed.
  */
+import { neuralNetworkProject, routeOptimizerProject } from "@/features/platform/demo-projects";
 import type { PlatformProject, ProjectGrant, ProviderCredential } from "@/features/platform/types";
 
 const REPO = "https://github.com/ManDik-Chan/AI-Generator";
@@ -336,7 +338,7 @@ const notes: PlatformProject = {
   ownedByViewer: true,
 };
 
-export const platformProjects: readonly PlatformProject[] = [aiGenerator, volume, sorting, typeSpecimen, airQuality, notes];
+export const platformProjects: readonly PlatformProject[] = [aiGenerator, routeOptimizerProject, neuralNetworkProject, volume, sorting, typeSpecimen, airQuality, notes];
 
 export const sampleGrants: readonly ProjectGrant[] = [
   { id: "grant_1", project: "城市空气质量摘要", projectSlug: "air-quality", capability: "summary.read.async", scope: "仅城市与日期 · 每日 20 次", expires: "示例 · 2026-11-30", status: "ACTIVE", dataFlow: "developer" },

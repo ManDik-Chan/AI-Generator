@@ -19,7 +19,7 @@ export type ClaimStatus = "SOURCE_IMPLEMENTED" | "DOCUMENTED" | "EXPERIMENT_VERI
 export type RunStatus = "PENDING" | "ACCEPTED" | "RUNNING" | "SUCCEEDED" | "FAILED" | "CANCELLED" | "TIMED_OUT";
 /** "real" content describes something that exists; "sample" content is written for the demo. */
 export type Provenance = "real" | "sample";
-export type LabKind = "volume" | "sorting" | "hub" | "api";
+export type LabKind = "volume" | "sorting" | "hub" | "api" | "route" | "nn";
 export type DataFlow = "none" | "platform" | "developer";
 
 export interface ProjectCapability {
@@ -51,7 +51,7 @@ export interface ArchitectureLayer {
 export interface BenchmarkMetric {
   name: string;
   dataset: string;
-  /** UNPUBLISHED and REPORTED come from the presentation schema; COMPUTED_LIVE is measured in the visitor's browser. */
+  /** UNPUBLISHED and REPORTED come from the presentation schema; COMPUTED_LIVE is computed by the page or its run, never typed in. */
   status: "UNPUBLISHED" | "REPORTED" | "COMPUTED_LIVE";
   note?: string;
 }

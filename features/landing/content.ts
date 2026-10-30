@@ -51,6 +51,7 @@ export interface LandingCopy {
     label: string;
     explore: { tag: string; title: string; styles: string; go: string };
     hub: { tag: string; title: string; avatars: string; go: string };
+    demos: { tag: string; title: string; items: { name: string; meta: string }[]; runtimes: string; chips: [string, string]; go: string };
   };
   index: { label: string; rows: { href: string; word: string }[] };
   /** quote: one entry per forced line break (English lets the browser balance a single line). */
@@ -79,8 +80,8 @@ const zh: LandingCopy = {
     mainNav: "主导航",
     links: [
       { href: "/explore", label: "探索" },
-      { href: "/platform/projects", label: "项目" },
-      { href: "/platform/developer", label: "开发者" },
+      { href: "/demos", label: "Demo" },
+      { href: "/docs", label: "开发者" },
       { href: "/platform/hub", label: "AI Hub" },
     ],
     login: "登录",
@@ -95,9 +96,9 @@ const zh: LandingCopy = {
     label: "移动端导航",
     links: [
       { href: "/explore", label: "探索项目" },
+      { href: "/demos", label: "运行 Demo" },
+      { href: "/docs", label: "开发者文档" },
       { href: "/platform", label: "演示工作台" },
-      { href: "/platform/projects", label: "项目" },
-      { href: "/platform/developer", label: "开发者" },
       { href: "/platform/hub", label: "AI Hub" },
       { href: "/platform/connections", label: "连接与授权" },
     ],
@@ -122,18 +123,18 @@ const zh: LandingCopy = {
     },
     lab: {
       tag: "实验室",
-      title: ["可交互的样例，", "就在你的浏览器里运行"],
-      cta: "打开实验室",
-      catalog: ["排序实验", "可复现的浏览器内运行"],
-      prompt: "合成体数据 64³ · 分割阈值 0.42",
-      status: "实验室运行中",
-      meta: "浏览器内 · 不上传 · 非临床",
+      title: ["两个可运行的 Demo，", "参数由你来改"],
+      cta: "打开 Demo",
+      catalog: ["神经网络训练场", "在你的浏览器里训练"],
+      prompt: "120 个城市 · 2-opt + Or-opt",
+      status: "服务端求解中",
+      meta: "真实执行 · 无需登录",
     },
     publish: {
       tag: "发布",
       title: ["先有契约，", "再有版本与运行"],
       cta: "校验 Manifest",
-      catalog: ["新建项目", "四步生成合格草稿"],
+      catalog: ["开发者文档", "手册 · API · Manifest"],
       nodes: ["Manifest 校验", "资产已批准", "独立审核", "版本封存"],
       lead: ["已发布", "v1.0.0 · 不可变"],
     },
@@ -172,14 +173,25 @@ const zh: LandingCopy = {
     label: "从这里开始",
     explore: { tag: "项目", title: "探索公开项目", styles: "项目类别", go: "去探索" },
     hub: { tag: "AI Hub", title: "内置 AI Hub", avatars: "专属人格", go: "进入" },
+    demos: {
+      tag: "Demo",
+      title: "亲手运行，看它真实执行",
+      items: [
+        { name: "路线优化求解器", meta: "服务端执行 · 事件流实时进度" },
+        { name: "神经网络训练场", meta: "浏览器执行 · 数据不离开设备" },
+      ],
+      runtimes: "同一套运行状态",
+      chips: ["服务端", "浏览器"],
+      go: "去运行",
+    },
   },
   index: {
     label: "平台地图",
     rows: [
       { href: "/explore", word: "探索" },
       { href: "/platform/projects", word: "项目" },
-      { href: "/explore/volume-reconstruction#lab", word: "实验室" },
-      { href: "/platform/developer", word: "开发者" },
+      { href: "/demos", word: "Demo" },
+      { href: "/docs", word: "开发者" },
       { href: "/platform/connections", word: "授权" },
       { href: "/platform/hub", word: "AI Hub" },
     ],
@@ -217,7 +229,7 @@ const zh: LandingCopy = {
   },
   footer: {
     cols: [
-      { title: "平台", links: [{ href: "/explore", label: "探索项目" }, { href: "/platform", label: "演示工作台" }, { href: "/platform/projects", label: "项目 · 开发中" }, { href: "/platform/developer", label: "开发者 · 开发中" }, { href: "/platform/connections", label: "连接与授权 · 规划中" }] },
+      { title: "平台", links: [{ href: "/explore", label: "探索项目" }, { href: "/demos", label: "运行 Demo" }, { href: "/docs", label: "开发者文档" }, { href: "/platform", label: "演示工作台" }, { href: "/platform/projects", label: "项目 · 开发中" }, { href: "/platform/connections", label: "连接与授权 · 规划中" }] },
       { title: "AI Hub", links: [{ href: "/chat", label: "AI 对话" }, { href: "/personas", label: "专属人格" }, { href: "/memories", label: "长期记忆" }, { href: "/tools", label: "AI 工具" }] },
       { title: "账户", links: [{ href: "/workspace", label: "进入工作台" }, { href: "/account", label: "账户与隐私" }, { href: "/login", label: "登录" }, { href: "/register", label: "注册" }] },
     ],
@@ -226,8 +238,8 @@ const zh: LandingCopy = {
   },
   fab: "快速开始对话",
   runtime: {
-    bubbles: ["v1.0.0 已发布", "Manifest 校验通过", "202 Accepted · run_7Hq2", "帮我总结这份实验记录", "仅成员可见", "授权：仅本次"],
-    chips: [["项目", "体数据三维重建"], ["实验室", "合成样例 64³"], ["授权", "可撤销"], ["版本", "v0.3.0"], ["AI Hub", "已上线"], ["运行", "SUCCEEDED"]],
+    bubbles: ["v1.0.0 已发布", "Manifest 校验通过", "run.status · SUCCEEDED", "帮我总结这份实验记录", "仅成员可见", "授权：仅本次"],
+    chips: [["项目", "体数据三维重建"], ["Demo", "路线优化 · 真实运行"], ["授权", "可撤销"], ["版本", "v0.3.0"], ["AI Hub", "已上线"], ["运行", "SUCCEEDED"]],
   },
 };
 
@@ -242,8 +254,8 @@ const en: LandingCopy = {
     mainNav: "Main navigation",
     links: [
       { href: "/explore", label: "Explore" },
-      { href: "/platform/projects", label: "Projects" },
-      { href: "/platform/developer", label: "Developers" },
+      { href: "/demos", label: "Demos" },
+      { href: "/docs", label: "Developers" },
       { href: "/platform/hub", label: "AI Hub" },
     ],
     login: "Log in",
@@ -258,9 +270,9 @@ const en: LandingCopy = {
     label: "Mobile navigation",
     links: [
       { href: "/explore", label: "Explore projects" },
+      { href: "/demos", label: "Run the demos" },
+      { href: "/docs", label: "Developer docs" },
       { href: "/platform", label: "Demo workspace" },
-      { href: "/platform/projects", label: "Projects" },
-      { href: "/platform/developer", label: "Developers" },
       { href: "/platform/hub", label: "AI Hub" },
       { href: "/platform/connections", label: "Connections" },
     ],
@@ -285,18 +297,18 @@ const en: LandingCopy = {
     },
     lab: {
       tag: "Lab",
-      title: ["Interactive samples,", "running in your browser"],
-      cta: "Open the lab",
-      catalog: ["Sorting lab", "Reproducible, in-browser"],
-      prompt: "Synthetic volume 64³ · threshold 0.42",
-      status: "Lab running",
-      meta: "In-browser · nothing uploaded · not clinical",
+      title: ["Two runnable demos,", "your parameters"],
+      cta: "Open the demos",
+      catalog: ["Neural network", "Trains in your browser"],
+      prompt: "120 cities · 2-opt + Or-opt",
+      status: "Solving on the server",
+      meta: "Real execution · no login",
     },
     publish: {
       tag: "Publish",
       title: ["Contract first,", "then versions and runs"],
       cta: "Validate a manifest",
-      catalog: ["New project", "A valid draft in four steps"],
+      catalog: ["Developer docs", "Guide · API · Manifest"],
       nodes: ["Manifest check", "Assets approved", "Review passed", "Version sealed"],
       lead: ["Published", "v1.0.0 · immutable"],
     },
@@ -335,14 +347,25 @@ const en: LandingCopy = {
     label: "Start here",
     explore: { tag: "Projects", title: "Explore public projects", styles: "Categories", go: "Explore" },
     hub: { tag: "AI Hub", title: "The built-in AI Hub", avatars: "Personas", go: "Open" },
+    demos: {
+      tag: "Demos",
+      title: "Run it yourself, for real",
+      items: [
+        { name: "Route optimizer", meta: "Runs on the server · live event stream" },
+        { name: "Neural network", meta: "Runs in your browser · data stays on device" },
+      ],
+      runtimes: "One run lifecycle",
+      chips: ["Server", "Browser"],
+      go: "Run",
+    },
   },
   index: {
     label: "Platform map",
     rows: [
       { href: "/explore", word: "Explore" },
       { href: "/platform/projects", word: "Projects" },
-      { href: "/explore/volume-reconstruction#lab", word: "Lab" },
-      { href: "/platform/developer", word: "Developers" },
+      { href: "/demos", word: "Demos" },
+      { href: "/docs", word: "Developers" },
       { href: "/platform/connections", word: "Grants" },
       { href: "/platform/hub", word: "AI Hub" },
     ],
@@ -380,7 +403,7 @@ const en: LandingCopy = {
   },
   footer: {
     cols: [
-      { title: "Platform", links: [{ href: "/explore", label: "Explore projects" }, { href: "/platform", label: "Demo workspace" }, { href: "/platform/projects", label: "Projects · in development" }, { href: "/platform/developer", label: "Developers · in development" }, { href: "/platform/connections", label: "Connections · planned" }] },
+      { title: "Platform", links: [{ href: "/explore", label: "Explore projects" }, { href: "/demos", label: "Run the demos" }, { href: "/docs", label: "Developer docs" }, { href: "/platform", label: "Demo workspace" }, { href: "/platform/projects", label: "Projects · in development" }, { href: "/platform/connections", label: "Connections · planned" }] },
       { title: "AI Hub", links: [{ href: "/chat", label: "AI chat" }, { href: "/personas", label: "Personas" }, { href: "/memories", label: "Long-term memory" }, { href: "/tools", label: "AI tools" }] },
       { title: "Account", links: [{ href: "/workspace", label: "Open the workspace" }, { href: "/account", label: "Account & privacy" }, { href: "/login", label: "Log in" }, { href: "/register", label: "Sign up" }] },
     ],
@@ -389,8 +412,8 @@ const en: LandingCopy = {
   },
   fab: "Start a chat",
   runtime: {
-    bubbles: ["v1.0.0 published", "Manifest valid", "202 Accepted · run_7Hq2", "Summarize these lab notes", "Members only", "Grant: this run only"],
-    chips: [["Project", "Volume reconstruction"], ["Lab", "Synthetic 64³"], ["Grant", "Revocable"], ["Version", "v0.3.0"], ["AI Hub", "Live"], ["Run", "SUCCEEDED"]],
+    bubbles: ["v1.0.0 published", "Manifest valid", "run.status · SUCCEEDED", "Summarize these lab notes", "Members only", "Grant: this run only"],
+    chips: [["Project", "Volume reconstruction"], ["Demo", "Route optimizer · live"], ["Grant", "Revocable"], ["Version", "v0.3.0"], ["AI Hub", "Live"], ["Run", "SUCCEEDED"]],
   },
 };
 

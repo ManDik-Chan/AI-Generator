@@ -96,7 +96,7 @@ export function ArchitectureDiagram({ project }: { project: PlatformProject }) {
 const metricStatus = {
   UNPUBLISHED: { label: "未发布", tone: "neutral" as const },
   REPORTED: { label: "已报告", tone: "success" as const },
-  COMPUTED_LIVE: { label: "浏览器内实时计算", tone: "lime" as const },
+  COMPUTED_LIVE: { label: "实时计算", tone: "lime" as const },
 };
 
 export function BenchmarksPanel({ project }: { project: PlatformProject }) {

@@ -184,8 +184,8 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
               </Chapter>
 
               <Chapter
-                art="persona" catalog={<Catalog href="/explore/sorting-lab#lab" sub={ch.lab.catalog[1]} thumb={<span className="catalog__thumb art" data-art="citron" />} title={ch.lab.catalog[0]} />}
-                cta={ch.lab.cta} hint={ch.hint} href="/explore/volume-reconstruction#lab" icon="flask" tag={ch.lab.tag} tagColor="#B9CDB2" title={ch.lab.title}
+                art="persona" catalog={<Catalog href="/demos/neural-network" sub={ch.lab.catalog[1]} thumb={<span className="catalog__thumb art" data-art="bloom" />} title={ch.lab.catalog[0]} />}
+                cta={ch.lab.cta} hint={ch.hint} href="/demos" icon="flask" tag={ch.lab.tag} tagColor="#B9CDB2" title={ch.lab.title}
               >
                 <div className="panel comp-gen">
                   <div className="gen__prompt"><Icon name="flask" />{ch.lab.prompt}</div>
@@ -196,8 +196,8 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
               </Chapter>
 
               <Chapter
-                art="agents" catalog={<Catalog href="/platform/projects/new" sub={ch.publish.catalog[1]} thumb={<span className="catalog__thumb art" data-art="stone" />} title={ch.publish.catalog[0]} />}
-                cta={ch.publish.cta} hint={ch.hint} href="/platform/developer#manifest" icon="doc" tag={ch.publish.tag} tagColor="#E9E778" title={ch.publish.title}
+                art="agents" catalog={<Catalog href="/docs" sub={ch.publish.catalog[1]} thumb={<span className="catalog__thumb art" data-art="stone" />} title={ch.publish.catalog[0]} />}
+                cta={ch.publish.cta} hint={ch.hint} href="/docs/manifest" icon="doc" tag={ch.publish.tag} tagColor="#E9E778" title={ch.publish.title}
               >
                 <svg className="comp-graph" viewBox="0 0 400 320">
                   <g className="graph__lines">
@@ -307,6 +307,34 @@ export function LandingPage({ lang }: { lang: LandingLang }) {
               <span className="fcard__bottom">
                 <span><small>{c.features.hub.avatars}</small><span className="swatches swatches--avatars">{[2, 4, 6, 8].map((n) => <Img key={n} src={avatar(n)} />)}<em>+8</em></span></span>
                 <span className="pill pill--ink fcard__go"><Roll text={c.features.hub.go} /><Loop dir="right" name="right" /></span>
+              </span>
+            </A>
+            {/* Runnable demos: one server-executed, one in-browser; the tiles are illustrative */}
+            <A attrs={{ "data-reveal": "" }} className="fcard fcard--wide" href="/demos" style={vars({ "--d": 240 })}>
+              <span className="fcard__top"><span className="tag tag--sm" style={vars({ "--tag": "#B9CDB2" })}><Icon name="flask" />{c.features.demos.tag}</span><Loop className="fcard__arrow" dir="ur" name="ur" /></span>
+              <span className="fcard__title">{c.features.demos.title}</span>
+              <span aria-hidden="true" className="fcard__stage fcard__stage--demos">
+                {c.features.demos.items.map((item, i) => (
+                  <span className="demo-tile" key={item.name}>
+                    <span className="demo-tile__art art" data-art={i ? "bloom" : "tide"} />
+                    {i === 0 ? (
+                      <svg className="demo-tile__viz" viewBox="0 0 200 120">
+                        <path className="demo-route" d="M28 30 L62 18 L104 34 L150 22 L178 52 L160 92 L116 100 L84 82 L44 96 L20 64 Z" />
+                        {[[28, 30], [62, 18], [104, 34], [150, 22], [178, 52], [160, 92], [116, 100], [84, 82], [44, 96], [20, 64]].map(([x, y], k) => <circle cx={x} cy={y} key={k} r={k ? 3.2 : 5} />)}
+                      </svg>
+                    ) : (
+                      <svg className="demo-tile__viz demo-tile__viz--nn" viewBox="0 0 200 120">
+                        <path className="demo-boundary" d="M14 86 C 56 92, 70 30, 104 46 S 158 98, 188 34" />
+                        {[[30, 60], [46, 44], [62, 70], [80, 36], [96, 62], [120, 30], [136, 52], [70, 96], [110, 88], [150, 92], [168, 70], [182, 96]].map(([x, y], k) => <circle className={k < 7 ? "dot-a" : "dot-b"} cx={x} cy={y} key={k} r={3.4} />)}
+                      </svg>
+                    )}
+                    <span className="demo-tile__label"><b>{item.name}</b><small>{item.meta}</small></span>
+                  </span>
+                ))}
+              </span>
+              <span className="fcard__bottom">
+                <span><small>{c.features.demos.runtimes}</small><span className="chips demo-chips"><span>{c.features.demos.chips[0]}</span><span>{c.features.demos.chips[1]}</span></span></span>
+                <span className="pill pill--ink fcard__go"><Roll text={c.features.demos.go} /><Loop dir="right" name="right" /></span>
               </span>
             </A>
           </div>
