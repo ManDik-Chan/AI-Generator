@@ -18,7 +18,7 @@ export function ProjectsIndex({ projects, runs, mode }: { projects: PlatformProj
         actions={
           <>
             <Button asChild size="lg"><Link href={`${base}/new`} prefetch={false}><FolderPlus className="size-4" />新建项目</Link></Button>
-            <Button asChild size="lg" variant="outline"><Link href={`${developer}#manifest`} prefetch={false}><FileCheck2 className="size-4" />校验 Manifest</Link></Button>
+            <Button asChild size="lg" variant="outline"><Link href={`${developer}/integrate#manifest`} prefetch={false}><FileCheck2 className="size-4" />校验 Manifest</Link></Button>
           </>
         }
         description="项目是平台的一级实体：一个成果页、一组不可变版本、一份明确的能力清单。可以只展示、不运行，也可以在授权后提供可交互的能力。"
