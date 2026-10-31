@@ -83,7 +83,7 @@ Mock 与真实协议的已知差异：身份可切换（真实环境中就是登
 | --- | --- |
 | `pnpm typecheck` | 通过 |
 | `pnpm lint`（零警告） | 通过 |
-| `pnpm test` | 164 文件 / 1124 项通过；100 项需隔离数据库的集成测试照旧跳过。新增 3 个文件 / 51 项 |
+| `pnpm test` | 164 文件 / 1125 项通过；100 项需隔离数据库的集成测试照旧跳过。新增 3 个文件 / 52 项 |
 | `pnpm build` | 通过；`/platform/developer`、`/integrate`、`/access` 静态预渲染，四个发布台 SSG；`/developer/*` 为动态 |
 | 预渲染 HTML 静态检查 | 7 个演示页面标题正确、均含「Mock 数据源」、无 `undefined` / `NaN` |
 | 客户端包检查 | `.next/static` 中没有 `registry_private`、`internal_operators`、`PrismaClient` 或服务端密钥名；Registry 模块只以 `import type` 进入客户端代码 |
@@ -96,16 +96,50 @@ Mock 与真实协议的已知差异：身份可切换（真实环境中就是登
 
 为让组件测试能导入 `.tsx`，`vitest.config.ts` 增加了一行 `oxc.jsx.runtime = "automatic"`（tsconfig 为 Next 保留 `jsx: "preserve"`）。不影响现有测试。
 
+### 截图通道（Owner 授权的一次、单 Edge 实例）
+
+Owner 在 2026-10-31 明确授权“一次单 Edge 实例的控制台截图”。执行与回收：
+
+- 范围：只访问本地 `next start`（commit `b0dd6b8` 的生产构建，`127.0.0.1:3519`）上的 `/platform/developer/*`；不访问参考站、Preview 或生产。
+- 实例：Playwright 1.61 `launchServer({ channel: "msedge", headless: true })`，全程 1 个 Edge 主进程（PID 39976，专用临时资料目录），所有尺寸、深浅色和交互复用同一页面；启动失败即停、不重试、不下载浏览器。
+- 资源：Edge 进程树稳定在 9 个进程、工作集 640–670 MB，无增长趋势。
+- 回收：脚本在成功、异常、超时和 SIGINT/SIGTERM/SIGHUP/SIGBREAK 下走同一清理路径；按记录的 PID + 创建时间 + 资料目录核对。独立复核结果：Edge 根进程与全部子进程已退出、临时资料目录已删除、Next 服务进程树已退出、3519 端口关闭；运行前已存在的 7 个用户 Edge 进程全部保留。没有按进程名结束任何进程。
+- 页内检查（同一次访问中读取 DOM）：17 张截图全部 200；无控制台错误或页面异常；桌面 1440、平板 768、手机 390 宽度均无横向溢出；无无名按钮/链接、无未关联 label 的表单控件、无重复 id、无缺 alt 的图片；每页 1 个 `h1`、标题层级无跳级；所有页面显示「Mock 数据源」，无 `undefined`/`NaN`。
+
+截图在 `docs/handoffs/assets/2026-10-31-developer-console/`（JPEG，整页）：
+
+| 文件 | 内容 |
+| --- | --- |
+| `desktop-workbench.jpg` / `mobile-workbench.jpg` | 工作台 |
+| `desktop-desk-sorting-lab.jpg` · `-air-quality` · `-volume-reconstruction` · `-research-notes` | 四个项目各处一个阶段的发布台 |
+| `desktop-dark-desk-sorting-lab.jpg` / `tablet-desk-sorting-lab.jpg` / `mobile-desk-air-quality.jpg` | 深色、平板、手机 |
+| `desktop-integrate.jpg` / `mobile-integrate.jpg` | 接入 |
+| `desktop-access.jpg` / `mobile-access.jpg` | 权限与隐私 |
+| `desktop-flow-1-stale-edit.jpg` → `desktop-flow-2-save-412.jpg` | 本地修改 → 协作者并发保存 → 用过期 ETag 保存得到 412 |
+| `desktop-flow-3-reviewer-approves.jpg` | 切换为示例审核人并批准 |
+| `desktop-focus-ring.jpg` | 键盘 Tab 焦点环 |
+
+整页截图里中段出现的站点顶栏与底部浮动导航是固定定位元素在整页拼接时的位置，不是布局问题。
+
+截图审阅后修复了 6 处问题。**截图是修复前的状态**，修复只经过类型检查、lint、服务端渲染测试和构建验证，没有再次截图：
+
+1. 手机宽度下「操作与角色」的角色筛选按钮逐字换行 → 标签不换行，窄屏横向滚动。
+2. 接入页 `curl` 长行被代码块裁切 → 代码块按字符折行，复制内容不变。
+3. 已封存草稿仍提示“这个版本号已被封存过” → 只在可编辑时提示。
+4. 批准/拒绝按钮被说明文字撑宽、同一说明重复两次 → 两个按钮共用一条说明，按钮恢复自然宽度。
+5. 操作结果只显示在页面上方，点击底部按钮后看不到 → 结果同时以一行文字显示在发出请求的按钮下方（上方横幅保留并继续 `aria-live`）。
+6. 倒计时的“剩”和概览 Markdown 输入框用等宽字体，等宽字体栈没有中文字形 → 中文改用无衬线字体栈。
+
 ## 6. 未验证与风险
 
-- **没有打开任何浏览器、没有截图、没有运行 E2E**：`AGENTS.md` 规定在 Owner 再次明确授权前禁止浏览器自动化，本次任务说明中的“输出截图”“检查桌面与移动端效果”不构成恢复授权。真实渲染、动效、响应式断点、深色模式、触屏、键盘焦点顺序需要 Owner 在本地或 Preview 上亲自查看，或明确授权一次受控的单实例截图。可访问性在代码层面处理：语义标题与 landmark、表格 `scope`、`aria-current="step"`/`"page"`、`aria-live` 结果区、原生表单控件与 label、状态同时用文字表达、沿用全局 `prefers-reduced-motion`。
-- 现有 E2E 不访问开发者控制台页面，CI 中不会因本 PR 新增浏览器用例；也没有为控制台新增 E2E。
+- 截图通道只覆盖公开的 `/platform/developer/*` 和一个 Edge 引擎；登录后的 `/developer/*`（同一组件，外层为 AppShell）、WebKit/Safari、真实触屏、读屏软件朗读未验证。上面 6 处修复没有再次截图。可访问性另有代码层面的处理：语义标题与 landmark、表格 `scope`、`aria-current="step"`/`"page"`、`aria-live` 结果区、原生表单控件与 label、状态同时用文字表达、沿用全局 `prefers-reduced-motion`。
+- 没有运行 E2E。现有 E2E 不访问开发者控制台页面，CI 中不会因本 PR 新增浏览器用例；也没有为控制台新增 E2E。
 - 发布部分基于未合并草案，B2-B 合并后可能需要调整 `mock/engine.ts` 的发布分支与 `model.ts` 的发布类型（C-9）。
 - `features/platform/demo-projects.ts` 仍把两个 Demo 的 1.0.0 标为 IN_REVIEW（PR #36 已合并）。工作台只展示 Demo 的运行状态，没有引用这个字段；是否改为 PUBLISHED 由 Owner 决定（上一份交接第 8.5 项）。
 
 ## 7. 改动范围
 
-新增：`features/developer-console/**`、`app/platform/developer/{layout,integrate,access,projects/[slug]}`、`app/developer/{layout,integrate,access,projects/[slug]}`、本文件。
+新增：`features/developer-console/**`、`app/platform/developer/{layout,integrate,access,projects/[slug]}`、`app/developer/{layout,integrate,access,projects/[slug]}`、本文件、`docs/handoffs/assets/2026-10-31-developer-console/`（17 张截图，约 4 MB）。
 修改：`app/developer/page.tsx`、`app/platform/developer/page.tsx`、`components/layout/command-palette.tsx`（一个链接）、`features/platform/components/projects-index.tsx`（一个链接）、`vitest.config.ts`（一行）。
 删除：`features/platform/components/developer-console.tsx`。
 未触碰：`prisma/**`、`supabase/**`、`features/registry/**`、`lib/auth/**`、`middleware.ts`、`app/api/**`、`tests/e2e/**`、`tests/integration/**`、`vercel.json`、`.github/**`、Landing。
