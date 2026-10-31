@@ -45,7 +45,7 @@ export function Workbench({ base, projectsBase }: { base: string; projectsBase: 
       />
 
       <DemoNotice className="mb-14" label="Mock 数据源">
-        Registry 还没有 HTTP 接口，控制台通过一个类型化的 Mock Adapter 运行：规则、ETag、错误码与真实协议一致，但身份可以切换、数据只在本标签页内存中，刷新即重置，不会调用任何服务或保存任何内容。
+        Registry 还没有写入接口（只读接口仅供登录后的「Registry 只读」模式使用，默认关闭），这里的完整流程通过一个类型化的 Mock Adapter 运行：规则、ETag、错误码与真实协议一致，但身份可以切换、数据只在本标签页内存中，刷新即重置，不会调用任何服务或保存任何内容。
       </DemoNotice>
 
       <section aria-labelledby="wb-projects" id="projects">
