@@ -247,7 +247,7 @@ test.describe("memory provenance and live turn disclosure", () => {
       );
       assertNoRuntimeErrors(page, "Provider failure");
 
-      const cancelledMessage = `E2E_PROVIDER_SLOW ${token} alpha beta`;
+      const cancelledMessage = `E2E_PROVIDER_CANCELLABLE ${token} alpha beta`;
       await page.getByLabel("消息内容").fill(cancelledMessage);
       const slowResponsePromise = page.waitForResponse(
         (response) => response.request().method() === "POST"
@@ -275,6 +275,7 @@ test.describe("memory provenance and live turn disclosure", () => {
       await stopButton.click();
       const cancelResponse = await cancelResponsePromise;
       expect(cancelResponse.status()).toBe(200);
+      expect(await cancelResponse.json()).toEqual({ status: "CANCELLED" });
       await expect(page.getByRole(
         "button",
         { name: "停止生成", exact: true },
