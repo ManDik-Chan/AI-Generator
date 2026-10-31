@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ProjectShowcase } from "@/features/platform/components/showcase";
 import { getPublicProject, listPublicProjects, publicProjectSlugs } from "@/features/platform/source";
+import { getShowcaseRelease } from "@/features/showcase/releases";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -27,5 +28,6 @@ export default async function ProjectShowcasePage({ params }: Props) {
   const project = getPublicProject((await params).slug).data;
   if (!project) notFound();
   const related = listPublicProjects().data.filter((item) => item.slug !== project.slug).slice(0, 3);
-  return <ProjectShowcase project={project} related={related} />;
+  const releasePreviewHref = getShowcaseRelease(project.slug) ? `/explore/${project.slug}/release` : undefined;
+  return <ProjectShowcase project={project} related={related} releasePreviewHref={releasePreviewHref} />;
 }
