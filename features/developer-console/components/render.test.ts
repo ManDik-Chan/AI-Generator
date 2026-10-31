@@ -11,10 +11,14 @@ import { describe, expect, it } from "vitest";
 import { AccessView } from "@/features/developer-console/components/access-view";
 import { ConsoleHeader } from "@/features/developer-console/components/console-header";
 import { ConsoleProvider } from "@/features/developer-console/components/console-provider";
+import type { DeskApi, Gate } from "@/features/developer-console/components/desk-kit";
 import { IntegrateView } from "@/features/developer-console/components/integrate-view";
+import { ReviewPanel } from "@/features/developer-console/components/pipeline-panels";
 import { ReleaseDesk } from "@/features/developer-console/components/release-desk";
 import { Workbench } from "@/features/developer-console/components/workbench";
-import { consoleProjectSlugs } from "@/features/developer-console/mock/seed";
+import { execute, projectView } from "@/features/developer-console/mock/engine";
+import { SEED_EPOCH, consoleProjectSlugs, createSeedState, projectIdFor } from "@/features/developer-console/mock/seed";
+import { requiredRoles, roleLabels, rolesAllow } from "@/features/developer-console/permissions";
 
 const base = "/platform/developer";
 const render = (page: ReactElement) => renderToStaticMarkup(createElement(ConsoleProvider, null, createElement(ConsoleHeader, { base }), page));
@@ -54,6 +58,23 @@ describe("developer console screens render on the server", () => {
     expect(visibleText(html)).toMatch(/剩\s+12:00/);
     expect(html).toContain("需要「审核」角色");
     // Approve and reject share one gate, so the explanation is shown once for the pair.
+    expect(html.match(/仍然发送，查看拒绝响应/g)).toHaveLength(1);
+  });
+
+  it("after approval, seal and withdraw denied for the same reason share one explanation", () => {
+    const seed = createSeedState();
+    const before = projectView(seed, "air-quality", "reviewer", SEED_EPOCH)!;
+    const review = before.reviews[0];
+    const { state, result } = execute(seed, "reviewer", { action: "DECIDE_REVIEW", projectId: projectIdFor("air-quality"), ifMatch: before.draft.etag, idempotencyKey: "render_test_approve", input: { reviewId: review.id, decision: "APPROVED", expectedContentHash: review.contentHash } }, SEED_EPOCH);
+    expect(result.ok).toBe(true);
+    const view = projectView(state, "air-quality", "reviewer", SEED_EPOCH)!;
+    const roles = view.members.find((member) => member.personaId === "reviewer")!.roles;
+    // Same reason text the release desk builds for a missing project role.
+    const gate = (action: Parameters<DeskApi["gate"]>[0]): Gate => rolesAllow(roles, action) ? { allowed: true } : { allowed: false, reason: `需要「${requiredRoles(action).map((role) => roleLabels[role]).join("」或「")}」角色` };
+    const api: DeskApi = { view, personaId: "reviewer", roles, personas: [], now: SEED_EPOCH, pending: null, last: null, markOrigin: () => {}, gate, send: async () => result, switchPersona: () => {}, personaName: (id) => id };
+    const html = renderToStaticMarkup(createElement(ConsoleProvider, null, createElement(ReviewPanel, { api }))); // provider supplies the countdown clock
+    expect(html).toContain("封存为 v0.2.0");
+    expect(html).toContain("撤回审核");
     expect(html.match(/仍然发送，查看拒绝响应/g)).toHaveLength(1);
   });
 

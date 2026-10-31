@@ -14,6 +14,7 @@ import type { ReleaseRecordDTO, VersionDTO } from "@/features/developer-console/
 export function ReviewPanel({ api }: { api: DeskApi }) {
   const { view } = api;
   const decisionOrigin = useId();
+  const approvedOrigin = useId();
   const [latest, ...older] = view.reviews;
   const inReview = view.draft.head.state === "IN_REVIEW";
 
@@ -30,7 +31,11 @@ export function ReviewPanel({ api }: { api: DeskApi }) {
   const withdraw = () => api.send({ action: "WITHDRAW_REVIEW", ifMatch: view.draft.etag, input: { reviewId: latest.id } });
   const seal = () => api.send({ action: "SEAL_VERSION", ifMatch: view.draft.etag, input: { reviewId: latest.id, expectedContentHash: latest.contentHash } });
   const state = reviewStateMeta[latest.effectiveState];
-  const live = inReview && (latest.effectiveState === "PENDING" || latest.effectiveState === "APPROVED");
+  const sealGate = api.gate("SEAL_VERSION");
+  const withdrawGate = api.gate("WITHDRAW_REVIEW");
+  // After approval, seal and withdraw usually fail for the same reason; explain it once.
+  const sharedApprovedDenial = latest.effectiveState === "APPROVED" && inReview && !sealGate.allowed && !withdrawGate.allowed && sealGate.reason === withdrawGate.reason;
+  const live =inReview && (latest.effectiveState === "PENDING" || latest.effectiveState === "APPROVED");
   const version = view.draft.dto?.payload.manifest.version;
 
   return (
@@ -57,11 +62,17 @@ export function ReviewPanel({ api }: { api: DeskApi }) {
             </ActionGroup>
           </>
         ) : null}
-        {latest.effectiveState === "APPROVED" && inReview ? (
-          <ActionButton action="SEAL_VERSION" api={api} gate={api.gate("SEAL_VERSION")} onRun={seal}>封存为 v{version}</ActionButton>
+        {sharedApprovedDenial ? (
+          <ActionGroup api={api} gate={sealGate} onRunAnyway={seal} origin={approvedOrigin}>
+            <ActionButton action="SEAL_VERSION" api={api} gate={sealGate} hint={false} onRun={seal} origin={approvedOrigin}>封存为 v{version}</ActionButton>
+            <ActionButton action="WITHDRAW_REVIEW" api={api} gate={withdrawGate} hint={false} onRun={withdraw} origin={approvedOrigin} variant="outline">撤回审核</ActionButton>
+          </ActionGroup>
         ) : null}
-        {inReview ? (
-          <ActionButton action="WITHDRAW_REVIEW" api={api} gate={api.gate("WITHDRAW_REVIEW")} onRun={withdraw} variant={latest.effectiveState === "PENDING" ? "ghost" : "outline"}>
+        {latest.effectiveState === "APPROVED" && inReview && !sharedApprovedDenial ? (
+          <ActionButton action="SEAL_VERSION" api={api} gate={sealGate} onRun={seal}>封存为 v{version}</ActionButton>
+        ) : null}
+        {inReview && !sharedApprovedDenial ? (
+          <ActionButton action="WITHDRAW_REVIEW" api={api} gate={withdrawGate} onRun={withdraw} variant={latest.effectiveState === "PENDING" ? "ghost" : "outline"}>
             {latest.effectiveState === "REJECTED" || latest.effectiveState === "INVALIDATED" ? "撤回审核，回到草稿" : "撤回审核"}
           </ActionButton>
         ) : null}
