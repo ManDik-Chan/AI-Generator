@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, FlaskConical } from "lucide-react";
+import { ArrowUpRight, FlaskConical, Microscope } from "lucide-react";
 
 import { ArtSurface } from "@/components/platform/art";
 import { DemoNotice, EmptyBlock, SectionHead, delay } from "@/components/platform/primitives";
@@ -26,7 +26,7 @@ function Lab({ project }: { project: PlatformProject }) {
 }
 
 /** Public project page: full-bleed artwork, honest provenance, tabs from overview to releases. */
-export function ProjectShowcase({ project, related, releasePreviewHref }: { project: PlatformProject; related: PlatformProject[]; releasePreviewHref?: string }) {
+export function ProjectShowcase({ project, related, releasePreviewHref, researchHref }: { project: PlatformProject; related: PlatformProject[]; releasePreviewHref?: string; researchHref?: string }) {
   const integration = integrationMeta[project.integration];
   const tabs = [
     {
@@ -72,6 +72,7 @@ export function ProjectShowcase({ project, related, releasePreviewHref }: { proj
               </dl>
               <div className="flex flex-wrap gap-2">
                 {project.lab ? <a className="btn-wipe inline-flex h-11 items-center gap-2 rounded-full border border-[hsl(var(--paper))] bg-[hsl(var(--paper))] px-5 text-[.8125rem] font-medium text-[hsl(var(--ink))]" href="#lab"><FlaskConical aria-hidden="true" className="size-4" />打开实验室</a> : null}
+                {researchHref ? <Link className="inline-flex h-11 items-center gap-1.5 rounded-full border border-[hsl(var(--paper)/.4)] px-5 text-[.8125rem] font-medium transition-colors duration-300 hover:border-[hsl(var(--paper))] hover:bg-[hsl(var(--paper)/.1)]" href={researchHref} prefetch={false}><Microscope aria-hidden="true" className="size-4" />研究记录</Link> : null}
                 {releasePreviewHref ? <Link className="inline-flex h-11 items-center gap-1.5 rounded-full border border-[hsl(var(--paper)/.4)] px-5 text-[.8125rem] font-medium transition-colors duration-300 hover:border-[hsl(var(--paper))] hover:bg-[hsl(var(--paper)/.1)]" href={releasePreviewHref} prefetch={false}>版本页预览 · Fixture</Link> : null}
                 {project.links?.map((link) => (
                   <a className="inline-flex h-11 items-center gap-1.5 rounded-full border border-[hsl(var(--paper)/.4)] px-5 text-[.8125rem] font-medium transition-colors duration-300 hover:border-[hsl(var(--paper))] hover:bg-[hsl(var(--paper)/.1)]" href={link.href} key={link.href} rel="noopener noreferrer" target="_blank">{link.label}<ArrowUpRight aria-hidden="true" className="size-3.5" /></a>
