@@ -97,6 +97,14 @@ pnpm test
 pnpm build
 ```
 
+Registry B2-A 的 DTO / JCS 定向单测：
+
+```bash
+pnpm exec vitest run features/registry/canonical.test.ts features/registry/contracts.test.ts
+```
+
+跨语言哈希验证需在独立目录准备固定 commit 的 RFC Python 参考实现，然后运行 `python3 scripts/verify-registry-jcs.py --reference-root <reference-checkout>`。完整 fetch 命令、31 个固定向量和范围见 [Registry B2-A 契约说明](docs/registry-b2a-contracts.md#固定向量与跨语言验证)。CI 的 `Registry JCS Python reference` 独立任务执行同一验证，失败不会跳过。
+
 ## 当前开发方向
 
 1. 打磨独立可展示的产品主页、工作台和响应式体验。

@@ -12,6 +12,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  registry-jcs-reference:
+    name: Registry JCS Python reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the exact PR commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify JCS bytes and hashes against the pinned Python reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          reference="$RUNNER_TEMP/registry-jcs-reference"
+          mkdir "$reference"
+          git -C "$reference" init --quiet
+          git -C "$reference" remote add origin https://github.com/cyberphone/json-canonicalization.git
+          git -C "$reference" fetch --depth=1 origin 32a48195b9b20fe67b1795e39e4509f14d860b45
+          git -C "$reference" -c core.hooksPath=/dev/null checkout --detach --quiet FETCH_HEAD
+          python3 --version
+          python3 scripts/verify-registry-jcs.py --reference-root "$reference"
+
   quality:
     name: ${{ matrix.gate.name }}
     runs-on: ubuntu-latest
