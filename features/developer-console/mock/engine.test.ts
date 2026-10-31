@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
-import type { CommandResult, ConsoleCommand, DraftPayload } from "@/features/developer-console/model";
-import { DRAFT_ROLES, RELEASE_ROLES } from "@/features/developer-console/permissions";
-import { execute, projectSummaries, projectView, REVIEW_TTL_MS, toggleQualification, type MockState } from "@/features/developer-console/mock/engine";
+import { registryFunctions } from "@/features/developer-console/api-catalog";
+import { commandFunction, type AssetAction, type CommandResult, type ConsoleAction, type ConsoleCommand, type DraftPayload } from "@/features/developer-console/model";
+import { ACTION_ROLES, actionMeta, ASSET_ROLES, DRAFT_ROLES, RELEASE_ROLES } from "@/features/developer-console/permissions";
+import { execute, isReleaseAction, projectSummaries, projectView, REVIEW_TTL_MS, toggleQualification, type MockState } from "@/features/developer-console/mock/engine";
 import { SEED_EPOCH, createSeedState, initialPayloadFor, projectIdFor } from "@/features/developer-console/mock/seed";
 import { draftDTOSchema, draftPayloadSchema, validateDraftPayload, versionDTOSchema } from "@/features/registry/contracts";
 
@@ -407,11 +408,47 @@ describe("role map parity with the merged protocol", () => {
     expect(parsed).toEqual(Object.fromEntries(Object.entries(DRAFT_ROLES).map(([action, roles]) => [action, [...roles]])));
   });
 
-  it("RELEASE_ROLES equals the private roles map in features/registry/release-context.ts", () => {
+  it("RELEASE_ROLES and ASSET_ROLES together equal the private roles map in features/registry/release-context.ts", () => {
     const source = readFileSync("features/registry/release-context.ts", "utf8");
     const block = /const roles: Record<Action, string\[\]> = \{([\s\S]*?)\};/.exec(source)?.[1];
     expect(block, "roles map not found in release-context.ts").toBeTruthy();
     const parsed = Object.fromEntries([...block!.matchAll(/([A-Z_]+): \[([^\]]*)\]/g)].map(([, action, list]) => [action, [...list.matchAll(/"([A-Z]+)"/g)].map((m) => m[1])]));
-    expect(parsed).toEqual(Object.fromEntries(Object.entries(RELEASE_ROLES).map(([action, roles]) => [action, [...roles]])));
+    const copy = (map: Record<string, readonly string[]>) => Object.fromEntries(Object.entries(map).map(([action, roles]) => [action, [...roles]]));
+    // Every backend action is classified exactly once: release or internal asset.
+    const releaseKeys = Object.keys(RELEASE_ROLES);
+    const assetKeys = Object.keys(ASSET_ROLES);
+    expect(releaseKeys.filter((action) => assetKeys.includes(action))).toEqual([]);
+    expect(Object.keys(parsed).sort()).toEqual([...releaseKeys, ...assetKeys].sort());
+    expect(Object.fromEntries(releaseKeys.map((action) => [action, parsed[action]]))).toEqual(copy(RELEASE_ROLES));
+    expect(Object.fromEntries(assetKeys.map((action) => [action, parsed[action]]))).toEqual(copy(ASSET_ROLES));
+  });
+});
+
+describe("internal B3-A asset actions stay out of the console", () => {
+  const assetActions = Object.keys(ASSET_ROLES) as AssetAction[];
+
+  it("are not console actions", () => {
+    expectTypeOf<Extract<ConsoleAction, AssetAction>>().toBeNever();
+    expect(assetActions.sort()).toEqual(["INGEST_ASSET", "VERIFY_ASSET"]);
+    for (const action of assetActions) {
+      expect(ACTION_ROLES).not.toHaveProperty(action);
+      expect(actionMeta).not.toHaveProperty(action);
+      expect(commandFunction).not.toHaveProperty(action);
+      expect(registryFunctions.map((fn) => fn.action)).not.toContain(action);
+      expect(isReleaseAction(action as unknown as ConsoleAction)).toBe(false);
+    }
+  });
+
+  it("are rejected by the mock even for members holding the backend role", () => {
+    const state = createSeedState();
+    const v = view(state, "sorting-lab");
+    for (const [action, ifMatch] of [["INGEST_ASSET", v.draft.etag], ["VERIFY_ASSET", v.releaseETag]] as const) {
+      const forged = { action, projectId: sorting, ifMatch, idempotencyKey: k(), input: {} } as unknown as Command;
+      for (const persona of ["you", "reviewer"]) {
+        const r = step(state, persona, forged);
+        expect(err(r.result)).toBe("INVALID_INPUT 422");
+        expect(r.state).toBe(state);
+      }
+    }
   });
 });

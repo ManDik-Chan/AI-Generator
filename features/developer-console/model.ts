@@ -12,7 +12,7 @@
  */
 import type { DraftDTO, DraftPayload, VersionDTO } from "@/features/registry/contracts";
 import type { CommandResponse } from "@/features/registry/protocol";
-import type { Action as RegistryReleaseAction } from "@/features/registry/release-context";
+import type { Action as RegistryContextAction } from "@/features/registry/release-context";
 
 export type { CommandResponse, DraftDTO, DraftPayload, VersionDTO };
 
@@ -22,8 +22,14 @@ export type DraftState = DraftDTO["state"];
 
 /** Actions of the merged B2-A protocol (features/registry/protocol.ts). */
 export type DraftAction = "READ_DRAFT" | "EDIT_DRAFT" | "SUBMIT_REVIEW" | "WITHDRAW_REVIEW" | "DECIDE_REVIEW" | "SEAL_VERSION";
+/**
+ * Internal B3-A asset operations (quarantine ingest, actual-byte verification). They share the
+ * authority gate in features/registry/release-context.ts but are not console actions: no mock
+ * command, no permission-matrix row, no public surface.
+ */
+export type AssetAction = Extract<RegistryContextAction, "INGEST_ASSET" | "VERIFY_ASSET">;
 /** Actions of the merged B2-B release library (type-only: features/registry/release-context.ts is server-only). */
-export type ReleaseAction = RegistryReleaseAction;
+export type ReleaseAction = Exclude<RegistryContextAction, AssetAction>;
 /** Not in any contract yet: starting the next draft after a version is sealed. */
 export type GapAction = "START_DRAFT";
 export type ConsoleAction = DraftAction | ReleaseAction | GapAction;

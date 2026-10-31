@@ -7,7 +7,7 @@ import { prisma } from "@/lib/database/prisma";
 import { RegistryProtocolError } from "./protocol";
 export const RELEASE_POLICY_REVISION = 1;
 type Tx = Prisma.TransactionClient;
-export type Action = "READ_RELEASE" | "REQUEST_RELEASE" | "APPROVE_RELEASE" | "PUBLISH_RELEASE" | "WITHDRAW_RELEASE" | "ROLLBACK_RELEASE";
+export type Action = "READ_RELEASE" | "REQUEST_RELEASE" | "APPROVE_RELEASE" | "PUBLISH_RELEASE" | "WITHDRAW_RELEASE" | "ROLLBACK_RELEASE" | "INGEST_ASSET" | "VERIFY_ASSET";
 export const uuid = z.string().uuid();
 export const hash = z.string().regex(/^[a-f0-9]{64}$/);
 export const readInput = z.object({ accessToken: z.string().min(1).max(16384), projectId: uuid }).strict();
@@ -43,6 +43,7 @@ export async function authenticate(token: string): Promise<Principal> {
   } catch { return fail("AUTH_REQUIRED", 401); }
 }
 const roles: Record<Action, string[]> = {
+  INGEST_ASSET: ["OWNER", "EDITOR"], VERIFY_ASSET: ["REVIEWER"],
   READ_RELEASE: ["OWNER", "EDITOR", "REVIEWER", "PUBLISHER", "VIEWER"],
   REQUEST_RELEASE: ["OWNER", "PUBLISHER"], APPROVE_RELEASE: ["REVIEWER"],
   PUBLISH_RELEASE: ["OWNER", "PUBLISHER"], WITHDRAW_RELEASE: ["OWNER", "PUBLISHER"],
