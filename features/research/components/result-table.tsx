@@ -10,40 +10,43 @@ import { cn } from "@/lib/utils";
 
 export function ResultTable({ outcome, comparison, caption }: { outcome: ReplayOutcome; comparison?: Comparison; caption: string }) {
   return (
-    <div className="scroll-x">
-      <table className="w-full min-w-[34rem] border-collapse text-left text-[.8125rem]">
-        <caption className="sr-only">{caption}</caption>
-        <thead>
-          <tr className="border-b border-border/20 text-[.75rem] text-muted-foreground">
-            <th className="py-2 pr-4 font-medium" scope="col">{outcome.rowHeader}</th>
-            {outcome.columns.map((column) => (
-              <th className="py-2 pl-4 text-right font-medium" key={column.key} scope="col">
-                {column.label}{column.unit ? <span className="font-normal">（{column.unit}）</span> : null}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {outcome.rows.map((row) => (
-            <tr className="border-b border-border/12 last:border-0" key={row.key}>
-              <th className="py-3 pr-4 font-medium" scope="row">{row.label}</th>
-              {outcome.columns.map((column) => {
-                const agree = comparison?.comparable ? comparison.cells[`${row.key}:${column.key}`] : undefined;
-                return (
-                  <td className="py-3 pl-4 text-right font-code tabular-nums" key={column.key}>
-                    <span className="inline-flex items-center justify-end gap-1.5">
-                      {formatResult(row.values[column.key], column)}
-                      {agree === undefined ? null : agree
-                        ? <Check aria-label="与参考一致" className="size-3 text-success" role="img" />
-                        : <span aria-label="与参考不一致" className="font-sans text-[.75rem] font-medium text-destructive" role="img">≠</span>}
-                    </span>
-                  </td>
-                );
-              })}
+    <div>
+      <div className="scroll-x">
+        <table className="w-full min-w-[34rem] border-collapse text-left text-[.8125rem]">
+          <caption className="sr-only">{caption}</caption>
+          <thead>
+            <tr className="border-b border-border/20 text-[.75rem] text-muted-foreground">
+              <th className="whitespace-nowrap py-2 pr-4 font-medium" scope="col">{outcome.rowHeader}</th>
+              {outcome.columns.map((column) => (
+                <th className="whitespace-nowrap py-2 pl-4 text-right font-medium" key={column.key} scope="col">
+                  {column.label}{column.unit ? <span className="font-normal">（{column.unit}）</span> : null}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {outcome.rows.map((row) => (
+              <tr className="border-b border-border/12 last:border-0" key={row.key}>
+                <th className="whitespace-nowrap py-3 pr-4 font-medium" scope="row">{row.label}</th>
+                {outcome.columns.map((column) => {
+                  const agree = comparison?.comparable ? comparison.cells[`${row.key}:${column.key}`] : undefined;
+                  return (
+                    <td className="py-3 pl-4 text-right font-code tabular-nums" key={column.key}>
+                      <span className="inline-flex items-center justify-end gap-1.5">
+                        {formatResult(row.values[column.key], column)}
+                        {agree === undefined ? null : agree
+                          ? <Check aria-label="与参考一致" className="size-3 text-success" role="img" />
+                          : <span aria-label="与参考不一致" className="font-sans text-[.75rem] font-medium text-destructive" role="img">≠</span>}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-caption min-[700px]:hidden">表格可左右滑动，查看全部 {outcome.columns.length + 1} 列。</p>
     </div>
   );
 }

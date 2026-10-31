@@ -53,10 +53,11 @@ export function EvidenceList({ items, empty, className }: { items: EvidenceItem[
           <li className="flex gap-2.5" key={`${item.kind}-${item.label}-${index}`}>
             <Icon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
             <span className="min-w-0">
+              {/* The arrow stays inline after the last word, so wrapped titles do not push it to the edge. */}
               {target ? (
                 target.external
-                  ? <a className="group inline-flex items-start gap-1" href={target.href} rel="noopener noreferrer" target="_blank"><span className="link-grow">{label}</span><ArrowUpRight aria-hidden="true" className="mt-1 size-3 shrink-0 text-muted-foreground" /></a>
-                  : <Link className="group inline-flex items-start gap-1" href={target.href} prefetch={false}><span className="link-grow">{label}</span><ArrowUpRight aria-hidden="true" className="mt-1 size-3 shrink-0 text-muted-foreground" /></Link>
+                  ? <a className="group" href={target.href} rel="noopener noreferrer" target="_blank"><span className="link-grow">{label}</span><ArrowUpRight aria-hidden="true" className="ml-1 inline size-3 align-[-1px] text-muted-foreground" /></a>
+                  : <Link className="group" href={target.href} prefetch={false}><span className="link-grow">{label}</span><ArrowUpRight aria-hidden="true" className="ml-1 inline size-3 align-[-1px] text-muted-foreground" /></Link>
               ) : label}
               <span className="mt-0.5 block text-[.6875rem] leading-4 text-muted-foreground">
                 {evidenceKindMeta[item.kind].label}

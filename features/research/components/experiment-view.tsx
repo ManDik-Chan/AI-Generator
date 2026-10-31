@@ -116,7 +116,7 @@ export function ExperimentView({ project, experiment, showcase }: { project: Res
                   <CheckList checks={reference.checks} className="mt-4" />
                 </div>
                 <p className="mt-4 text-caption">
-                  参考结果由本页构建时运行右侧「环境」中列出的仓库代码得到，没有手写任何数值。{revision ? <>代码版本 <a className="link-grow font-code" href={commitUrl(revision)} rel="noopener noreferrer" target="_blank">{revision.slice(0, 7)}</a>。</> : "本次构建没有注入提交号。"}
+                  参考结果由本页构建时运行「环境」中列出的仓库代码得到，没有手写任何数值。{revision ? <>代码版本 <a className="link-grow font-code" href={commitUrl(revision)} rel="noopener noreferrer" target="_blank">{revision.slice(0, 7)}</a>。</> : "本次构建没有注入提交号。"}
                 </p>
               </>
             ) : experiment.status === "TEST_COVERED" ? (
