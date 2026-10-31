@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 
-import { AppShell } from "@/components/layout/app-shell";
-import { DeveloperConsole } from "@/features/platform/components/developer-console";
+import { Workbench } from "@/features/developer-console/components/workbench";
 import { requireUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "开发者" };
+export const metadata: Metadata = { title: "开发者控制台" };
 
 export default async function DeveloperPage() {
   await requireUser();
-  return <AppShell mobileTitle="开发者" variant="wide"><DeveloperConsole mode="live" /></AppShell>;
+  return <Workbench base="/developer" projectsBase="/projects" />;
 }

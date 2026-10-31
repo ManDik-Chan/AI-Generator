@@ -25,7 +25,7 @@ function entries(mode: ShellMode, isAdmin: boolean): Entry[] {
   const actions: Entry[] = [
     { key: "new-chat", label: "新建对话", description: demo ? "演示对话" : "开始一段新的对话", href: demo ? "/platform/chat" : "/chat", icon: MessageSquarePlus, group: "快速操作" },
     { key: "new-project", label: "新建项目", description: "演示状态 · 不会保存", href: demo ? "/platform/projects/new" : "/projects/new", icon: FolderPlus, group: "快速操作", badge: statusMeta.dev.label },
-    { key: "manifest", label: "校验 Manifest", description: "在浏览器内检查 P0.5 契约", href: demo ? "/platform/developer#manifest" : "/developer#manifest", icon: FileCheck2, group: "快速操作" },
+    { key: "manifest", label: "校验 Manifest", description: "在浏览器内检查 P0.5 契约", href: demo ? "/platform/developer/integrate#manifest" : "/developer/integrate#manifest", icon: FileCheck2, group: "快速操作" },
   ];
   const pages = navigationGroups.flatMap((group) => visibleItems(group.items, mode, isAdmin).map((item) => ({
     key: item.key,
