@@ -20,6 +20,8 @@
 
 全量 `scripts/run-security-integration.mjs` 自动发现并要求每个 suite 和 assertion 实际通过，skip/TODO/空套件均失败。P1-A、B1、B2-A 与新 B2-B 必须在同一最终候选上真实执行，最终计数与日志以 PR 的本轮完整运行记录为准。既有 `verify-security-migrations.mjs clean / incremental / rollback-all` 继续执行；定向 52 项不能代替这些全量门禁。
 
+首个候选的远端 WebKit 暴露了两处测试时序问题。离线 trace 证明取消 HTTP 200 的正文实际为 `{"status":"COMPLETE"}`，取消请求晚于固定 10 秒慢流完成；原测试只检查 200，错误地把它视为已取消。测试专用 provider 增加独立的持续流夹具，等待真实取消或断连而不自动成功结束，测试同时要求 `CANCELLED`、请求中断、无记忆披露及数据库取消状态；输入框高度改为有界等待同一个 `>44px` 条件。没有修改产品 UI、浏览器配置、重试次数、矩阵或 skip。修正后的最终候选重新执行全部 CI，结果仍以 PR 对应 head 的记录为准，不借用被替换候选的通过状态。
+
 ## Release 安全覆盖
 
 新套件覆盖双 flag 默认关闭；独立动作、项目角色、ADMIN / metadata / JWT 伪造；当前会话到期；跨租户 Version / request / approval / Release；SEALED 不能直接发布、自审拒绝、原 Review 自然过期后的全新审批；真实资格自然过期；policy、epoch、显式审核失效、内容哈希及资产退休；相同 key 并发和响应丢失重放；不同 key / 不同 Version 竞争；撤权与再授权不复活旧回执；撤回后的幂等、空指针 ABA、旧版本重新发布和 v2 → 历史 v1 回滚；PUBLIC / UNLISTED / PRIVATE 均不分发；原始 SQL 缺批准、错发布者、孤立发布拒绝；TTL 不接受伪造 created_at；遗留可见性不一致不阻止撤权；私有表与函数真实 ACL/RLS 和不可变历史。
