@@ -144,7 +144,7 @@ Owner 随后授权“再一次单 Edge 实例截图，复查这 6 处修复”�
   - 倒计时“剩”与 Markdown 输入框为 figtree / Noto Sans SC 字体栈，数字保持等宽；
   - 用过期 ETag 保存后，保存按钮下方显示 `412 PRECONDITION_FAILED · ETag 已过期`；
   - 无控制台错误，无横向溢出。
-- 受影响页面的整页截图已替换为修复后的版本（13 张）。未受影响的 `desktop-workbench`、`mobile-workbench`、`desktop-desk-research-notes`、`desktop-focus-ring` 保留第一次的截图。另有 9 张 `fix-*.jpg` 近景：
+- 受影响页面的整页截图已替换为修复后的版本（13 张）。未受影响的 `desktop-workbench`、`mobile-workbench`、`desktop-desk-research-notes`、`desktop-focus-ring` 保留第一次的截图。另有 8 张 `fix-*.jpg` 近景：
 
 | 文件 | 修复 |
 | --- | --- |
@@ -167,7 +167,7 @@ Owner 随后授权“再一次单 Edge 实例截图，复查这 6 处修复”�
 
 ## 7. 改动范围
 
-新增：`features/developer-console/**`、`app/platform/developer/{layout,integrate,access,projects/[slug]}`、`app/developer/{layout,integrate,access,projects/[slug]}`、本文件、`docs/handoffs/assets/2026-10-31-developer-console/`（17 张整页截图与 9 张修复近景，约 4 MB）。
+新增：`features/developer-console/**`、`app/platform/developer/{layout,integrate,access,projects/[slug]}`、`app/developer/{layout,integrate,access,projects/[slug]}`、本文件、`docs/handoffs/assets/2026-10-31-developer-console/`（17 张整页截图与 8 张修复近景，约 4 MB）。
 修改：`app/developer/page.tsx`、`app/platform/developer/page.tsx`、`components/layout/command-palette.tsx`（一个链接）、`features/platform/components/projects-index.tsx`（一个链接）、`vitest.config.ts`（一行）。
 删除：`features/platform/components/developer-console.tsx`。
 未触碰：`prisma/**`、`supabase/**`、`features/registry/**`、`lib/auth/**`、`middleware.ts`、`app/api/**`、`tests/e2e/**`、`tests/integration/**`、`vercel.json`、`.github/**`、Landing。
