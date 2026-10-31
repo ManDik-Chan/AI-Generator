@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/explore", label: "探索" },
+  { href: "/research", label: "研究" },
   { href: "/demos", label: "Demo" },
   { href: "/docs", label: "开发者" },
   { href: "/platform", label: "演示工作台" },
@@ -48,7 +49,7 @@ export function SiteHeader() {
           </div>
         </div>
       </header>
-      <Dialog description="公开项目、可运行的 Demo、开发者文档与登录入口。" onOpenChange={setOpen} open={open} title="AI-Generator">
+      <Dialog description="公开项目、研究记录、可运行的 Demo、开发者文档与登录入口。" onOpenChange={setOpen} open={open} title="AI-Generator">
         <nav aria-label="站点菜单" className="grid gap-1">
           {[{ href: "/", label: "官网首页" }, ...links].map((link) => (
             <Link className="flex min-h-12 items-center rounded-full px-4 text-base font-medium text-muted-foreground hover:bg-surface hover:text-foreground" href={link.href} key={link.href} onClick={() => setOpen(false)} prefetch={false}>{link.label}</Link>
