@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 const columns = [
-  { title: "平台", links: [["探索项目", "/explore"], ["运行 Demo", "/demos"], ["开发者文档", "/docs"], ["演示工作台", "/platform"], ["连接与授权", "/platform/connections"]] },
+  { title: "平台", links: [["探索项目", "/explore"], ["研究实验室", "/research"], ["运行 Demo", "/demos"], ["开发者文档", "/docs"], ["演示工作台", "/platform"], ["连接与授权", "/platform/connections"]] },
   { title: "AI Hub", links: [["对话", "/chat"], ["人格", "/personas"], ["记忆", "/memories"], ["工具", "/tools"]] },
   { title: "账户", links: [["登录", "/login"], ["注册", "/register"], ["进入工作台", "/workspace"]] },
 ] as const;
