@@ -8,28 +8,14 @@ import { EmptyBlock, Kicker, ToneBadge } from "@/components/platform/primitives"
 import { Button } from "@/components/ui/button";
 import { newIdempotencyKey } from "@/features/developer-console/adapter";
 import { Countdown, useConsole, useConsoleAdapter } from "@/features/developer-console/components/console-provider";
-import type { DeskApi, DeskCommand, Gate } from "@/features/developer-console/components/desk-kit";
+import type { DeskApi, DeskCommand, DeskResult, Gate } from "@/features/developer-console/components/desk-kit";
 import { DraftPanel } from "@/features/developer-console/components/draft-panel";
 import { ReleasesPanel, ReviewPanel, VersionsPanel } from "@/features/developer-console/components/pipeline-panels";
 import { ProtocolLog } from "@/features/developer-console/components/protocol-log";
-import { draftStateMeta, errorMeta, reviewStateMeta, visibilityLabels } from "@/features/developer-console/labels";
-import type { CommandResult, ConsoleCommand, ConsoleProjectView, ConsoleRole } from "@/features/developer-console/model";
+import { draftStateMeta, errorMeta, reviewStateMeta, successText, visibilityLabels } from "@/features/developer-console/labels";
+import type { ConsoleCommand, ConsoleProjectView, ConsoleRole } from "@/features/developer-console/model";
 import { requiredRoles, roleLabels, rolesAllow } from "@/features/developer-console/permissions";
 import { cn } from "@/lib/utils";
-
-const successText: Record<ConsoleCommand["action"], string> = {
-  EDIT_DRAFT: "草稿已保存，revision +1",
-  SUBMIT_REVIEW: "已提交审核：内容哈希与期限已冻结",
-  WITHDRAW_REVIEW: "审核已撤回，草稿回到可编辑状态",
-  DECIDE_REVIEW: "审核决定已记录",
-  SEAL_VERSION: "已封存为不可变版本，草稿随之冻结",
-  REQUEST_RELEASE: "发布申请已创建，等待独立批准",
-  APPROVE_RELEASE: "已批准，等待原申请人执行",
-  PUBLISH_RELEASE: "已发布：当前指针切换到新的 Release",
-  ROLLBACK_RELEASE: "已回滚：用历史版本创建了新的 Release",
-  WITHDRAW_RELEASE: "已追加撤回事实",
-  START_DRAFT: "已开始新的草稿（Mock，契约缺口）",
-};
 
 type Stage = "project" | "draft" | "review" | "version" | "release";
 
@@ -98,7 +84,7 @@ function Pipeline({ view }: { view: ConsoleProjectView }) {
   );
 }
 
-function ResultBanner({ last }: { last: { action: ConsoleCommand["action"]; result: CommandResult } | null }) {
+function ResultBanner({ last }: { last: DeskResult | null }) {
   return (
     <div aria-live="polite" className="min-h-0" role="status">
       {last ? (
@@ -123,7 +109,9 @@ export function ReleaseDesk({ slug, base, projectsBase }: { slug: string; base: 
   const snapshot = useConsole();
   const adapter = useConsoleAdapter();
   const ownEtags = useRef(new Set<string>());
-  const [last, setLast] = useState<{ action: ConsoleCommand["action"]; result: CommandResult } | null>(null);
+  const [last, setLast] = useState<DeskResult | null>(null);
+  // Which button sent the command in flight, so its result can also be shown next to it.
+  const origin = useRef<string | null>(null);
   const view = snapshot.views[slug];
 
   if (!view) return <EmptyBlock title="没有这个项目">Mock 数据里没有 /{slug}。</EmptyBlock>;
@@ -138,7 +126,7 @@ export function ReleaseDesk({ slug, base, projectsBase }: { slug: string; base: 
   };
 
   const api: DeskApi = {
-    view, personaId: snapshot.personaId, roles, personas: snapshot.personas, now: snapshot.now, pending: snapshot.pending,
+    view, personaId: snapshot.personaId, roles, personas: snapshot.personas, now: snapshot.now, pending: snapshot.pending, last,
     gate(action, independence): Gate {
       if (!qualified) return { allowed: false, reason: `${persona.name}的平台操作资格已撤销`, suggest: candidateFor(action) };
       if (!rolesAllow(roles, action)) return { allowed: false, reason: `需要「${requiredRoles(action).map((role) => roleLabels[role]).join("」或「")}」角色`, suggest: candidateFor(action) };
@@ -147,11 +135,14 @@ export function ReleaseDesk({ slug, base, projectsBase }: { slug: string; base: 
     },
     async send(partial: DeskCommand) {
       const command = { ...partial, projectId: view.id, idempotencyKey: partial.idempotencyKey ?? newIdempotencyKey(partial.action) } as ConsoleCommand;
+      const from = origin.current;
+      origin.current = null;
       const result = await adapter.execute(command);
       if (result.ok) ownEtags.current.add(result.response.etag);
-      setLast({ action: command.action, result });
+      setLast({ action: command.action, result, origin: from });
       return result;
     },
+    markOrigin: (id) => { origin.current = id; },
     switchPersona: (id) => adapter.tools?.setPersona(id),
     personaName,
   };
@@ -159,7 +150,7 @@ export function ReleaseDesk({ slug, base, projectsBase }: { slug: string; base: 
   const replay = async (seq: number) => {
     const result = await adapter.replay(seq);
     const entry = adapter.getSnapshot().log[0];
-    if (result && entry) setLast({ action: entry.action, result });
+    if (result && entry) setLast({ action: entry.action, result, origin: null });
   };
 
   const tools = adapter.tools;

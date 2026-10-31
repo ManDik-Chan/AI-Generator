@@ -44,6 +44,13 @@ export function Countdown({ deadline, className }: { deadline: string; className
     const id = window.setInterval(read, 1000);
     return () => window.clearInterval(id);
   }, [adapter]);
-  const left = Date.parse(deadline) - now;
-  return <span className={className} suppressHydrationWarning>{formatRemaining(left)}</span>;
+  const text = formatRemaining(Date.parse(deadline) - now);
+  // The CJK label stays in the sans stack; the monospace stack has no CJK glyphs.
+  const [label, time] = text.startsWith("剩 ") ? ["剩", text.slice(2)] : [text, ""];
+  return (
+    <span className={className} suppressHydrationWarning>
+      <span className="font-sans">{label}</span>
+      {time ? <> {time}</> : null}
+    </span>
+  );
 }

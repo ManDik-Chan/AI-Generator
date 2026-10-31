@@ -26,7 +26,7 @@ const contracts: { file: string; detail: string; status: ContractStatus }[] = [
 ];
 
 function Code({ children }: { children: string }) {
-  return <pre className="scroll-x mt-3 rounded-control bg-foreground p-4 font-code text-[.75rem] leading-5 text-background"><code>{children}</code></pre>;
+  return <pre className="mt-3 whitespace-pre-wrap rounded-control bg-foreground p-4 font-code text-[.75rem] leading-5 text-background [overflow-wrap:anywhere]"><code>{children}</code></pre>;
 }
 
 function Lifecycle() {

@@ -1,5 +1,5 @@
 import type { Tone } from "@/features/platform/labels";
-import type { ConsoleVisibility, DraftState, ProtocolErrorCode, ReleaseRecordDTO, ReleaseRequestDTO, ReviewDTO } from "@/features/developer-console/model";
+import type { ConsoleCommand, ConsoleVisibility, DraftState, ProtocolErrorCode, ReleaseRecordDTO, ReleaseRequestDTO, ReviewDTO } from "@/features/developer-console/model";
 
 export const draftStateMeta: Record<DraftState, { label: string; tone: Tone; detail: string }> = {
   DRAFT: { label: "草稿", tone: "neutral", detail: "可编辑；每次保存 revision +1" },
@@ -7,6 +7,20 @@ export const draftStateMeta: Record<DraftState, { label: string; tone: Tone; det
   // B1 enum value; it means "frozen into a Version", not "publicly released".
   PUBLISHED: { label: "已封存", tone: "info", detail: "已冻结为不可变 Version；不等于已公开发布" },
   ARCHIVED: { label: "已归档", tone: "neutral", detail: "终态" },
+};
+
+export const successText: Record<ConsoleCommand["action"], string> = {
+  EDIT_DRAFT: "草稿已保存，revision +1",
+  SUBMIT_REVIEW: "已提交审核：内容哈希与期限已冻结",
+  WITHDRAW_REVIEW: "审核已撤回，草稿回到可编辑状态",
+  DECIDE_REVIEW: "审核决定已记录",
+  SEAL_VERSION: "已封存为不可变版本，草稿随之冻结",
+  REQUEST_RELEASE: "发布申请已创建，等待独立批准",
+  APPROVE_RELEASE: "已批准，等待原申请人执行",
+  PUBLISH_RELEASE: "已发布：当前指针切换到新的 Release",
+  ROLLBACK_RELEASE: "已回滚：用历史版本创建了新的 Release",
+  WITHDRAW_RELEASE: "已追加撤回事实",
+  START_DRAFT: "已开始新的草稿（Mock，契约缺口）",
 };
 
 export const reviewStateMeta: Record<ReviewDTO["effectiveState"], { label: string; tone: Tone }> = {

@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { ToneBadge } from "@/components/platform/primitives";
 import { shortHash } from "@/features/developer-console/content-hash";
 import { Countdown } from "@/features/developer-console/components/console-provider";
-import { ActionButton, ContractBadge, Facts, Mono, Panel, type DeskApi } from "@/features/developer-console/components/desk-kit";
+import { ActionButton, ActionGroup, ContractBadge, Facts, Mono, Panel, type DeskApi } from "@/features/developer-console/components/desk-kit";
 import { bumpMinor, formatClock, releaseStateMeta, requestStateMeta, reviewStateMeta, visibilityLabels } from "@/features/developer-console/labels";
 import type { ReleaseRecordDTO, VersionDTO } from "@/features/developer-console/model";
 
@@ -13,6 +13,7 @@ import type { ReleaseRecordDTO, VersionDTO } from "@/features/developer-console/
 
 export function ReviewPanel({ api }: { api: DeskApi }) {
   const { view } = api;
+  const decisionOrigin = useId();
   const [latest, ...older] = view.reviews;
   const inReview = view.draft.head.state === "IN_REVIEW";
 
@@ -50,8 +51,10 @@ export function ReviewPanel({ api }: { api: DeskApi }) {
       <div className="mt-6 flex flex-wrap items-start gap-3 border-t border-border/12 pt-5">
         {latest.effectiveState === "PENDING" ? (
           <>
-            <ActionButton action="DECIDE_REVIEW" api={api} gate={api.gate("DECIDE_REVIEW", selfReview)} onRun={() => decide("APPROVED")}>批准</ActionButton>
-            <ActionButton action="DECIDE_REVIEW" api={api} gate={api.gate("DECIDE_REVIEW", selfReview)} onRun={() => decide("REJECTED")} variant="outline">拒绝</ActionButton>
+            <ActionGroup api={api} gate={api.gate("DECIDE_REVIEW", selfReview)} onRunAnyway={() => decide("APPROVED")} origin={decisionOrigin}>
+              <ActionButton action="DECIDE_REVIEW" api={api} gate={api.gate("DECIDE_REVIEW", selfReview)} hint={false} onRun={() => decide("APPROVED")} origin={decisionOrigin}>批准</ActionButton>
+              <ActionButton action="DECIDE_REVIEW" api={api} gate={api.gate("DECIDE_REVIEW", selfReview)} hint={false} onRun={() => decide("REJECTED")} origin={decisionOrigin} variant="outline">拒绝</ActionButton>
+            </ActionGroup>
           </>
         ) : null}
         {latest.effectiveState === "APPROVED" && inReview ? (

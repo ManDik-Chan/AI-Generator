@@ -21,10 +21,13 @@ export function PermissionMatrix() {
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <SegmentedControl label="按角色查看">
-          <Segment active={focus === null} onClick={() => setFocus(null)}>全部</Segment>
-          {roles.map((role) => <Segment active={focus === role} key={role} onClick={() => setFocus(role)}>{roleLabels[role]}</Segment>)}
-        </SegmentedControl>
+        {/* Labels never wrap; on narrow screens the pill row scrolls instead. */}
+        <div className="scroll-x -mx-1 max-w-[calc(100%+.5rem)] px-1 py-0.5">
+          <SegmentedControl className="whitespace-nowrap" label="按角色查看">
+            <Segment active={focus === null} className="max-[520px]:px-3" onClick={() => setFocus(null)}>全部</Segment>
+            {roles.map((role) => <Segment active={focus === role} className="max-[520px]:px-3" key={role} onClick={() => setFocus(role)}>{roleLabels[role]}</Segment>)}
+          </SegmentedControl>
+        </div>
         <p aria-live="polite" className="text-[.75rem] text-muted-foreground">
           {focus ? `「${roleLabels[focus]}」可以执行 ${allowed.length} / ${order.length} 项操作，前提是会话与平台操作资格同时有效。` : "勾号表示该项目角色满足此操作；平台操作资格需要另外单独授予。"}
         </p>

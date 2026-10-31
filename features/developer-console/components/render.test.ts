@@ -51,8 +51,16 @@ describe("developer console screens render on the server", () => {
 
   it("a pending review shows a countdown and the self-review rule for its submitter", () => {
     const html = render(createElement(ReleaseDesk, { slug: "air-quality", base, projectsBase: "/platform/projects" }));
-    expect(html).toContain("剩 12:00");
+    expect(visibleText(html)).toMatch(/剩\s+12:00/);
     expect(html).toContain("需要「审核」角色");
+    // Approve and reject share one gate, so the explanation is shown once for the pair.
+    expect(html.match(/仍然发送，查看拒绝响应/g)).toHaveLength(1);
+  });
+
+  it("a frozen draft does not warn that its own sealed version number is taken", () => {
+    const html = render(createElement(ReleaseDesk, { slug: "volume-reconstruction", base, projectsBase: "/platform/projects" }));
+    expect(html).toContain("已封存");
+    expect(html).not.toContain("这个版本号已被封存过");
   });
 
   it("integration page lists the live Demo API from its OpenAPI builder", () => {

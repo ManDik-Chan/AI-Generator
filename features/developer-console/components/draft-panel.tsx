@@ -81,7 +81,8 @@ export function DraftPanel({ api, ownEtags }: { api: DeskApi; ownEtags: MutableR
 
   const candidate = useMemo(() => (basePayload ? applyForm(basePayload, form) : null), [basePayload, form]);
   const issues = candidate ? payloadIssues(candidate, view) : [];
-  const versionTaken = Boolean(form.version) && view.versions.some((version) => version.version === form.version);
+  // Only a warning while editing: a frozen draft's own version is, by definition, already sealed.
+  const versionTaken = editable && Boolean(form.version) && view.versions.some((version) => version.version === form.version);
 
   const save = () => {
     if (!candidate) return;
@@ -159,7 +160,7 @@ export function DraftPanel({ api, ownEtags }: { api: DeskApi; ownEtags: MutableR
           </fieldset>
           <div>
             <label className="text-[.8125rem] font-medium" htmlFor={`${ids}-overview`}>概览（Markdown）</label>
-            <textarea className="premium-field mt-2 min-h-[7rem] resize-y px-4 py-3 font-code text-[.8125rem] leading-6" id={`${ids}-overview`} maxLength={20000} onChange={(event) => setForm({ ...form, overview: event.target.value })} value={form.overview} />
+            <textarea className="premium-field mt-2 min-h-[7rem] resize-y px-4 py-3 text-[.8125rem] leading-6" id={`${ids}-overview`} maxLength={20000} onChange={(event) => setForm({ ...form, overview: event.target.value })} value={form.overview} />
           </div>
           {issues.length ? (
             <ul className="space-y-1 text-[.75rem] text-destructive-foreground" role="alert">
