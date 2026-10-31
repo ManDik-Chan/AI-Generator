@@ -7,9 +7,11 @@
  *
  * DRAFT_ROLES mirrors the private `roles` map in features/registry/protocol.ts; a unit test
  * reads that file and fails when they diverge. RELEASE_ROLES mirrors the same map in
- * features/registry/release-context.ts (P1-B2-B) and has the same parity test.
+ * features/registry/release-context.ts (P1-B2-B) and has the same parity test. That map also
+ * holds the internal B3-A asset actions; ASSET_ROLES mirrors them so the parity test covers the
+ * whole map, but they stay out of ACTION_ROLES and actionMeta.
  */
-import type { ConsoleAction, ConsoleRole, DraftAction, ReleaseAction } from "@/features/developer-console/model";
+import type { AssetAction, ConsoleAction, ConsoleRole, DraftAction, ReleaseAction } from "@/features/developer-console/model";
 
 export const DRAFT_ROLES: Record<DraftAction, readonly ConsoleRole[]> = {
   READ_DRAFT: ["OWNER", "EDITOR", "REVIEWER", "PUBLISHER", "VIEWER"],
@@ -28,6 +30,15 @@ export const RELEASE_ROLES: Record<ReleaseAction, readonly ConsoleRole[]> = {
   PUBLISH_RELEASE: ["OWNER", "PUBLISHER"],
   WITHDRAW_RELEASE: ["OWNER", "PUBLISHER"],
   ROLLBACK_RELEASE: ["OWNER", "PUBLISHER"],
+};
+
+/**
+ * Mirrors the B3-A asset entries of `roles` in features/registry/release-context.ts.
+ * Reference only: not part of ACTION_ROLES, so the console cannot show or execute them.
+ */
+export const ASSET_ROLES: Record<AssetAction, readonly ConsoleRole[]> = {
+  INGEST_ASSET: ["OWNER", "EDITOR"],
+  VERIFY_ASSET: ["REVIEWER"],
 };
 
 /** Mock-only: no contract defines who may start the next draft. Assumed OWNER / EDITOR. */
