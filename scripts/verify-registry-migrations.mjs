@@ -1,12 +1,13 @@
 // Registry migration proof. No .env, remote URLs or unlabelled containers.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, relative, basename } from "node:path";
 import { createRequire } from "node:module";
 import { randomUUID, createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
 import { assertDisposableTarget, bindDisposableLoopback } from "./disposable-supabase.mjs";
 
 const root = process.cwd(), target = assertDisposableTarget();
@@ -146,6 +147,35 @@ async function storageSnapshot(db) {
     WHERE n.nspname='storage' AND NOT t.tgisinternal ORDER BY relation,t.tgname`;
   return { buckets,objects,policies,triggers };
 }
+async function seedStorageBytes() {
+  // Match the inspected disposable gateway before using even a test service
+  // key. Never send privileged credentials to an environment-supplied remote.
+  const url = new URL(process.env.SUPABASE_TEST_URL ?? ""), key = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
+  const gateway = JSON.parse(execFileSync("docker",["inspect",`supabase_kong_${target.project}`],{encoding:"utf8",windowsHide:true}))[0];
+  const bindings = gateway.HostConfig.PortBindings?.["8000/tcp"];
+  assert(key && url.protocol==="http:" && url.hostname==="127.0.0.1" && !url.username && !url.password
+    && gateway.Config.Labels?.["com.supabase.cli.project"]===target.project && gateway.State.Running
+    && bindings?.length && bindings.every(binding => binding.HostIp==="127.0.0.1" && binding.HostPort===url.port),
+  "Storage byte fixture requires the inspected loopback disposable gateway");
+  const client = createClient(url.origin,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
+    global:{fetch:(resource,init)=>fetch(resource,{...init,cache:"no-store",redirect:"error",signal:AbortSignal.timeout(5000)})}});
+  const bucket = `p1-storage-upgrade-${randomUUID()}`, path = `${randomUUID()}/upgrade-fixture.txt`;
+  const bytes = Buffer.from("Preserve preexisting private object bytes across every Registry migration.\n","utf8");
+  const created = await client.storage.createBucket(bucket,{public:false,fileSizeLimit:1024,allowedMimeTypes:["text/plain"]});
+  assert(!created.error,"Private Storage upgrade fixture bucket creation failed");
+  const uploaded = await client.storage.from(bucket).upload(path,bytes,{contentType:"text/plain",upsert:false,cacheControl:"0"});
+  assert(!uploaded.error,"Real Storage upgrade fixture upload failed");
+  const fixture = {client,bucket,path,digest:createHash("sha256").update(bytes).digest("hex"),size:bytes.length};
+  await assertStorageBytes(fixture);
+  return fixture;
+}
+async function assertStorageBytes(fixture) {
+  const downloaded = await fixture.client.storage.from(fixture.bucket).download(fixture.path);
+  assert(!downloaded.error && downloaded.data,"Preexisting private Storage object could not be downloaded");
+  const bytes = Buffer.from(await downloaded.data.arrayBuffer());
+  assert.equal(bytes.length,fixture.size,"Registry migration changed preexisting private object size");
+  assert.equal(createHash("sha256").update(bytes).digest("hex"),fixture.digest,"Registry migration changed preexisting private object bytes");
+}
 async function catalogSnapshot(db) {
   // Preserve existing ACLs, RLS/policies, constraints, types, routines and
   // triggers as well as legacy data when any Registry transaction fails.
@@ -213,6 +243,9 @@ try {
     await db.toolRun.create({ data: { userId, type: "SUMMARIZE", options: {}, outputText: "historical output" } });
     await db.memory.create({ data: { userId, content: "historical memory", category: "fixture", verificationMethod: "MANUAL_ENTRY", verifiedAt: new Date() } });
     await verifyMigrations(db, mainPrefix);
+    const storageFixture = await seedStorageBytes(), populatedStorage = await storageSnapshot(db);
+    assert(populatedStorage.objects.length>0 && populatedStorage.objects.some(object => object.row.bucket_id===storageFixture.bucket && object.row.name===storageFixture.path),
+      "Storage preservation proof requires a preexisting real object");
     const expected = [...mainPrefix];
     let seededB1 = false, seededB2a = false, seededB2b = false;
     for (const migration of registrySuffix) {
@@ -258,6 +291,7 @@ try {
         const previous = new Set(beforeStorage[kind].map(identity));
         assert.deepEqual(appliedStorage[kind].filter(row => previous.has(identity(row))),beforeStorage[kind],"Applied Registry migration changed preexisting Storage policy or trigger definitions");
       }
+      await assertStorageBytes(storageFixture);
       if (migration > lastB2aMigration) {
         const [legacy] = await db.$queryRaw`SELECT count(*)::int AS count FROM public.project_releases
           WHERE authorization_id IS NOT NULL OR published_by IS NOT NULL`;
@@ -266,6 +300,10 @@ try {
       console.info(`Registry incremental + injected transaction rollback passed: ${migration}`);
       console.info(`Preserved prefix data snapshot: ${createHash("sha256").update(JSON.stringify(before)).digest("hex")}`);
     }
+    const removed = await storageFixture.client.storage.from(storageFixture.bucket).remove([storageFixture.path]);
+    assert(!removed.error,"Private Storage upgrade fixture object cleanup failed");
+    const deleted = await storageFixture.client.storage.deleteBucket(storageFixture.bucket);
+    assert(!deleted.error,"Private Storage upgrade fixture bucket cleanup failed");
   } finally { await db.$disconnect(); }
   await reset();
   run([cli, "migrate", "deploy"]); run([cli, "migrate", "deploy"]);
