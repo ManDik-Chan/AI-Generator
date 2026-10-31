@@ -1,18 +1,20 @@
 // Registry migration proof. No .env, remote URLs or unlabelled containers.
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, relative, basename } from "node:path";
 import { createRequire } from "node:module";
 import { randomUUID, createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
 import { assertDisposableTarget, bindDisposableLoopback } from "./disposable-supabase.mjs";
 
 const root = process.cwd(), target = assertDisposableTarget();
 const name = "20261028135224_project_registry_foundation";
 const lastB1Migration = "20261030120001_registry_sealing_qualification";
 const lastB2aMigration = "20261030174407_registry_draft_review_commands";
+const lastB2bMigration = "20261031054426_registry_release_commands";
 const migrationsRoot = join(root, "prisma/migrations");
 const migrations = readdirSync(migrationsRoot, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
 const boundary = migrations.indexOf(name);
@@ -98,6 +100,82 @@ async function seedB2aProtocol(db) {
     VALUES(${fixture.review_id}::uuid,${fixture.project_id}::uuid,${fixture.owner_id}::uuid,'WITHDRAWN')`;
   console.info("Seeded B2-A action, immutable receipt and review invalidation before B2-B upgrade");
 }
+async function seedB2bProtocol(db) {
+  // Upgrade fixtures exercise the final B2-B schema with its SQL guards intact.
+  // They never provision a real operator or enable a publication service flag.
+  await db.$transaction(async tx => {
+    const [legacy] = await tx.$queryRaw`SELECT p.id,p.owner_id,m.subject_id AS reviewer_id,p.current_release_id
+      FROM public.projects p JOIN public.project_memberships m ON m.project_id=p.id AND m.subject_id<>p.owner_id
+      WHERE p.current_release_id IS NOT NULL ORDER BY p.id LIMIT 1`;
+    assert(legacy, "Legacy Release fixture required for B2-B upgrade proof");
+    for (const [subject,action] of [[legacy.owner_id,"REQUEST_RELEASE"],[legacy.owner_id,"WITHDRAW_RELEASE"],[legacy.reviewer_id,"APPROVE_RELEASE"]]) {
+      await tx.$executeRaw`INSERT INTO registry_private.operator_actions(subject_id,action,active,expires_at)
+        VALUES(${subject}::uuid,${action},true,clock_timestamp()+interval '1 hour')`;
+    }
+    const digest = "c".repeat(64), project = await tx.project.create({ data: { slug: `b2b-preserve-${randomUUID()}`, ownerId: legacy.owner_id } });
+    await tx.projectMembership.create({ data: { projectId: project.id, subjectId: legacy.reviewer_id, roles: ["REVIEWER"] } });
+    const draft = await tx.projectDraft.create({ data: { projectId: project.id, updatedBy: legacy.owner_id } });
+    const submitted = await tx.projectDraft.update({ where: { id: draft.id }, data: { state: "IN_REVIEW" } });
+    const current = await tx.project.findUniqueOrThrow({ where: { id: project.id } });
+    const review = await tx.publicationReview.create({ data: { projectId: project.id, draftId: draft.id, draftRevision: submitted.revision,
+      authzEpoch: current.authzEpoch, snapshotHash: digest, visibility: "PRIVATE", assetDigestSet: [], submitterId: legacy.owner_id,
+      policyRevision: 1, expiresAt: new Date(Date.now()+3600000) } });
+    await tx.publicationReview.update({ where: { id: review.id }, data: { decision: "APPROVED", reviewerId: legacy.reviewer_id, decidedAt: new Date() } });
+    const version = await tx.projectVersion.create({ data: { projectId: project.id, version: "1.0.0", snapshot: { manifest: { visibility: "PRIVATE" } },
+      contentHash: digest, reviewId: review.id } });
+    const [request] = await tx.$queryRaw`INSERT INTO registry_private.release_requests
+      (project_id,version_id,content_hash,visibility,asset_digest_set,authz_epoch,project_revision,policy_revision,intent,requester_id,expires_at)
+      VALUES(${project.id}::uuid,${version.id}::uuid,${digest},'PRIVATE','[]'::jsonb,${current.authzEpoch},${current.revision},1,'PUBLISH',
+        ${legacy.owner_id}::uuid,clock_timestamp()+interval '10 minutes') RETURNING id`;
+    await tx.$executeRaw`INSERT INTO registry_private.release_approvals(project_id,request_id,reviewer_id)
+      VALUES(${project.id}::uuid,${request.id}::uuid,${legacy.reviewer_id}::uuid)`;
+    await tx.$executeRaw`INSERT INTO registry_private.release_receipts(project_id,actor_id,idempotency_key,action,body_hash,authz_epoch,result)
+      VALUES(${project.id}::uuid,${legacy.owner_id}::uuid,'migration-preserve-b2b','REQUEST_RELEASE',${digest},${current.authzEpoch},'{"fixture":"preserve-b2b"}'::jsonb)`;
+    await tx.$executeRaw`INSERT INTO registry_private.release_withdrawals(release_id,project_id,actor_id)
+      VALUES(${legacy.current_release_id}::uuid,${legacy.id}::uuid,${legacy.owner_id}::uuid)`;
+    await tx.project.update({ where: { id: legacy.id }, data: { currentReleaseId: null, visibility: "PRIVATE" } });
+  });
+  console.info("Seeded B2-B request, independent approval, withdrawal and receipt before B3-A upgrade");
+}
+async function storageSnapshot(db) {
+  const buckets = await db.$queryRaw`SELECT id,to_jsonb(b) AS row FROM storage.buckets b ORDER BY id`;
+  const objects = await db.$queryRaw`SELECT id,to_jsonb(o) AS row FROM storage.objects o ORDER BY id`;
+  const policies = await db.$queryRaw`SELECT schemaname,tablename,policyname,roles::text[] AS roles,cmd,qual,with_check,permissive
+    FROM pg_policies WHERE schemaname='storage' ORDER BY tablename,policyname`;
+  const triggers = await db.$queryRaw`SELECT t.tgrelid::regclass::text AS relation,t.tgname,pg_get_triggerdef(t.oid) AS definition
+    FROM pg_trigger t JOIN pg_class c ON c.oid=t.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='storage' AND NOT t.tgisinternal ORDER BY relation,t.tgname`;
+  return { buckets,objects,policies,triggers };
+}
+async function seedStorageBytes() {
+  // Match the inspected disposable gateway before using even a test service
+  // key. Never send privileged credentials to an environment-supplied remote.
+  const url = new URL(process.env.SUPABASE_TEST_URL ?? ""), key = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
+  const gateway = JSON.parse(execFileSync("docker",["inspect",`supabase_kong_${target.project}`],{encoding:"utf8",windowsHide:true}))[0];
+  const bindings = gateway.HostConfig.PortBindings?.["8000/tcp"];
+  assert(key && url.protocol==="http:" && url.hostname==="127.0.0.1" && !url.username && !url.password
+    && gateway.Config.Labels?.["com.supabase.cli.project"]===target.project && gateway.State.Running
+    && bindings?.length && bindings.every(binding => binding.HostIp==="127.0.0.1" && binding.HostPort===url.port),
+  "Storage byte fixture requires the inspected loopback disposable gateway");
+  const client = createClient(url.origin,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
+    global:{fetch:(resource,init)=>fetch(resource,{...init,cache:"no-store",redirect:"error",signal:AbortSignal.timeout(5000)})}});
+  const bucket = `p1-storage-upgrade-${randomUUID()}`, path = `${randomUUID()}/upgrade-fixture.txt`;
+  const bytes = Buffer.from("Preserve preexisting private object bytes across every Registry migration.\n","utf8");
+  const created = await client.storage.createBucket(bucket,{public:false,fileSizeLimit:1024,allowedMimeTypes:["text/plain"]});
+  assert(!created.error,"Private Storage upgrade fixture bucket creation failed");
+  const uploaded = await client.storage.from(bucket).upload(path,bytes,{contentType:"text/plain",upsert:false,cacheControl:"0"});
+  assert(!uploaded.error,"Real Storage upgrade fixture upload failed");
+  const fixture = {client,bucket,path,digest:createHash("sha256").update(bytes).digest("hex"),size:bytes.length};
+  await assertStorageBytes(fixture);
+  return fixture;
+}
+async function assertStorageBytes(fixture) {
+  const downloaded = await fixture.client.storage.from(fixture.bucket).download(fixture.path);
+  assert(!downloaded.error && downloaded.data,"Preexisting private Storage object could not be downloaded");
+  const bytes = Buffer.from(await downloaded.data.arrayBuffer());
+  assert.equal(bytes.length,fixture.size,"Registry migration changed preexisting private object size");
+  assert.equal(createHash("sha256").update(bytes).digest("hex"),fixture.digest,"Registry migration changed preexisting private object bytes");
+}
 async function catalogSnapshot(db) {
   // Preserve existing ACLs, RLS/policies, constraints, types, routines and
   // triggers as well as legacy data when any Registry transaction fails.
@@ -165,8 +243,11 @@ try {
     await db.toolRun.create({ data: { userId, type: "SUMMARIZE", options: {}, outputText: "historical output" } });
     await db.memory.create({ data: { userId, content: "historical memory", category: "fixture", verificationMethod: "MANUAL_ENTRY", verifiedAt: new Date() } });
     await verifyMigrations(db, mainPrefix);
+    const storageFixture = await seedStorageBytes(), populatedStorage = await storageSnapshot(db);
+    assert(populatedStorage.objects.length>0 && populatedStorage.objects.some(object => object.row.bucket_id===storageFixture.bucket && object.row.name===storageFixture.path),
+      "Storage preservation proof requires a preexisting real object");
     const expected = [...mainPrefix];
-    let seededB1 = false, seededB2a = false;
+    let seededB1 = false, seededB2a = false, seededB2b = false;
     for (const migration of registrySuffix) {
       if (migration > lastB1Migration && !seededB1) {
         await seedB1Registry(db);
@@ -175,8 +256,12 @@ try {
       if (migration > lastB2aMigration && !seededB2a) {
         await seedB2aProtocol(db); seededB2a = true;
       }
+      if (migration > lastB2bMigration && !seededB2b) {
+        await seedB2bProtocol(db); seededB2b = true;
+      }
       const before = await snapshot(db);
       const beforeCatalog = await catalogSnapshot(db);
+      const beforeStorage = await storageSnapshot(db);
       const sql = readFileSync(join(migrationsRoot, migration, "migration.sql"), "utf8");
       assert(/^BEGIN;/m.test(sql) && /COMMIT;\s*$/.test(sql), "Registry migrations must be explicitly transactional");
       const failed = spawnSync("docker", ["exec", "-i", `supabase_db_${target.project}`, "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1"], {
@@ -184,13 +269,29 @@ try {
       });
       assert.notEqual(failed.status, 0); assert(failed.stderr.includes("division by zero"));
       assert.deepEqual(await catalogSnapshot(db), beforeCatalog, "Failed Registry migration changed schema or permissions");
+      assert.deepEqual(await storageSnapshot(db),beforeStorage,"Failed Registry migration changed Storage identities, policies or triggers");
       await assertPreservedData(db, before);
+      const afterStorage = await storageSnapshot(db);
+      for (const kind of ["buckets","objects"]) {
+        const previous = new Set(beforeStorage[kind].map(row => row.id));
+        assert.deepEqual(afterStorage[kind].filter(row => previous.has(row.id)),beforeStorage[kind],"Registry migration changed preexisting Storage identities");
+      }
       await verifyMigrations(db, expected);
       cpSync(join(migrationsRoot,migration), join(temporary,"prisma/migrations",migration), { recursive: true });
       run([cli, "migrate", "deploy", "--schema", schema]);
       expected.push(migration);
       await verifyMigrations(db, expected);
       await assertPreservedData(db, before);
+      const appliedStorage = await storageSnapshot(db);
+      for (const kind of ["buckets","objects"]) {
+        const previous = new Set(beforeStorage[kind].map(row => row.id));
+        assert.deepEqual(appliedStorage[kind].filter(row => previous.has(row.id)),beforeStorage[kind],"Applied Registry migration changed preexisting Storage identities");
+      }
+      for (const [kind,identity] of [["policies",row => `${row.tablename}.${row.policyname}`],["triggers",row => `${row.relation}.${row.tgname}`]]) {
+        const previous = new Set(beforeStorage[kind].map(identity));
+        assert.deepEqual(appliedStorage[kind].filter(row => previous.has(identity(row))),beforeStorage[kind],"Applied Registry migration changed preexisting Storage policy or trigger definitions");
+      }
+      await assertStorageBytes(storageFixture);
       if (migration > lastB2aMigration) {
         const [legacy] = await db.$queryRaw`SELECT count(*)::int AS count FROM public.project_releases
           WHERE authorization_id IS NOT NULL OR published_by IS NOT NULL`;
@@ -199,6 +300,10 @@ try {
       console.info(`Registry incremental + injected transaction rollback passed: ${migration}`);
       console.info(`Preserved prefix data snapshot: ${createHash("sha256").update(JSON.stringify(before)).digest("hex")}`);
     }
+    const removed = await storageFixture.client.storage.from(storageFixture.bucket).remove([storageFixture.path]);
+    assert(!removed.error,"Private Storage upgrade fixture object cleanup failed");
+    const deleted = await storageFixture.client.storage.deleteBucket(storageFixture.bucket);
+    assert(!deleted.error,"Private Storage upgrade fixture bucket cleanup failed");
   } finally { await db.$disconnect(); }
   await reset();
   run([cli, "migrate", "deploy"]); run([cli, "migrate", "deploy"]);
@@ -223,6 +328,19 @@ try {
       (SELECT count(*) FROM registry_private.release_withdrawals)+
       (SELECT count(*) FROM registry_private.release_receipts) AS count`;
     assert.equal(seedless.count, 0n, "Command tables must not provision privileges or records on install");
+    const [byteEvidence] = await clean.$queryRaw`SELECT count(*)::int AS count FROM pg_class
+      WHERE relnamespace='registry_private'::regnamespace AND relname IN ('asset_object_intents','asset_quarantine','asset_verifications') AND relrowsecurity
+        AND NOT has_table_privilege('anon',oid,'SELECT,INSERT,UPDATE,DELETE')
+        AND NOT has_table_privilege('authenticated',oid,'SELECT,INSERT,UPDATE,DELETE')
+        AND NOT has_table_privilege('service_role',oid,'SELECT,INSERT,UPDATE,DELETE')`;
+    assert.equal(byteEvidence.count,3,"Byte evidence and intent tables must have RLS and no client privileges");
+    const [noByteSeeds] = await clean.$queryRaw`SELECT (SELECT count(*) FROM registry_private.asset_object_intents)+(SELECT count(*) FROM registry_private.asset_quarantine)+
+      (SELECT count(*) FROM registry_private.asset_verifications) AS count`;
+    assert.equal(noByteSeeds.count,0n,"Install must not fabricate byte or scan evidence");
+    const registryBuckets = await clean.$queryRaw`SELECT id,public,file_size_limit FROM storage.buckets
+      WHERE id IN ('registry-quarantine-v1','registry-candidates-v1') ORDER BY id`;
+    assert.equal(registryBuckets.length,2);
+    assert(registryBuckets.every(bucket => !bucket.public && Number(bucket.file_size_limit)===2097152),"Registry buckets must be private and bounded");
     await verifyMigrations(clean, migrations);
     console.info(`Registry clean install + repeat deploy + eight RLS tables + all ${migrations.length} migration checksums passed`);
   } finally { await clean.$disconnect(); }
