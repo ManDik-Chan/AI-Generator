@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { type PrismaClient } from "@prisma/client";
 import { createIntegrationPrisma, integrationDatabaseEnabled } from "./database";
 import { createInternalRegistryProject } from "@/features/registry/internal";
+import { getRegistryReleaseHead, withdrawRegistryRelease } from "@/features/registry/release";
 
 const enabled = integrationDatabaseEnabled && Boolean(process.env.SUPABASE_TEST_SERVICE_ROLE_KEY);
 if (process.env.REQUIRE_SECURITY_TEST_DATABASE === "true" && !enabled) throw new Error("Real Registry JWT/database environment required");
@@ -39,6 +40,8 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
       actors.push({ id: made.data.user!.id, client: signed, token: session.data.session!.access_token });
     }
     await qualify(actors[0].id, true); await qualify(actors[2].id, true);
+    for (const action of ["READ_RELEASE", "WITHDRAW_RELEASE"]) await db.$executeRaw`INSERT INTO registry_private.operator_actions(subject_id,action,active,expires_at)
+      VALUES(${actors[0].id}::uuid,${action},true,clock_timestamp()+interval '1 hour')`;
     // Existing ADMIN is deliberately NOT an internal operator.
     await db.profile.update({ where: { id: actors[1].id }, data: { role: "ADMIN" } });
     p = await newProject(actors[0].id); other = await newProject(actors[2].id);
@@ -62,7 +65,13 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
       version = (await tx.projectVersion.create({ data: { projectId: p, version: "1.0.0", snapshot: {}, contentHash: hash, reviewId: review } })).id;
       await tx.projectDocumentation.create({ data: { projectId: p, versionId: version, title: "sealed", language: "en", assetId: asset, contentHash: hash } });
     });
-    release = (await db.projectRelease.create({ data: { projectId: p, versionId: version, visibilityAtApproval: "PRIVATE", contentHash: hash, publishedAt: new Date() } })).id;
+    // A preserved pre-B2-B historical row, deliberately without new release
+    // authorization. Only fixture setup may bypass the new insertion guards.
+    release = await db.$transaction(async tx => {
+      await tx.$executeRawUnsafe("SET LOCAL session_replication_role='replica'");
+      const row = await tx.projectRelease.create({ data: { projectId: p, versionId: version, visibilityAtApproval: "PRIVATE", contentHash: hash, publishedAt: new Date() } });
+      return row.id;
+    });
   }, 60000);
 
   afterAll(async () => {
@@ -72,6 +81,9 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
     if (db) {
       await db.$transaction(async tx => {
         await tx.$executeRawUnsafe("SET LOCAL session_replication_role='replica'");
+        for (const table of ["release_receipts", "release_withdrawals", "release_approvals", "release_requests"])
+          await tx.$executeRawUnsafe(`DELETE FROM registry_private.${table} WHERE project_id=ANY($1::uuid[])`, projects);
+        await tx.$executeRaw`DELETE FROM registry_private.operator_actions WHERE subject_id=ANY(${actors.map(a => a.id)}::uuid[])`;
         for (const table of [...tables].reverse()) {
           const column = table === "projects" ? "id" : "project_id";
           await tx.$executeRawUnsafe(`DELETE FROM public.${table} WHERE ${column}=ANY($1::uuid[])`, projects);
@@ -100,7 +112,7 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
       AND c.contype='f' AND cardinality(c.conkey)=2`, tables);
     // current release + review/draft + version/review + release/version +
     // documentation's draft, version and asset references.
-    expect(constraints).toHaveLength(7);
+    expect(constraints).toHaveLength(8);
     expect(constraints.every(c => c.convalidated)).toBe(true);
   });
   it("keeps qualification data and every privileged helper private with one read-only definer", async () => {
@@ -260,10 +272,18 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
     await reject(() => db.projectDocumentation.update({ where: { id: doc.id }, data: { title: "tampered" } }));
     await reject(() => db.projectDocumentation.create({ data: { projectId: p, versionId: version, title: "late addition", language: "en", assetId: asset, contentHash: hash } }));
     await reject(() => db.projectRelease.update({ where: { id: release }, data: { contentHash: "b".repeat(64) } }));
-    await db.project.update({ where: { id: p }, data: { currentReleaseId: release } });
+    // Historical records cannot be selected as current without new approval.
+    await reject(() => db.project.update({ where: { id: p }, data: { currentReleaseId: release } }));
     await reject(() => db.projectRelease.update({ where: { id: release }, data: { state: "WITHDRAWN", withdrawnAt: new Date() } }));
-    await db.project.update({ where: { id: p }, data: { currentReleaseId: null } });
-    await db.projectRelease.update({ where: { id: release }, data: { state: "WITHDRAWN", withdrawnAt: new Date() } });
+    const immutable = await db.projectRelease.findUniqueOrThrow({ where: { id: release } });
+    vi.stubEnv("REGISTRY_INTERNAL_ACCESS_ENABLED", "true"); vi.stubEnv("REGISTRY_RELEASE_COMMANDS_ENABLED", "true");
+    try {
+      const access = { projectId: p, accessToken: actors[0].token }, head = await getRegistryReleaseHead(access);
+      await withdrawRegistryRelease({ ...access, ifMatch: head.etag, idempotencyKey: randomUUID(), input: { releaseId: release } });
+    } finally { vi.unstubAllEnvs(); }
+    expect(await db.projectRelease.findUniqueOrThrow({ where: { id: release } })).toEqual(immutable);
+    const [fact] = await db.$queryRaw<{ count: number }[]>`SELECT count(*)::int AS count FROM registry_private.release_withdrawals WHERE release_id=${release}::uuid`;
+    expect(fact.count).toBe(1);
     await reject(() => db.projectRelease.update({ where: { id: release }, data: { state: "PUBLISHED", withdrawnAt: null } }));
     await reject(() => db.project.update({ where: { id: p }, data: { currentReleaseId: release } }));
   });
@@ -302,7 +322,7 @@ describe.skipIf(!enabled)("Registry PostgreSQL constraints and real Auth/PostgRE
         expiredRole === "reviewer" ? "Current approved review required" : "Current sealing qualifications required",
       );
       await expect(db.projectRelease.create({ data: { projectId, versionId: sealed.id, contentHash: hash,
-        visibilityAtApproval: "PRIVATE", publishedAt: new Date() } })).rejects.toThrow("Current sealing qualifications required");
+        visibilityAtApproval: "PRIVATE", publishedAt: new Date() } })).rejects.toThrow("Fresh exact release approval and publisher required");
     } finally {
       await db.$executeRaw`UPDATE registry_private.internal_operators SET expires_at=statement_timestamp()+interval '1 hour' WHERE subject_id=${subject}::uuid`;
     }

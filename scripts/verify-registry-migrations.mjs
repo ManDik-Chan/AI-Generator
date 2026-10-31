@@ -12,6 +12,7 @@ import { assertDisposableTarget, bindDisposableLoopback } from "./disposable-sup
 const root = process.cwd(), target = assertDisposableTarget();
 const name = "20261028135224_project_registry_foundation";
 const lastB1Migration = "20261030120001_registry_sealing_qualification";
+const lastB2aMigration = "20261030174407_registry_draft_review_commands";
 const migrationsRoot = join(root, "prisma/migrations");
 const migrations = readdirSync(migrationsRoot, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => entry.name).sort();
 const boundary = migrations.indexOf(name);
@@ -36,7 +37,10 @@ async function snapshot(db) {
   for (const { schemaname,tablename } of tables) {
     assert(/^[a-z_]+$/.test(schemaname) && /^[a-z_]+$/.test(tablename));
     const relation = `${schemaname}.${tablename}`;
-    data.push(...await db.$queryRawUnsafe(`SELECT '${relation}' AS name,count(*)::int AS count,md5(string_agg(to_jsonb(t)::text,E'\n' ORDER BY to_jsonb(t)::text)) AS digest FROM ${relation} t`));
+    // Additive B2-B provenance columns must not change any preexisting bytes.
+    // Compare every old column, then assert those new columns stay NULL below.
+    const row = relation === "public.project_releases" ? "(to_jsonb(t)-'authorization_id'-'published_by')" : "to_jsonb(t)";
+    data.push(...await db.$queryRawUnsafe(`SELECT '${relation}' AS name,count(*)::int AS count,md5(string_agg(${row}::text,E'\n' ORDER BY ${row}::text)) AS digest FROM ${relation} t`));
   }
   return data;
 }
@@ -76,10 +80,23 @@ async function seedB1Registry(db) {
     await tx.projectDocumentation.create({ data: { projectId: project.id, versionId: version.id, title: "preserve sealed document",
       language: "en", assetId: asset.id, contentHash: digest } });
     const release = await tx.projectRelease.create({ data: { projectId: project.id, versionId: version.id, contentHash: digest,
-      visibilityAtApproval: "PRIVATE", publishedAt: new Date() } });
+      visibilityAtApproval: "PRIVATE", publishedAt: new Date() }, select: { id: true } });
     await tx.project.update({ where: { id: project.id }, data: { currentReleaseId: release.id } });
   });
   console.info("Seeded all eight B1 entities plus qualification/Auth subjects before the B2 upgrade");
+}
+async function seedB2aProtocol(db) {
+  const [fixture] = await db.$queryRaw`SELECT p.id AS project_id,p.owner_id,d.id AS draft_id,d.revision,r.id AS review_id,p.authz_epoch
+    FROM public.projects p JOIN public.project_drafts d ON d.project_id=p.id
+      JOIN public.publication_reviews r ON r.draft_id=d.id ORDER BY p.id LIMIT 1`;
+  assert(fixture, "Preserved B1 fixture required for B2-A upgrade proof");
+  await db.$executeRaw`INSERT INTO registry_private.operator_actions(subject_id,action,active,expires_at)
+    VALUES(${fixture.owner_id}::uuid,'READ_DRAFT',true,clock_timestamp()+interval '1 hour')`;
+  await db.$executeRaw`INSERT INTO registry_private.command_receipts(project_id,actor_id,idempotency_key,action,body_hash,expected_revision,authz_epoch,result)
+    VALUES(${fixture.project_id}::uuid,${fixture.owner_id}::uuid,'migration-preserve-b2a','EDIT_DRAFT',${"b".repeat(64)},${fixture.revision},${fixture.authz_epoch},'{"fixture":"preserve-b2a"}'::jsonb)`;
+  await db.$executeRaw`INSERT INTO registry_private.review_invalidations(review_id,project_id,actor_id,reason)
+    VALUES(${fixture.review_id}::uuid,${fixture.project_id}::uuid,${fixture.owner_id}::uuid,'WITHDRAWN')`;
+  console.info("Seeded B2-A action, immutable receipt and review invalidation before B2-B upgrade");
 }
 async function catalogSnapshot(db) {
   // Preserve existing ACLs, RLS/policies, constraints, types, routines and
@@ -149,11 +166,14 @@ try {
     await db.memory.create({ data: { userId, content: "historical memory", category: "fixture", verificationMethod: "MANUAL_ENTRY", verifiedAt: new Date() } });
     await verifyMigrations(db, mainPrefix);
     const expected = [...mainPrefix];
-    let seededB1 = false;
+    let seededB1 = false, seededB2a = false;
     for (const migration of registrySuffix) {
       if (migration > lastB1Migration && !seededB1) {
         await seedB1Registry(db);
         seededB1 = true;
+      }
+      if (migration > lastB2aMigration && !seededB2a) {
+        await seedB2aProtocol(db); seededB2a = true;
       }
       const before = await snapshot(db);
       const beforeCatalog = await catalogSnapshot(db);
@@ -171,6 +191,11 @@ try {
       expected.push(migration);
       await verifyMigrations(db, expected);
       await assertPreservedData(db, before);
+      if (migration > lastB2aMigration) {
+        const [legacy] = await db.$queryRaw`SELECT count(*)::int AS count FROM public.project_releases
+          WHERE authorization_id IS NOT NULL OR published_by IS NOT NULL`;
+        assert.equal(legacy.count,0,"B2-B must not fabricate fresh authorization for legacy Release rows");
+      }
       console.info(`Registry incremental + injected transaction rollback passed: ${migration}`);
       console.info(`Preserved prefix data snapshot: ${createHash("sha256").update(JSON.stringify(before)).digest("hex")}`);
     }
@@ -184,15 +209,19 @@ try {
     assert.equal(row.count, 8);
     const [privateTables] = await clean.$queryRaw`SELECT count(*)::int AS count FROM pg_class
       WHERE relnamespace='registry_private'::regnamespace
-        AND relname IN ('operator_actions','command_receipts','review_invalidations') AND relrowsecurity
+        AND relname IN ('operator_actions','command_receipts','review_invalidations','release_requests','release_approvals','release_withdrawals','release_receipts') AND relrowsecurity
         AND NOT has_table_privilege('anon',oid,'SELECT,INSERT,UPDATE,DELETE')
         AND NOT has_table_privilege('authenticated',oid,'SELECT,INSERT,UPDATE,DELETE')
         AND NOT has_table_privilege('service_role',oid,'SELECT,INSERT,UPDATE,DELETE')`;
-    assert.equal(privateTables.count, 3, "Private command tables must have RLS and no client privileges");
+    assert.equal(privateTables.count, 7, "Private command tables must have RLS and no client privileges");
     const [seedless] = await clean.$queryRaw`SELECT
       (SELECT count(*) FROM registry_private.operator_actions)+
       (SELECT count(*) FROM registry_private.command_receipts)+
-      (SELECT count(*) FROM registry_private.review_invalidations) AS count`;
+      (SELECT count(*) FROM registry_private.review_invalidations)+
+      (SELECT count(*) FROM registry_private.release_requests)+
+      (SELECT count(*) FROM registry_private.release_approvals)+
+      (SELECT count(*) FROM registry_private.release_withdrawals)+
+      (SELECT count(*) FROM registry_private.release_receipts) AS count`;
     assert.equal(seedless.count, 0n, "Command tables must not provision privileges or records on install");
     await verifyMigrations(clean, migrations);
     console.info(`Registry clean install + repeat deploy + eight RLS tables + all ${migrations.length} migration checksums passed`);

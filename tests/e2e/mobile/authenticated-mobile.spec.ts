@@ -61,7 +61,10 @@ test.describe("authenticated mobile shell", () => {
     const composer = page.getByLabel("消息内容");
     await composer.fill("第一行\n第二行\n第三行\n第四行");
     await expect(composer).toBeInViewport();
-    expect(await composer.evaluate((element) => element.getBoundingClientRect().height)).toBeGreaterThan(44);
+    await expect.poll(
+      () => composer.evaluate((element) => element.getBoundingClientRect().height),
+      { timeout: 5_000 },
+    ).toBeGreaterThan(44);
     await page.evaluate(() => window.dispatchEvent(new Event("focus")));
     await expectNoHorizontalOverflow(page);
   });

@@ -800,6 +800,10 @@ model ProjectRelease {
   state ProjectReleaseState @default(PUBLISHED)
   publishedAt DateTime @map("published_at") @db.Timestamptz(6)
   withdrawnAt DateTime? @map("withdrawn_at") @db.Timestamptz(6)
+  // Private release-approval and auth.users foreign keys are maintained in SQL.
+  // NULL is reserved for pre-B2-B history; INSERT guards require both values.
+  authorizationId String? @map("authorization_id") @db.Uuid
+  publishedBy String? @map("published_by") @db.Uuid
   project Project @relation("ProjectReleases", fields: [projectId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   version ProjectVersion @relation(fields: [versionId, projectId], references: [id, projectId], onDelete: Restrict, onUpdate: Restrict)
   currentFor Project[] @relation("CurrentRelease")

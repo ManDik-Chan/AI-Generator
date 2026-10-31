@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 
 const port = Number(process.env.MOCK_AI_PORT || 4319);
+const cancellableResponses = new Map();
 
 function sse(response, content) {
   response.writeHead(200, {
@@ -36,6 +37,37 @@ function slowSse(response) {
     })}\n\n`);
     response.end("data: [DONE]\n\n");
   }, 10_000);
+}
+
+function cancellableSse(response) {
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  });
+  response.flushHeaders();
+  const delta = (content) => response.write(`data: ${JSON.stringify({
+    choices: [{ delta: { content }, finish_reason: null }],
+  })}\n\n`);
+  delta("E2E cancellable response started");
+  // Keep producing chunks so WebKit can consume the app's queued turn event.
+  // This fixture never races cancellation against a timed successful finish.
+  const heartbeat = setInterval(() => {
+    if (!response.destroyed && !response.writableEnded) delta(".");
+  }, 100);
+  // Failed tests must not leave an indefinitely pending provider connection.
+  const deadline = setTimeout(() => response.destroy(), 30_000);
+  const cleanup = () => {
+    cancellableResponses.delete(response);
+    clearInterval(heartbeat);
+    clearTimeout(deadline);
+  };
+  response.once("close", cleanup);
+  response.once("error", () => {
+    cleanup();
+    response.destroy();
+  });
+  cancellableResponses.set(response, cleanup);
 }
 
 function decodeMemoryXml(value) {
@@ -146,6 +178,10 @@ const server = createServer((request, response) => {
         }));
         return;
       }
+      if (!isExtractor && currentMessage.includes("E2E_PROVIDER_CANCELLABLE")) {
+        cancellableSse(response);
+        return;
+      }
       if (!isExtractor && currentMessage.includes("E2E_PROVIDER_SLOW")) {
         slowSse(response);
         return;
@@ -174,5 +210,11 @@ server.listen(port, "127.0.0.1", () => {
 });
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
-  process.on(signal, () => server.close(() => process.exit(0)));
+  process.on(signal, () => {
+    for (const [response, cleanup] of cancellableResponses) {
+      cleanup();
+      response.destroy();
+    }
+    server.close(() => process.exit(0));
+  });
 }
