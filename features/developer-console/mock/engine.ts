@@ -2,10 +2,15 @@
  * MOCK Registry engine. Pure and synchronous: (state, persona, command, now) → (state, result).
  *
  * It reproduces the observable rules of the merged B2-A library (features/registry/
- * protocol.ts) — check order, ETags, CAS, idempotency receipts, independent review,
- * freshness, error codes and HTTP statuses — so the console can show real protocol
- * behaviour before any HTTP route exists. Release commands follow the unmerged B2-B draft
- * contract and START_DRAFT has no contract at all; both are labelled in the UI.
+ * protocol.ts) and the merged B2-B release library (features/registry/release.ts and the
+ * release migration's project trigger) — check order, ETags, CAS, idempotency receipts,
+ * independent review and approval, freshness, revision/epoch effects, error codes and HTTP
+ * statuses — so the console can show real protocol behaviour before any HTTP route exists.
+ * START_DRAFT has no contract at all and is labelled as a gap in the UI.
+ *
+ * Known simplification: the real operator qualification is granted per action
+ * (registry_private.operator_actions); the mock has one switch per persona, which models
+ * "all actions granted" or "all revoked".
  *
  * It is NOT a security boundary and NOT a source of truth: identities are personas picked
  * in the UI, nothing is persisted, and a failed command simply returns the previous state
@@ -43,14 +48,18 @@ export interface StoredReview {
   submitterId: string; reviewerId: string | null; decision: "PENDING" | "APPROVED" | "REJECTED"; decidedAt: number | null;
   policyRevision: number; expiresAt: number; createdAt: number;
 }
+/** Binds the same head facts as registry_private.release_requests: revision, epoch and current pointer. */
 export interface StoredRequest {
   id: string; versionId: string; contentHash: string; intent: "PUBLISH" | "ROLLBACK"; targetReleaseId: string | null;
-  visibility: ConsoleVisibility; requesterId: string; expiresAt: number; headRevision: number; createdAt: number;
+  visibility: ConsoleVisibility; requesterId: string; expiresAt: number; headRevision: number; authzEpoch: number;
+  currentReleaseId: string | null; createdAt: number;
   approval: { id: string; reviewerId: string; at: number } | null; consumed: boolean;
 }
 export interface StoredRelease {
   id: string; versionId: string; contentHash: string; visibilityAtApproval: ConsoleVisibility; publishedAt: number;
   withdrawnAt: number | null; intent: "PUBLISH" | "ROLLBACK";
+  /** The release request whose approval authorized it (project_releases.authorization_id); null for seeded history. */
+  requestId: string | null;
 }
 interface Receipt { action: ConsoleAction; bodyHash: string; authzEpoch: number; response: Omit<CommandResponse<unknown>, "replayed"> }
 export interface StoredProject {
@@ -128,18 +137,23 @@ export function payloadIssues(payload: DraftPayload, project: { id: string; slug
   return issues;
 }
 
-function checkInput(command: ConsoleCommand, project: StoredProject) {
+/**
+ * Strict input shape. Like the real libraries (parse(inputSchema) runs before authenticate),
+ * this runs before any access gate, so malformed input is INVALID_INPUT for everyone.
+ */
+function checkShape(command: ConsoleCommand) {
   const input: unknown = command.input;
   const ok = (() => {
     try {
     switch (command.action) {
-      case "EDIT_DRAFT": return exact(input, ["manifest", "presentation", "documentation"]) && payloadIssues(command.input, project).length === 0;
+      case "EDIT_DRAFT": return exact(input, ["manifest", "presentation", "documentation"]);
       case "SUBMIT_REVIEW": return exact(input, ["expectedContentHash"]) && hash(input.expectedContentHash);
       case "WITHDRAW_REVIEW": return exact(input, ["reviewId"]) && id(input.reviewId);
       case "DECIDE_REVIEW": return exact(input, ["reviewId", "decision", "expectedContentHash"]) && id(input.reviewId) && hash(input.expectedContentHash) && ["APPROVED", "REJECTED"].includes(input.decision as string);
       case "SEAL_VERSION": return exact(input, ["reviewId", "expectedContentHash"]) && id(input.reviewId) && hash(input.expectedContentHash);
       case "REQUEST_RELEASE": return exact(input, ["versionId", "expectedContentHash", "intent"], ["targetReleaseId"]) && id(input.versionId) && hash(input.expectedContentHash)
-        && ["PUBLISH", "ROLLBACK"].includes(input.intent as string) && (input.targetReleaseId === undefined || id(input.targetReleaseId));
+        && ["PUBLISH", "ROLLBACK"].includes(input.intent as string) && (input.targetReleaseId === undefined || id(input.targetReleaseId))
+        && (input.intent === "ROLLBACK") === (input.targetReleaseId !== undefined); // release.ts requestInput.refine
       case "APPROVE_RELEASE": return exact(input, ["requestId"]) && id(input.requestId);
       case "PUBLISH_RELEASE":
       case "ROLLBACK_RELEASE": return exact(input, ["approvalId"]) && id(input.approvalId);
@@ -151,6 +165,14 @@ function checkInput(command: ConsoleCommand, project: StoredProject) {
     }
   })();
   if (!ok) fail("INVALID_INPUT", 422);
+}
+
+/** Payload checks that need the project's identity; these run inside the gated command. */
+function checkPayload(command: ConsoleCommand, project: StoredProject) {
+  if (command.action !== "EDIT_DRAFT") return;
+  let issues: string[];
+  try { issues = payloadIssues(command.input, project); } catch { issues = ["invalid"]; }
+  if (issues.length) fail("INVALID_INPUT", 422);
 }
 
 /* ---------------- freshness ---------------- */
@@ -178,10 +200,27 @@ function requireFreshReview(state: MockState, project: StoredProject, draft: Sto
   if (review.contentHash !== expected) fail("HASH_MISMATCH");
 }
 
-function requestProblem(state: MockState, project: StoredProject, request: StoredRequest, now: number): boolean {
-  return request.expiresAt <= now || request.headRevision !== project.revision || !holds(state, project, request.requesterId, "REQUEST_RELEASE")
-    || (request.approval !== null && !holds(state, project, request.approval.reviewerId, "APPROVE_RELEASE"));
+/**
+ * release.ts freshness(): expiry, policy and participants always; the bound head (revision,
+ * epoch, current pointer) unless the request was already consumed by its own publication.
+ */
+function requestProblem(state: MockState, project: StoredProject, request: StoredRequest, now: number, { consumed = false, withApproval = true } = {}): boolean {
+  if (request.expiresAt <= now || !holds(state, project, request.requesterId, "REQUEST_RELEASE")) return true;
+  if (!consumed && (request.headRevision !== project.revision || request.authzEpoch !== project.authzEpoch || request.currentReleaseId !== project.currentReleaseId)) return true;
+  if (withApproval && request.approval !== null && (request.approval.reviewerId === request.requesterId || !holds(state, project, request.approval.reviewerId, "APPROVE_RELEASE"))) return true;
+  const version = project.versions.find((item) => item.id === request.versionId);
+  if (!version || version.contentHash !== request.contentHash || version.snapshot.manifest.visibility !== request.visibility) return true;
+  if (request.intent === "ROLLBACK") {
+    const target = project.releases.find((item) => item.id === request.targetReleaseId);
+    if (!target || target.versionId !== request.versionId || target.contentHash !== request.contentHash || target.visibilityAtApproval !== request.visibility
+      || (!consumed && target.id === project.currentReleaseId)) return true;
+  }
+  return false;
 }
+
+/** Command results have the shape of release.ts Response.result. */
+const releaseResult = (project: StoredProject, id: string, versionId: string, state: "PENDING" | "APPROVED" | "PUBLISHED" | "WITHDRAWN") =>
+  ({ id, projectId: project.id, versionId, state });
 
 /* ---------------- DTO projection ---------------- */
 
@@ -316,60 +355,61 @@ function releaseWork(state: MockState, project: StoredProject, personaId: string
       const { versionId, expectedContentHash, intent, targetReleaseId } = command.input;
       const version = project.versions.find((item) => item.id === versionId) ?? fail("NOT_FOUND", 404);
       if (contentHash(version.snapshot) !== version.contentHash || expectedContentHash !== version.contentHash) fail("HASH_MISMATCH");
+      // B2-B allows any visibility, PRIVATE included: the request binds the manifest's target
+      // visibility, and a PRIVATE release simply has no public projection.
       const visibility = version.snapshot.manifest.visibility;
-      // A PRIVATE manifest has no public projection, so there is nothing to release.
-      if (visibility === "PRIVATE") fail("APPROVAL_INVALID");
       if (intent === "ROLLBACK") {
         const target = project.releases.find((item) => item.id === targetReleaseId) ?? fail("NOT_FOUND", 404);
         if (target.id === project.currentReleaseId || target.versionId !== version.id) fail("APPROVAL_INVALID");
-      } else if (targetReleaseId) fail("INVALID_INPUT", 422);
+      }
       const request: StoredRequest = {
         id: nextId(state, "release-request"), versionId, contentHash: version.contentHash, intent, targetReleaseId: targetReleaseId ?? null,
-        visibility, requesterId: personaId, expiresAt: now + RELEASE_REQUEST_TTL_MS, headRevision: project.revision, createdAt: now,
-        approval: null, consumed: false,
+        visibility, requesterId: personaId, expiresAt: now + RELEASE_REQUEST_TTL_MS, headRevision: project.revision,
+        authzEpoch: project.authzEpoch, currentReleaseId: project.currentReleaseId, createdAt: now, approval: null, consumed: false,
       };
       project.requests.push(request);
-      return { result: requestDTO(project, request), etag: releaseETag(project) };
+      // Creating a request does not move the project revision.
+      return { result: releaseResult(project, request.id, versionId, "PENDING"), etag: releaseETag(project) };
     }
     case "APPROVE_RELEASE": {
       const request = project.requests.find((item) => item.id === command.input.requestId) ?? fail("NOT_FOUND", 404);
       if (request.requesterId === personaId) fail("FORBIDDEN", 403);
-      if (request.approval || request.consumed) fail("CONFLICT");
-      if (requestProblem(state, project, request, now)) fail("APPROVAL_INVALID");
+      // release.ts runs freshness before the insert; a second approval then hits the UNIQUE(request_id) index → CONFLICT.
+      if (requestProblem(state, project, request, now, { withApproval: false })) fail("APPROVAL_INVALID");
+      if (request.approval) fail("CONFLICT");
       request.approval = { id: nextId(state, "release-approval"), reviewerId: personaId, at: now };
-      return { result: requestDTO(project, request), etag: releaseETag(project) };
+      return { result: releaseResult(project, request.approval.id, request.versionId, "APPROVED"), etag: releaseETag(project) };
     }
     case "PUBLISH_RELEASE":
     case "ROLLBACK_RELEASE": {
       const request = project.requests.find((item) => item.approval?.id === command.input.approvalId) ?? fail("NOT_FOUND", 404);
       const intent = command.action === "ROLLBACK_RELEASE" ? "ROLLBACK" : "PUBLISH";
       if (request.intent !== intent || request.requesterId !== personaId) fail("APPROVAL_INVALID");
-      if (request.consumed) fail("CONFLICT");
+      // A consumed approval is already stale: its publication moved the project revision.
       if (requestProblem(state, project, request, now)) fail("APPROVAL_INVALID");
-      const version = project.versions.find((item) => item.id === request.versionId) ?? fail("NOT_FOUND", 404);
-      if (contentHash(version.snapshot) !== request.contentHash) fail("HASH_MISMATCH");
-      if (intent === "ROLLBACK" && (!request.targetReleaseId || request.targetReleaseId === project.currentReleaseId)) fail("APPROVAL_INVALID");
+      if (request.consumed) fail("CONFLICT");
       const release: StoredRelease = {
-        id: nextId(state, "release"), versionId: version.id, contentHash: request.contentHash, visibilityAtApproval: request.visibility,
-        publishedAt: now, withdrawnAt: null, intent,
+        id: nextId(state, "release"), versionId: request.versionId, contentHash: request.contentHash, visibilityAtApproval: request.visibility,
+        publishedAt: now, withdrawnAt: null, intent, requestId: request.id,
       };
       project.releases.push(release);
       request.consumed = true;
+      // guard_project: every UPDATE advances revision; a visibility change also advances the epoch.
       project.currentReleaseId = release.id;
       if (project.visibility !== request.visibility) { project.visibility = request.visibility; project.authzEpoch += 1; }
       project.revision += 1;
-      return { result: releaseDTO(project, release), etag: releaseETag(project) };
+      return { result: releaseResult(project, release.id, release.versionId, "PUBLISHED"), etag: releaseETag(project) };
     }
     case "WITHDRAW_RELEASE": {
       const release = project.releases.find((item) => item.id === command.input.releaseId) ?? fail("NOT_FOUND", 404);
       if (release.withdrawnAt !== null) fail("CONFLICT");
       release.withdrawnAt = now;
-      if (project.currentReleaseId === release.id) {
-        project.currentReleaseId = null;
-        if (project.visibility !== "PRIVATE") { project.visibility = "PRIVATE"; project.authzEpoch += 1; }
-      }
+      // release.ts advances the epoch for every withdrawal, historical ones included, so no
+      // approval survives a change to the release history it was issued against.
+      if (project.currentReleaseId === release.id) { project.currentReleaseId = null; project.visibility = "PRIVATE"; }
+      project.authzEpoch += 1;
       project.revision += 1;
-      return { result: releaseDTO(project, release), etag: releaseETag(project) };
+      return { result: releaseResult(project, release.id, release.versionId, "WITHDRAWN"), etag: releaseETag(project) };
     }
     default:
       return fail("INVALID_INPUT", 422);
@@ -384,13 +424,21 @@ function replay(state: MockState, project: StoredProject, receipt: Receipt, acti
     const draft = review && project.drafts.find((item) => item.id === review.draftId);
     if (!review || !draft || reviewProblem(state, project, draft, review, now, review.decision !== "PENDING")) fail("REPLAY_STALE");
   }
-  if (action === "REQUEST_RELEASE" || action === "APPROVE_RELEASE") {
+  if (action === "REQUEST_RELEASE") {
     const request = project.requests.find((item) => item.id === result?.id);
+    if (!request || requestProblem(state, project, request, now, { withApproval: false })) fail("REPLAY_STALE");
+  }
+  if (action === "APPROVE_RELEASE") {
+    const request = project.requests.find((item) => item.approval?.id === result?.id);
     if (!request || requestProblem(state, project, request, now)) fail("REPLAY_STALE");
   }
   if (action === "PUBLISH_RELEASE" || action === "ROLLBACK_RELEASE") {
+    // Only the still-current, unwithdrawn release replays, and only while its request is
+    // unexpired and both participants still hold their authority (consumed freshness).
     const release = project.releases.find((item) => item.id === result?.id);
-    if (!release || release.withdrawnAt !== null || project.currentReleaseId !== release.id) fail("REPLAY_STALE");
+    const request = release && project.requests.find((item) => item.id === release.requestId);
+    if (!release || release.withdrawnAt !== null || project.currentReleaseId !== release.id || !request
+      || requestProblem(state, project, request, now, { consumed: true })) fail("REPLAY_STALE");
   }
   return { ...clone(receipt.response), replayed: true };
 }
@@ -400,13 +448,14 @@ function run(state: MockState, personaId: string, command: ConsoleCommand, now: 
   const release = isReleaseAction(command.action);
   const releaseExpected = release ? releasePrecondition(command.ifMatch, command.projectId) : null;
   const draftExpected = release ? null : draftPrecondition(command.ifMatch);
+  checkShape(command);
   if (!(personaId in state.qualified)) fail("AUTH_REQUIRED", 401);
   // Gate 2: the separately granted internal operator qualification.
   if (!state.qualified[personaId]) fail("FORBIDDEN", 403);
   const project = state.projects.find((item) => item.id === command.projectId) ?? fail("NOT_FOUND", 404);
   // Gate 3: a member without one of the action's roles cannot tell the project exists.
   if (!rolesAllow(project.members[personaId] ?? [], command.action)) fail("NOT_FOUND", 404);
-  checkInput(command, project);
+  checkPayload(command, project);
 
   const bodyHash = contentHash({ action: command.action, projectId: command.projectId, ifMatch: command.ifMatch, input: command.input });
   const key = `${personaId}|${command.idempotencyKey}`;
@@ -442,11 +491,15 @@ export function execute(input: MockState, personaId: string, command: ConsoleCom
 
 /* ---------------- environment events (not commands) ---------------- */
 
-/** Revoking or restoring an operator qualification advances the epoch of every project the persona belongs to (B1 guard_operator). */
+/**
+ * Revoking or restoring an operator qualification advances the epoch of every project the
+ * persona belongs to (B1 guard_operator). That is an UPDATE of the project row, so
+ * guard_project also advances its revision and every release head ETag goes stale.
+ */
 export function toggleQualification(input: MockState, personaId: string): MockState {
   const state = clone(input);
   state.qualified[personaId] = !state.qualified[personaId];
-  for (const project of state.projects) if (project.members[personaId]) project.authzEpoch += 1;
+  for (const project of state.projects) if (project.members[personaId]) { project.authzEpoch += 1; project.revision += 1; }
   return state;
 }
 

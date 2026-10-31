@@ -103,8 +103,8 @@ export function AccessView({ base, connectionsHref }: { base: string; connection
       </section>
 
       <section aria-labelledby="ac-visibility" className="mt-20">
-        <SectionHead id="ac-visibility" meta={<ToneBadge tone="warning">暂定契约</ToneBadge>}>可见性与公开投影</SectionHead>
-        <DemoNotice className="mb-5" label="尚未开放">公开读取目前对所有输入统一返回 NOT_FOUND；探索目录仍使用示例数据。下表是发布协议草案对未来公开读取的要求：任何检查失败一律不分发，也不会回退到上一个版本或草稿。</DemoNotice>
+        <SectionHead id="ac-visibility" meta={<ToneBadge tone="success">已合并契约</ToneBadge>}>可见性与公开投影</SectionHead>
+        <DemoNotice className="mb-5" label="尚未开放">公开读取目前对所有输入统一返回 NOT_FOUND；探索目录仍使用示例数据。下表是已合并的发布协议（P1-B2-B）对未来公开读取的要求：任何检查失败一律不分发，也不会回退到上一个版本或草稿。</DemoNotice>
         <div className="scroll-x">
           <table className="w-full min-w-[40rem] border-collapse text-left text-[.8125rem]">
             <thead>

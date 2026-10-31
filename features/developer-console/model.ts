@@ -12,6 +12,7 @@
  */
 import type { DraftDTO, DraftPayload, VersionDTO } from "@/features/registry/contracts";
 import type { CommandResponse } from "@/features/registry/protocol";
+import type { Action as RegistryReleaseAction } from "@/features/registry/release-context";
 
 export type { CommandResponse, DraftDTO, DraftPayload, VersionDTO };
 
@@ -21,8 +22,8 @@ export type DraftState = DraftDTO["state"];
 
 /** Actions of the merged B2-A protocol (features/registry/protocol.ts). */
 export type DraftAction = "READ_DRAFT" | "EDIT_DRAFT" | "SUBMIT_REVIEW" | "WITHDRAW_REVIEW" | "DECIDE_REVIEW" | "SEAL_VERSION";
-/** Release actions. PROVISIONAL: P1-B2-B is not merged; names follow its draft contract. */
-export type ReleaseAction = "READ_RELEASE" | "REQUEST_RELEASE" | "APPROVE_RELEASE" | "PUBLISH_RELEASE" | "WITHDRAW_RELEASE" | "ROLLBACK_RELEASE";
+/** Actions of the merged B2-B release library (type-only: features/registry/release-context.ts is server-only). */
+export type ReleaseAction = RegistryReleaseAction;
 /** Not in any contract yet: starting the next draft after a version is sealed. */
 export type GapAction = "START_DRAFT";
 export type ConsoleAction = DraftAction | ReleaseAction | GapAction;
@@ -32,7 +33,7 @@ export type ProtocolErrorCode =
   | "AUTH_REQUIRED" | "FORBIDDEN" | "NOT_FOUND" | "INVALID_INPUT" | "PRECONDITION_REQUIRED" | "PRECONDITION_FAILED"
   | "IDEMPOTENCY_CONFLICT" | "REPLAY_STALE" | "REVIEW_INVALID" | "HASH_MISMATCH" | "CONFLICT" | "DRAFT_UNINITIALIZED"
   | "DISABLED" | "UNAVAILABLE"
-  // PROVISIONAL (B2-B draft contract)
+  // release.ts (P1-B2-B)
   | "APPROVAL_INVALID";
 
 export interface ProtocolError {
@@ -55,7 +56,10 @@ export interface ReviewDTO {
   expiresAt: string;
 }
 
-/** PROVISIONAL view of a release request + its independent approval (B2-B draft). */
+/**
+ * Console read model of a release request and its approval (registry_private.release_requests /
+ * release_approvals). B2-B has no read for these yet; see contract request C-6.
+ */
 export interface ReleaseRequestDTO {
   id: string;
   projectId: string;
@@ -70,7 +74,7 @@ export interface ReleaseRequestDTO {
   state: "PENDING" | "APPROVED" | "CONSUMED";
 }
 
-/** PROVISIONAL release record (B1 ProjectRelease + B2-B draft semantics). */
+/** Console read model of public.project_releases plus withdrawal facts. No list read exists yet (C-6). */
 export interface ReleaseRecordDTO {
   id: string;
   projectId: string;

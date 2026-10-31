@@ -136,7 +136,7 @@ export function VersionsPanel({ api }: { api: DeskApi }) {
                   <ActionButton
                     action="REQUEST_RELEASE"
                     api={api}
-                    blockedReason={visibility === "PRIVATE" ? "私有版本没有公开投影，不能发布" : openRequest(version.id) ? "已有进行中的申请" : undefined}
+                    blockedReason={openRequest(version.id) ? "已有进行中的申请" : undefined}
                     gate={api.gate("REQUEST_RELEASE")}
                     onRun={() => request(version, previous)}
                     variant="outline"
@@ -175,7 +175,7 @@ export function ReleasesPanel({ api }: { api: DeskApi }) {
   const withdraw = (release: ReleaseRecordDTO) => api.send({ action: "WITHDRAW_RELEASE", ifMatch: view.releaseETag, input: { releaseId: release.id } });
 
   return (
-    <Panel id="releases" meta={<ContractBadge status="provisional" />} title="发布">
+    <Panel id="releases" meta={<ContractBadge status="merged" />} title="发布">
       <Facts
         className="mb-5"
         items={[
@@ -225,7 +225,7 @@ export function ReleasesPanel({ api }: { api: DeskApi }) {
       ) : null}
 
       <p className="text-[.75rem] font-medium text-muted-foreground">发布历史 · {view.releases.length}</p>
-      {view.releases.length === 0 ? <p className="mt-2 text-[.8125rem] text-muted-foreground">还没有发布过。在左侧版本列表里为一个非私有版本申请发布。</p> : (
+      {view.releases.length === 0 ? <p className="mt-2 text-[.8125rem] text-muted-foreground">还没有发布过。在版本列表里为一个版本申请发布；私有版本可以发布，但不会产生公开投影。</p> : (
         <ul className="mt-2 border-t border-border/12">
           {view.releases.map((release) => {
             const meta = releaseStateMeta(release, view.currentReleaseId);
@@ -243,7 +243,7 @@ export function ReleasesPanel({ api }: { api: DeskApi }) {
           })}
         </ul>
       )}
-      <p className="mt-4 text-[.6875rem] leading-5 text-muted-foreground">撤回和回滚都只追加新事实：旧 Release 不会被改写或复活，撤回当前发布会让项目立即回到私有。发布部分按尚未合并的 P1-B2-B 草案模拟。</p>
+      <p className="mt-4 text-[.6875rem] leading-5 text-muted-foreground">撤回和回滚都只追加新事实：旧 Release 不会被改写或复活，撤回当前发布会让项目立即回到私有；每次撤回都会推进授权 epoch。规则来自已合并的 P1-B2-B，数据仍是 Mock。</p>
     </Panel>
   );
 }

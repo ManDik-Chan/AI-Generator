@@ -64,7 +64,7 @@ export const errorMeta: Record<ProtocolErrorCode, { title: string; detail: strin
   DRAFT_UNINITIALIZED: { title: "草稿尚未初始化", detail: "B1 创建的空草稿必须先经过一次合法编辑，才能读取完整 DraftDTO 或提交。" },
   DISABLED: { title: "功能未开启", detail: "Registry 内部开关默认关闭。" },
   UNAVAILABLE: { title: "服务暂不可用", detail: "依赖超时或失败；所有检查失败时一律拒绝。" },
-  APPROVAL_INVALID: { title: "发布批准无效", detail: "批准已过期、发布头已变化、意图不符，或执行人不是原申请人。（暂定契约）" },
+  APPROVAL_INVALID: { title: "发布批准无效", detail: "批准已过期或已被使用、发布头或授权 epoch 已变化、参与者失去资格、意图不符，或执行人不是原申请人。" },
 };
 
 const pad = (value: number) => String(value).padStart(2, "0");

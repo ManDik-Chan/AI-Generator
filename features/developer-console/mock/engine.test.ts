@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import type { CommandResult, ConsoleCommand, DraftPayload } from "@/features/developer-console/model";
-import { DRAFT_ROLES } from "@/features/developer-console/permissions";
+import { DRAFT_ROLES, RELEASE_ROLES } from "@/features/developer-console/permissions";
 import { execute, projectSummaries, projectView, REVIEW_TTL_MS, toggleQualification, type MockState } from "@/features/developer-console/mock/engine";
 import { SEED_EPOCH, createSeedState, initialPayloadFor, projectIdFor } from "@/features/developer-console/mock/seed";
 import { draftDTOSchema, draftPayloadSchema, validateDraftPayload, versionDTOSchema } from "@/features/registry/contracts";
@@ -108,18 +108,22 @@ describe("full pipeline: Draft → Review → Version → Release", () => {
     state = r.state;
     const request = ok(r.result).result as { id: string };
     expect(ok(r.result).etag).toBe(head); // a request does not move the release head
+    // Command results have the shape of release.ts Response.result.
+    expect(ok(r.result).result).toEqual({ id: request.id, projectId: sorting, versionId: version.id, state: "PENDING" });
 
     r = step(state, "you", { action: "APPROVE_RELEASE", projectId: sorting, ifMatch: head, idempotencyKey: k(), input: { requestId: request.id } });
     expect(err(r.result)).toBe("NOT_FOUND 404");
     r = step(state, "reviewer", { action: "APPROVE_RELEASE", projectId: sorting, ifMatch: head, idempotencyKey: k(), input: { requestId: request.id } });
     state = r.state;
-    const approvalId = (ok(r.result).result as { approvalId: string }).approvalId;
+    const approvalId = (ok(r.result).result as { id: string }).id;
+    expect(ok(r.result).result).toEqual({ id: approvalId, projectId: sorting, versionId: version.id, state: "APPROVED" });
 
     r = step(state, "coauthor", { action: "PUBLISH_RELEASE", projectId: sorting, ifMatch: head, idempotencyKey: k(), input: { approvalId } });
     expect(err(r.result)).toBe("NOT_FOUND 404"); // EDITOR cannot publish
     r = step(state, "you", { action: "PUBLISH_RELEASE", projectId: sorting, ifMatch: head, idempotencyKey: k(), input: { approvalId } });
     state = r.state;
     v = view(state, "sorting-lab");
+    expect(ok(r.result).result).toEqual({ id: v.releases[0].id, projectId: sorting, versionId: version.id, state: "PUBLISHED" });
     expect(v.releases[0]).toMatchObject({ version: "1.1.0", state: "PUBLISHED" });
     expect(v.currentReleaseId).toBe(v.releases[0].id);
     expect(v.releaseETag).not.toBe(head);
@@ -241,7 +245,18 @@ describe("roles, independence and freshness", () => {
   });
 });
 
-describe("release history (provisional B2-B semantics)", () => {
+/** Request (you) → independent approval (reviewer) on one project; returns ids and the new state. */
+function approvedRequest(state: MockState, slug: string, versionLabel: string, intent: "PUBLISH" | "ROLLBACK" = "PUBLISH", now = T) {
+  const v = view(state, slug, "you", now);
+  const version = v.versions.find((item) => item.version === versionLabel)!;
+  const target = intent === "ROLLBACK" ? v.releases.find((release) => release.versionId === version.id && release.id !== v.currentReleaseId)!.id : undefined;
+  let r = step(state, "you", { action: "REQUEST_RELEASE", projectId: v.id, ifMatch: v.releaseETag, idempotencyKey: k(), input: { versionId: version.id, expectedContentHash: version.contentHash, intent, ...(target ? { targetReleaseId: target } : {}) } }, now);
+  const requestId = (ok(r.result).result as { id: string }).id;
+  r = step(r.state, "reviewer", { action: "APPROVE_RELEASE", projectId: v.id, ifMatch: v.releaseETag, idempotencyKey: k(), input: { requestId } }, now);
+  return { state: r.state, requestId, approvalId: (ok(r.result).result as { id: string }).id, head: v.releaseETag, versionId: version.id };
+}
+
+describe("release history (merged B2-B semantics)", () => {
   it("withdrawing the current release clears the pointer and makes the project private", () => {
     const state = createSeedState();
     const v = view(state, "sorting-lab");
@@ -261,7 +276,7 @@ describe("release history (provisional B2-B semantics)", () => {
     const requestId = (ok(r.result).result as { id: string }).id;
     r = step(state, "reviewer", { action: "APPROVE_RELEASE", projectId: volume, ifMatch: v.releaseETag, idempotencyKey: k(), input: { requestId } });
     state = r.state;
-    const approvalId = (ok(r.result).result as { approvalId: string }).approvalId;
+    const approvalId = (ok(r.result).result as { id: string }).id;
     // A PUBLISH command cannot consume a ROLLBACK approval.
     expect(err(step(state, "you", { action: "PUBLISH_RELEASE", projectId: volume, ifMatch: v.releaseETag, idempotencyKey: k(), input: { approvalId } }).result)).toBe("APPROVAL_INVALID 409");
     r = step(state, "you", { action: "ROLLBACK_RELEASE", projectId: volume, ifMatch: v.releaseETag, idempotencyKey: k(), input: { approvalId } });
@@ -288,7 +303,62 @@ describe("release history (provisional B2-B semantics)", () => {
     expect(err(step(state, "reviewer", { action: "APPROVE_RELEASE", projectId: volume, ifMatch: head, idempotencyKey: k(), input: { requestId } }).result)).toBe("APPROVAL_INVALID 409");
   });
 
-  it("seals a PRIVATE version but refuses to release it", () => {
+  it("withdrawing a historical release keeps the pointer but advances epoch and revision", () => {
+    const state = createSeedState();
+    const v = view(state, "volume-reconstruction");
+    const superseded = v.releases.find((release) => release.version === "0.2.0" && release.state === "PUBLISHED")!;
+    const r = step(state, "you", { action: "WITHDRAW_RELEASE", projectId: volume, ifMatch: v.releaseETag, idempotencyKey: k(), input: { releaseId: superseded.id } });
+    expect(ok(r.result).result).toEqual({ id: superseded.id, projectId: volume, versionId: superseded.versionId, state: "WITHDRAWN" });
+    expect(view(r.state, "volume-reconstruction")).toMatchObject({ currentReleaseId: v.currentReleaseId, visibility: v.visibility, authzEpoch: v.authzEpoch + 1, revision: v.revision + 1 });
+  });
+
+  it("a second approval of a fresh request conflicts; a consumed approval is stale, not a conflict", () => {
+    const a = approvedRequest(createSeedState(), "volume-reconstruction", "0.2.0");
+    expect(err(step(a.state, "reviewer", { action: "APPROVE_RELEASE", projectId: volume, ifMatch: a.head, idempotencyKey: k(), input: { requestId: a.requestId } }).result)).toBe("CONFLICT 409");
+    const published = step(a.state, "you", { action: "PUBLISH_RELEASE", projectId: volume, ifMatch: a.head, idempotencyKey: k(), input: { approvalId: a.approvalId } });
+    const head = view(published.state, "volume-reconstruction").releaseETag;
+    expect(err(step(published.state, "you", { action: "PUBLISH_RELEASE", projectId: volume, ifMatch: head, idempotencyKey: k(), input: { approvalId: a.approvalId } }).result)).toBe("APPROVAL_INVALID 409");
+    expect(err(step(published.state, "reviewer", { action: "APPROVE_RELEASE", projectId: volume, ifMatch: head, idempotencyKey: k(), input: { requestId: a.requestId } }).result)).toBe("APPROVAL_INVALID 409");
+  });
+
+  it("a publication replays only while its request is unexpired", () => {
+    const a = approvedRequest(createSeedState(), "volume-reconstruction", "0.2.0");
+    const command: Command = { action: "PUBLISH_RELEASE", projectId: volume, ifMatch: a.head, idempotencyKey: k(), input: { approvalId: a.approvalId } };
+    const first = step(a.state, "you", command);
+    expect(ok(step(first.state, "you", command, T + 60_000).result).replayed).toBe(true);
+    expect(err(step(first.state, "you", command, T + 16 * 60_000).result)).toBe("REPLAY_STALE 409");
+  });
+
+  it("a qualification change moves the project revision, so the release head goes stale", () => {
+    const state = createSeedState();
+    const v = view(state, "volume-reconstruction");
+    const after = toggleQualification(toggleQualification(state, "reviewer"), "reviewer");
+    expect(view(after, "volume-reconstruction")).toMatchObject({ authzEpoch: v.authzEpoch + 2, revision: v.revision + 2 });
+    const version = v.versions.find((item) => item.version === "0.2.0")!;
+    expect(err(step(after, "you", { action: "REQUEST_RELEASE", projectId: volume, ifMatch: v.releaseETag, idempotencyKey: k(), input: { versionId: version.id, expectedContentHash: version.contentHash, intent: "PUBLISH" } }).result)).toBe("PRECONDITION_FAILED 412");
+  });
+
+  it("checks the input shape before any access gate, including the intent/target pairing", () => {
+    const state = createSeedState();
+    const v = view(state, "volume-reconstruction");
+    const version = v.versions[0];
+    const request = (persona: string, input: Record<string, unknown>) =>
+      err(step(state, persona, { action: "REQUEST_RELEASE", projectId: volume, ifMatch: v.releaseETag, idempotencyKey: k(), input } as Command).result);
+    expect(request("you", { versionId: version.id, expectedContentHash: version.contentHash, intent: "ROLLBACK" })).toBe("INVALID_INPUT 422");
+    expect(request("you", { versionId: version.id, expectedContentHash: version.contentHash, intent: "PUBLISH", targetReleaseId: v.releases[0].id })).toBe("INVALID_INPUT 422");
+    expect(request("guest", { versionId: version.id, expectedContentHash: version.contentHash, intent: "PUBLISH", extra: true })).toBe("INVALID_INPUT 422");
+    expect(request("nobody", { versionId: version.id })).toBe("INVALID_INPUT 422");
+  });
+
+  it("seeded epochs follow the merged triggers (visibility changes and every withdrawal)", () => {
+    const state = createSeedState();
+    // sorting-lab: publish 0.9.0 PUBLIC (+1) → withdraw it (+1, PRIVATE) → publish 1.0.0 PUBLIC (+1).
+    expect(view(state, "sorting-lab")).toMatchObject({ revision: 4, authzEpoch: 4, visibility: "PUBLIC" });
+    // research-notes never released anything.
+    expect(view(state, "research-notes")).toMatchObject({ revision: 1, authzEpoch: 1, visibility: "PRIVATE" });
+  });
+
+  it("publishes a PRIVATE version like B2-B: the project gets a current release and stays private", () => {
     let state = createSeedState();
     state.projects.find((project) => project.id === notes)!.members.reviewer = ["REVIEWER"];
     let v = view(state, "research-notes");
@@ -302,8 +372,14 @@ describe("release history (provisional B2-B semantics)", () => {
     const version = versionDTOSchema.parse(ok(sealed.result).result);
     state = sealed.state;
     v = view(state, "research-notes");
-    const r = step(state, "you", { action: "REQUEST_RELEASE", projectId: notes, ifMatch: v.releaseETag, idempotencyKey: k(), input: { versionId: version.id, expectedContentHash: version.contentHash, intent: "PUBLISH" } });
-    expect(err(r.result)).toBe("APPROVAL_INVALID 409");
+    let r = step(state, "you", { action: "REQUEST_RELEASE", projectId: notes, ifMatch: v.releaseETag, idempotencyKey: k(), input: { versionId: version.id, expectedContentHash: version.contentHash, intent: "PUBLISH" } });
+    const requestId = (ok(r.result).result as { id: string }).id;
+    r = step(r.state, "reviewer", { action: "APPROVE_RELEASE", projectId: notes, ifMatch: v.releaseETag, idempotencyKey: k(), input: { requestId } });
+    const approvalId = (ok(r.result).result as { id: string }).id;
+    r = step(r.state, "you", { action: "PUBLISH_RELEASE", projectId: notes, ifMatch: v.releaseETag, idempotencyKey: k(), input: { approvalId } });
+    const after = view(r.state, "research-notes");
+    // PRIVATE → PRIVATE is no visibility change: revision moves, the epoch does not.
+    expect(after).toMatchObject({ visibility: "PRIVATE", currentReleaseId: (ok(r.result).result as { id: string }).id, revision: v.revision + 1, authzEpoch: v.authzEpoch });
   });
 });
 
@@ -329,5 +405,13 @@ describe("role map parity with the merged protocol", () => {
     expect(block, "roles map not found in protocol.ts").toBeTruthy();
     const parsed = Object.fromEntries([...block!.matchAll(/([A-Z_]+): \[([^\]]*)\]/g)].map(([, action, list]) => [action, [...list.matchAll(/"([A-Z]+)"/g)].map((m) => m[1])]));
     expect(parsed).toEqual(Object.fromEntries(Object.entries(DRAFT_ROLES).map(([action, roles]) => [action, [...roles]])));
+  });
+
+  it("RELEASE_ROLES equals the private roles map in features/registry/release-context.ts", () => {
+    const source = readFileSync("features/registry/release-context.ts", "utf8");
+    const block = /const roles: Record<Action, string\[\]> = \{([\s\S]*?)\};/.exec(source)?.[1];
+    expect(block, "roles map not found in release-context.ts").toBeTruthy();
+    const parsed = Object.fromEntries([...block!.matchAll(/([A-Z_]+): \[([^\]]*)\]/g)].map(([, action, list]) => [action, [...list.matchAll(/"([A-Z]+)"/g)].map((m) => m[1])]));
+    expect(parsed).toEqual(Object.fromEntries(Object.entries(RELEASE_ROLES).map(([action, roles]) => [action, [...roles]])));
   });
 });

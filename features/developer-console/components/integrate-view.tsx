@@ -22,7 +22,8 @@ const contracts: { file: string; detail: string; status: ContractStatus }[] = [
   { file: "features/registry/canonical.ts", detail: "JCS-SHA256-v1：RFC 8785 规范化 + SHA-256，含跨语言固定向量", status: "merged" },
   { file: "docs/developer/contracts/manifest.schema.json", detail: "Manifest 0.5.0 JSON Schema（P0.5 契约副本）", status: "merged" },
   { file: "docs/developer/openapi.json", detail: "Demo Runtime API 的 OpenAPI 3.1，由 zod 生成并校验", status: "merged" },
-  { file: "docs/registry-b2b-release-contracts.md", detail: "Release 命令与公开投影草案；所在分支尚未合并", status: "provisional" },
+  { file: "features/registry/release.ts", detail: "Release 命令库：server-only、默认关闭、没有 HTTP 路由", status: "merged" },
+  { file: "docs/registry-b2b-release-contracts.md", detail: "Release 命令、审批与公开投影契约（P1-B2-B）", status: "merged" },
 ];
 
 function Code({ children }: { children: string }) {

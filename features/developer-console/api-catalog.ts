@@ -45,11 +45,12 @@ export const registryFunctions: RegistryFunction[] = [
   { fn: "withdrawRegistryReview", file: "features/registry/protocol.ts", action: "WITHDRAW_REVIEW", contract: "merged", detail: "追加失效事实，草稿回到可编辑" },
   { fn: "decideRegistryReview", file: "features/registry/protocol.ts", action: "DECIDE_REVIEW", contract: "merged", detail: "独立审核人批准或拒绝" },
   { fn: "sealRegistryVersion", file: "features/registry/protocol.ts", action: "SEAL_VERSION", contract: "merged", detail: "原子封存不可变 Version" },
-  { fn: "requestRegistryReleaseApproval", file: "features/registry/release.ts（未合并）", action: "REQUEST_RELEASE", contract: "provisional", detail: "发布或回滚申请" },
-  { fn: "approveRegistryRelease", file: "features/registry/release.ts（未合并）", action: "APPROVE_RELEASE", contract: "provisional", detail: "独立批准" },
-  { fn: "publishRegistryRelease", file: "features/registry/release.ts（未合并）", action: "PUBLISH_RELEASE", contract: "provisional", detail: "消费批准并切换当前指针" },
-  { fn: "withdrawRegistryRelease", file: "features/registry/release.ts（未合并）", action: "WITHDRAW_RELEASE", contract: "provisional", detail: "追加撤回事实" },
-  { fn: "rollbackRegistryRelease", file: "features/registry/release.ts（未合并）", action: "ROLLBACK_RELEASE", contract: "provisional", detail: "用历史 Version 创建新 Release" },
+  { fn: "getRegistryReleaseHead", file: "features/registry/release.ts", action: "READ_RELEASE", contract: "merged", detail: "当前 Release 指针、可见性与发布 ETag" },
+  { fn: "requestRegistryReleaseApproval", file: "features/registry/release.ts", action: "REQUEST_RELEASE", contract: "merged", detail: "发布或回滚申请" },
+  { fn: "approveRegistryRelease", file: "features/registry/release.ts", action: "APPROVE_RELEASE", contract: "merged", detail: "独立批准" },
+  { fn: "publishRegistryRelease", file: "features/registry/release.ts", action: "PUBLISH_RELEASE", contract: "merged", detail: "消费批准并切换当前指针" },
+  { fn: "withdrawRegistryRelease", file: "features/registry/release.ts", action: "WITHDRAW_RELEASE", contract: "merged", detail: "追加撤回事实" },
+  { fn: "rollbackRegistryRelease", file: "features/registry/release.ts", action: "ROLLBACK_RELEASE", contract: "merged", detail: "用历史 Version 创建新 Release" },
 ];
 
 export interface DesignedEndpoint {

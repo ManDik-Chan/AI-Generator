@@ -16,7 +16,7 @@ const pipeline: { step: string; title: string; detail: string; actor: string; co
   { step: "02", title: "草稿", detail: "整份 payload 替换；每个写请求带强 ETag 与幂等键。", actor: "所有者 · 编辑", contract: "merged", source: "P1-B2-A" },
   { step: "03", title: "审核", detail: "冻结内容哈希与 15 分钟期限，审核人不能是提交人。", actor: "审核人", contract: "merged", source: "P1-B2-A" },
   { step: "04", title: "版本", detail: "已批准内容原子封存为不可变 Version，草稿随之冻结。", actor: "所有者 · 编辑", contract: "merged", source: "P1-B2-A" },
-  { step: "05", title: "发布", detail: "独立批准后切换当前 Release；撤回与回滚都追加新事实。", actor: "所有者 · 发布 + 审核", contract: "provisional", source: "P1-B2-B" },
+  { step: "05", title: "发布", detail: "独立批准后切换当前 Release；撤回与回滚都追加新事实。", actor: "所有者 · 发布 + 审核", contract: "merged", source: "P1-B2-B" },
 ];
 
 /** Overview of the developer console: projects, the pipeline, live demos and readiness. */
@@ -25,7 +25,7 @@ export function Workbench({ base, projectsBase }: { base: string; projectsBase: 
   const merged = registryFunctions.filter((item) => item.contract === "merged").length;
   const readiness = [
     { label: "可直接调用", count: live.length, unit: "个 HTTP 操作", tone: "success" as const, detail: "Demo Runtime API，公开、无需登录、按客户端限流。", href: "/docs/api", link: "API Reference" },
-    { label: "内部库，无 HTTP", count: merged, unit: "个函数", tone: "info" as const, detail: "Registry 草稿、审核与版本协议；默认关闭，只在服务端调用。", href: `${base}/integrate#registry`, link: "查看函数" },
+    { label: "内部库，无 HTTP", count: merged, unit: "个函数", tone: "info" as const, detail: "Registry 草稿、审核、版本与发布协议；默认关闭，只在服务端调用。", href: `${base}/integrate#registry`, link: "查看函数" },
     { label: "设计中", count: designedEndpoints.length, unit: "个端点", tone: "neutral" as const, detail: "公开读取、安装、授权与异步运行；调用会得到 404。", href: `${base}/integrate#designed`, link: "查看草案" },
   ];
 
@@ -38,7 +38,7 @@ export function Workbench({ base, projectsBase }: { base: string; projectsBase: 
             <Button asChild size="lg" variant="outline"><Link href={`${base}/integrate`} prefetch={false}>接入指南</Link></Button>
           </>
         )}
-        description="管理项目从草稿、独立审核、不可变版本到发布的全过程，查看接口就绪度、权限与数据边界。草稿到版本的规则来自已合并的 Registry 协议；发布部分按尚未合并的契约草案模拟。"
+        description="管理项目从草稿、独立审核、不可变版本到发布的全过程，查看接口就绪度、权限与数据边界。草稿、审核、版本与发布的规则都来自已合并的 Registry 协议（P1-B2-A、P1-B2-B）；数据来自 Mock。"
         kicker="开发者控制台 · Developer Console"
         meta={<StatusPill status="dev" />}
         title={["从草稿到发布，", "每一步都有据可查。"]}

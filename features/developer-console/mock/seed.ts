@@ -93,8 +93,7 @@ function buildProject(spec: ProjectSpec): StoredProject {
   const reviews: StoredReview[] = [];
   const versions: VersionDTO[] = [];
   const releases: StoredRelease[] = [];
-  let revision = 1;
-  let epoch = 1;
+  const sealedReviews: StoredReview[] = [];
 
   spec.history.forEach((entry, index) => {
     const payload = buildPayload(entry.spec);
@@ -103,28 +102,50 @@ function buildProject(spec: ProjectSpec): StoredProject {
     const reviewId = mockUuid(`seed-review:${spec.slug}:${index}`);
     // Seeded history: edit (rev 2) → submit (rev 3) → seal (rev 4).
     drafts.push({ id: draftId, revision: 4, state: "PUBLISHED", payload, createdAt: entry.sealedAt - days(2) });
-    reviews.push({
-      id: reviewId, draftId, draftRevision: 3, authzEpoch: epoch, contentHash: hash, visibility: entry.spec.visibility,
+    const review: StoredReview = {
+      id: reviewId, draftId, draftRevision: 3, authzEpoch: 1, contentHash: hash, visibility: entry.spec.visibility,
       submitterId: "you", reviewerId: "reviewer", decision: "APPROVED", decidedAt: entry.sealedAt - minutes(5), policyRevision: POLICY_REVISION,
       expiresAt: entry.sealedAt - minutes(12) + REVIEW_TTL_MS, createdAt: entry.sealedAt - minutes(12),
-    });
+    };
+    reviews.push(review);
+    sealedReviews.push(review);
     const versionId = mockUuid(`seed-version:${spec.slug}:${index}`);
     versions.push({ id: versionId, projectId: id, version: entry.spec.version, snapshot: payload, contentHash: hash, hashAlgorithm: HASH_ALGORITHM, reviewId, createdAt: iso(entry.sealedAt) });
     if (entry.released) {
       releases.push({
         id: mockUuid(`seed-release:${spec.slug}:${index}`), versionId, contentHash: hash, visibilityAtApproval: entry.spec.visibility,
-        publishedAt: entry.released.at, withdrawnAt: entry.released.withdrawnAt ?? null, intent: entry.released.intent ?? "PUBLISH",
+        publishedAt: entry.released.at, withdrawnAt: entry.released.withdrawnAt ?? null, intent: entry.released.intent ?? "PUBLISH", requestId: null,
       });
-      revision += entry.released.withdrawnAt ? 2 : 1;
     }
   });
 
+  // Replay the seeded history in time order under the merged rules (guard_project and
+  // release.ts): every project UPDATE advances revision; a visibility change and every
+  // withdrawal also advance the authorization epoch. Reviews bind the epoch at submission.
+  let revision = 1;
+  let epoch = 1;
+  let visibility: ConsoleVisibility = "PRIVATE";
+  let currentId: string | null = null;
+  const events: { at: number; apply: () => void }[] = [
+    ...sealedReviews.map((review) => ({ at: review.createdAt, apply: () => { review.authzEpoch = epoch; } })),
+    ...releases.flatMap((release) => [
+      { at: release.publishedAt, apply: () => {
+        revision += 1;
+        if (visibility !== release.visibilityAtApproval) { visibility = release.visibilityAtApproval; epoch += 1; }
+        currentId = release.id;
+      } },
+      ...(release.withdrawnAt === null ? [] : [{ at: release.withdrawnAt, apply: () => {
+        revision += 1;
+        epoch += 1;
+        if (currentId === release.id) { currentId = null; visibility = "PRIVATE"; }
+      } }]),
+    ]),
+  ];
+  events.sort((a, b) => a.at - b.at).forEach((event) => event.apply());
+
   const currentIndex = spec.history.findIndex((entry) => entry.spec.version === spec.current);
   const current = currentIndex >= 0 ? releases.find((release) => release.versionId === versions[currentIndex].id) : undefined;
-  const visibility: ConsoleVisibility = current ? current.visibilityAtApproval : "PRIVATE";
-  // Going from PRIVATE to the released visibility advanced the epoch once. Sealed reviews
-  // keep the epoch they were bound to; only the open review below must match the current one.
-  if (visibility !== "PRIVATE") epoch += 1;
+  if ((current?.id ?? null) !== currentId) throw new Error(`seed history of ${spec.slug} does not end at release ${spec.current ?? "none"}`);
 
   const draft = spec.draft;
   if (draft.kind === "uninitialized") {
