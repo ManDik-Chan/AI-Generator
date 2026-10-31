@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/database/prisma";
 import { canonicalHash, HASH_ALGORITHM, hashSnapshot } from "./canonical";
 import { collectAssetReferences, draftDTOSchema, parseDraftPayload, validateDraftPayload, versionDTOSchema, type DraftDTO, type DraftPayload } from "./contracts";
+import { reviewDTOSchema, type ReviewDTO } from "./read-contracts";
 
 export const REGISTRY_POLICY_REVISION = 1;
 const REVIEW_TTL_MS = 15 * 60 * 1000;
@@ -20,6 +21,7 @@ type ReadInput = z.input<typeof readInput>;
 type Principal = { id: string; session: string; exp: number };
 type Context = { tx: Tx; project: Project; actor: Principal; trackReview: boolean;
   parties: Map<string, { subject: string; action: Action; roles: string[] }>; deadlines: Date[] };
+export type RegistryDraftReadContext = Context;
 type Response<T> = { result: T; etag: string };
 export type CommandResponse<T> = Response<T> & { replayed: boolean };
 
@@ -32,6 +34,10 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
 }
 function enabled() {
   if (process.env.REGISTRY_INTERNAL_ACCESS_ENABLED !== "true" || process.env.REGISTRY_DRAFT_REVIEW_ENABLED !== "true") fail("DISABLED", 403);
+}
+function enabledRead() {
+  if (process.env.REGISTRY_INTERNAL_ACCESS_ENABLED !== "true"
+    || (process.env.REGISTRY_DRAFT_REVIEW_ENABLED !== "true" && process.env.REGISTRY_INTERNAL_READ_ENABLED !== "true")) fail("DISABLED", 403);
 }
 async function authenticate(token: string): Promise<Principal> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return fail("UNAVAILABLE", 503);
@@ -150,14 +156,30 @@ async function activeDraft(ctx: Context) {
   return draft;
 }
 async function read<T>(input: ReadInput, work: (ctx: Context) => Promise<T>) {
-  enabled(); const args = parse(readInput, input); const actor = await authenticate(args.accessToken);
+  enabledRead(); const args = parse(readInput, input); const actor = await authenticate(args.accessToken);
   return transaction(actor, args.projectId, "READ_DRAFT", work);
 }
+/** Internal composition helper: retains the same session, qualification and member gates. */
+export const readRegistryDraftTransaction = read;
 export async function getRegistryDraftHead(input: ReadInput) {
-  return read(input, async ctx => { const d = await activeDraft(ctx); return { result: { id: d.id, projectId: d.projectId, revision: d.revision, state: d.state }, etag: draftETag(d) }; });
+  return read(input, async ctx => {
+    const d = await activeDraft(ctx);
+    let contentHash: string | null;
+    try { contentHash = hashSnapshot(payload(d, ctx.project)); }
+    catch (error) {
+      if (!(error instanceof RegistryProtocolError) || error.code !== "DRAFT_UNINITIALIZED") throw error;
+      contentHash = null;
+    }
+    return { result: { id: d.id, projectId: d.projectId, revision: d.revision, state: d.state, contentHash }, etag: draftETag(d) };
+  });
 }
 export async function getRegistryDraft(input: ReadInput) {
-  return read(input, async ctx => { const d = await activeDraft(ctx); return { result: draftDTO(d, ctx.project), etag: draftETag(d) }; });
+  return read(input, async ctx => {
+    const d = await activeDraft(ctx), result = draftDTO(d, ctx.project);
+    // Keep the strict legacy DraftDTO intact; HTTP reads combine this hash with
+    // result as a DraftReadDTO. It is computed from the same locked payload.
+    return { result, contentHash: hashSnapshot(result.payload), etag: draftETag(d) };
+  });
 }
 async function mutate<T>(action: Action, input: WriteInput, inputSchema: z.ZodType, work: (ctx: Context, d: ProjectDraft, body: unknown) => Promise<Response<T>>): Promise<CommandResponse<T>> {
   enabled(); const args = parse(writeInput, input); const expected = precondition(args.ifMatch);
@@ -173,6 +195,7 @@ async function mutate<T>(action: Action, input: WriteInput, inputSchema: z.ZodTy
       const receipt = receipts[0];
       if (receipt.action !== action || receipt.body_hash !== bodyHash) return fail("IDEMPOTENCY_CONFLICT");
       if (receipt.authz_epoch !== ctx.project.authzEpoch) return fail("REPLAY_STALE");
+      let replayReview: PublicationReview | null = null;
       if (action === "SUBMIT_REVIEW" || action === "DECIDE_REVIEW") {
         const id = (receipt.result.result as { id: string }).id;
         const review = await ctx.tx.publicationReview.findFirst({ where: { id, projectId: ctx.project.id } });
@@ -180,6 +203,18 @@ async function mutate<T>(action: Action, input: WriteInput, inputSchema: z.ZodTy
         if (!review || !draft) return fail("REPLAY_STALE");
         try { await freshness(ctx, draft, review, review.snapshotHash, review.decision === "APPROVED" || review.decision === "REJECTED"); }
         catch (error) { if (!(error instanceof RegistryProtocolError)) throw error; return fail("REPLAY_STALE"); }
+        replayReview = review;
+      }
+      if (action === "WITHDRAW_REVIEW") {
+        replayReview = await ctx.tx.publicationReview.findFirst({ where: { id: (receipt.result.result as { id: string }).id, projectId: ctx.project.id } });
+        if (!replayReview) return fail("REPLAY_STALE");
+      }
+      if (replayReview) {
+        // Existing receipts can predate the viewer-relative field. Rehydrate
+        // only that field from the authorized object; keep the saved decision
+        // and effectiveState so idempotent replay retains its original result.
+        const result = reviewDTOSchema.parse({ ...(receipt.result.result as object), submittedByViewer: replayReview.submitterId === actor.id });
+        return { ...receipt.result, result: result as T, replayed: true };
       }
       return { ...receipt.result, replayed: true };
     }
@@ -234,9 +269,10 @@ async function freshness(ctx: Context, d: ProjectDraft, review: PublicationRevie
   }
   return { content, bindings };
 }
-function reviewDTO(review: PublicationReview, effectiveState: PublicationReview["decision"] | "SEALED" = review.decision) {
-  return { id: review.id, projectId: review.projectId, draftId: review.draftId, draftRevision: review.draftRevision,
-    decision: review.decision, effectiveState, contentHash: review.snapshotHash, expiresAt: review.expiresAt.toISOString() };
+function reviewDTO(review: PublicationReview, viewerId: string, effectiveState: PublicationReview["decision"] | "SEALED" = review.decision): ReviewDTO {
+  return reviewDTOSchema.parse({ id: review.id, projectId: review.projectId, draftId: review.draftId, draftRevision: review.draftRevision,
+    decision: review.decision, effectiveState, contentHash: review.snapshotHash, expiresAt: review.expiresAt.toISOString(),
+    submittedByViewer: review.submitterId === viewerId });
 }
 async function invalidateDraft(ctx: Context, d: ProjectDraft, reason: "DRAFT_EDITED" | "WITHDRAWN") {
   await ctx.tx.$executeRaw`INSERT INTO registry_private.review_invalidations(review_id,project_id,actor_id,reason)
@@ -273,7 +309,7 @@ export async function submitRegistryDraft(input: WriteInput) {
       authzEpoch: ctx.project.authzEpoch, snapshotHash: digest, visibility: content.manifest.visibility, assetDigestSet: bindings,
       submitterId: ctx.actor.id, policyRevision: REGISTRY_POLICY_REVISION, expiresAt: new Date(clock.now.getTime() + REVIEW_TTL_MS) } });
     ctx.deadlines.push(review.expiresAt);
-    return { result: reviewDTO(review), etag: draftETag(submitted) };
+    return { result: reviewDTO(review, ctx.actor.id), etag: draftETag(submitted) };
   });
 }
 const reviewIdInput = z.object({ reviewId: uuid }).strict();
@@ -283,7 +319,7 @@ export async function withdrawRegistryReview(input: WriteInput) {
     if (d.state !== "IN_REVIEW") return fail("CONFLICT");
     await invalidateDraft(ctx, d, "WITHDRAWN");
     const updated = await ctx.tx.projectDraft.update({ where: { id: d.id }, data: { state: "DRAFT", updatedBy: ctx.actor.id } });
-    return { result: reviewDTO(review, "INVALIDATED"), etag: draftETag(updated) };
+    return { result: reviewDTO(review, ctx.actor.id, "INVALIDATED"), etag: draftETag(updated) };
   });
 }
 const decisionInput = z.object({ reviewId: uuid, decision: z.enum(["APPROVED", "REJECTED"]), expectedContentHash: hash }).strict();
@@ -296,7 +332,7 @@ export async function decideRegistryReview(input: WriteInput) {
     const [clock] = await ctx.tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`;
     const decided = await ctx.tx.publicationReview.update({ where: { id: review.id }, data: { decision: body.decision, reviewerId: ctx.actor.id, decidedAt: clock.now } });
     await freshness(ctx, d, decided, body.expectedContentHash, true);
-    return { result: reviewDTO(decided), etag: draftETag(d) };
+    return { result: reviewDTO(decided, ctx.actor.id), etag: draftETag(d) };
   });
 }
 const sealInput = z.object({ reviewId: uuid, expectedContentHash: hash }).strict();
@@ -323,25 +359,31 @@ export async function sealRegistryVersion(input: WriteInput) {
   });
 }
 export async function getRegistryReview(input: ReadInput & { reviewId: string }) {
-  enabled(); const args = parse(readInput.extend({ reviewId: uuid }).strict(), input); const actor = await authenticate(args.accessToken);
+  enabledRead(); const args = parse(readInput.extend({ reviewId: uuid }).strict(), input); const actor = await authenticate(args.accessToken);
   return transaction(actor, args.projectId, "READ_DRAFT", async ctx => {
     const review = await ctx.tx.publicationReview.findFirst({ where: { id: args.reviewId, projectId: args.projectId } });
     if (!review) return fail("NOT_FOUND", 404);
-    const draft = await ctx.tx.projectDraft.findUniqueOrThrow({ where: { id: review.draftId } });
-    let effective: PublicationReview["decision"] | "SEALED" = review.decision;
-    const version = await ctx.tx.projectVersion.findFirst({ where: { reviewId: review.id, projectId: ctx.project.id } });
-    if (await invalidated(ctx, review.id)) effective = "INVALIDATED";
-    else if (version && draft.state === "PUBLISHED" && review.decision === "APPROVED") {
-      // A sealed immutable version is an audit fact. It is not a live publish
-      // authorization; B2-B must independently recheck all publication policy.
-      try {
-        versionDTOSchema.parse({ ...version, createdAt: version.createdAt.toISOString() });
-        effective = version.contentHash === review.snapshotHash ? "SEALED" : "INVALIDATED";
-      } catch { effective = "INVALIDATED"; }
-    } else {
-      try { await freshness(ctx, draft, review, review.snapshotHash, review.decision === "APPROVED"); }
-      catch (error) { if (!(error instanceof RegistryProtocolError)) throw error; effective = "INVALIDATED"; }
-    }
-    return { result: reviewDTO(review, effective), etag: draftETag(draft) };
+    return getRegistryReviewInContext(ctx, review);
   });
+}
+/** Project an already-authorized review without a second transaction or identity lookup. */
+export async function getRegistryReviewInContext(ctx: RegistryDraftReadContext, review: PublicationReview) {
+  if (review.projectId !== ctx.project.id) return fail("NOT_FOUND", 404);
+  const draft = await ctx.tx.projectDraft.findFirst({ where: { id: review.draftId, projectId: ctx.project.id } });
+  if (!draft) return fail("NOT_FOUND", 404);
+  let effective: PublicationReview["decision"] | "SEALED" = review.decision;
+  const version = await ctx.tx.projectVersion.findFirst({ where: { reviewId: review.id, projectId: ctx.project.id } });
+  if (await invalidated(ctx, review.id)) effective = "INVALIDATED";
+  else if (version && draft.state === "PUBLISHED" && review.decision === "APPROVED") {
+    // A sealed immutable version is an audit fact. It is not a live publish
+    // authorization; B2-B must independently recheck all publication policy.
+    try {
+      versionDTOSchema.parse({ ...version, createdAt: version.createdAt.toISOString() });
+      effective = version.contentHash === review.snapshotHash ? "SEALED" : "INVALIDATED";
+    } catch { effective = "INVALIDATED"; }
+  } else {
+    try { await freshness(ctx, draft, review, review.snapshotHash, review.decision === "APPROVED"); }
+    catch (error) { if (!(error instanceof RegistryProtocolError)) throw error; effective = "INVALIDATED"; }
+  }
+  return { result: reviewDTO(review, ctx.actor.id, effective), etag: draftETag(draft) };
 }

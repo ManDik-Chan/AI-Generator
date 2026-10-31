@@ -4,12 +4,13 @@ import { z } from "zod";
 import { canonicalHash, HASH_ALGORITHM, hashSnapshot } from "./canonical";
 import { collectAssetReferences, validateDraftPayload, type DraftPayload } from "./contracts";
 import { RegistryProtocolError } from "./protocol";
+import type { ReleaseCommandResult } from "./read-contracts";
 import {
   authenticate, authority, enabled, fail, hash, parse, readInput, RELEASE_POLICY_REVISION,
   transaction, uuid, writeInput, type Action, type Context, type ReadInput, type WriteInput,
 } from "./release-context";
 
-type Response = { result: { id: string; projectId: string; versionId?: string; state: string }; etag: string };
+type Response = { result: ReleaseCommandResult; etag: string };
 type Request = {
   id: string; project_id: string; version_id: string; content_hash: string; visibility: string;
   asset_digest_set: unknown; authz_epoch: number; project_revision: number; current_release_id: string | null;
