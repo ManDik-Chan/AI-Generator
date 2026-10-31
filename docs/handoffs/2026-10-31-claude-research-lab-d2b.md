@@ -1,7 +1,7 @@
 # 交接：P1-D2-B Research Lab 首个可交互版本（Claude，2026-10-31）
 
 > 分支 `claude/p1-d2b-research-lab-20261031`，基于 `origin/main` `fc43538`（含 PR #39 开发者控制台、PR #41 Showcase、PR #40 B3-A）。独立 worktree，与 P1-C1-A 隔离。
-> 未改 Registry、Prisma、Supabase / RLS、Auth、middleware、后端安全模块与 AGENTS.md；未读取任何内部数据；未启动浏览器、未截图；未合并 main；未部署。
+> 未改 Registry、Prisma、Supabase / RLS、Auth、middleware、后端安全模块与 AGENTS.md；未读取任何内部数据；浏览器只在 Owner 授权后用于一次单 Edge 视觉验收（第 10 节）；未合并 main；未部署。
 
 ## 1. 定位与切片
 
@@ -91,9 +91,9 @@ D2-A 交接中留给 Owner 的三个问题，本轮任务说明已经决定两�
 
 ## 6. 未验证事项与风险
 
-- **浏览器视觉未覆盖**。浏览器自动化按仓库 AGENTS.md 处于停用状态，本轮未启动浏览器、未截图。布局、响应式断点、深色模式与动效只在服务端渲染层面检查，桌面与手机宽度仍需人工验收。重点：实验目录在 1024 px 上下的两种行布局；实验页侧栏在 1180 px 以下移到正文之后；Showcase 两个真实 Demo 的 Hero 现在最多有 5 个按钮，窄屏换行情况；站点导航增加到 6 项后在 900 px 附近的宽度。
-- **客户端交互未在真实浏览器中运行**。筛选、query string 同步、`#claim-<id>` 直达与本机复现的逻辑由单元测试与服务端渲染覆盖，事件处理与 `history.replaceState` 未在浏览器中执行过。
-- **跨引擎一致性未实测**。容差按 IEEE 754 与各引擎数学函数的差异设计，未在 Safari / Firefox 上实际比对。若出现不一致，页面会如实标出 ≠，不会掩盖。
+- **视觉验收覆盖范围**。一次单 Edge（Chromium）视觉验收已完成（第 10 节）。未覆盖：Safari、Firefox 与真实手机；动效（截图时启用了减少动态效果）；验收后修复的 4 处细节只经过单元测试与构建验证，没有重新截图。
+- **部分客户端交互仍待人工验收**。Edge 中已验证：4 个实验的本机复现与“换种子”路径、复现期间无网络请求、query string 恢复状态筛选、项目筛选、`#claim-<id>` 直达与高亮。关键词搜索、“全部”复位与声明等级筛选按钮的点击，因验收脚本的选择器错误没有执行。
+- **跨引擎一致性只覆盖 Chromium**。Edge 中 4 个实验与 Node 参考结果逐项一致；Safari、Firefox 未实测。若出现不一致，页面会如实标出 ≠，不会掩盖。
 - **低端设备耗时未测**。实验在主线程运行，Node 中最长约 30 ms；低端手机可能更慢，但不涉及网络。
 - **构建提交号**：Vercel 构建会注入 `VERCEL_GIT_COMMIT_SHA`，页面显示短提交号并把代码链接固定到该提交；本地构建显示“未注入提交号”，代码链接指向 main。
 
@@ -155,3 +155,44 @@ L-1 … L-5 沿用 D2-A 交接；L-6 … L-9 为本次新增。实验记录在�
 - VOL-01 显示“没有结果”与解锁条件（含 L-9）；ROUTE-03 显示测试命令。
 - 研究页没有指向 `/api/` 的链接，没有提交表单。
 - Showcase 页中只有路线优化、神经网络、排序、体数据 4 个项目含 `/research/<slug>` 链接；AI-Generator、中西文混排样张、空气质量摘要不含。
+
+## 10. 视觉验收（单 Edge，Owner 授权，2026-10-31）
+
+Owner 授权一次受控的 Edge 视觉验收，范围为 Research Lab 页面及本分支改动的两个入口（Showcase 项目页 Hero 按钮、站点导航）。授权只覆盖这一次，验收结束后浏览器自动化恢复默认停用。
+
+**执行方式**（与 PR #39 的授权截图使用同一套机制，脚本运行前做过生命周期静态检查）：
+- 服务：脚本自行以 `next start -p 3521 -H 127.0.0.1` 启动本 worktree 的生产构建；`/research` 不需要会话或环境变量。
+- 浏览器：Playwright 1.61 `launchServer({ channel: "msedge", headless: true })`，全程 1 个 Edge 实例（根 PID 36708，专用临时资料目录 `playwright_chromiumdev_profile-*`），所有尺寸、深浅色与交互复用同一页面；启动失败即停、不重试、不下载浏览器。
+- 守护：每次截图后采样本实例进程树；超过 24 个进程、3000 MB 工作集或系统可用内存低于 4 GB 即中止；6 分钟硬上限。
+- 回收：成功、异常、超时与 SIGINT / SIGTERM / SIGHUP / SIGBREAK 走同一条清理路径；按记录的 PID + 创建时间 + 资料目录核对，不按进程名结束任何进程。
+
+**资源**：运行 76 秒（15:47:16–15:48:32 UTC）。本实例 8 个进程，工作集峰值 710 MB；系统可用内存全程约 9.6–9.8 GB（共 31.8 GB）。
+
+**回收核对**（脚本内核对 + 独立复核脚本）：Edge 根进程与全部带本次资料目录的进程已退出，临时资料目录已删除；Next 服务进程树（仅 PID 53080）已退出，3521 端口关闭；运行脚本自身已退出。清理只调用了本实例的 `BrowserServer.close()` 与按 PID 结束服务进程树，没有对任何 Edge 进程执行结束命令。运行前已存在的 9 个用户 Edge 进程中，2 个（PID 29084、44220）在运行期间退出：它们与用户 Edge 主进程（PID 45000）同在基线前 12 秒创建，属于浏览器启动阶段辅助进程的正常回收；用户 Edge 主进程保持运行。
+
+**结果**：
+
+| 检查 | 结果 |
+| --- | --- |
+| 页面 | 24 张截图：桌面 1440、导航 920、平板 768、手机 390，浅色与深色；全部 HTTP 200 |
+| 控制台 | 0 条错误，0 个页面异常（包括 Hydration） |
+| 布局 | 所有页面无横向溢出；研究页每页 1 个 h1、无标题层级跳跃、无未命名按钮或未关联标签的输入框、无重复 id |
+| 本机复现（Edge 与 Node 参考结果） | ROUTE-01 20/20、ROUTE-02 12/12、NN-01 9/9、SORT-01 12/12 个数值一致，判定相同；SORT-01 换种子 42 走“不比对、只判定”路径 |
+| 网络 | 记录了网络请求的 5 次复现期间，页面发出 0 个请求；深色与手机页面另有 2 次 ROUTE-01 复现（未记录网络），结论均为“与参考结果一致” |
+| 筛选 | `?status=REPRODUCIBLE` 恢复为“可本地复现”；点击项目“神经网络训练场”后显示 1 / 11（NN-01） |
+| 声明直达 | `#claim-mst-lower-bound` 滚动到页头下方并高亮该行 |
+| 导航 | 920 px 宽时导航保持单行，右边缘 840 px；手机菜单包含「研究」 |
+| Showcase Hero | 桌面单行；手机 5 个按钮分 3 行，无溢出 |
+
+**发现并已修复**（修复后只经过单元测试与构建验证，没有再次截图）：
+1. 手机宽度下结果表的行标题被挤成两行（“均匀随 / 机”）：表头与行标题改为不换行。
+2. 结果表在窄屏需要横向滑动但没有提示：700 px 以下在表格下方显示“表格可左右滑动”。
+3. “参考结果由……运行右侧「环境」中列出的仓库代码”在手机上方向不对（侧栏在正文之后）：去掉方向词。
+4. 证据链接标题换行时，↗ 被推到行尾远端：箭头改为跟随文字内联。
+
+**验收脚本自身的问题**（不影响页面结论，如实记录）：
+- 关键词搜索、“全部”复位与声明等级筛选按钮的点击没有执行：脚本用正则匹配按钮名“全部”加数字，实际可访问名中间有空格，两处检查各等待 15 秒后超时。这部分交互仍待人工验收。
+- “换种子”复现原计划在 NN-01 上进行，实际执行在当时所在的 SORT-01 页面上；截图已按实际内容命名为 `desktop-exp-sort-01-other-seed.jpg`。
+- 没有为补齐这些检查再次启动浏览器。
+
+**截图**（`docs/handoffs/assets/2026-10-31-research-lab/`）：`desktop-research-index`、`desktop-registry-filtered`、`desktop-project-route-optimizer`、`desktop-project-claim-anchor`、`desktop-project-volume-reconstruction`、`desktop-exp-route-01`、`desktop-exp-route-02`、`desktop-exp-nn-01`、`desktop-exp-sort-01`、`desktop-exp-sort-01-other-seed`、`desktop-exp-nn-02-test-covered`、`desktop-exp-vol-01-blocked`、`desktop-explore-route-optimizer-hero`、`nav-920-research`、`dark-research-index`、`dark-exp-route-01`、`tablet-research-index`、`tablet-exp-sort-01`、`mobile-research-index`、`mobile-project-route-optimizer`、`mobile-exp-route-01`、`mobile-exp-vol-01-blocked`、`mobile-explore-route-optimizer-hero`、`mobile-site-menu`。整页截图中途出现的吸顶页头是截图在滚动后拼接造成的，不是布局问题。
