@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { waitForInteractiveChat } from "../support/chat-terminal";
 
 const authState = process.env.PLAYWRIGHT_AUTH_STATE;
 const hasAuthState = Boolean(
@@ -11,7 +12,7 @@ test.describe("authenticated Chat entry performance", () => {
 
   test("keeps the Composer interactive while the non-critical bootstrap is delayed", async ({ page }) => {
     await page.goto("/chat");
-    await expect(page.locator("[data-chat-shell]")).toBeVisible();
+    await waitForInteractiveChat(page);
     await page.goto("/workspace");
 
     const requests: string[] = [];
@@ -35,8 +36,9 @@ test.describe("authenticated Chat entry performance", () => {
       }
       return performance.now() - started;
     });
-    await expect(page.locator("[data-chat-shell]")).toBeVisible({ timeout: 1_500 });
-    await expect(page.getByLabel("消息内容")).toBeEditable({ timeout: 1_500 });
+    // All readiness assertions share the original click deadline; bootstrap
+    // remains delayed and must not become a prerequisite for editing.
+    await waitForInteractiveChat(page, startedAt + 1_500);
     const composerMs = performance.now() - startedAt;
 
     expect(feedbackMs).toBeLessThan(100);

@@ -8,6 +8,7 @@ import { createIntegrationPrisma, integrationDatabaseEnabled } from "./database"
 import { AUTH_PERSISTENCE_COOKIE, authCookieName, isSessionCookie } from "@/lib/auth/supabase/persistence";
 import { clearSupabaseSession, createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { getValidatedUser } from "@/lib/auth/supabase/validated-user";
+import { GET as checkReturningSession } from "@/app/api/auth/session/route";
 
 type StoredCookie = { name: string; value: string; options: CookieOptions };
 
@@ -64,6 +65,7 @@ describe.skipIf(!enabled)("real Supabase login persistence, refresh and session 
   }
   const authCookies = (jar: CookieJar) => [...jar.entries.values()].filter(cookie => isSessionCookie(cookie.name, url));
   const sessionId = (session: Session) => JSON.parse(Buffer.from(session.access_token.split(".")[1], "base64url").toString("utf8")).session_id as string;
+  const returningRequest = (viewer = userId) => new Request("http://127.0.0.1/api/auth/session", { headers: { "x-aig-viewer": viewer } });
 
   async function expireStoredMetadata(jar: CookieJar) {
     const encoded = await combineChunks(key, name => jar.entries.get(name)?.value);
@@ -108,6 +110,12 @@ describe.skipIf(!enabled)("real Supabase login persistence, refresh and session 
     expect(authCookies(jar).every(cookie => Number(cookie.options.maxAge) > 0)).toBe(true);
     for (let i = 0; i < 3; i++) expect((await getValidatedUser(await client(jar)))?.id).toBe(userId);
     expect((await getValidatedUser(await client(jar.clone(true))))?.id).toBe(userId);
+    request.cookies = jar;
+    const response = await checkReturningSession(returningRequest());
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(response.headers.get("Cache-Control")).toContain("no-store");
+    expect((await checkReturningSession(returningRequest(randomUUID()))).status).toBe(409);
   });
 
   it("keeps unchecked login in session cookies through real SDK token refresh", async () => {
@@ -151,6 +159,8 @@ describe.skipIf(!enabled)("real Supabase login persistence, refresh and session 
     const stale = jar.clone();
     expect((await getValidatedUser(await client(jar)))?.id).toBe(userId);
     expect(Boolean((await service.auth.admin.signOut(session.access_token, "global")).error)).toBe(false);
+    request.cookies = jar;
+    expect((await checkReturningSession(returningRequest())).status).toBe(401);
     expect(await getValidatedUser(await client(jar))).toBeNull();
     await expireStoredMetadata(stale);
     const refreshed = await client(stale), result = await refreshed.auth.getSession();
@@ -163,6 +173,8 @@ describe.skipIf(!enabled)("real Supabase login persistence, refresh and session 
     const id = sessionId(session);
     expect(await db.$executeRaw`UPDATE auth.sessions SET not_after=clock_timestamp()-interval '1 second' WHERE id=${id}::uuid AND user_id=${userId}::uuid`).toBe(1);
     expect(await getValidatedUser(await client(jar))).toBeNull();
+    request.cookies = jar;
+    expect((await checkReturningSession(returningRequest())).status).toBe(401);
     await expireStoredMetadata(jar);
     expect(Boolean((await (await client(jar)).auth.getSession()).data.session)).toBe(false);
   });

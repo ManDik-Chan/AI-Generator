@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { SessionSync } from "@/features/auth/components/session-sync";
+import { Suspense, type ReactNode } from "react";
+import { SessionBoundary } from "@/features/auth/components/session-boundary";
 
 export default function ChatSessionLayout({ children }: { children: ReactNode }) {
-  return <><SessionSync />{children}</>;
+  return <><Suspense fallback={null}><SessionBoundary /></Suspense>{children}</>;
 }

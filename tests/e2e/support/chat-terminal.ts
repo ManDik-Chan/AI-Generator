@@ -7,6 +7,20 @@ export function getChatComposer(page: Page) {
   return page.getByRole("textbox", { name: "消息内容", exact: true });
 }
 
+/** Wait for the live, hydrated UI without waiting for non-critical bootstrap data. */
+export async function waitForInteractiveChat(page: Page, deadline = performance.now() + 5_000) {
+  // Next can retain an SSR tree inside a hidden streaming container. Count every
+  // visible shell and accessible composer: real visible duplicates must fail.
+  const shell = page.locator("[data-chat-shell]:visible");
+  const composer = shell.getByRole("textbox", { name: "消息内容", exact: true });
+  const remaining = () => Math.max(1, deadline - performance.now());
+  await expect(shell, "Chat must expose exactly one visible shell.").toHaveCount(1, { timeout: remaining() });
+  await expect(getChatComposer(page), "Chat must expose exactly one accessible composer.").toHaveCount(1, { timeout: remaining() });
+  await expect(composer).toBeVisible({ timeout: remaining() });
+  await expect(composer).toBeEditable({ timeout: remaining() });
+  return { shell, composer };
+}
+
 function isChatPost(url: string, method: string) {
   return method === "POST" && new URL(url).pathname === "/api/chat";
 }
@@ -57,9 +71,7 @@ export async function waitForReadyChatNavigation(
     await bootstrapResponse.finished(),
     "Chat bootstrap transport must finish before the test changes route.",
   ).toBeNull();
-  const composer = getChatComposer(page);
-  await expect(composer, "The ready chat must expose exactly one message composer.").toHaveCount(1);
-  await expect(composer).toBeEditable();
+  await waitForInteractiveChat(page);
 }
 
 export async function runAndWaitForChatTransport(
