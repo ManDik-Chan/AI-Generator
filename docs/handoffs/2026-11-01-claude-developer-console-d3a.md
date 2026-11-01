@@ -1,6 +1,6 @@
 # 交接：P1-D3-A 开发者控制台 Registry 只读模式（Claude，2026-11-01）
 
-> 分支 `claude/p1-d3a-readonly-console-20261101`，基于 PR #43 head `62f82d8`（P1-C1-A 内部只读 API，尚未合并）。本分支依赖 #43，#43 合并前不应合并。未修改 #43 分支、Research Lab（#42）、Showcase、Landing、迁移、RLS、Auth、生产配置或任何 Registry 服务端模块。
+> 分支 `claude/p1-d3a-readonly-console-20261101`，最初基于 PR #43 head `62f82d8`（P1-C1-A 内部只读 API）。#43 与 #45 合并后，已通过合并提交同步最新 `main`（见第 7 节）。未修改 Research Lab（#42）、Showcase、Landing、迁移、RLS、Auth、CI 工作流、生产配置或任何 Registry 服务端模块。
 
 ## 1. 交付内容
 
@@ -94,6 +94,25 @@ Node 24 兼容性与远端浏览器矩阵只在 CI 中运行，结果见 PR。
 
 ## 6. 需要 Owner 决定
 
-1. #43 合并后，本 PR 需要 rebase 到新的 main（或改 base），再跑一次完整 CI。
+1. ~~#43 合并后同步 main 并重跑完整 CI~~：已完成，见第 7 节；CI 结果见 PR。
 2. 是否、何时在某个隔离环境开启三个读取开关，并为测试账户授予 READ_DRAFT / READ_RELEASE，以便在真实浏览器中验收（需要单独授权浏览器自动化）。
 3. 后续写入：C-5（开始下一版草稿）、内部 HTTP 写接口（If-Match / Idempotency-Key 映射、正文大小、限流与 CSRF/Origin 验收）都尚未实现；本 PR 不包含任何写入准备之外的改动。
+
+## 7. 与 main 同步（2026-11-01）
+
+- 方式：在本分支上 `git merge --no-ff origin/main`（`ba0692f`，含 #43、#45、#42），生成合并提交 `a3a8bec`。没有 rebase、没有改写历史、没有 force-push；原提交 `62f82d8`、`b3acf9a` 保留。
+- 冲突：无。本分支与 `62f82d8..main` 之间没有共同修改的文件。
+- 兼容性：#43 在 `62f82d8` 之后只合并了 main，`features/registry/**`、`app/api/**`、`lib/auth/**`、`prisma/**`、`supabase/**` 与 `62f82d8` 完全一致，因此控制台使用的 DTO、错误码、ETag 规则、读取资格与三个默认关闭的开关（`REGISTRY_INTERNAL_ACCESS_ENABLED`、`REGISTRY_INTERNAL_READ_ENABLED`、`REGISTRY_INTERNAL_READ_HTTP_ENABLED`）都没有变化，无需调整控制台代码。同步后本分支相对 `main` 的差异仍只有第 3 节列出的 32 个文件。
+- CI 拓扑（#45）：新增的真实数据库套件 `tests/integration/developer-console-registry.integration.test.ts` 由 `pnpm test:integration` 自动发现，在 Security Acceptance 的 clean install and integration 作业中运行；运行器对任何跳过都判失败。无需修改工作流。
+
+同步后本地复验（Windows，Node 22.23.1，pnpm 11.7.0）：
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm typecheck` / `pnpm lint`（零警告） | 通过 |
+| `pnpm test` | 178 个文件 / 1358 项通过；13 个真实数据库文件（175 项）在无数据库环境下按设计跳过，由 CI 运行 |
+| Registry 契约与兼容性（控制台 7 个文件 + `features/registry` 6 个文件 + `scripts/ci-topology.test.ts`） | 14 个文件 / 237 项通过，包括镜像 schema 对齐、客户端对真实 `createRegistryReadHandler` 的兼容、Mock 隔离 |
+| `pnpm build` | 通过；两个 Registry 路由为动态路由，Research Lab 路由正常生成 |
+| 客户端包检查 | 同第 4 节的 6 个标识均为 0 |
+
+本次同步未在本地重新运行一次性 Supabase 集成验收；真实数据库、迁移与三端浏览器验收以该提交的远端 CI 为准。
