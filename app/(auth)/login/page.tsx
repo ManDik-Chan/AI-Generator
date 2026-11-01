@@ -2,13 +2,19 @@ import { AuthForm } from "@/features/auth/components/auth-form";
 import { signIn } from "@/features/auth/actions";
 import { StatusBanner } from "@/components/ui/status-banner";
 import { safeReturnPath } from "@/lib/auth/return-path";
+import { getCurrentUser } from "@/lib/auth/session";
+import { getSupabasePublicConfig } from "@/lib/env/supabase";
+import { redirect } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ configuration?: string; registered?: string; next?: string; error?: string }>;
+  searchParams: Promise<{ configuration?: string; registered?: string; next?: string; error?: string; logout?: string }>;
 }) {
-  const { configuration, registered, next, error } = await searchParams;
+  const { configuration, registered, next, error, logout } = await searchParams;
+  if (getSupabasePublicConfig() && await getCurrentUser()) redirect(safeReturnPath(next));
 
   return (
     <>
@@ -22,6 +28,7 @@ export default async function LoginPage({
         <StatusBanner className="mt-5" title="登录暂不可用" variant="warning">服务尚未准备好，请稍后再试或联系管理员。</StatusBanner>
       )}
       {error === "callback" ? <StatusBanner className="mt-5" variant="error">验证链接已失效，请重新登录或申请新的验证邮件。</StatusBanner> : null}
+      {logout === "local" ? <StatusBanner className="mt-5" variant="warning">已清除此浏览器的登录状态。会话撤销服务暂不可用，其他设备上的登录可能仍然有效。</StatusBanner> : null}
       <AuthForm action={signIn} mode="login" nextPath={safeReturnPath(next)} />
     </>
   );
