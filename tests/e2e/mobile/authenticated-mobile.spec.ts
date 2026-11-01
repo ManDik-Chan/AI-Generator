@@ -58,6 +58,26 @@ test.describe("authenticated mobile shell", () => {
   });
 
   test("chat composer grows and preserves its draft through coalesced session return checks", async ({ page }) => {
+    await page.addInitScript(() => {
+      const nativeFetch = window.fetch.bind(window);
+      const outcomes: Array<number | "rejected"> = [];
+      Object.defineProperty(window, "__aigSessionFetchOutcomes", { value: outcomes });
+      window.fetch = (...args) => {
+        const [input] = args;
+        const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
+        const fetched = nativeFetch(...args);
+        if (url.pathname !== "/api/auth/session") return fetched;
+        // Observe native fetch fulfillment, returning its exact Response to the
+        // application. No status, body or failure is fabricated by this probe.
+        return fetched.then((response) => {
+          outcomes.push(response.status);
+          return response;
+        }, (error: unknown) => {
+          outcomes.push("rejected");
+          throw error;
+        });
+      };
+    });
     let bootstrapRequests = 0;
     let sessionRequests = 0;
     let chatRscRequests = 0;
@@ -109,7 +129,14 @@ test.describe("authenticated mobile shell", () => {
       releaseCheck();
       const response = await checked;
       expect(response.status(), "The existing server session must still be valid.").toBe(204);
-      expect(await response.finished()).toBeNull();
+      // The bodyless check must fulfill in the application. Chromium's trace
+      // reported the real 204 while Response.finished() never settled.
+      await expect.poll(() => page.evaluate(() => (window as Window & {
+        __aigSessionFetchOutcomes?: Array<number | "rejected">;
+      }).__aigSessionFetchOutcomes), {
+        timeout: 5_000,
+        message: "Native browser fetch must fulfill the real session check exactly once.",
+      }).toEqual([204]);
       await waitForInteractiveChat(page);
       await expect(composer).toHaveValue(draft);
       expect(sessionRequests).toBe(1);

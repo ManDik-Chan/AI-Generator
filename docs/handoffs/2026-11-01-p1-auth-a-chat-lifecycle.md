@@ -113,3 +113,33 @@
 AGENTS.md 的本地浏览器暂停仍生效。此处只读取已有 CI 产物，未启动、连接或控制本地浏览器；也未访问生产 Supabase 或使用 Owner 账号。若需要本地定向 Mobile 验收，须先由 Owner 明确恢复资源所有权、单实例和清理规则；等待时间不构成恢复授权。现有 workflow_dispatch 没有 spec/project 筛选输入，不能在不改工作流的情况下把它声称为定向执行；本轮采用原完整远程 CI 继续验收，未创建临时诊断 workflow 或分支。
 
 历史对照：[18d339e 的 run 41276346274](https://github.com/ManDik-Chan/AI-Generator/actions/runs/41276346274) 曾全部通过，实际测试 merge tree 为 `fc1cc04d6725aac4648f2702ea95c86610f52028`。那次说明已修正的公共登录页/Memory locator 用例通过，不保证后来 `8722373` 的其他原始 locator 不受相同生命周期影响。
+
+## a733140：修复后的首轮远程结果与新增测试等待问题
+
+首轮修复候选 `a7331401e5abc53bc587c8f69719f7cfe4eb7f5a` 的 [Security Acceptance run 41294201005](https://github.com/ManDik-Chan/AI-Generator/actions/runs/41294201005) 实际 checkout 为 `6db8b481620f213d8731345fbafc0e25baa00873`，合成 main parent 仍是 `98acc2d77ac8b02fce403a3d36de2c216281a230`。Merge Gates 全部通过；Supabase 验收通过，真实集成 14 suites / 184 tests、DB 环境内 Node 测试 187 files / 1421 tests 全部通过。
+
+| 浏览器 | 完整结果 | 新增的草稿 / 返回事件合并用例 |
+| --- | --- | --- |
+| Chromium desktop，job `124814365289` | 40 passed / 1 failed | 等待 `response.finished()` 时超时 |
+| Chromium mobile，job `124814365306` | 37 passed / 1 failed / 3 个原有 skipped | 同一等待点超时 |
+| WebKit iPhone，job `124814365305` | 38 passed / 3 个原有 skipped，job success | 2.7 秒通过 |
+
+`8722373` 的四个失败用例在三个项目中全部通过：Agent standard、Agent cancellation、focus scroll、延迟 bootstrap 的 Chat entry performance。五项 Auth 用例在三个项目中也全部通过，共 15 次。性能用例保留原预算；日志仅给出用例通过和总耗时，不能将总耗时当作反馈或 Composer 的单项测量值。
+
+此次 Chromium 唯一失败是新增用例 `authenticated-mobile.spec.ts:112`：
+
+```ts
+expect(response.status()).toBe(204); // 已通过
+expect(await response.finished()).toBeNull(); // 在这里等到总用例 30 秒超时
+```
+
+实际 Mobile artifact 为 `13078864410`，11,675,290 bytes，SHA-256 `85e0a4c8c84f7c4cc5dce12fa819dd2f1af685cf495a6f663a47eeacbf71c67f`，下载后匹配。已离线查看本轮 trace 和失败 PNG，存于忽略目录 `test-results/pr46-a733/authenticated-mobile-authe-852ce-esced-session-return-checks-chromium-mobile/`，没有启动本地浏览器。
+
+可核对的事实：
+
+- 网络记录只有一个 `/chat` document、零个 Chat RSC 请求、一个 bootstrap 和一个会话检查 GET。
+- 会话检查真实返回 204 No Content，网络 wait 73.844 ms；HAR 的 receive 和 bodySize 都为 -1，没有 failureText。产物没有足够的终止事件记录来证明 `ERR_ABORTED` 或其他请求失败，不能补写该推断。
+- response waiter 在单调时间 55023.866 ms 返回，204 断言于 55024.436 ms 通过。此后没有后续测试 API 操作，直到 84097.763 ms 进入超时清理。
+- 最后 DOM 快照只有一个没有隐藏祖先的 shell 和一个已启用 textarea。草稿仍为四行、15 个字符，textarea 高度 116 px。实际超时截图仍显示完整四行草稿，没有观察到草稿被清空或重复 Chat 页面。
+
+因此本轮不能授予完整浏览器通过结论，也不能重新把它归因于旧的重复 DOM 问题。直接阻塞是新增测试对原始 Response 传输终止的无界等待。后续仅修正测试的完成观察点：记录应用实际 fetch 对真实响应的 fulfillment，要求恰好 `[204]`，同时保留真实 response status、检查次数 1、草稿、bootstrap 次数、RSC 次数和单一可编辑 Composer 的全部断言；不模拟成功响应，不改产品代码或预算，不扩大跳过条件。该后续候选仍须通过原完整远程门禁，不能用 WebKit 单项成功代替 Chromium 的修复验收。
