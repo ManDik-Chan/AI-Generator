@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ password: vi.fn(), signup: vi.fn(), signout: vi.fn(), ensure: vi.fn(), revalidate: vi.fn(), redirect: vi.fn() }));
-vi.mock("@/lib/auth/supabase/server", () => ({ createSupabaseServerClient: async () => ({ auth: { signInWithPassword: mocks.password, signUp: mocks.signup, signOut: mocks.signout } }) }));
+const mocks = vi.hoisted(() => ({ create: vi.fn(), clear: vi.fn(), password: vi.fn(), signup: vi.fn(), signout: vi.fn(), ensure: vi.fn(), revalidate: vi.fn(), redirect: vi.fn() }));
+vi.mock("@/lib/auth/supabase/server", () => ({ createSupabaseServerClient: mocks.create, clearSupabaseSession: mocks.clear }));
 vi.mock("@/lib/auth/profile", () => ({ ensureProfile: mocks.ensure }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
@@ -8,6 +8,8 @@ import { signIn, signOut, signUp } from "./actions";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.create.mockResolvedValue({ auth: { signInWithPassword: mocks.password, signUp: mocks.signup, signOut: mocks.signout } });
+  mocks.signout.mockResolvedValue({ error: null });
   mocks.password.mockResolvedValue({ data: { user: { id: "synthetic-user" } }, error: null });
   mocks.signup.mockResolvedValue({ data: { user: { id: "synthetic-user" } }, error: null });
   mocks.redirect.mockImplementation((path: string) => { throw new Error(`redirect:${path}`); });
@@ -19,11 +21,22 @@ describe("auth return flow", () => {
     await expect(signIn({}, credentials(next))).rejects.toThrow(`redirect:${expected}`);
     expect(mocks.ensure).toHaveBeenCalledWith({ id: "synthetic-user" });
     expect(mocks.revalidate).toHaveBeenCalledWith("/", "layout");
+    expect(mocks.create).toHaveBeenCalledWith("session");
   });
   it("never redirects on rejected credentials", async () => {
     mocks.password.mockResolvedValue({ data: { user: null }, error: new Error("bad credentials") });
     expect(await signIn({}, credentials())).toEqual({ error: "邮箱或密码不正确。" });
     expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+  it("uses persistent cookies only for an explicit remember-me choice", async () => {
+    const data = credentials(); data.set("rememberMe", "on");
+    await expect(signIn({}, data)).rejects.toThrow("redirect:/workspace");
+    expect(mocks.create).toHaveBeenCalledWith("persistent");
+  });
+  it("lets Auth validate existing passwords shorter than the signup minimum", async () => {
+    const data = credentials(); data.set("password", "old-pw");
+    await expect(signIn({}, data)).rejects.toThrow("redirect:/workspace");
+    expect(mocks.password).toHaveBeenCalledWith({ email: "synthetic@example.test", password: "old-pw" });
   });
   it("carries safe return targets through signup email and subsequent login", async () => {
     const data = credentials("/memories?scope=all");data.set("displayName", "演示用户");
@@ -33,5 +46,12 @@ describe("auth return flow", () => {
   it("signs out and returns to login", async () => {
     await expect(signOut()).rejects.toThrow("redirect:/login");
     expect(mocks.signout).toHaveBeenCalledOnce();
+    expect(mocks.clear).toHaveBeenCalledOnce();
+  });
+  it.each(["returned", "thrown"])("clears local credentials and reports failed remote revocation (%s)", async (failure) => {
+    if (failure === "returned") mocks.signout.mockResolvedValueOnce({ error: new Error("unavailable") });
+    else mocks.signout.mockRejectedValueOnce(new Error("unavailable"));
+    await expect(signOut()).rejects.toThrow("redirect:/login?logout=local");
+    expect(mocks.clear).toHaveBeenCalledOnce();
   });
 });

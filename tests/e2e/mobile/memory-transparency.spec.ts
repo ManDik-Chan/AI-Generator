@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 
 import { expectNoHorizontalOverflow } from "./helpers";
 import {
+  getChatComposer,
   observeRequestTerminal,
   runAndWaitForChatTransport,
   runAndWaitForMemoryServerAction,
@@ -228,7 +229,7 @@ test.describe("memory provenance and live turn disclosure", () => {
       assertNoRuntimeErrors(page, "successful disclosure");
 
       const providerFailureMessage = `E2E_PROVIDER_FAIL ${token} alpha beta`;
-      await page.getByLabel("消息内容").fill(providerFailureMessage);
+      await getChatComposer(page).fill(providerFailureMessage);
       await runAndWaitForChatTransport(page, async () => {
         await page.getByRole("button", { name: "发送消息" }).click();
       });
@@ -248,7 +249,7 @@ test.describe("memory provenance and live turn disclosure", () => {
       assertNoRuntimeErrors(page, "Provider failure");
 
       const cancelledMessage = `E2E_PROVIDER_CANCELLABLE ${token} alpha beta`;
-      await page.getByLabel("消息内容").fill(cancelledMessage);
+      await getChatComposer(page).fill(cancelledMessage);
       const slowResponsePromise = page.waitForResponse(
         (response) => response.request().method() === "POST"
           && new URL(response.url()).pathname === "/api/chat",
@@ -311,7 +312,7 @@ test.describe("memory provenance and live turn disclosure", () => {
         page,
         () => page.reload({ waitUntil: "domcontentloaded" }),
       );
-      await expect(page.getByLabel("消息内容")).toBeVisible();
+      await expect(getChatComposer(page)).toBeVisible();
       await expect(page.getByText(
         "本轮参考了 2 条已确认记忆",
         { exact: true },

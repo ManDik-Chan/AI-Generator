@@ -10,6 +10,7 @@ import { ShellHeader } from "@/components/layout/shell-header";
 import { getShellViewer } from "@/components/layout/shell-viewer-data";
 import type { ShellViewer } from "@/components/layout/shell-viewer";
 import { cn } from "@/lib/utils";
+import { SessionBoundary } from "@/features/auth/components/session-boundary";
 
 export type { AppShellVariant } from "@/components/layout/layout-variants";
 
@@ -84,6 +85,7 @@ export function AppShell({
   const demo = mode === "demo";
   return (
     <div className="premium-shell app-shell-root relative z-[1] flex flex-col" data-scroll-mode={scrollMode} data-shell-mode={mode}>
+      {demo ? null : <Suspense fallback={null}><SessionBoundary /></Suspense>}
       {demo ? <DemoRibbon /> : null}
       {demo || viewer
         ? <ShellHeader mobileTitle={mobileTitle} mode={mode} viewer={viewer} />

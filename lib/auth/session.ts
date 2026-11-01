@@ -3,14 +3,11 @@ import { cache } from "react";
 
 import { prisma } from "@/lib/database/prisma";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
+import { getValidatedUser } from "@/lib/auth/supabase/validated-user";
 
 async function readCurrentUser() {
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return user;
+  return getValidatedUser(supabase);
 }
 
 export const getCurrentUser = cache(readCurrentUser);

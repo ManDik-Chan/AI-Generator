@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { waitForInteractiveChat } from "../support/chat-terminal";
 
 import {
   expectComposerInsideVisualViewport,
@@ -56,24 +57,103 @@ test.describe("authenticated mobile shell", () => {
     await expectNoHorizontalOverflow(page);
   });
 
-  test("chat composer grows, remains visible and does not cancel on visibility changes", async ({ page }) => {
+  test("chat composer grows and preserves its draft through coalesced session return checks", async ({ page }) => {
+    await page.addInitScript(() => {
+      const nativeFetch = window.fetch.bind(window);
+      const outcomes: Array<number | "rejected"> = [];
+      Object.defineProperty(window, "__aigSessionFetchOutcomes", { value: outcomes });
+      window.fetch = (...args) => {
+        const [input] = args;
+        const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url, window.location.href);
+        const fetched = nativeFetch(...args);
+        if (url.pathname !== "/api/auth/session") return fetched;
+        // Observe native fetch fulfillment, returning its exact Response to the
+        // application. No status, body or failure is fabricated by this probe.
+        return fetched.then((response) => {
+          outcomes.push(response.status);
+          return response;
+        }, (error: unknown) => {
+          outcomes.push("rejected");
+          throw error;
+        });
+      };
+    });
+    let bootstrapRequests = 0;
+    let sessionRequests = 0;
+    let chatRscRequests = 0;
+    page.on("request", (request) => {
+      const url = new URL(request.url());
+      if (url.pathname === "/api/chat/bootstrap") bootstrapRequests++;
+      if (url.pathname === "/api/auth/session") sessionRequests++;
+      if (url.pathname === "/chat" && (request.headers()["rsc"] === "1" || url.searchParams.has("_rsc"))) chatRscRequests++;
+    });
     await page.goto("/chat");
-    const composer = page.getByLabel("消息内容");
-    await composer.fill("第一行\n第二行\n第三行\n第四行");
+    const { composer } = await waitForInteractiveChat(page);
+    const draft = "第一行\n第二行\n第三行\n第四行";
+    await composer.fill(draft);
     await expect(composer).toBeInViewport();
     await expect.poll(
       () => composer.evaluate((element) => element.getBoundingClientRect().height),
       { timeout: 5_000 },
     ).toBeGreaterThan(44);
-    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+    await expect.poll(() => bootstrapRequests).toBe(1);
+    expect(sessionRequests, "A normal entry is already validated by the server.").toBe(0);
+    const initialRscRequests = chatRscRequests;
+
+    // Hold the real check in flight until the return-event burst finishes. Its
+    // actual server response is still required; no success response is mocked.
+    let releaseCheck!: () => void;
+    const checkGate = new Promise<void>((resolve) => { releaseCheck = resolve; });
+    await page.route("**/api/auth/session", async (route) => {
+      await checkGate;
+      await route.continue();
+    });
+    const checkStarted = page.waitForRequest((request) => new URL(request.url()).pathname === "/api/auth/session");
+    const background = await page.context().newPage();
+    try {
+      await composer.blur();
+      // The second tab and return exercise real window focus changes. Explicit
+      // lifecycle events cover the corresponding bfcache return burst too.
+      await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+      await background.bringToFront();
+      await page.bringToFront();
+      await page.evaluate(() => {
+        window.dispatchEvent(new Event("focus"));
+        window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+        window.dispatchEvent(new Event("focus"));
+      });
+      await composer.focus();
+      await checkStarted;
+      expect(sessionRequests, "Return events must share their in-flight session check.").toBe(1);
+      const checked = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/auth/session");
+      releaseCheck();
+      const response = await checked;
+      expect(response.status(), "The existing server session must still be valid.").toBe(204);
+      // The bodyless check must fulfill in the application. Chromium's trace
+      // reported the real 204 while Response.finished() never settled.
+      await expect.poll(() => page.evaluate(() => (window as Window & {
+        __aigSessionFetchOutcomes?: Array<number | "rejected">;
+      }).__aigSessionFetchOutcomes), {
+        timeout: 5_000,
+        message: "Native browser fetch must fulfill the real session check exactly once.",
+      }).toEqual([204]);
+      await waitForInteractiveChat(page);
+      await expect(composer).toHaveValue(draft);
+      expect(sessionRequests).toBe(1);
+      expect(bootstrapRequests, "Session validation must not remount Chat or reload bootstrap.").toBe(1);
+      expect(chatRscRequests, "A valid return check must not refresh the RSC route.").toBe(initialRscRequests);
+    } finally {
+      releaseCheck();
+      await background.close();
+    }
     await expectNoHorizontalOverflow(page);
   });
 
   test("focusing the composer does not reset message or document scroll", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/chat");
-    const scroller = page.locator("[data-chat-message-scroll]");
-    const composer = page.getByLabel("消息内容");
+    const { shell, composer } = await waitForInteractiveChat(page);
+    const scroller = shell.locator("[data-chat-message-scroll]");
     await scroller.evaluate((element) => { element.scrollTop = Math.max(80, element.scrollHeight / 3); });
     const before = await scroller.evaluate((element) => element.scrollTop);
     const windowBefore = await page.evaluate(() => window.scrollY);
@@ -117,9 +197,8 @@ test.describe("authenticated mobile shell", () => {
     });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/chat");
-    const shell = page.locator("[data-chat-shell]");
-    const scroller = page.locator("[data-chat-message-scroll]");
-    await expect(page.getByLabel("消息内容")).toBeEditable();
+    const { shell } = await waitForInteractiveChat(page);
+    const scroller = shell.locator("[data-chat-message-scroll]");
     await scroller.evaluate((element) => {
       const fixture = document.createElement("div");
       fixture.style.height = "1800px";

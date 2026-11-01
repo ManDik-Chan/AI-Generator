@@ -11,7 +11,8 @@
       "codex/p1-b2-a-draft-review-20261031": false,
       "codex/p1-b2-b-release-20261031": false,
       "codex/p1-b3-a-quarantine-20261031": false,
-      "codex/p1-c1-a-internal-read-api-20261031": false
+      "codex/p1-c1-a-internal-read-api-20261031": false,
+      "codex/p1-auth-a-login-persistence-20261101": false
     }
   }
 }

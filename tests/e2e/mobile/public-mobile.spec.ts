@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { expectNoHorizontalOverflow } from "./helpers";
 
+// These public-surface checks require a signed-out visitor, independent of the
+// authenticated storage state prepared for the rest of the CI browser suite.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 for (const route of ["/login", "/register"] as const) {
   test(`${route} keeps mobile fields readable without horizontal overflow`, async ({ page }, testInfo) => {
     await page.goto(route);

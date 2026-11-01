@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 import { agentFixtureIds as ids, agentFixtureStartedAt as startedAt } from "../fixtures/agent";
+import { waitForInteractiveChat } from "../support/chat-terminal";
 import { expectNoHorizontalOverflow } from "./helpers";
 
 const authState = process.env.PLAYWRIGHT_AUTH_STATE;
@@ -187,10 +188,10 @@ async function installAgentMocks(page: Page, scenario: MockScenario) {
 
 async function submitAgent(page: Page, label: "Agent 标准" | "Agent 深度") {
   await page.goto("/chat");
-  await expect(page.getByLabel("消息内容")).toBeEditable();
-  await page.getByRole("button", { name: label, exact: true }).click();
-  await page.getByLabel("消息内容").fill("验证 Agent 编排");
-  await page.getByRole("button", { name: "发送消息" }).click();
+  const { shell, composer } = await waitForInteractiveChat(page);
+  await shell.getByRole("button", { name: label, exact: true }).click();
+  await composer.fill("验证 Agent 编排");
+  await shell.getByRole("button", { name: "发送消息" }).click();
 }
 
 async function startNewConversationViaUi(page: Page) {
@@ -204,7 +205,7 @@ async function startNewConversationViaUi(page: Page) {
   await expect(newConversation).toBeVisible();
   await newConversation.click();
   await expect(page).toHaveURL(/\/chat$/);
-  await expect(page.getByLabel("消息内容")).toBeEditable();
+  return waitForInteractiveChat(page);
 }
 
 async function installCompletedChatMock(page: Page) {
@@ -307,9 +308,9 @@ test.describe("authenticated Agent Mode", () => {
     await submitAgent(page, "Agent 标准");
     await expect(page.getByRole("button", { name: "停止生成", exact: true })).toBeVisible();
 
-    await startNewConversationViaUi(page);
+    const { composer } = await startNewConversationViaUi(page);
     await expect(page.getByRole("button", { name: "停止生成", exact: true })).toHaveCount(0);
-    await page.getByLabel("消息内容").fill("Chat B can send independently");
+    await composer.fill("Chat B can send independently");
     const send = page.getByRole("button", { name: "发送消息" });
     await expect(send).toBeEnabled();
     await send.click();
@@ -329,7 +330,7 @@ test.describe("authenticated Agent Mode", () => {
     const completedAt = Date.now();
     await expect(page.getByText("这是 Leader 的最终回答。")).toBeVisible({ timeout: 10_000 });
     expect(Date.now() - completedAt).toBeLessThan(5_000);
-    await expect(page.getByLabel("消息内容")).toBeEditable();
+    await waitForInteractiveChat(page);
     await expect(page.getByRole("button", { name: "停止生成" })).toHaveCount(0);
     expect(mock.getTerminalFetchCount()).toBe(1);
 

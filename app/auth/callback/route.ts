@@ -8,7 +8,8 @@ export async function GET(request: NextRequest) {
   const safeNext = safeReturnPath(request.nextUrl.searchParams.get("next"));
 
   if (code) {
-    const supabase = await createSupabaseServerClient();
+    // Explicit PKCE completion may follow a new registration after a prior logout.
+    const supabase = await createSupabaseServerClient("session");
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {

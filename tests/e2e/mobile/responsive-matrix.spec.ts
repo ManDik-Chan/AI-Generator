@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { expectNoHorizontalOverflow } from "./helpers";
 
+// Login is a public form only for signed-out visitors; valid shared CI sessions
+// correctly leave it for the workspace, so these public layout checks start empty.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 const viewports = [
   { width: 320, height: 568 },
   { width: 360, height: 800 },

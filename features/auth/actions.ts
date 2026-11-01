@@ -5,16 +5,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { ensureProfile } from "@/lib/auth/profile";
-import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
+import { clearSupabaseSession, createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import type { AuthActionState } from "@/features/auth/types";
 import { safeReturnPath } from "@/lib/auth/return-path";
 
 const credentialsSchema = z.object({
   email: z.email("请输入有效的邮箱地址。"),
-  password: z.string().min(8, "密码至少需要 8 个字符。"),
+  password: z.string().min(1, "请输入密码。"),
 });
 
 const signupSchema = credentialsSchema.extend({
+  password: z.string().min(8, "密码至少需要 8 个字符。"),
   displayName: z.string().trim().min(1, "请输入显示名称。").max(50, "显示名称不能超过 50 个字符。"),
 });
 
@@ -36,7 +37,7 @@ export async function signIn(
   }
 
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient(formData.get("rememberMe") === "on" ? "persistent" : "session");
     const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
 
     if (error || !data.user) {
@@ -67,7 +68,7 @@ export async function signUp(
   }
 
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await createSupabaseServerClient("session");
     const { data, error } = await supabase.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
@@ -92,8 +93,16 @@ export async function signUp(
 }
 
 export async function signOut() {
-  const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
+  let failed = false;
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.signOut();
+    failed = Boolean(error);
+  } catch {
+    failed = true;
+  } finally {
+    await clearSupabaseSession();
+  }
   revalidatePath("/", "layout");
-  redirect("/login");
+  redirect(failed ? "/login?logout=local" : "/login");
 }
