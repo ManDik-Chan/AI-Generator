@@ -260,12 +260,23 @@ p, li, dd, blockquote, figcaption { overflow-wrap: anywhere; }
 .font-code { font-family: ui-monospace, "SFMono-Regular", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace; font-feature-settings: "calt" 0; }
 
 
-/* Rolling characters (components/ui/roll-text.tsx) */
-.rt { display: inline-flex; white-space: nowrap; vertical-align: top; }
-.rt__c { display: inline-flex; flex-direction: column; height: 1.3em; line-height: 1.3; overflow: hidden; }
-.rt__c > span { display: block; transition: transform .6s var(--ease-out) calc(var(--i) * 16ms); }
-:is(a, button):hover .rt__c > span,
-:is(a, button):focus-visible .rt__c > span { transform: translate3d(0, -100%, 0); }
+/* Rolling characters (components/ui/roll-text.tsx).
+   .rt__txt is the real label and is what shows at rest. The aria-hidden .rt__fx layer draws the
+   rolling copies from data-c (generated content is never selected, copied or translated) and only
+   shows while hovered/focused; the swap back waits until the last character has rolled home.
+   Kerning and ligatures are off so the real text lines up glyph-for-glyph with the per-character copy. */
+.rt { position: relative; display: inline-block; vertical-align: top; height: 1.3em; line-height: 1.3; white-space: nowrap; font-kerning: none; font-variant-ligatures: none; }
+.rt__fx { position: absolute; left: 0; top: 0; display: flex; visibility: hidden; pointer-events: none; }
+.rt__txt, .rt__fx { transition: visibility 0s linear calc(.6s + var(--n, 0) * 16ms); }
+.rt__c { display: block; height: 1.3em; overflow: hidden; }
+.rt__c::before, .rt__c::after { content: attr(data-c); display: block; transition: transform .6s var(--ease-out) calc(var(--i) * 16ms); }
+:is(a, button):is(:hover, :focus-visible) .rt__c::before,
+:is(a, button):is(:hover, :focus-visible) .rt__c::after { transform: translate3d(0, -100%, 0); }
+:is(a, button):is(:hover, :focus-visible) .rt__fx { visibility: visible; transition-delay: 0s; }
+:is(a, button):is(:hover, :focus-visible) .rt__txt { visibility: hidden; transition-delay: 0s; }
+/* A translated page rewrites .rt__txt; keep that text and drop the untranslated rolling copy. */
+html[class*="translated-"] .rt .rt__fx { display: none; }
+html[class*="translated-"] .rt .rt__txt { visibility: visible; }
 
 .premium-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
 .premium-scrollbar::-webkit-scrollbar-track { background: transparent; }

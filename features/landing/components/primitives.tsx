@@ -1,4 +1,4 @@
-import type { CSSProperties, ImgHTMLAttributes, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ImgHTMLAttributes, type ReactNode } from "react";
 
 /* ------------------------------------------------------------------ icons */
 
@@ -61,25 +61,29 @@ export function IconSprite() {
 
 /* ------------------------------------------------------- motion helpers */
 
+/** Generated content collapses a plain space, so rolling copies of spaces use U+00A0. */
+const NBSP = String.fromCharCode(0xa0);
+
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
 export const vars = (v: Record<`--${string}`, string | number>) => v as Vars;
 
-/** Text whose characters roll up one by one when the surrounding link/button is hovered. */
+/**
+ * Text whose characters roll up one by one when the surrounding link/button is hovered.
+ * The label is a single real text node (selection, copy, translation and screen readers
+ * all see it once); the rolling glyphs are CSS-generated from data-c in an aria-hidden
+ * layer that is only shown while the control is hovered or focused.
+ */
 export function Roll({ text, className }: { text: string; className?: string }) {
   const chars = Array.from(text);
   return (
     <span className={className}>
-      <span className="sr-only">{text}</span>
-      <span aria-hidden="true" className="roll-t">
-        {chars.map((ch, i) => {
-          const glyph = ch === " " ? " " : ch;
-          return (
-            <span className="roll-t__c" key={i} style={vars({ "--i": i })}>
-              <span>{glyph}</span>
-              <span>{glyph}</span>
-            </span>
-          );
-        })}
+      <span className="roll-t" style={vars({ "--n": chars.length })}>
+        <span className="roll-t__txt">{text}</span>
+        <span aria-hidden="true" className="roll-t__fx">
+          {chars.map((ch, i) => (
+            <span className="roll-t__c" data-c={ch === " " ? NBSP : ch} key={i} style={vars({ "--i": i })} />
+          ))}
+        </span>
       </span>
     </span>
   );
@@ -95,16 +99,22 @@ export function Loop({ name, dir, className }: { name: LandingIcon; dir: "right"
   );
 }
 
-/** Lines of text split into characters that light up with scroll (opacity driven by the runtime). */
+/**
+ * Copy that lights up character by character with scroll. It stays plain text (one text
+ * node per line, no per-character elements); the runtime paints the unread part through
+ * CSS Custom Highlights, so the DOM, copy, translation and screen readers are unaffected.
+ */
 export function Chars({ lines }: { lines: string[] }) {
-  const out: ReactNode[] = [];
-  lines.forEach((line, li) => {
-    if (li > 0) out.push(<br key={`br-${li}`} />);
-    Array.from(line).forEach((ch, ci) => {
-      out.push(/\s/.test(ch) ? " " : <span className="ch" key={`${li}-${ci}`}>{ch}</span>);
-    });
-  });
-  return <>{out}</>;
+  return (
+    <>
+      {lines.map((line, i) => (
+        <Fragment key={i}>
+          {i > 0 ? <br /> : null}
+          {line}
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 /** Static artwork / avatar image. */

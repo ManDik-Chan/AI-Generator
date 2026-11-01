@@ -25,6 +25,13 @@
   --ease-io: cubic-bezier(0.77, 0, 0.18, 1);    /* quart in-out */
   --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
   --font: var(--font-latin, "Figtree"), var(--font-sc, "Noto Sans SC"), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+
+  /* Floating chat button and the lane that bottom-left copy keeps clear of it. */
+  --fab: 48px;
+  --fab-lane: calc(var(--fab) + 14px);
+  /* Frosted surfaces behind ink header text: opaque enough for 4.5:1 over any backdrop. */
+  --chip-veil: rgba(255, 255, 255, 0.64);
+  --chip-veil-dark: rgba(242, 239, 234, 0.78);
 }
 
 .lp *,
@@ -69,11 +76,31 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
    Interaction primitives
    ========================================================================== */
 
-/* Rolling characters (built by JS from [data-roll]) */
-.lp .roll-t { display: inline-flex; white-space: nowrap; vertical-align: top; }
-.lp .roll-t__c { display: inline-flex; flex-direction: column; height: 1.2em; line-height: 1.2; overflow: hidden; }
-.lp .roll-t__c > span { display: block; transition: transform 0.6s var(--ease) calc(var(--i) * 18ms); }
-.lp :is(a, button):hover .roll-t__c > span, .lp :is(a, button):focus-visible .roll-t__c > span { transform: translate3d(0, -100%, 0); }
+/* Rolling characters (primitives.tsx <Roll>).
+   .roll-t__txt is the real label and is what shows at rest: one text node for selection, copy,
+   translation and screen readers. The aria-hidden .roll-t__fx layer draws the rolling copies from
+   data-c (generated content is never selected, copied or translated) and only shows while the
+   control is hovered/focused; the swap back waits until the last character has rolled home.
+   Kerning and ligatures are off so the real text lines up glyph-for-glyph with the copies. */
+.lp .roll-t {
+  position: relative; display: inline-block; vertical-align: top;
+  height: calc(var(--roll-lh, 1.2) * 1em); line-height: var(--roll-lh, 1.2);
+  white-space: nowrap; font-kerning: none; font-variant-ligatures: none;
+}
+.lp .roll-t__fx { position: absolute; left: 0; top: 0; display: flex; visibility: hidden; pointer-events: none; }
+.lp .roll-t__txt, .lp .roll-t__fx { transition: visibility 0s linear calc(var(--roll-dur, 0.6s) + var(--n, 0) * var(--roll-step, 18ms)); }
+.lp .roll-t__c { display: block; height: calc(var(--roll-lh, 1.2) * 1em); overflow: hidden; }
+.lp .roll-t__c::before, .lp .roll-t__c::after {
+  content: attr(data-c); display: block;
+  transition: transform var(--roll-dur, 0.6s) var(--ease) calc(var(--i) * var(--roll-step, 18ms));
+}
+.lp :is(a, button):is(:hover, :focus-visible) .roll-t__c::before,
+.lp :is(a, button):is(:hover, :focus-visible) .roll-t__c::after { transform: translate3d(0, -100%, 0); }
+.lp :is(a, button):is(:hover, :focus-visible) .roll-t__fx { visibility: visible; transition-delay: 0s; }
+.lp :is(a, button):is(:hover, :focus-visible) .roll-t__txt { visibility: hidden; transition-delay: 0s; }
+/* When the label text is rewritten (browser translation), keep that text and drop the rolling copy. */
+.lp .roll-t.is-static .roll-t__fx, html[class*="translated-"] .lp .roll-t .roll-t__fx { display: none; }
+.lp .roll-t.is-static .roll-t__txt, html[class*="translated-"] .lp .roll-t .roll-t__txt { visibility: visible; }
 
 /* Looping icon (built by JS from svg[data-loop]) */
 .lp .loop { position: relative; display: inline-grid; overflow: hidden; flex: none; }
@@ -118,7 +145,8 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 @keyframes lp-bob { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
 
 .lp .line { display: block; overflow: hidden; padding-bottom: 0.1em; margin-bottom: -0.1em; }
-.lp .line > span { display: block; transform: translate3d(0, 112%, 0); transition: transform 1.25s var(--ease) calc(var(--d, 0) * 1ms); }
+/* Each title line is its own block; balancing keeps a line that has to wrap from leaving one word alone. */
+.lp .line > span { display: block; text-wrap: balance; transform: translate3d(0, 112%, 0); transition: transform 1.25s var(--ease) calc(var(--d, 0) * 1ms); }
 .lp .is-in .line > span,
 .lp.is-loaded .hero .line > span { transform: none; }
 .lp.is-loaded .hero .line > span { transition-delay: calc(450ms + var(--d, 0) * 1ms); }
@@ -142,8 +170,17 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 .lp .rule.is-in { transform: none; }
 .lp .rule--ink { background: rgba(36, 31, 33, 0.28); }
 
-/* Character reveal */
-.lp [data-chars] .ch { opacity: var(--ch-min, 0.16); }
+/* Scroll-lit copy (primitives.tsx <Chars>): the text stays one plain text node; the runtime marks
+   the unread part with CSS Custom Highlights. Without highlight support the copy is simply fully lit.
+   Steps 1-3 are the partial brightness of the character at the reading frontier. */
+.lp .about__text::highlight(lp-ch-dim) { color: rgba(36, 31, 33, 0.16); }
+.lp .about__text::highlight(lp-ch-1) { color: rgba(36, 31, 33, 0.37); }
+.lp .about__text::highlight(lp-ch-2) { color: rgba(36, 31, 33, 0.58); }
+.lp .about__text::highlight(lp-ch-3) { color: rgba(36, 31, 33, 0.79); }
+.lp .forest__quote::highlight(lp-ch-dim) { color: rgba(233, 231, 120, 0.22); }
+.lp .forest__quote::highlight(lp-ch-1) { color: rgba(233, 231, 120, 0.415); }
+.lp .forest__quote::highlight(lp-ch-2) { color: rgba(233, 231, 120, 0.61); }
+.lp .forest__quote::highlight(lp-ch-3) { color: rgba(233, 231, 120, 0.805); }
 
 .lp .grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gap); padding: 0 var(--gutter); }
 .lp .art { background-color: var(--paper-3); background-size: cover; background-position: center; }
@@ -264,9 +301,11 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
   padding: var(--gutter);
   pointer-events: none;
   color: var(--ink);
-  transition: color 0.5s var(--ease);
 }
 .lp .header > * { pointer-events: auto; }
+/* Tone changes swap text and fill colours in one frame. Cross-fading an ink pill to paper (and its
+   text the other way) passes through equal colours mid-way, so contrast would briefly reach 1:1. */
+.lp .header .pill { transition: padding 0.7s var(--ease), transform 0.35s var(--ease); }
 /* Soft frosted band behind the fixed header so scrolled copy never collides with the
    wordmark or the pills. Colour-neutral (blur only), so it works over paper, art and lime. */
 .lp .header::before {
@@ -286,7 +325,7 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 .lp .brand__mark { width: 22px; height: 22px; transition: transform 0.9s var(--ease); }
 .lp .brand:hover .brand__mark { transform: rotate(90deg) scale(1.08); }
 .lp .brand__word { display: inline-flex; align-items: flex-start; font-size: 22px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.2; }
-.lp .brand__word .roll-t__c > span { transition-duration: 0.7s; transition-delay: calc(var(--i) * 22ms); }
+.lp .brand__word { --roll-dur: 0.7s; --roll-step: 22ms; }
 .lp .brand__word sup { margin-top: 0.35em; }
 
 .lp .header__right { display: flex; align-items: center; gap: 10px; }
@@ -295,11 +334,16 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 
 /* Language switcher */
 .lp .lang { position: relative; }
+/* The language switch is the one header control without a fill of its own; a frosted chip keeps its
+   ink label readable over paper, art, the darkening hero and the dark chapters alike. */
 .lp .lang__btn {
   display: inline-flex; align-items: center; gap: 3px;
-  height: 34px; padding: 0 4px 0 8px;
+  height: 34px; padding: 0 4px 0 8px; border-radius: 999px;
+  color: var(--ink); background: var(--chip-veil);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
   font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap;
 }
+.lp .header[data-tone="dark"] .lang__btn { background: var(--chip-veil-dark); }
 .lp .lang__chev { width: 14px; height: 14px; transition: transform 0.6s var(--ease); }
 .lp .lang.is-open .lang__chev { transform: rotate(180deg); }
 .lp .lang__menu {
@@ -366,7 +410,9 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
    ========================================================================== */
 .lp .intro { position: relative; }
 .lp .hero { position: sticky; top: 0; z-index: 1; height: calc(var(--vh) * 100); overflow: hidden; background: var(--paper); }
-.lp .hero__field { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 50% 50%; pointer-events: none; }
+/* Floating cards are decoration (aria-hidden); the runtime fades any card that would sit behind the
+   headline, the foot copy or the header (motion-math.ts clearance). perspective = HERO_PERSPECTIVE. */
+.lp .hero__field { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 50% 50%; pointer-events: none; -webkit-user-select: none; user-select: none; }
 .lp .hero__cam { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d; }
 .lp .hcard { position: absolute; left: 0; top: 0; opacity: 0; will-change: transform, opacity; backface-visibility: hidden; }
 .lp .hcard__in { transform: translate(-50%, -50%); }
@@ -390,7 +436,9 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
   transition: opacity 1.2s var(--ease) 1s, transform 1.2s var(--ease) 1s;
 }
 .lp.is-loaded .hero__foot { opacity: 1; transform: none; }
-.lp .hero__foot > p:first-child, .lp .footer__bottom > span:first-child { padding-left: 62px; }
+/* Copy at the bottom-left keeps clear of the fixed chat button. The footer row reserves the lane as a
+   whole, so its lines stay clear when they stack on narrow screens. */
+.lp .hero__foot > p:first-child, .lp .footer__bottom { padding-left: var(--fab-lane); }
 .lp .hero__scroll { display: inline-flex; align-items: center; gap: 6px; }
 .lp .hero__scroll svg { width: 13px; height: 13px; animation: lp-bob 2s var(--ease-io) infinite; }
 
@@ -436,7 +484,7 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 .lp .catalog__thumb--avatar { display: grid; place-items: center; background: #e9dfcf; }
 .lp .catalog__thumb--avatar img { width: 46px; height: 46px; border-radius: 12px; }
 
-.lp .chapters__index { position: absolute; left: var(--gutter); top: 50%; z-index: 5; width: calc((100% - 2 * var(--gutter) + var(--gap)) / 4 - var(--gap) * 1.5); color: #fff; font-size: 12px; pointer-events: none; }
+.lp .chapters__index { position: absolute; left: var(--gutter); top: 50%; z-index: 5; width: calc((100% - 2 * var(--gutter) + var(--gap)) / 4 - var(--gap) * 1.5); color: #fff; font-size: 12px; pointer-events: none; -webkit-user-select: none; user-select: none; }
 .lp .roll { height: 1.25em; overflow: hidden; font-size: 13px; line-height: 1.25; font-variant-numeric: tabular-nums; }
 .lp .roll__track { display: flex; flex-direction: column; will-change: transform; }
 .lp .chapters__bar { height: 1px; background: rgba(255, 255, 255, 0.3); margin: 12px 0 10px; }
@@ -649,8 +697,7 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 .lp .index__thumb--avatar { display: inline-grid; place-items: center; background: #e9e2f2; }
 .lp .index__thumb--avatar img { width: 0.58em; height: auto; border-radius: 24%; transition: transform 1s var(--ease-back); }
 .lp .index__row:hover .index__thumb--avatar img { transform: rotate(-8deg) scale(1.1); }
-.lp .index__num { font-variant-numeric: tabular-nums; }
-.lp .index__num .roll-t__c { height: 1.12em; line-height: 1.12; }
+.lp .index__num { font-variant-numeric: tabular-nums; --roll-lh: 1.12; }
 
 .lp .leaves { position: absolute; inset: 0; pointer-events: none; color: var(--ink); opacity: 0.075; overflow: hidden; }
 .lp .leaves__svg { position: absolute; right: -6%; top: -8%; width: min(1100px, 95vw); height: auto; transform-origin: 100% 0; animation: lp-sway 9s ease-in-out infinite alternate; }
@@ -671,7 +718,10 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 .lp .forest__avatar svg { width: 46%; height: 46%; animation: lp-spinSlow 14s linear infinite; }
 @keyframes lp-spinSlow { to { transform: rotate(360deg); } }
 .lp .forest__copy { font-size: 13px; line-height: 1.55; color: rgba(242, 239, 234, 0.82); display: grid; gap: 12px; }
-.lp .forest__quote { color: var(--lime); margin-bottom: 26px; --ch-min: 0.22; }
+.lp .forest__quote { color: var(--lime); margin-bottom: 26px; }
+/* The Chinese quote is set as three fixed lines; at 3.6vw the longest one fits its six-column cell
+   from 961px up (at t-h2's 4vw it wrapped a lone "前，" between about 961 and 1500px). */
+.lp[lang="zh-CN"] .forest__quote { font-size: clamp(32px, 3.6vw, 64px); }
 .lp .forest__right { grid-column: 7 / span 6; }
 .lp .forest__media { position: relative; aspect-ratio: 5 / 4; border-radius: 2px; }
 .lp .forest__img { position: absolute; left: 0; right: 0; top: -12%; bottom: -12%; will-change: transform; }
@@ -770,7 +820,7 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 /* ---------- floating button + toast ---------- */
 .lp .fab {
   position: fixed; left: var(--gutter); bottom: var(--gutter); z-index: 58;
-  display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%;
+  display: grid; place-items: center; width: var(--fab); height: var(--fab); border-radius: 50%;
   background: var(--lime); color: var(--ink);
   box-shadow: 0 10px 30px rgba(36, 31, 33, 0.18);
   transition: background-color 0.5s var(--ease), color 0.5s var(--ease), transform 0.7s var(--ease-back);
@@ -834,7 +884,7 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
   .lp .footer__cols { grid-template-columns: 1fr 1fr; row-gap: 24px; }
   .lp .footer__mark { grid-column: 1 / span 8; }
   .lp .footer__bottom { flex-direction: column; gap: 4px; }
-  .lp .fab { width: 44px; height: 44px; }
+  .lp { --fab: 44px; }
   .lp .index__row { font-size: clamp(38px, 12vw, 60px); }
 }
 
