@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { expectNoHorizontalOverflow } from "./helpers";
+import { attachRuntimeDiagnostics, expectNoRuntimeErrors, flushRuntimeDiagnostics, installRuntimeDiagnostics } from "../support/runtime-diagnostics";
 
 // Login is a public form only for signed-out visitors; valid shared CI sessions
 // correctly leave it for the workspace, so these public layout checks start empty.
@@ -31,9 +32,7 @@ const viewports = [
 
 test("public Lumen surfaces remain fluid across the acceptance viewport matrix", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desktop", "The complete matrix runs once in Chromium; device projects cover mobile Chromium and WebKit separately.");
-  const errors: string[] = [];
-  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
-  page.on("pageerror", (error) => errors.push(error.message));
+  const diagnostics = await installRuntimeDiagnostics(page);
 
   await page.goto("/");
   for (const viewport of viewports) {
@@ -49,7 +48,9 @@ test("public Lumen surfaces remain fluid across the acceptance viewport matrix",
     await expectNoHorizontalOverflow(page);
   }
 
-  expect(errors).toEqual([]);
+  await flushRuntimeDiagnostics(page);
+  await attachRuntimeDiagnostics(testInfo, diagnostics);
+  expectNoRuntimeErrors(diagnostics, "The public viewport matrix must emit zero unexpected runtime errors.");
 });
 
 test("public forms tolerate enlarged system text without disabling browser zoom", async ({ page }, testInfo) => {

@@ -22,6 +22,7 @@ import {
   attachRuntimeDiagnostics,
   expectNoRuntimeErrors,
   installRuntimeDiagnostics,
+  flushRuntimeDiagnostics,
   type RuntimeDiagnostics,
 } from "../support/runtime-diagnostics";
 
@@ -32,10 +33,11 @@ const hasAuthState = Boolean(
 const runtimeDiagnostics = new WeakMap<Page, RuntimeDiagnostics>();
 
 test.beforeEach(async ({ page }) => {
-  runtimeDiagnostics.set(page, installRuntimeDiagnostics(page));
+  runtimeDiagnostics.set(page, await installRuntimeDiagnostics(page));
 });
 
 test.afterEach(async ({ page }, testInfo) => {
+  await flushRuntimeDiagnostics(page);
   const diagnostics = runtimeDiagnostics.get(page) ?? {
     errors: ["Runtime diagnostics were not installed."],
     requestFailures: [],

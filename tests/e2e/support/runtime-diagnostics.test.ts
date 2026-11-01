@@ -4,6 +4,7 @@ import {
   getUnexpectedRuntimeErrors,
   type RuntimeDiagnostics,
 } from "./runtime-diagnostics";
+import { expectedCspPolicy } from "./csp-observations";
 
 const webkitLoadFailed = "console: TypeError: Load failed (http://127.0.0.1:3000/_next/static/chunks/app.js:0:42)";
 
@@ -54,5 +55,17 @@ describe("authenticated E2E runtime diagnostics", () => {
     expect(getUnexpectedRuntimeErrors(diagnostics({
       errors: [pageError],
     }))).toEqual([pageError]);
+  });
+
+  it("retains page errors and extra console errors alongside a paired CSP observation", () => {
+    const origin = "http://127.0.0.1:3000";
+    const text = "[Report Only] Refused to execute a script because its hash, its nonce, or 'unsafe-inline' does not appear in the script-src directive of the Content Security Policy.";
+    const error = `console: ${text} (${origin}/login:1:0)`;
+    const input = diagnostics({
+      errors: [error, error, "page: ReferenceError: real failure"], requestFailures: [],
+      cspEvents: [{ blockedURI: "inline", disposition: "report", effectiveDirective: "script-src-elem", originalPolicy: expectedCspPolicy, documentOrigin: origin, sourceOrigin: origin, frameOrigin: origin }],
+      cspConsole: [{ text, origin, error }, { text, origin, error }],
+    });
+    expect(getUnexpectedRuntimeErrors(input)).toEqual([error, "page: ReferenceError: real failure"]);
   });
 });

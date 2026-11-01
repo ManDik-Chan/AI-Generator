@@ -1,4 +1,5 @@
 import { expect, type Page, type TestInfo } from "@playwright/test";
+import { pairCspObservations, urlOrigin, type CspConsoleObservation, type CspObservation } from "./csp-observations";
 
 interface RequestFailureDiagnostic {
   failure: string;
@@ -37,23 +38,56 @@ function isWebKitNextChunkLoadCancellation(error: string, origin: string) {
 
 export interface RuntimeDiagnostics {
   errors: string[];
+  cspEvents?: CspObservation[];
+  cspConsole?: CspConsoleObservation[];
   pendingRequestDiagnostics?: Promise<void>[];
   requestFailures: RequestFailureDiagnostic[];
 }
 
-export function installRuntimeDiagnostics(page: Page): RuntimeDiagnostics {
+export async function installRuntimeDiagnostics(page: Page): Promise<RuntimeDiagnostics> {
   const diagnostics: RuntimeDiagnostics = {
     errors: [],
     pendingRequestDiagnostics: [],
     requestFailures: [],
+    cspEvents: [],
+    cspConsole: [],
   };
+  await page.exposeBinding("__aigObserveCsp", ({ frame }, event: Record<string, unknown>) => {
+    diagnostics.cspEvents!.push({
+      blockedURI: event.blockedURI === "inline" || event.blockedURI === "eval" ? event.blockedURI : "other",
+      disposition: typeof event.disposition === "string" ? event.disposition : "",
+      effectiveDirective: typeof event.effectiveDirective === "string" ? event.effectiveDirective : "",
+      originalPolicy: typeof event.originalPolicy === "string" ? event.originalPolicy : "",
+      documentOrigin: urlOrigin(typeof event.documentURI === "string" ? event.documentURI : ""),
+      sourceOrigin: urlOrigin(typeof event.sourceFile === "string" ? event.sourceFile : ""),
+      frameOrigin: urlOrigin(frame.url()),
+    });
+  });
+  await page.addInitScript(() => {
+    const pending = new Set<Promise<void>>();
+    Object.defineProperty(window, "__aigDrainCsp", { value: async () => {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await Promise.all([...pending]);
+    } });
+    document.addEventListener("securitypolicyviolation", (event) => {
+      if (!event.isTrusted) return;
+      const observe = (window as unknown as { __aigObserveCsp: (value: unknown) => Promise<void> }).__aigObserveCsp;
+      const task = observe({ blockedURI: event.blockedURI, disposition: event.disposition, effectiveDirective: event.effectiveDirective,
+        originalPolicy: event.originalPolicy, documentURI: event.documentURI, sourceFile: event.sourceFile });
+      pending.add(task);
+      void task.finally(() => pending.delete(task));
+    });
+  });
   page.on("console", (message) => {
-    if (message.type() !== "error") return;
     const location = message.location();
     const suffix = location.url
       ? ` (${location.url}:${location.lineNumber ?? 0}:${location.columnNumber ?? 0})`
       : "";
-    diagnostics.errors.push(`console: ${message.text()}${suffix}`);
+    const error = message.type() === "error" ? `console: ${message.text()}${suffix}` : undefined;
+    if (error) diagnostics.errors.push(error);
+    if (message.text().includes("Content Security Policy") && (message.text().startsWith("[Report Only]") || message.text().includes("The policy is report-only"))) {
+      diagnostics.cspConsole!.push({ text: message.text(), origin: urlOrigin(location.url), error });
+    }
   });
   page.on("pageerror", (error) => {
     diagnostics.errors.push(`page: ${error.message}`);
@@ -81,6 +115,13 @@ export function installRuntimeDiagnostics(page: Page): RuntimeDiagnostics {
   return diagnostics;
 }
 
+/** Drain the browser event queue and its binding deliveries before assertions. */
+export async function flushRuntimeDiagnostics(page: Page) {
+  await page.evaluate(async () => {
+    await (window as unknown as { __aigDrainCsp?: () => Promise<void> }).__aigDrainCsp?.();
+  });
+}
+
 export function getUnexpectedRuntimeErrors(diagnostics: RuntimeDiagnostics) {
   // WebKit can cancel the RSC response tail when a completed /memories Server
   // Action immediately changes the rendered tree. We only pair that console
@@ -89,7 +130,10 @@ export function getUnexpectedRuntimeErrors(diagnostics: RuntimeDiagnostics) {
   const expectedCancellations = diagnostics.requestFailures
     .filter(isCompletedMemoryActionNavigationCancellation)
     .map((failure) => new URL(failure.url).origin);
-  return diagnostics.errors.filter((error) => {
+  const csp = pairCspObservations(diagnostics.cspEvents ?? [], diagnostics.cspConsole ?? []);
+  const unexpectedErrors = diagnostics.errors.filter((error) => {
+    const cspIndex = csp.expectedErrors.indexOf(error);
+    if (cspIndex >= 0) { csp.expectedErrors.splice(cspIndex, 1); return false; }
     const matchIndex = expectedCancellations.findIndex(
       (origin) => isWebKitNextChunkLoadCancellation(error, origin),
     );
@@ -97,6 +141,7 @@ export function getUnexpectedRuntimeErrors(diagnostics: RuntimeDiagnostics) {
     expectedCancellations.splice(matchIndex, 1);
     return false;
   });
+  return [...unexpectedErrors, ...csp.unexpected];
 }
 
 export function expectNoRuntimeErrors(
@@ -114,11 +159,13 @@ export async function attachRuntimeDiagnostics(
   diagnostics: RuntimeDiagnostics,
 ) {
   await Promise.all(diagnostics.pendingRequestDiagnostics ?? []);
-  if (!diagnostics.errors.length && !diagnostics.requestFailures.length) return;
+  if (!diagnostics.errors.length && !diagnostics.requestFailures.length && !diagnostics.cspEvents?.length) return;
   await testInfo.attach("runtime-diagnostics", {
     body: Buffer.from(JSON.stringify({
       errors: diagnostics.errors,
       requestFailures: diagnostics.requestFailures,
+      cspEvents: diagnostics.cspEvents,
+      cspConsole: diagnostics.cspConsole,
     }, null, 2)),
     contentType: "application/json",
   });

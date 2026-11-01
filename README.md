@@ -116,3 +116,24 @@ pnpm exec vitest run features/registry/canonical.test.ts features/registry/contr
 ---
 
 *AI-Generator is an evolving personal full-stack project. Feature availability and deployment status may change between branches and environments.*
+
+## Security response-header verification
+
+The application enforces baseline browser headers and uses a strict CSP **Report-Only** candidate. Report-Only does not block attacks; remaining inline-script/style observations require review before enforcement. See [the source inventory, platform boundaries and acceptance record](docs/security/p1-sec-b-response-headers-20261101.md).
+
+Run quality checks serially to control memory:
+
+```powershell
+pnpm typecheck
+pnpm lint
+pnpm exec vitest run --exclude "tests/integration/**" --maxWorkers=1
+pnpm build
+```
+
+With the production build running against disposable loopback infrastructure, verify actual HTTP responses without launching a browser:
+
+```powershell
+node --import tsx scripts/verify-security-headers.ts http://127.0.0.1:3000
+```
+
+Keep the existing isolated Supabase security acceptance and remote Chromium desktop/mobile and WebKit iPhone gates. Local browser execution remains suspended under `AGENTS.md`; the HTTP command does not grant browser authorization. Production edge challenges, SSO pages and domain redirects require a separate Owner platform review.
