@@ -11,9 +11,14 @@ concurrency:
   group: security-acceptance-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Supabase acceptance runs as two independent jobs, each on its own runner with its own disposable
+# Supabase project. Every migration verifier resets its database before it starts, so the upgrade
+# and rollback proofs do not depend on the integration job's state. The required
+# "Supabase Security Acceptance" check is the aggregator below and passes only if both succeed;
+# the browser matrix still starts only after it.
 jobs:
-  supabase-security-acceptance:
-    name: Supabase Security Acceptance
+  supabase-integration-acceptance:
+    name: Supabase Security Acceptance (clean install and integration)
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -89,6 +94,11 @@ jobs:
       - name: Apply all migrations to a clean database
         run: pnpm exec prisma migrate deploy
 
+      # Replaces the former Merge Gates browser matrix that re-applied prisma/rls.sql: it proves
+      # inside a rolled-back transaction that the baseline leaves the migrated catalog unchanged.
+      - name: Verify the disaster-recovery RLS baseline matches the migrations
+        run: node scripts/verify-rls-baseline.mjs
+
       - name: Verify clean migration metadata
         run: node scripts/verify-security-migrations.mjs clean
 
@@ -97,12 +107,6 @@ jobs:
 
       - name: Run all discovered real database, JWT and PostgREST suites
         run: pnpm test:integration
-
-      - name: Verify old-database upgrade and transaction rollback
-        run: node scripts/verify-security-migrations.mjs incremental
-
-      - name: Verify every explicitly transactional historical migration rolls back
-        run: node scripts/verify-security-migrations.mjs rollback-all
 
       - name: Run static quality gates
         run: |
@@ -115,6 +119,123 @@ jobs:
         if: always()
         shell: bash
         run: supabase stop --no-backup >"$RUNNER_TEMP/supabase-stop.log" 2>&1 || true
+
+  supabase-upgrade-acceptance:
+    name: Supabase Security Acceptance (upgrade and rollback)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      REQUIRE_SECURITY_TEST_DATABASE: "true"
+      SUPABASE_TEST_WORKDIR: ${{ github.workspace }}
+      ALLOW_TEST_DATABASE_RESET: "true"
+      AI_TOOL_ASSET_BUCKET: p1-tool-assets
+      AI_TOOL_ASSET_LEGACY_BUCKET: p1-tool-assets
+      SUPABASE_GENERATED_IMAGE_BUCKET: p1-generated-images
+      SUPABASE_PERSONA_AVATAR_BUCKET: p1-persona-avatars
+    steps:
+      - name: Check out the exact PR commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 11.7.0
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@6ffe784b57613e98e0c04651e5fde0cec28cb1c9
+        with:
+          version: 2.109.1
+
+      - name: Start isolated local Supabase
+        shell: bash
+        env:
+          SUPABASE_INTERNAL_IMAGE_REGISTRY: ""
+        run: |
+          set -euo pipefail
+          if ! supabase start >"$RUNNER_TEMP/supabase-start.log" 2>&1; then
+            node scripts/diagnose-supabase-start.mjs "$RUNNER_TEMP/supabase-start.log"
+            exit 1
+          fi
+          node scripts/disposable-supabase.mjs bind "$GITHUB_WORKSPACE"
+          status_env="$(supabase status -o env)"
+          eval "$status_env"
+          for value in "$ANON_KEY" "$SERVICE_ROLE_KEY" "$DB_URL"; do
+            echo "::add-mask::$value"
+          done
+          {
+            printf 'DATABASE_URL=%s\n' "$DB_URL"
+            printf 'DIRECT_URL=%s\n' "$DB_URL"
+            printf 'TEST_DATABASE_URL=%s\n' "$DB_URL"
+            printf 'ALLOW_TEST_DATABASE_MUTATIONS=true\n'
+            printf 'TEST_DATABASE_CONFIRMED_NON_PRODUCTION=true\n'
+            printf 'SUPABASE_TEST_URL=%s\n' "$API_URL"
+            printf 'SUPABASE_TEST_ANON_KEY=%s\n' "$ANON_KEY"
+            printf 'SUPABASE_TEST_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+            printf 'NEXT_PUBLIC_SUPABASE_URL=%s\n' "$API_URL"
+            printf 'NEXT_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$ANON_KEY"
+            printf 'SUPABASE_SERVICE_ROLE_KEY=%s\n' "$SERVICE_ROLE_KEY"
+            printf 'NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000\n'
+            printf 'PLAYWRIGHT_AUTH_STATE=%s/playwright-auth.json\n' "$RUNNER_TEMP"
+            printf 'AI_BASE_URL=http://127.0.0.1:4319/v1\n'
+            printf 'AI_API_KEY=isolated-test-provider-key\n'
+            printf 'AI_MODEL=isolated-test-model\n'
+            printf 'AI_MEMORY_MODEL=isolated-memory-model\n'
+            printf 'AI_EMBEDDING_MODEL=mock-embedding\n'
+            printf 'AI_EMBEDDING_DIMENSIONS=512\n'
+          } >> "$GITHUB_ENV"
+
+      - name: Apply all migrations to a clean database
+        run: pnpm exec prisma migrate deploy
+
+      - name: Verify old-database upgrade and transaction rollback
+        run: node scripts/verify-security-migrations.mjs incremental
+
+      - name: Verify every explicitly transactional historical migration rolls back
+        run: node scripts/verify-security-migrations.mjs rollback-all
+
+      - name: Stop isolated Supabase
+        if: always()
+        shell: bash
+        run: supabase stop --no-backup >"$RUNNER_TEMP/supabase-stop.log" 2>&1 || true
+
+  supabase-security-acceptance:
+    name: Supabase Security Acceptance
+    if: always()
+    needs:
+      - supabase-integration-acceptance
+      - supabase-upgrade-acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify every Supabase acceptance job succeeded
+        shell: bash
+        env:
+          INTEGRATION_RESULT: ${{ needs.supabase-integration-acceptance.result }}
+          UPGRADE_RESULT: ${{ needs.supabase-upgrade-acceptance.result }}
+        run: |
+          set -euo pipefail
+          echo "Clean install, RLS baseline, Registry migrations, integration suites and static gates: $INTEGRATION_RESULT"
+          echo "Old-database upgrade and historical transaction rollback: $UPGRADE_RESULT"
+
+          if [[ "$INTEGRATION_RESULT" != "success" ]]; then
+            echo "::error::Clean install and integration acceptance did not succeed."
+            exit 1
+          fi
+
+          if [[ "$UPGRADE_RESULT" != "success" ]]; then
+            echo "::error::Upgrade and rollback acceptance did not succeed."
+            exit 1
+          fi
 
   authenticated-browser-acceptance:
     name: Authenticated E2E (${{ matrix.project }})
