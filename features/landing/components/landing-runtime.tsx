@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 import { artFallback, isArtKey, renderArt, type ArtKey } from "@/features/landing/art";
 import { LANG_COOKIE, type LandingLang } from "@/features/landing/content";
+import { CHAR_HIGHLIGHTS, charFrontier, clearance, projectCard, scrollHeroBox, tilt, toneAt, type Box, type ToneBand } from "@/features/landing/motion-math";
 
 interface RuntimeProps {
   lang: LandingLang;
@@ -43,12 +44,43 @@ const HOLD = 0.3;
 const STEP = 1.3;
 const AVATAR_BG = ["#dce5d6", "#f3d5c5", "#e4e0da", "#e2dff0", "#efe4cc", "#d8e4e8"];
 const HERO_ART: ArtKey[] = ["chat", "persona", "memory", "image", "agents", "stone", "dawn", "moss"];
+/** Cards fade out within CLEAR_PAD px of the hero copy and are fully back CLEAR_FEATHER px further out. */
+const CLEAR_PAD = 10;
+const CLEAR_FEATHER = 48;
 
-interface HeroCard { el: HTMLDivElement; x: number; y: number; z: number }
+interface HeroCard { el: HTMLDivElement; inner: HTMLDivElement; x: number; y: number; z: number; w: number; h: number }
 interface Goo { host: HTMLElement; items: HTMLElement[]; rects: SVGRectElement[]; radii: number[]; until: number }
 interface Magnet { el: HTMLElement; s: number; x: number; y: number; tx: number; ty: number }
-interface CharHost { host: HTMLElement; chars: { el: HTMLElement; v: number }[]; min: number; top: number; h: number }
-type Themed = HTMLElement & { _top?: number; _h?: number };
+interface Glyph { node: Text; start: number; end: number }
+interface CharHost {
+  host: HTMLElement; nodes: Text[]; texts: string[]; glyphs: Glyph[];
+  dim: Range; part: Range; lit: number; level: number; top: number; h: number; off: boolean;
+}
+
+/** Content box of `el` in `ancestor`'s coordinates, from layout offsets (ignores transforms). */
+function contentBox(el: HTMLElement, ancestor: HTMLElement): Box | null {
+  let x = 0;
+  let y = 0;
+  let n: HTMLElement | null = el;
+  while (n && n !== ancestor) {
+    x += n.offsetLeft;
+    y += n.offsetTop;
+    n = n.offsetParent as HTMLElement | null;
+  }
+  if (n !== ancestor) return null;
+  const cs = getComputedStyle(el);
+  const px = (v: string) => parseFloat(v) || 0;
+  return {
+    l: x + px(cs.paddingLeft),
+    t: y + px(cs.paddingTop),
+    r: x + el.offsetWidth - px(cs.paddingRight),
+    b: y + el.offsetHeight - px(cs.paddingBottom),
+  };
+}
+
+function supportsHighlights(): boolean {
+  return typeof Highlight === "function" && typeof CSS !== "undefined" && "highlights" in CSS;
+}
 
 function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps): () => void {
   const $ = <T extends Element = HTMLElement>(s: string, el: ParentNode = root) => el.querySelector<T>(s);
@@ -137,12 +169,50 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
       }
       el.appendChild(inner);
       cam.appendChild(el);
-      const it: HeroCard = { el, x: 0, y: 0, z: 0 };
+      const it: HeroCard = { el, inner, x: 0, y: 0, z: 0, w: 0, h: 0 };
       place(it, true);
       hero.push(it);
     }
     cleanups.push(() => hero.forEach((it) => it.el.remove()));
   }
+
+  /*
+   * Readable hero copy stays clear of the cards. Every card flies out of the vanishing point,
+   * which sits behind the headline, and grows as it nears the viewer; so its projected screen
+   * box (not its 3D position) is checked against the headline, the foot copy and the header,
+   * and the card fades out while it would pass behind any of them.
+   */
+  const heroEl = heroCenter?.parentElement ?? null;
+  const heroTitle = $("#lp-hero-title");
+  const heroCopy = $$(".hero__foot > p");
+  const headerParts = $$(".header > .brand, .header > .header__right");
+  const titleRest: Box = { l: 0, t: 0, r: 0, b: 0 };
+  const titleNow: Box = { l: 0, t: 0, r: 0, b: 0 };
+  const heroZones: Box[] = [titleNow];
+  const cardBox: Box = { l: 0, t: 0, r: 0, b: 0 };
+
+  const measureHero = () => {
+    if (!heroEl) return;
+    const cx = heroEl.offsetWidth / 2;
+    const cy = heroEl.offsetHeight / 2;
+    const rel = (b: Box): Box => ({ l: b.l - cx, t: b.t - cy, r: b.r - cx, b: b.b - cy });
+    heroZones.length = 1;
+    const title = heroTitle && contentBox(heroTitle, heroEl);
+    if (title) Object.assign(titleRest, rel(title));
+    for (const p of heroCopy) {
+      const b = contentBox(p, heroEl);
+      if (b) heroZones.push(rel(b));
+    }
+    // The header is fixed and the hero is pinned at the top while visible, so viewport = hero coordinates.
+    for (const part of headerParts) {
+      const r = part.getBoundingClientRect();
+      if (r.width) heroZones.push(rel({ l: r.left, t: r.top, r: r.right, b: r.bottom }));
+    }
+    for (const it of hero) {
+      it.w = it.inner.offsetWidth;
+      it.h = it.inner.offsetHeight;
+    }
+  };
 
   const updateHero = (dt: number) => {
     if (!cam || !heroCenter || !heroShade || S.y > S.vh * 1.05) return;
@@ -151,15 +221,21 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     S.boost *= Math.exp(-dt * 1.8);
     const p = clamp(S.y / S.vh, 0, 1);
     const speed = reduce ? 0 : 60 + S.boost + Math.min(Math.abs(S.vel) * 0.8, 1600);
-    cam.style.transform = `rotateX(${(-S.my * 4).toFixed(2)}deg) rotateY(${(S.mx * 6).toFixed(2)}deg)`;
+    const tiltX = -S.my * 4;
+    const tiltY = S.mx * 6;
+    const scale = 1 - p * 0.08;
+    const view = tilt(tiltX, tiltY);
+    scrollHeroBox(titleNow, titleRest, scale, -p * 0.14 * S.vh);
+    cam.style.transform = `rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`;
     for (const it of hero) {
       it.z += speed * dt;
       if (it.z > ZMAX) place(it, false);
-      const o = smooth(ZMIN, ZMIN + 1000, it.z) * (1 - smooth(ZMAX - 280, ZMAX, it.z));
+      let o = smooth(ZMIN, ZMIN + 1000, it.z) * (1 - smooth(ZMAX - 280, ZMAX, it.z));
+      if (o > 0.001) o *= projectCard(cardBox, it.x, it.y, it.z, it.w, it.h, view) ? clearance(cardBox, heroZones, CLEAR_PAD, CLEAR_FEATHER) : 0;
       it.el.style.transform = `translate3d(${it.x.toFixed(1)}px,${it.y.toFixed(1)}px,${it.z.toFixed(1)}px)`;
       it.el.style.opacity = o.toFixed(3);
     }
-    heroCenter.style.transform = `translate3d(0,${(-p * 14).toFixed(2)}vh,0) scale(${(1 - p * 0.08).toFixed(4)})`;
+    heroCenter.style.transform = `translate3d(0,${(-p * 14).toFixed(2)}vh,0) scale(${scale.toFixed(4)})`;
     heroShade.style.opacity = (p * 0.55).toFixed(3);
   };
 
@@ -273,26 +349,65 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
   };
 
   /* --------------------------------------------- characters light up */
-  const charHosts: CharHost[] = $$("[data-chars]").map((host) => ({
-    host,
-    chars: $$(".ch", host).map((el) => ({ el, v: -1 })),
-    min: parseFloat(getComputedStyle(host).getPropertyValue("--ch-min")) || 0.16,
-    top: 0,
-    h: 0,
-  }));
+  // The copy stays plain text; the unread part is painted through CSS Custom Highlights (ranges over
+  // the existing text nodes), so the DOM, selection, copy and screen readers never change. Without
+  // highlight support the copy is simply fully lit.
+  const highlights = supportsHighlights() ? CHAR_HIGHLIGHTS.map(() => new Highlight()) : null;
+  if (highlights) {
+    CHAR_HIGHLIGHTS.forEach((name, i) => CSS.highlights.set(name, highlights[i]));
+    cleanups.push(() => CHAR_HIGHLIGHTS.forEach((name) => CSS.highlights.delete(name)));
+  }
+  const charHosts: CharHost[] = !highlights ? [] : $$("[data-chars]").map((host) => {
+    const nodes: Text[] = [];
+    const glyphs: Glyph[] = [];
+    const walk = document.createTreeWalker(host, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const node = n as Text;
+      nodes.push(node);
+      let at = 0;
+      for (const ch of node.data) {
+        if (!/\s/.test(ch)) glyphs.push({ node, start: at, end: at + ch.length });
+        at += ch.length;
+      }
+    }
+    const dim = document.createRange();
+    highlights[0].add(dim);
+    return { host, nodes, texts: nodes.map((n) => n.data), glyphs, dim, part: document.createRange(), lit: -1, level: 0, top: 0, h: 0, off: false };
+  });
+  const charsIntact = (c: CharHost) => c.nodes.every((n, i) => n.isConnected && n.data === c.texts[i]);
+  // A rewritten text (browser translation) keeps its own text, fully lit.
+  const releaseChars = (c: CharHost) => {
+    c.off = true;
+    highlights?.[0].delete(c.dim);
+    if (c.level > 0) highlights?.[c.level].delete(c.part);
+  };
+  const paintChars = (c: CharHost, lit: number, level: number) => {
+    if (!highlights) return;
+    const g = c.glyphs;
+    const last = g[g.length - 1];
+    const from = level > 0 ? lit + 1 : lit;
+    c.dim.setStart(from < g.length ? g[from].node : last.node, from < g.length ? g[from].start : last.end);
+    c.dim.setEnd(last.node, last.end);
+    if (c.level > 0) highlights[c.level].delete(c.part);
+    if (level > 0) {
+      c.part.setStart(g[lit].node, g[lit].start);
+      c.part.setEnd(g[lit].node, g[lit].end);
+      highlights[level].add(c.part);
+    }
+    c.lit = lit;
+    c.level = level;
+  };
   const updateChars = () => {
     for (const c of charHosts) {
+      if (c.off || !c.glyphs.length) continue;
       const top = c.top - S.y;
-      if (top > S.vh || top + c.h < 0) continue;
+      // Off-screen hosts are skipped once painted; the first pass paints every host so none flashes in lit.
+      if (c.lit >= 0 && (top > S.vh || top + c.h < 0)) continue;
       const prog = clamp((S.vh * 0.85 - top) / (S.vh * 0.25 + c.h), 0, 1);
-      const total = c.chars.length + 10;
-      c.chars.forEach((ch, k) => {
-        const o = c.min + (1 - c.min) * clamp(prog * total - k, 0, 1);
-        if (Math.abs(o - ch.v) > 0.01) {
-          ch.v = o;
-          ch.el.style.opacity = o.toFixed(3);
-        }
-      });
+      const { lit, level } = charFrontier(prog, c.glyphs.length);
+      if (lit === c.lit && level === c.level) continue;
+      if (!charsIntact(c)) releaseChars(c);
+      else paintChars(c, lit, level);
     }
   };
 
@@ -331,16 +446,15 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
   /* ------------------------------ header / fab follow the section tone */
   const header = $("[data-header]");
   const fab = $(".fab");
-  const themed = $$<Themed>("[data-theme]");
-  const toneAt = (y: number) => {
-    let tone = "light";
-    for (const el of themed) if (y >= (el._top ?? 0) && y < (el._top ?? 0) + (el._h ?? 0)) tone = el.dataset.theme ?? "light";
-    return tone;
-  };
+  const themed = $$("[data-theme]");
+  const bands: ToneBand[] = [];
+  // The header follows the section under the middle of its controls row (measured), so its
+  // text flips as the section edge passes behind the text rather than at a fixed offset.
+  let headerMid = 40;
   const updateTone = () => {
-    const top = toneAt(S.y + 40) === "dark" ? "dark" : "light";
+    const top = toneAt(bands, S.y + headerMid) === "dark" ? "dark" : "light";
     if (header && header.dataset.tone !== top) header.dataset.tone = top;
-    const bottom = toneAt(S.y + S.vh - 40);
+    const bottom = toneAt(bands, S.y + S.vh - 40);
     if (fab && fab.dataset.tone !== bottom) fab.dataset.tone = bottom;
   };
 
@@ -350,7 +464,10 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     S.vh = innerHeight;
     const y = window.scrollY;
     const topOf = (el: Element) => el.getBoundingClientRect().top + y;
-    themed.forEach((el) => { el._top = topOf(el); el._h = el.offsetHeight; });
+    bands.length = 0;
+    themed.forEach((el) => bands.push({ top: topOf(el), height: el.offsetHeight, tone: el.dataset.theme ?? "light" }));
+    if (header) headerMid = header.offsetHeight / 2;
+    measureHero();
     if (chapEl) { chap.top = topOf(chapEl); chap.height = chapEl.offsetHeight; }
     charHosts.forEach((c) => { c.top = topOf(c.host); c.h = c.host.offsetHeight; });
     parallax.forEach((p) => { p.top = topOf(p.frame); p.h = p.frame.offsetHeight; });
@@ -410,6 +527,27 @@ function startLanding(root: HTMLElement, { lang, bubbles, chips }: RuntimeProps)
     });
   }, 400);
   cleanups.push(() => window.clearInterval(sweep));
+
+  /* ------------------------------------------- rewritten (translated) text */
+  // Browser translators rewrite text nodes in place. A rolling label whose text changed drops its
+  // (untranslated) rolling copy, and scroll-lit copy stops painting over text it no longer matches.
+  const rollLabels = new Map<Element, { txt: HTMLElement; text: string }>();
+  $$(".roll-t").forEach((el) => {
+    const txt = $(".roll-t__txt", el);
+    if (txt) rollLabels.set(el, { txt, text: txt.textContent ?? "" });
+  });
+  const rewrites = new MutationObserver((records) => {
+    for (const record of records) {
+      const el = record.target instanceof Element ? record.target : record.target.parentElement;
+      if (!el) continue;
+      const roll = el.closest(".roll-t");
+      const label = roll ? rollLabels.get(roll) : undefined;
+      if (roll && label) roll.classList.toggle("is-static", label.txt.textContent !== label.text);
+      for (const c of charHosts) if (!c.off && c.host.contains(el) && !charsIntact(c)) releaseChars(c);
+    }
+  });
+  rewrites.observe(root, { subtree: true, childList: true, characterData: true });
+  cleanups.push(() => rewrites.disconnect());
 
   /* -------------------------------------------------------------- menu */
   const menu = $("[data-menu]");
