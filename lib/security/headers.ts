@@ -45,4 +45,3 @@ export function buildSecurityHeaders(supabaseUrl?: string) {
     { key: "Content-Security-Policy-Report-Only", value: reportOnly },
   ];
 }
-
