@@ -83,6 +83,45 @@ test("hero cards fade out before they pass behind the headline or the foot copy"
   }
 });
 
+test("landing titles that wrap do not leave a single word on its own line", async ({ page }) => {
+  await page.goto("/?lang=en");
+  await expect(page.locator(".lp.is-loaded")).toHaveCount(1, { timeout: 15_000 });
+  const lines = await page.locator(".hero__title .line > span, .closing__title .line > span").evaluateAll((spans) => spans.map((span) => {
+    const range = document.createRange();
+    range.selectNodeContents(span);
+    const widths = [...range.getClientRects()].filter((rect) => rect.width > 0).map((rect) => rect.width);
+    return { text: span.textContent, widths };
+  }));
+  for (const { text, widths } of lines) {
+    if (widths.length < 2) continue;
+    expect(Math.min(...widths) / Math.max(...widths), `${text}: ${widths.map(Math.round).join(" / ")}`).toBeGreaterThan(0.4);
+  }
+});
+
+test("the Chinese forest quote keeps its three designed lines on desktop", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desktop", "The fixed three-line setting applies from 961px up.");
+  await page.goto("/?lang=zh");
+  await expect(page.locator(".lp.is-loaded")).toHaveCount(1, { timeout: 15_000 });
+  const rows = await page.locator(".forest__quote").evaluate((quote) => {
+    // Glyph centres, clustered into lines wherever the gap exceeds half the font size.
+    const centres: number[] = [];
+    const walk = document.createTreeWalker(quote, NodeFilter.SHOW_TEXT);
+    for (let node = walk.nextNode() as Text | null; node; node = walk.nextNode() as Text | null) {
+      for (let i = 0; i < node.data.length; i += 1) {
+        const range = document.createRange();
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const rect = range.getBoundingClientRect();
+        if (rect.width) centres.push(rect.top + rect.height / 2);
+      }
+    }
+    const half = parseFloat(getComputedStyle(quote).fontSize) / 2;
+    centres.sort((a, b) => a - b);
+    return centres.filter((y, i) => i === 0 || y - centres[i - 1] > half).length;
+  });
+  expect(rows).toBe(3);
+});
+
 test("login and register titles have one h1 and never wrap a lone glyph", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desktop", "Width sweep runs once in Chromium.");
   for (const route of ["/login", "/register"]) {

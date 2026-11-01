@@ -145,7 +145,8 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 @keyframes lp-bob { 0%, 100% { transform: none; } 50% { transform: translateY(3px); } }
 
 .lp .line { display: block; overflow: hidden; padding-bottom: 0.1em; margin-bottom: -0.1em; }
-.lp .line > span { display: block; transform: translate3d(0, 112%, 0); transition: transform 1.25s var(--ease) calc(var(--d, 0) * 1ms); }
+/* Each title line is its own block; balancing keeps a line that has to wrap from leaving one word alone. */
+.lp .line > span { display: block; text-wrap: balance; transform: translate3d(0, 112%, 0); transition: transform 1.25s var(--ease) calc(var(--d, 0) * 1ms); }
 .lp .is-in .line > span,
 .lp.is-loaded .hero .line > span { transform: none; }
 .lp.is-loaded .hero .line > span { transition-delay: calc(450ms + var(--d, 0) * 1ms); }
@@ -718,6 +719,9 @@ body:has(.lp) { background: #f2efea; overflow-x: clip; }
 @keyframes lp-spinSlow { to { transform: rotate(360deg); } }
 .lp .forest__copy { font-size: 13px; line-height: 1.55; color: rgba(242, 239, 234, 0.82); display: grid; gap: 12px; }
 .lp .forest__quote { color: var(--lime); margin-bottom: 26px; }
+/* The Chinese quote is set as three fixed lines; at 3.6vw the longest one fits its six-column cell
+   from 961px up (at t-h2's 4vw it wrapped a lone "前，" between about 961 and 1500px). */
+.lp[lang="zh-CN"] .forest__quote { font-size: clamp(32px, 3.6vw, 64px); }
 .lp .forest__right { grid-column: 7 / span 6; }
 .lp .forest__media { position: relative; aspect-ratio: 5 / 4; border-radius: 2px; }
 .lp .forest__img { position: absolute; left: 0; right: 0; top: -12%; bottom: -12%; will-change: transform; }
