@@ -1,6 +1,12 @@
 import { expect, type Page, type Request } from "@playwright/test";
 import { PrismaClient, type MessageStatus } from "@prisma/client";
 
+export function getChatComposer(page: Page) {
+  // Role locators exclude accessibility-hidden streamed/retained route trees.
+  // Keep every visible textbox in scope so a real duplicate still fails.
+  return page.getByRole("textbox", { name: "消息内容", exact: true });
+}
+
 function isChatPost(url: string, method: string) {
   return method === "POST" && new URL(url).pathname === "/api/chat";
 }
@@ -51,6 +57,9 @@ export async function waitForReadyChatNavigation(
     await bootstrapResponse.finished(),
     "Chat bootstrap transport must finish before the test changes route.",
   ).toBeNull();
+  const composer = getChatComposer(page);
+  await expect(composer, "The ready chat must expose exactly one message composer.").toHaveCount(1);
+  await expect(composer).toBeEditable();
 }
 
 export async function runAndWaitForChatTransport(
@@ -157,7 +166,7 @@ export async function sendChatAndWaitForCompletion(
     page,
     () => page.goto("/chat", { waitUntil: "domcontentloaded" }),
   );
-  const composer = page.getByLabel("消息内容");
+  const composer = getChatComposer(page);
   await expect(composer).toBeVisible();
   await composer.fill(message);
   await runAndWaitForChatTransport(page, async () => {
