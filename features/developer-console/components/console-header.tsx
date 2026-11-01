@@ -4,14 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserRound } from "lucide-react";
 
+import { ConsoleModeSwitch } from "@/features/developer-console/components/console-mode-switch";
 import { useConsole, useConsoleAdapter } from "@/features/developer-console/components/console-provider";
 import { cn } from "@/lib/utils";
 
 /**
  * Second navigation row of the developer console plus the two facts every console screen
- * must show: where the data comes from, and who the console is acting as.
+ * must show: where the data comes from, and who the console is acting as. `registryHref` is
+ * set only on the signed-in console, where the read-only Registry mode exists.
  */
-export function ConsoleHeader({ base }: { base: string }) {
+export function ConsoleHeader({ base, registryHref }: { base: string; registryHref?: string }) {
   const pathname = usePathname() ?? "";
   const snapshot = useConsole();
   const adapter = useConsoleAdapter();
@@ -45,6 +47,7 @@ export function ConsoleHeader({ base }: { base: string }) {
           ))}
         </nav>
         <div className="flex flex-wrap items-center gap-2 pb-2.5 min-[900px]:justify-end">
+          {registryHref ? <ConsoleModeSwitch active="mock" mockHref={base} registryHref={registryHref} /> : null}
           <span className="demo-outline inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-[.75rem]" title="所有数据来自浏览器内的 Mock Adapter，刷新即重置，不调用任何服务">
             <span aria-hidden="true" className="size-1.5 rounded-full bg-warning" />
             <b className="font-medium">{snapshot.source === "mock" ? "Mock 数据源" : "Registry"}</b>
