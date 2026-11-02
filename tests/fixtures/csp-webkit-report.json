@@ -1,0 +1,11 @@
+{
+  "csp-report": {
+    "document-uri": "https://app.example.test/memories",
+    "referrer": "",
+    "violated-directive": "script-src-elem",
+    "effective-directive": "script-src-elem",
+    "original-policy": "script-src 'self'; report-uri /api/security/csp-report",
+    "blocked-uri": "inline",
+    "status-code": 200
+  }
+}

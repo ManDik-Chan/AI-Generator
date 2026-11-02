@@ -22,6 +22,7 @@ import {
   attachRuntimeDiagnostics,
   expectNoRuntimeErrors,
   installRuntimeDiagnostics,
+  flushRuntimeDiagnostics,
   type RuntimeDiagnostics,
 } from "../support/runtime-diagnostics";
 
@@ -32,10 +33,11 @@ const hasAuthState = Boolean(
 const runtimeDiagnostics = new WeakMap<Page, RuntimeDiagnostics>();
 
 test.beforeEach(async ({ page }) => {
-  runtimeDiagnostics.set(page, installRuntimeDiagnostics(page));
+  runtimeDiagnostics.set(page, await installRuntimeDiagnostics(page));
 });
 
 test.afterEach(async ({ page }, testInfo) => {
+  await flushRuntimeDiagnostics(page);
   const diagnostics = runtimeDiagnostics.get(page) ?? {
     errors: ["Runtime diagnostics were not installed."],
     requestFailures: [],
@@ -191,7 +193,11 @@ test.describe("trusted memory proposal workflow", () => {
       )).toBeVisible();
       await expectNoHorizontalOverflow(page);
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 
@@ -263,7 +269,11 @@ test.describe("trusted memory proposal workflow", () => {
         `[data-memory-proposal-id="${newProposal.id}"]`,
       )).toBeVisible();
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 
@@ -532,7 +542,11 @@ test.describe("trusted memory proposal workflow", () => {
         await expectNoHorizontalOverflow(page);
       }
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 });

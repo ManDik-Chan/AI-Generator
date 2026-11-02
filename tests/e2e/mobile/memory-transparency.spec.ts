@@ -20,6 +20,7 @@ import {
   attachRuntimeDiagnostics,
   expectNoRuntimeErrors,
   installRuntimeDiagnostics,
+  flushRuntimeDiagnostics,
   type RuntimeDiagnostics,
 } from "../support/runtime-diagnostics";
 
@@ -28,7 +29,8 @@ const serviceRoleKey = process.env.SUPABASE_TEST_SERVICE_ROLE_KEY;
 const configured = Boolean(supabaseUrl && serviceRoleKey);
 const runtimeDiagnostics = new WeakMap<Page, RuntimeDiagnostics>();
 
-function assertNoRuntimeErrors(page: Page, stage: string) {
+async function assertNoRuntimeErrors(page: Page, stage: string) {
+  await flushRuntimeDiagnostics(page);
   const diagnostics = runtimeDiagnostics.get(page) ?? {
     errors: ["Runtime diagnostics were not installed."],
     requestFailures: [],
@@ -40,16 +42,17 @@ function assertNoRuntimeErrors(page: Page, stage: string) {
 }
 
 test.beforeEach(async ({ page }) => {
-  runtimeDiagnostics.set(page, installRuntimeDiagnostics(page));
+  runtimeDiagnostics.set(page, await installRuntimeDiagnostics(page));
 });
 
 test.afterEach(async ({ page }, testInfo) => {
+  await flushRuntimeDiagnostics(page);
   const diagnostics = runtimeDiagnostics.get(page) ?? {
     errors: ["Runtime diagnostics were not installed."],
     requestFailures: [],
   };
   await attachRuntimeDiagnostics(testInfo, diagnostics);
-  assertNoRuntimeErrors(page, "the completed scenario");
+  await assertNoRuntimeErrors(page, "the completed scenario");
 });
 
 async function sendChat(
@@ -226,7 +229,7 @@ test.describe("memory provenance and live turn disclosure", () => {
       expect(actuallyUsed.map((memory) => memory.content).sort()).toEqual(
         [disclosureA, disclosureB].sort(),
       );
-      assertNoRuntimeErrors(page, "successful disclosure");
+      await assertNoRuntimeErrors(page, "successful disclosure");
 
       const providerFailureMessage = `E2E_PROVIDER_FAIL ${token} alpha beta`;
       await getChatComposer(page).fill(providerFailureMessage);
@@ -246,7 +249,7 @@ test.describe("memory provenance and live turn disclosure", () => {
         providerFailureMessage,
         "ERROR",
       );
-      assertNoRuntimeErrors(page, "Provider failure");
+      await assertNoRuntimeErrors(page, "Provider failure");
 
       const cancelledMessage = `E2E_PROVIDER_CANCELLABLE ${token} alpha beta`;
       await getChatComposer(page).fill(cancelledMessage);
@@ -296,7 +299,7 @@ test.describe("memory provenance and live turn disclosure", () => {
         cancelledMessage,
         "CANCELLED",
       );
-      assertNoRuntimeErrors(page, "user cancellation");
+      await assertNoRuntimeErrors(page, "user cancellation");
       const useCountsAfterUnsuccessfulTurns = await db.memory.findMany({
         where: { userId, useCount: { gt: 0 } },
         orderBy: { content: "asc" },
@@ -415,7 +418,11 @@ test.describe("memory provenance and live turn disclosure", () => {
         await expectNoHorizontalOverflow(page);
       }
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 });
