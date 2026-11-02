@@ -4,5 +4,6 @@
 legacy/streamlit/** -text
 
 *.png binary
+*.jpg binary
 *.pyc binary
 *.woff2 binary
