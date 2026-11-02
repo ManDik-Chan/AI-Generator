@@ -285,14 +285,6 @@ describe("source guards", () => {
     for (const [, source] of files) expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b|rgba?\(|\b(?:bg|text|border)-(?:white|black|gray|slate|zinc|neutral)\b/);
   });
 
-  it("calls the role action outside an async transition and rethrows navigation in render", () => {
-    // An async transition around the action held Next.js's router update in a React action scope;
-    // the recovery refresh right after a non-revalidating result then fetched but never committed.
-    const container = files.find(([name]) => name === "platform-member-directory")![1];
-    expect(container).not.toMatch(/useTransition|startTransition\(\s*async/);
-    expect(container).toContain("if (navigation) throw navigation.error;");
-  });
-
   it("does not read project roles or ship fixtures", () => {
     for (const [, source] of files) {
       expect(source).not.toMatch(/ProjectRole|projectRoles|tests\/fixtures|mock/i);

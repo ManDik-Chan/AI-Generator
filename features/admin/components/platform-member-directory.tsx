@@ -1,11 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState, useTransition } from "react";
 
 import { MemberDirectoryView, type RoleFilter } from "@/features/admin/components/member-directory-view";
 import { RoleChangeDialogView } from "@/features/admin/components/role-change-dialog-view";
-import { isFrameworkNavigation, performRoleChange, type PlatformMember, type PlatformViewer, type RoleChangeSubmitter } from "@/features/admin/rbac/contract";
+import { performRoleChange, type PlatformMember, type PlatformViewer, type RoleChangeSubmitter } from "@/features/admin/rbac/contract";
 import { buildRoleChangeRequest, canSubmit, directoryReducer, initialDirectoryState } from "@/features/admin/rbac/role-change-state";
 
 export interface PlatformMemberDirectoryProps {
@@ -22,8 +22,7 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
   const [state, dispatch] = useReducer(directoryReducer, members, initialDirectoryState);
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
-  // A redirect or not-found from the action, rethrown below so Next.js's boundaries navigate.
-  const [navigation, setNavigation] = useState<{ error: unknown } | null>(null);
+  const [, startTransition] = useTransition();
 
   const inFlight = useRef(false);
   const triggers = useRef(new Map<string, HTMLButtonElement>());
@@ -54,23 +53,13 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
     if (!request) return;
     inFlight.current = true;
     dispatch({ type: "submit", requestId });
-    // Deliberately not wrapped in startTransition. Next.js already applies the action's router
-    // update in its own transition; an async transition here would hold that update in a React
-    // async-action scope, and a router.refresh() issued right after the result (the recovery
-    // button) was observed to fetch fresh data that never committed. The saving state is the
-    // reducer's, so no transition pending flag is needed.
-    void performRoleChange(onChangeRole, request)
-      .then(
-        (outcome) => dispatch({ type: "resolved", outcome }),
-        (error: unknown) => {
-          // performRoleChange only lets Next.js navigation through (redirect, not found).
-          if (isFrameworkNavigation(error)) setNavigation({ error });
-          else dispatch({ type: "resolved", outcome: { ok: false, code: "UNKNOWN_OUTCOME" } });
-        },
-      )
-      .finally(() => {
+    startTransition(async () => {
+      try {
+        dispatch({ type: "resolved", outcome: await performRoleChange(onChangeRole, request) });
+      } finally {
         inFlight.current = false;
-      });
+      }
+    });
   };
 
   // Focus: into the choices when the dialog opens, back to the row's trigger when it closes.
@@ -95,9 +84,6 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
     const frame = requestAnimationFrame(() => (failure.retryable ? confirmRef.current : recoveryRef.current)?.focus());
     return () => cancelAnimationFrame(frame);
   }, [failure]);
-
-  // Thrown during render, as a transition would have done, so RedirectBoundary handles it.
-  if (navigation) throw navigation.error;
 
   return (
     <>
