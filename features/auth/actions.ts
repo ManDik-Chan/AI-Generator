@@ -78,11 +78,15 @@ export async function signUp(
       },
     });
 
-    if (error) {
-      return { error: "无法创建账号，请确认邮箱未被注册。" };
+    // Auth can return this error instead of an obfuscated user depending on
+    // its confirmation settings. Keep the externally visible result identical.
+    if (error && error.code !== "user_already_exists") {
+      return { error: "注册暂时无法完成，请稍后再试。" };
     }
 
-    if (data.user) {
+    // With confirmation enabled Auth may return an obfuscated user for an
+    // existing account. Never create a profile for that synthetic identity.
+    if (!error && data.user && data.user.identities?.length !== 0) {
       await ensureProfile(data.user);
     }
   } catch {
