@@ -20,7 +20,12 @@ export function urlOrigin(value: string) {
 function expectedInline(event: CspObservation) {
   return event.originalPolicy === expectedCspPolicy && event.disposition === "report" && event.blockedURI === "inline"
     && ["script-src-elem", "style-src-elem", "style-src-attr"].includes(event.effectiveDirective)
-    && Boolean(event.documentOrigin) && event.documentOrigin === event.sourceOrigin && event.documentOrigin === event.frameOrigin;
+    // WebKit omits sourceFile for parser-inserted inline script/style reports.
+    // In that case the trusted event's document/frame AND the independently
+    // recorded console location must still agree. An explicit foreign source
+    // never qualifies, and a missing console location is never inferred.
+    && Boolean(event.documentOrigin) && event.documentOrigin === event.frameOrigin
+    && (event.sourceOrigin === "" || event.documentOrigin === event.sourceOrigin);
 }
 
 function consoleKind(text: string): "script" | "style" | undefined {

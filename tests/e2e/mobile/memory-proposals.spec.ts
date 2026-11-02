@@ -193,7 +193,11 @@ test.describe("trusted memory proposal workflow", () => {
       )).toBeVisible();
       await expectNoHorizontalOverflow(page);
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 
@@ -265,7 +269,11 @@ test.describe("trusted memory proposal workflow", () => {
         `[data-memory-proposal-id="${newProposal.id}"]`,
       )).toBeVisible();
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 
@@ -534,7 +542,11 @@ test.describe("trusted memory proposal workflow", () => {
         await expectNoHorizontalOverflow(page);
       }
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 });

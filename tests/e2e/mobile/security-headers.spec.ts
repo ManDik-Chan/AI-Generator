@@ -22,17 +22,19 @@ test("security policy covers pages, redirects, errors, API and static assets", a
 
 test("strict CSP reports inline execution while the application remains interactive", async ({ page }, testInfo) => {
   const diagnostics = await installRuntimeDiagnostics(page);
+  // Insert into parser-delivered HTML, giving both browser reports and console
+  // messages a document location. DevTools-evaluated script has no source URL.
+  await page.route("**/login", async (route) => {
+    const response = await route.fetch();
+    const html = (await response.text()).replace("</head>", "<script>window.__aigInlineProbeExecuted = true</script></head>");
+    await route.fulfill({ response, body: html });
+  });
   const response = await page.goto("/login");
   expect(response).not.toBeNull();
   assertSecurityHeaderContract(new Headers(response!.headers()));
   expect(response!.headers()["content-security-policy"]).toBeUndefined();
   await page.getByLabel("邮箱").fill("csp-probe@example.test");
   await expect(page.getByLabel("邮箱")).toHaveValue("csp-probe@example.test");
-  await page.evaluate(() => {
-    const script = document.createElement("script");
-    script.textContent = "window.__aigInlineProbeExecuted = true";
-    document.head.appendChild(script);
-  });
   await expect.poll(() => page.evaluate(() => (window as unknown as { __aigInlineProbeExecuted?: boolean }).__aigInlineProbeExecuted)).toBe(true);
   await expect.poll(() => diagnostics.cspEvents?.filter((event) => event.disposition === "report" && event.blockedURI === "inline" && event.effectiveDirective === "script-src-elem").length ?? 0).toBeGreaterThan(0);
   await flushRuntimeDiagnostics(page);

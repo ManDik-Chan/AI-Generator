@@ -1,7 +1,7 @@
 # P1-SEC-HARDEN B — browser response headers
 
 Base: `0c13efe` (2026-11-01 main, including PR #46). The Draft PR records the final candidate SHA and CI results; local evidence below must not be read as remote browser acceptance.
-This branch is independent of dependency patch A. It changes no dependencies, Auth/session implementation, business permissions, UI, deployment settings, workflows, or browser matrix.
+This branch is independent of dependency patch A. It changes no dependencies, Auth/session implementation, business permissions, visual UI, deployment settings, workflows, or browser matrix. Client instrumentation selects Zod's interpreted parser to avoid dynamic code generation under the reporting policy.
 
 ## Effective configuration boundaries
 
@@ -69,3 +69,13 @@ Checks ran serially against disposable stack `aig-platform-p1-final-sec-a-202611
 Execution commands are in [README](../../README.md#security-response-header-verification). The Draft PR is the record for the final tested head and CI run links. Owner actions: merge A first, require all B CI/browser gates on the final main-compatible candidate, review observed source exceptions and Vercel-generated response headers, and retain a separate decision for CSP enforcement, HSTS/subdomains and isolation headers. No main merge or production deployment is performed here.
 
 Official references: [Next 15 headers](https://nextjs.org/docs/15/app/api-reference/config/next-config-js/headers), [Next 15 CSP / nonce and SRI](https://nextjs.org/docs/15/app/guides/content-security-policy), [CSP3 reporting and delivery specification](https://www.w3.org/TR/CSP3/), [WebKit CSP implementation](https://github.com/WebKit/WebKit/blob/main/Source/WebCore/page/csp/ContentSecurityPolicy.cpp), [Chromium CSP report severity](https://chromium.googlesource.com/chromium/src/+/main/third_party/blink/renderer/core/frame/csp/csp_directive_list.cc).
+
+## 2026-11-02 browser acceptance correction
+
+The first remote run on `829418a` passed all static/build/database gates and real XFO frame-denial tests, but failed browser diagnostic acceptance. It is not an accepted release candidate. The sanitized artifacts establish three separate causes:
+
+- Isolated-user cleanup closes pages before `afterEach`; the new drain attempted to evaluate those closed pages. Drain now runs before fixture cleanup, and `afterEach` retains and asserts collected evidence without evaluating a closed document.
+- WebKit reports a trusted inline violation without `sourceFile`. Such reports require the exact policy, a same-origin document/frame and a separately located same-origin console message; explicit foreign sources and absent console locations still fail. The deliberate inline probe is inserted into parser-delivered HTML, so its source is an actual document rather than a locationless DevTools evaluation.
+- Chat validation's Zod object compilation issued real `unsafe-eval` reports. `instrumentation-client.ts` now selects `config({ jitless: true })` before application modules/hydration, using Next's documented [client initialization convention](https://nextjs.org/docs/15/app/api-reference/file-conventions/instrumentation-client). A fresh-process regression blocks the Function constructor and verifies successful and rejected real chat-schema inputs with zero compilation attempts. Server validation configuration is unchanged; eval violations remain unexpected in browser diagnostics.
+
+No CSP source, error signature, skip, timeout, required check or browser project was relaxed. Corrected local and remote results are tracked on the PR at its final SHA; the previous failed run remains part of the evidence.

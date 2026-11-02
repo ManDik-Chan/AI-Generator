@@ -12,6 +12,16 @@ describe("strict CSP report-only diagnostic pairing", () => {
     expect(pairCspObservations([event()], [message])).toEqual({ expectedErrors: [error], unexpected: [] });
   });
 
+  it("pairs WebKit's absent inline sourceFile only with an independently located same-origin console report", () => {
+    expect(pairCspObservations([event({ sourceOrigin: "" })], [message])).toEqual({ expectedErrors: [error], unexpected: [] });
+    for (const origin of ["", "https://external.example"]) {
+      expect(pairCspObservations([event({ sourceOrigin: "" })], [{ ...message, origin }]).expectedErrors).toEqual([]);
+    }
+    for (const extra of [{ documentOrigin: "" }, { frameOrigin: "" }, { sourceOrigin: "https://external.example" }]) {
+      expect(pairCspObservations([event(extra)], [message]).expectedErrors).toEqual([]);
+    }
+  });
+
   it("pairs Chromium info-level inline reports without treating them as runtime errors", () => {
     const directive = expectedCspPolicy.split("; ").find((value) => value.startsWith("script-src "))!;
     const text = `Executing inline script violates the following Content Security Policy directive '${directive}'. Either the 'unsafe-inline' keyword, a hash ('sha256-YWJjZA=='), or a nonce ('nonce-...') is required to enable inline execution. The policy is report-only, so the violation has been logged but no further action has been taken.`;
@@ -29,7 +39,7 @@ describe("strict CSP report-only diagnostic pairing", () => {
     { disposition: "enforce" }, { blockedURI: "eval" }, { blockedURI: "https://external.example/private" },
     { originalPolicy: "script-src *" }, { effectiveDirective: "img-src" }, { effectiveDirective: "script-src-attr" },
     { sourceOrigin: "https://external.example" }, { documentOrigin: "https://external.example" },
-    { frameOrigin: "https://external.example" }, { sourceOrigin: "" },
+    { frameOrigin: "https://external.example" },
   ])("never classifies an unrelated violation as expected: %o", (extra) => {
     const result = pairCspObservations([event(extra)], [message]);
     expect(result.expectedErrors).toEqual([]);

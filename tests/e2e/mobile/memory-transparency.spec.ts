@@ -418,7 +418,11 @@ test.describe("memory provenance and live turn disclosure", () => {
         await expectNoHorizontalOverflow(page);
       }
     } finally {
-      await cleanupIsolatedE2eUser(identity, db, page);
+      try {
+        await flushRuntimeDiagnostics(page);
+      } finally {
+        await cleanupIsolatedE2eUser(identity, db, page);
+      }
     }
   });
 });

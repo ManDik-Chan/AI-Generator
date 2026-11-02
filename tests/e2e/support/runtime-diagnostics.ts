@@ -117,6 +117,9 @@ export async function installRuntimeDiagnostics(page: Page): Promise<RuntimeDiag
 
 /** Drain the browser event queue and its binding deliveries before assertions. */
 export async function flushRuntimeDiagnostics(page: Page) {
+  // Fixture cleanup deliberately closes the page before afterEach. Keep the
+  // collected evidence/assertions; only a live document can drain its queue.
+  if (page.isClosed()) return;
   await page.evaluate(async () => {
     await (window as unknown as { __aigDrainCsp?: () => Promise<void> }).__aigDrainCsp?.();
   });

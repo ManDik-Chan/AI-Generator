@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { Page } from "@playwright/test";
 
 import {
   getUnexpectedRuntimeErrors,
+  flushRuntimeDiagnostics,
   type RuntimeDiagnostics,
 } from "./runtime-diagnostics";
 import { expectedCspPolicy } from "./csp-observations";
@@ -28,6 +30,13 @@ function diagnostics(
 }
 
 describe("authenticated E2E runtime diagnostics", () => {
+  it("does not evaluate a closed fixture page or discard the evidence already collected", async () => {
+    const evaluate = vi.fn();
+    await flushRuntimeDiagnostics({ isClosed: () => true, evaluate } as unknown as Page);
+    expect(evaluate).not.toHaveBeenCalled();
+    const error = "page: ReferenceError: retained after close";
+    expect(getUnexpectedRuntimeErrors(diagnostics({ errors: [error] }))).toEqual([error]);
+  });
   it("pairs one WebKit Next chunk Load failed with one completed Memory action navigation cancellation", () => {
     expect(getUnexpectedRuntimeErrors(diagnostics())).toEqual([]);
   });
