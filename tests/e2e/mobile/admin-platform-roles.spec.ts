@@ -99,6 +99,80 @@ function redirectTargetOf(response: APIResponse) {
   return target.startsWith("http") ? new URL(target).pathname : target.split(/[;?]/, 1)[0];
 }
 
+/*
+ * Diagnostics for an intermittent stall seen on every browser project: after a Server Action, a
+ * router update that carries fresh /admin data (the action's revalidated tree or a later
+ * router.refresh()) is fetched correctly but never committed. The probe only counts React commits
+ * through the standard DevTools hook; on failure the spec records React's root lanes, the router
+ * state hook's pending lanes, and whether one more refresh commits. It changes no app behavior.
+ */
+function installReactCommitProbe() {
+  const probe = { commits: 0, roots: new Set<unknown>() };
+  Object.defineProperty(window, "__aigCommitProbe", { value: probe });
+  if ("__REACT_DEVTOOLS_GLOBAL_HOOK__" in window) return;
+  let renderers = 0;
+  Object.defineProperty(window, "__REACT_DEVTOOLS_GLOBAL_HOOK__", {
+    configurable: true,
+    value: {
+      supportsFiber: true,
+      isDisabled: false,
+      renderers: new Map(),
+      inject: () => (renderers += 1),
+      onCommitFiberRoot: (...args: unknown[]) => { probe.commits += 1; probe.roots.add(args[1]); },
+      onCommitFiberUnmount: () => {},
+      onPostCommitFiberRoot: () => {},
+      checkDCE: () => {},
+    },
+  });
+}
+
+async function collectStallDiagnostics(page: Page) {
+  return page.evaluate(async () => {
+    type Hook = { memoizedState?: unknown; queue?: { lanes?: number; pending?: unknown; lastRenderedState?: unknown } | null; baseQueue?: unknown; next?: Hook | null };
+    type Fiber = { memoizedState?: unknown; lanes?: number; child?: Fiber | null; sibling?: Fiber | null };
+    type Root = { current: Fiber; pendingLanes: number; suspendedLanes: number; pingedLanes: number; entangledLanes: number; expiredLanes: number; callbackNode: unknown; callbackPriority: number };
+    const probe = (window as unknown as { __aigCommitProbe?: { commits: number; roots: Set<Root> } }).__aigCommitProbe;
+    const router = (window as unknown as { next?: { router?: { refresh?: () => void } } }).next?.router;
+    const bits = (lanes: number) => (lanes >>> 0).toString(2);
+    const isRouterState = (value: unknown) => typeof value === "object" && value !== null && "canonicalUrl" in value && "tree" in value;
+    const routerHook = (root: Root) => {
+      const stack: Fiber[] = [root.current];
+      for (let visited = 0; stack.length && visited < 50_000; visited += 1) {
+        const fiber = stack.pop()!;
+        let hook = fiber.memoizedState as Hook | null | undefined;
+        for (let index = 0; hook && typeof hook === "object" && "queue" in hook && index < 64; index += 1, hook = hook.next) {
+          const state = hook.memoizedState;
+          if (isRouterState(state) || isRouterState(hook.queue?.lastRenderedState)) {
+            return {
+              fiberLanes: bits(fiber.lanes ?? 0),
+              queueLanes: bits(hook.queue?.lanes ?? 0),
+              hasPendingUpdates: Boolean(hook.queue?.pending),
+              hasBaseQueue: Boolean(hook.baseQueue),
+              stateIsThenable: typeof state === "object" && state !== null && typeof (state as { then?: unknown }).then === "function",
+            };
+          }
+        }
+        if (fiber.sibling) stack.push(fiber.sibling);
+        if (fiber.child) stack.push(fiber.child);
+      }
+      return null;
+    };
+    const snapshot = () => ({
+      commits: probe?.commits ?? null,
+      admins: document.querySelector('[aria-label="系统概览"]')?.textContent?.match(/\d+ 名管理员/)?.[0] ?? null,
+      roots: [...(probe?.roots ?? [])].map((root) => ({
+        pending: bits(root.pendingLanes), suspended: bits(root.suspendedLanes), pinged: bits(root.pingedLanes),
+        entangled: bits(root.entangledLanes), expired: bits(root.expiredLanes),
+        scheduled: root.callbackNode !== null, callbackPriority: root.callbackPriority, routerHook: routerHook(root),
+      })),
+    });
+    const before = snapshot();
+    router?.refresh?.();
+    await new Promise((resolve) => setTimeout(resolve, 5_000));
+    return { visibility: document.visibilityState, focused: document.hasFocus(), probeInstalled: Boolean(probe), refreshAvailable: Boolean(router?.refresh), before, afterOneMoreRefresh: snapshot() };
+  });
+}
+
 const row = (page: Page, person: IsolatedE2eUser) => page.locator(`li[data-member-id="${person.userId}"]`);
 const notice = (page: Page, person: IsolatedE2eUser) => page.locator(`[id="member-notice-${person.userId}"]`);
 const roleBadge = (page: Page, person: IsolatedE2eUser) => row(page, person).locator("[data-platform-role]");
@@ -151,6 +225,7 @@ test.describe("platform role administration", () => {
 
     let failure: unknown;
     try {
+      await page.addInitScript(installReactCommitProbe);
       expect(await db.profile.count({ where: { role: "OWNER" } }), "The disposable database must start without an OWNER.").toBe(0);
       owner = await createIsolatedE2eUser(page, testInfo, "rbac-owner");
       // The disposable stand-in for the reviewed OWNER bootstrap runbook.
@@ -344,6 +419,13 @@ test.describe("platform role administration", () => {
       expect(pageErrors, "The admin pages must not throw or fail to render.").toEqual([]);
     } catch (error) {
       failure = error;
+      try {
+        const diagnostics = await collectStallDiagnostics(page);
+        console.log(`[rbac-e2e] stall diagnostics ${JSON.stringify(diagnostics)}`);
+        await testInfo.attach("stall-diagnostics", { body: JSON.stringify(diagnostics, null, 2), contentType: "application/json" });
+      } catch (diagnosticError) {
+        console.log(`[rbac-e2e] stall diagnostics unavailable: ${String(diagnosticError)}`);
+      }
       throw error;
     } finally {
       const cleanupErrors: unknown[] = [];
