@@ -220,7 +220,7 @@ export function interpretRoleChangeResult(request: RoleChangeRequest, raw: unkno
 }
 
 /** Next.js signals redirects and not-found through thrown errors; those must keep propagating. */
-function isFrameworkNavigation(error: unknown) {
+export function isFrameworkNavigation(error: unknown) {
   if (typeof error !== "object" || error === null || !("digest" in error)) return false;
   const digest = (error as { digest: unknown }).digest;
   return typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK") || digest === "NEXT_NOT_FOUND");
