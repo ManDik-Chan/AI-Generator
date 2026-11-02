@@ -23,10 +23,11 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         <div className="relative z-10 my-auto max-w-xl py-16">
           <p className="kicker text-[hsl(var(--paper)/.75)]">AIG Platform<span aria-hidden="true" className="kicker__arrow text-[hsl(var(--paper)/.6)]">↓</span></p>
-          <h1 className="mt-5 text-[clamp(2.6rem,4.2vw,4.6rem)] font-medium leading-[1.03] tracking-[-.04em] text-lime">
+          {/* Brand tagline, not a heading: the form's title is the page's only h1. */}
+          <p className="mt-5 text-[clamp(2.6rem,4.2vw,4.6rem)] font-medium leading-[1.03] tracking-[-.04em] text-lime">
             <span className="title-line"><span>展你所作，</span></span>
             <span className="title-line" style={{ "--d": 90 } as CSSProperties}><span>守你所藏。</span></span>
-          </h1>
+          </p>
           <p className="enter mt-6 max-w-lg text-[.9375rem] leading-7 text-[hsl(var(--paper)/.75)]" style={{ "--d": 260 } as CSSProperties}>
             登录后进入你的工作台：项目、开发者控制台，以及已经上线的 AI Hub。
           </p>
