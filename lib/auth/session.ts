@@ -26,7 +26,7 @@ export async function requireAdmin() {
   const user = await requireUser();
   const profile = await prisma.profile.findUnique({ where: { id: user.id } });
 
-  if (profile?.role !== "ADMIN") {
+  if (profile?.role !== "ADMIN" && profile?.role !== "OWNER") {
     redirect("/workspace");
   }
 

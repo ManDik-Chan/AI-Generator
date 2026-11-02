@@ -3,6 +3,8 @@ import "server-only";
 import { getAiConfigurationStatus, getBrainstormConfigurationStatus } from "@/lib/ai/config";
 import { getImageConfigurationStatus, getImageGenerationConfigurationStatus } from "@/lib/ai/image/config";
 import { prisma } from "@/lib/database/prisma";
+import { requireAdmin } from "@/lib/auth/session";
+import { canChangePlatformRole, platformCapabilities } from "@/features/admin/role-contract";
 
 const USER_LIST_LIMIT = 50;
 
@@ -11,6 +13,7 @@ function statusCounts<T extends string>(rows: Array<{ status: T; _count: { _all:
 }
 
 export async function getAdminOverview() {
+  const { user, profile } = await requireAdmin();
   const [
     profiles,
     profileCount,
@@ -43,7 +46,7 @@ export async function getAdminOverview() {
       },
     }),
     prisma.profile.count(),
-    prisma.profile.count({ where: { role: "ADMIN" } }),
+    prisma.profile.count({ where: { role: { in: ["OWNER", "ADMIN"] } } }),
     prisma.conversation.count(),
     prisma.message.count(),
     prisma.memory.count(),
@@ -60,7 +63,6 @@ export async function getAdminOverview() {
         id: true,
         type: true,
         status: true,
-        title: true,
         errorCode: true,
         createdAt: true,
         updatedAt: true,
@@ -74,9 +76,10 @@ export async function getAdminOverview() {
   ]);
 
   return {
-    users: { items: profiles, total: profileCount, admins: adminCount, limit: USER_LIST_LIMIT },
+    actorCapabilities: platformCapabilities(profile.role),
+    users: { items: profiles.map((target) => ({ ...target, roleChange: canChangePlatformRole(profile.role, target.role, user.id === target.id) })), total: profileCount, admins: adminCount, limit: USER_LIST_LIMIT },
     totals: { conversations: conversationCount, messages: messageCount, memories: memoryCount, images: imageCount, toolRuns: toolRunCount },
-    toolRuns: { byStatus: statusCounts(toolRunsByStatus), byType: Object.fromEntries(toolRunsByType.map((row) => [row.type, row._count._all])), recent: recentRuns },
+    toolRuns: { byStatus: statusCounts(toolRunsByStatus), byType: Object.fromEntries(toolRunsByType.map((row) => [row.type, row._count._all])), recent: recentRuns.map((run) => ({ ...run, title: null })) },
     generationRuns: statusCounts(generationRunsByStatus),
     brainstormWorkers: statusCounts(brainstormWorkersByStatus),
     storageBytes: (storedAssetBytes._sum.sizeBytes ?? 0) + (generatedImageBytes._sum.sizeBytes ?? 0),

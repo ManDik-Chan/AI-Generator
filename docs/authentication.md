@@ -30,10 +30,6 @@ pnpm db:migrate
 
 ## 5. 管理员
 
-新用户默认角色为 `USER`。首个管理员必须由项目所有者在可信数据库控制台中显式更新：
-
-```sql
-update public.profiles set role = 'ADMIN' where email = 'owner@example.com';
-```
+新用户默认角色为 `USER`，历史 `ADMIN` 保持不变。首次平台 OWNER 的受控绑定、验证和恢复流程见 [平台角色运维](platform-rbac-operations.md)。不得根据邮箱或注册顺序提权。
 
 authenticated 客户端只有 `display_name`、`avatar_url`、`memory_enabled` 的列级 UPDATE 权限，不能修改 `role`、`id`、`email` 或系统时间字段；`/admin` 同时经过 Supabase 会话校验和服务端 Profile 角色校验。

@@ -121,7 +121,7 @@ export const getHomePersonalization = cache(async (): Promise<HomePersonalizatio
       latestConversation: recentConversations[0],
       recentConversations,
       activity,
-      isAdmin: viewer?.role === "ADMIN",
+      isAdmin: (viewer?.role === "ADMIN" || viewer?.role === "OWNER"),
       metrics: conversationsCount === undefined ? undefined : {
         conversations: conversationsCount,
         personas: count(5) ?? 0,

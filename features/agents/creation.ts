@@ -45,7 +45,7 @@ export async function createPendingAgentRun(input: {
       _sum: { units: true },
     });
     const used = usageUnits(aggregate);
-    const unlimited = profile.role === "ADMIN";
+    const unlimited = (profile.role === "ADMIN" || profile.role === "OWNER");
     if (!unlimited && used + limits.creditCost > input.dailyCredits) {
       throw new AgentCreationError(
         "DAILY_CREDITS",

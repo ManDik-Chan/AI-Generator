@@ -50,8 +50,8 @@ export default async function AccountPage() {
               <h1 className="mt-2 overflow-wrap-anywhere text-[clamp(1.75rem,3vw,2.5rem)] font-medium tracking-[-.035em]">{name}</h1>
               <p className="mt-1 overflow-wrap-anywhere text-supporting">{user.email}</p>
             </div>
-            <Badge variant={profile?.role === "ADMIN" ? "info" : "neutral"}>
-              {profile?.role === "ADMIN" ? "管理员" : "个人用户"}
+            <Badge variant={(profile?.role === "ADMIN" || profile?.role === "OWNER") ? "info" : "neutral"}>
+              {profile?.role === "OWNER" ? "平台所有者" : profile?.role === "ADMIN" ? "管理员" : "个人用户"}
             </Badge>
           </div>
         </Surface>
@@ -87,7 +87,7 @@ export default async function AccountPage() {
           <div className="mt-5 grid gap-3 sm:grid-cols-3"><div className="premium-subpanel p-4"><p className="premium-kicker">IDENTITY</p><p className="mt-2 text-sm font-semibold">服务端身份</p><p className="mt-1 text-xs leading-5 text-muted-foreground">不会信任浏览器传入的 userId。</p></div><div className="premium-subpanel p-4"><p className="premium-kicker">STORAGE</p><p className="mt-2 text-sm font-semibold">私有素材</p><p className="mt-1 text-xs leading-5 text-muted-foreground">不公开数据库或 Storage 路径。</p></div><div className="premium-subpanel p-4"><p className="premium-kicker">HISTORY</p><p className="mt-2 text-sm font-semibold">按次选择历史</p><p className="mt-1 text-xs leading-5 text-muted-foreground">每次工具运行都可决定是否保留内容。</p></div></div>
         </Surface>
 
-        {profile?.role === "ADMIN" ? (
+        {(profile?.role === "ADMIN" || profile?.role === "OWNER") ? (
           <Surface className="flex items-start gap-4 p-5 sm:p-6">
             <span className="grid size-10 shrink-0 place-items-center rounded-control bg-info-subtle text-info">
               <ShieldCheck className="size-4" />
