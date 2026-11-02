@@ -41,6 +41,7 @@ export async function getAdminOverview() {
         email: true,
         displayName: true,
         role: true,
+        roleVersion: true,
         createdAt: true,
         _count: { select: { conversations: true, personas: true, memories: true, toolRuns: true } },
       },

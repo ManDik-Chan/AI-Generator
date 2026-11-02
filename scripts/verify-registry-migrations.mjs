@@ -41,7 +41,8 @@ async function snapshot(db) {
     const relation = `${schemaname}.${tablename}`;
     // Additive B2-B provenance columns must not change any preexisting bytes.
     // Compare every old column, then assert those new columns stay NULL below.
-    const row = relation === "public.project_releases" ? "(to_jsonb(t)-'authorization_id'-'published_by')" : "to_jsonb(t)";
+    const row = relation === "public.project_releases" ? "(to_jsonb(t)-'authorization_id'-'published_by')"
+      : relation === "public.profiles" ? "(to_jsonb(t)-'role_version')" : "to_jsonb(t)";
     data.push(...await db.$queryRawUnsafe(`SELECT '${relation}' AS name,count(*)::int AS count,md5(string_agg(${row}::text,E'\n' ORDER BY ${row}::text)) AS digest FROM ${relation} t`));
   }
   return data;
@@ -236,7 +237,9 @@ try {
   const db = new PrismaClient({ datasourceUrl: process.env.TEST_DATABASE_URL });
   try {
     const userId = randomUUID();
-    await db.profile.create({ data: { id: userId, email: `${userId}@example.test` } });
+    // The historical prefix does not yet have Profile.role_version.
+    await db.$executeRaw`INSERT INTO public.profiles (id, email, created_at, updated_at)
+      VALUES (${userId}::uuid, ${`${userId}@example.test`}, now(), now())`;
     const persona = await db.persona.create({ data: { userId, name: "historical", personality: "fixture", systemPrompt: "fixture" } });
     const conversation = await db.conversation.create({ data: { userId, personaId: persona.id, title: "historical" } });
     await db.message.create({ data: { conversationId: conversation.id, role: "USER", content: "preserve historical chat" } });
@@ -282,6 +285,10 @@ try {
       expected.push(migration);
       await verifyMigrations(db, expected);
       await assertPreservedData(db, before);
+      if (migration === "20261102095909_platform_role_version_receipts") {
+        const [versions] = await db.$queryRaw`SELECT count(*)::int AS count FROM public.profiles WHERE role_version <> 0`;
+        assert.equal(versions.count, 0, "Existing profile versions must start at zero");
+      }
       const appliedStorage = await storageSnapshot(db);
       for (const kind of ["buckets","objects"]) {
         const previous = new Set(beforeStorage[kind].map(row => row.id));

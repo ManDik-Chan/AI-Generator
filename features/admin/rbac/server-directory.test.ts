@@ -9,7 +9,7 @@ import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared
 import { describe, expect, it } from "vitest";
 
 import { PlatformRolesSection } from "@/features/admin/components/platform-roles-section";
-import { canChangePlatformRole, platformCapabilities, type PlatformRole } from "@/features/admin/role-contract";
+import { canChangePlatformRole, platformCapabilities, type PlatformRole, type RoleChangeDecision } from "@/features/admin/role-contract";
 import { ROLE_AUDIT_FEED_NOT_CONNECTED, restrictionFor, toPlatformDirectory, type PlatformDirectorySource } from "@/features/admin/rbac/server-directory";
 
 const people = {
@@ -31,6 +31,7 @@ function backendOverview(viewer: Person): PlatformDirectorySource {
         email: `${key}@example.test`,
         displayName: key === "adminB" ? null : `成员 ${key}`,
         role: people[key].role,
+        roleVersion: index,
         createdAt: new Date(Date.UTC(2026, 9, 1 + index, 8, 30)),
         _count: { conversations: 2, personas: 1, memories: 4, toolRuns: 3 },
         roleChange: canChangePlatformRole(viewerRole, people[key].role, key === viewer),
@@ -62,13 +63,12 @@ describe("backend to view-model mapping", () => {
     expect(member(directory, "owner")).toMatchObject({ isViewer: true, roleChange: { assignableRoles: [], restriction: "SELF" } });
   });
 
-  it("offers no change and invents no version while the backend has no role version", () => {
+  it("uses the database version and backend permission for each member", () => {
     const directory = parsed("owner");
-    // The backend allows OWNER to change these members, but without a version the change cannot be
-    // conflict-checked, so it is not offered and nothing claims a version.
     for (const key of ["adminA", "adminB", "userC"] as const) {
       expect(canChangePlatformRole("OWNER", people[key].role, false).allowed).toBe(true);
-      expect(member(directory, key)).toMatchObject({ roleVersion: null, roleChange: { assignableRoles: [], restriction: null } });
+      expect(member(directory, key).roleVersion).toMatch(/^\d+$/);
+      expect(member(directory, key).roleChange).toEqual({ assignableRoles: [key === "userC" ? "ADMIN" : "USER"], restriction: null });
     }
   });
 
@@ -83,7 +83,7 @@ describe("backend to view-model mapping", () => {
   });
 
   it("maps request-level codes the advisory check never returns to no rights", () => {
-    expect(restrictionFor({ allowed: false, code: "CONFLICT", reason: "x" }, "OWNER", "USER")).toBe("INSUFFICIENT_ROLE");
+    expect(restrictionFor({ allowed: false, code: "ROLE_CONFLICT", reason: "x" } as unknown as RoleChangeDecision, "OWNER", "USER")).toBe("INSUFFICIENT_ROLE");
     expect(restrictionFor({ allowed: true }, "OWNER", "USER")).toBeNull();
   });
 

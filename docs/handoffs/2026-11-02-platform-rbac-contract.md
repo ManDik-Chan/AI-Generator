@@ -1,5 +1,7 @@
 # P1-RBAC-A 后台角色接口交接
 
+> 此文记录第一阶段接口；角色写入的现行契约及错误语义见 [最终后端契约](2026-11-02-platform-rbac-final-contract.md)。
+
 平台 `Role` 是 `OWNER`（平台所有者）、`ADMIN`（管理员）、`USER`（普通用户）；与 Registry 的项目角色无关。不要依据 UI 状态推断项目访问权或私人数据读取权限。
 
 `features/admin/role-contract.ts` 导出 `PlatformRole`、中文标签、`platformCapabilities(role)` 和 `canChangePlatformRole(actor, target, self)`。前者的 `canAccessAdmin` 对 OWNER/ADMIN 为真，`canManageAdminRoles` 仅 OWNER 为真。后者对其他 USER/ADMIN 仅 OWNER 返回 allowed；对 OWNER 和自己均拒绝。它用于展示提示，不能替代服务端鉴权。此轮没有新增封禁、停用或删除操作。

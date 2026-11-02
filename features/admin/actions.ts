@@ -1,33 +1,48 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-
-import { roleChangeInputSchema, type RoleChangeErrorCode } from "@/features/admin/role-contract";
+import { roleChangeInputSchema, type PlatformRole, type RoleChangeErrorCode } from "@/features/admin/role-contract";
 import { changePlatformRole, SafeRoleUpdateError } from "@/features/admin/role-service";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
 
+export type AdminRoleActionResult =
+  | { ok: true; changed: boolean; member: { id: string; platformRole: PlatformRole; roleVersion: string } }
+  | { ok: false; code: RoleChangeErrorCode; currentRole?: PlatformRole; currentVersion?: string; reason?: "SELF" | "OWNER_PROTECTED" };
 
-export interface AdminRoleActionState {
-  status: "idle" | "success" | "error";
-  message: string;
-  code?: RoleChangeErrorCode;
-}
-
-export async function updateAdminRoleAction(
-  _previous: AdminRoleActionState,
-  formData: FormData,
-): Promise<AdminRoleActionState> {
-  const { user } = await requireAdmin();
-  const parsed = roleChangeInputSchema.safeParse({ profileId: formData.get("profileId"), role: formData.get("role"), expectedRole: formData.get("expectedRole"), requestId: formData.get("requestId") });
-  if (!parsed.success) return { status: "error", code: "INVALID_REQUEST", message: "角色请求无效，请刷新后重试。" };
-
+export async function updateAdminRoleAction(input: unknown): Promise<AdminRoleActionResult> {
+  let user: Awaited<ReturnType<typeof requireAdmin>>["user"];
   try {
-    const changed = await changePlatformRole(prisma, user.id, parsed.data);
-    revalidatePath("/admin");
-    return { status: "success", message: changed ? "平台角色已更新。" : "平台角色未发生变化。" };
+    ({ user } = await requireAdmin());
   } catch (error) {
-    if (error instanceof SafeRoleUpdateError) return { status: "error", code: error.code, message: error.message };
-    return { status: "error", code: "CONFLICT", message: "角色更新失败；请刷新后重试。" };
+    // Preserve framework navigation, while never returning database details.
+    if (typeof error === "object" && error !== null && "digest" in error &&
+        typeof error.digest === "string" && (error.digest.startsWith("NEXT_REDIRECT") || error.digest.startsWith("NEXT_HTTP_ERROR_FALLBACK"))) throw error;
+    throw new Error("Role update outcome could not be confirmed.");
   }
+  const parsed = roleChangeInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "INVALID_REQUEST" };
+
+  let result: Awaited<ReturnType<typeof changePlatformRole>>;
+  try {
+    result = await changePlatformRole(prisma, user.id, parsed.data);
+  } catch (error) {
+    if (error instanceof SafeRoleUpdateError) return { ok: false, code: error.code, ...error.details };
+    // These transaction failures are known to have aborted. A concurrent duplicate
+    // request ID may first hit P2002; retrying reads the winning receipt.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2034" || error.code === "P2002")) {
+      return { ok: false, code: "UNAVAILABLE" };
+    }
+    // In particular, a lost commit acknowledgement is not a proven rollback.
+    // Do not expose the original exception; the caller maps a throw to UNKNOWN_OUTCOME.
+    throw new Error("Role update outcome could not be confirmed.");
+  }
+  try {
+    revalidatePath("/admin");
+  } catch {
+    // The transaction already committed, but the caller has not received its result.
+    throw new Error("Role update outcome could not be confirmed.");
+  }
+  return { ok: true, ...result };
 }
