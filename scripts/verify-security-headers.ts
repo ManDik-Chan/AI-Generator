@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { assertSecurityHeaderContract } from "../tests/security/header-contract";
+import webkitReport from "../tests/fixtures/csp-webkit-report.json";
 
 // HTTP-only regression; never launches a browser or connects to a production app.
 const base = new URL(process.argv[2] ?? "http://127.0.0.1:3000");
@@ -28,6 +29,7 @@ async function main() {
   await (await check("/api/security/csp-report", [405])).body?.cancel();
   await check("/api/security/csp-report", [400], { method: "POST", headers: { "Content-Type": "application/csp-report" }, body: "{" });
   await check("/api/security/csp-report", [204], { method: "POST", headers: { "Content-Type": "application/csp-report" }, body: JSON.stringify({ "csp-report": { "effective-directive": "script-src-elem", "blocked-uri": "inline", disposition: "report" } }) });
+  await check("/api/security/csp-report", [204], { method: "POST", headers: { "Content-Type": "application/csp-report" }, body: JSON.stringify(webkitReport) });
   await (await check("/favicon.ico", [200])).body?.cancel();
   for (const extension of ["js", "css"]) {
     const asset = html.match(new RegExp(`(?:src|href)="(/_next/static/[^" ]+\\.${extension})"`))?.[1];

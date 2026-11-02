@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { assertSecurityHeaderContract } from "../../security/header-contract";
+import webkitReport from "../../fixtures/csp-webkit-report.json";
 import { attachRuntimeDiagnostics, expectNoRuntimeErrors, flushRuntimeDiagnostics, installRuntimeDiagnostics } from "../support/runtime-diagnostics";
 
 // Existing CI browser matrix only; this file grants no local browser permission.
@@ -18,6 +19,12 @@ test("security policy covers pages, redirects, errors, API and static assets", a
   const rsc = await request.get("/?_rsc=security-header-browser", { headers: { RSC: "1" } });
   expect(rsc.headers()["content-type"]).toContain("text/x-component");
   assertSecurityHeaderContract(new Headers(rsc.headers()));
+  const legacyReport = await request.post("/api/security/csp-report", {
+    headers: { "Content-Type": "application/csp-report" }, data: JSON.stringify(webkitReport),
+  });
+  expect(legacyReport.status()).toBe(204);
+  expect(await legacyReport.text()).toBe("");
+  assertSecurityHeaderContract(new Headers(legacyReport.headers()));
 });
 
 test("strict CSP reports inline execution while the application remains interactive", async ({ page }, testInfo) => {

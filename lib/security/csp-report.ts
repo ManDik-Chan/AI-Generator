@@ -7,15 +7,20 @@ const directives = new Set([
   "default-src", "script-src", "script-src-elem", "script-src-attr", "style-src", "style-src-elem", "style-src-attr",
   "img-src", "font-src", "connect-src", "worker-src", "media-src", "object-src", "frame-src", "base-uri", "form-action", "frame-ancestors",
 ]);
-type Summary = { directive: string; disposition: "report"; blocked: "inline" | "eval" | "self" | "external-http" | "external-https" | "other" };
+type Summary = { directive: string; disposition: "report" | "unspecified"; blocked: "inline" | "eval" | "self" | "external-http" | "external-https" | "other" };
 type ReporterOptions = { now?: () => number; log?: (summary: Summary) => void };
 const record = (value: unknown): Record<string, unknown> | undefined => typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 
-function summarize(value: unknown, requestOrigin: string): Summary | undefined {
+function summarize(value: unknown, requestOrigin: string, legacy: boolean): Summary | undefined {
   const body = record(value);
   if (!body) return;
   const directive = body["effective-directive"] ?? body.effectiveDirective;
-  if (typeof directive !== "string" || !directives.has(directive) || body.disposition !== "report") return;
+  // WebKit's legacy report-uri JSON omits disposition. Do not invent a mode
+  // from the endpoint or the claimed original policy. Explicit invalid/enforce
+  // modes, and Reporting API reports without a mode, remain rejected.
+  const disposition = body.disposition === "report" ? "report"
+    : legacy && !Object.hasOwn(body, "disposition") ? "unspecified" : undefined;
+  if (typeof directive !== "string" || !directives.has(directive) || !disposition) return;
   const uri = body["blocked-uri"] ?? body.blockedURL;
   let blocked: Summary["blocked"] = "other";
   if (uri === "inline" || uri === "eval") blocked = uri;
@@ -27,7 +32,7 @@ function summarize(value: unknown, requestOrigin: string): Summary | undefined {
       else if (url.protocol === "https:") blocked = "external-https";
     } catch { /* Never retain a URL, document location, source sample, or body. */ }
   }
-  return { directive, disposition: "report", blocked };
+  return { directive, disposition, blocked };
 }
 
 async function readBoundedBody(request: Request) {
@@ -82,7 +87,7 @@ export function createCspReportHandler({ now = Date.now, log = (summary) => cons
       } else {
         bodies = [record(payload)?.["csp-report"]];
       }
-      const summaries = bodies.map((body) => summarize(body, new URL(request.url).origin)).filter((summary) => summary !== undefined);
+      const summaries = bodies.map((body) => summarize(body, new URL(request.url).origin, contentType === "application/csp-report")).filter((summary) => summary !== undefined);
       if (!summaries.length) return reply(400);
       // Each log field comes from a fixed vocabulary. Reports are untrusted claims;
       // never log document/source/blocked URLs, samples, IPs, cookies or request bodies.

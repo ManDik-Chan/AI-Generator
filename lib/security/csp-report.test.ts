@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createCspReportHandler } from "./csp-report";
+import webkitReport from "../../tests/fixtures/csp-webkit-report.json";
 
 const endpoint = "https://app.example/api/security/csp-report";
 const legacy = (extra = {}) => ({ "csp-report": { "effective-directive": "script-src-elem", "blocked-uri": "inline", disposition: "report", ...extra } });
@@ -7,6 +8,22 @@ const request = (value: unknown, type = "application/csp-report") => new Request
 afterEach(() => { vi.useRealTimers(); });
 
 describe("bounded anonymous CSP reporting", () => {
+  it("accepts WebKit's native legacy shape without inventing its missing disposition", async () => {
+    const log = vi.fn();
+    const response = await createCspReportHandler({ log })(request(webkitReport));
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
+    expect(log).toHaveBeenCalledExactlyOnceWith({ directive: "script-src-elem", disposition: "unspecified", blocked: "inline" });
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/example|memories|original-policy|document-uri/);
+  });
+
+  it("does not treat missing Reporting API disposition as a legacy WebKit claim", async () => {
+    const log = vi.fn();
+    const response = await createCspReportHandler({ log })(request([{ type: "csp-violation", body: { effectiveDirective: "script-src-elem", blockedURL: "inline" } }], "application/reports+json"));
+    expect(response.status).toBe(400);
+    expect(log).not.toHaveBeenCalled();
+  });
+
   it("accepts legacy reports and logs fixed-vocabulary fields only", async () => {
     const log = vi.fn();
     const response = await createCspReportHandler({ log })(request(legacy({ "document-uri": "https://app.example/?code=secret", "script-sample": "secret sample", "source-file": "https://app.example/?token=secret" })));
@@ -24,7 +41,7 @@ describe("bounded anonymous CSP reporting", () => {
     expect(log).toHaveBeenCalledExactlyOnceWith({ directive: "img-src", disposition: "report", blocked: "external-https" });
   });
 
-  it.each([null, {}, [], legacy({ disposition: "enforce" }), legacy({ "effective-directive": "arbitrary attacker text" })])("rejects malformed or unrelated claims without reflecting them", async (value) => {
+  it.each([null, {}, [], legacy({ disposition: "enforce" }), legacy({ disposition: null }), legacy({ disposition: "unknown" }), legacy({ "effective-directive": "arbitrary attacker text" })])("rejects malformed or unrelated claims without reflecting them", async (value) => {
     const log = vi.fn();
     const response = await createCspReportHandler({ log })(request(value));
     expect(response.status).toBe(400);
