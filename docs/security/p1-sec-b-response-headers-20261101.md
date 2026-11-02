@@ -1,6 +1,6 @@
 # P1-SEC-HARDEN B — browser response headers
 
-Base: `0c13efe` (2026-11-01 main, including PR #46). The Draft PR records the final candidate SHA and CI results; local evidence below must not be read as remote browser acceptance.
+Initial base: `0c13efe` (2026-11-01 main, including PR #46). Synchronized with main `7b73073` on 2026-11-02, including merged dependency patch #47 and visual changes #48. The Draft PR records the final candidate SHA and CI results; local evidence below must not be read as remote browser acceptance.
 This branch is independent of dependency patch A. It changes no dependencies, Auth/session implementation, business permissions, visual UI, deployment settings, workflows, or browser matrix. Client instrumentation selects Zod's interpreted parser to avoid dynamic code generation under the reporting policy.
 
 ## Effective configuration boundaries
@@ -79,3 +79,5 @@ The first remote run on `829418a` passed all static/build/database gates and rea
 - Chat validation's Zod object compilation issued real `unsafe-eval` reports. `instrumentation-client.ts` now selects `config({ jitless: true })` before application modules/hydration, using Next's documented [client initialization convention](https://nextjs.org/docs/15/app/api-reference/file-conventions/instrumentation-client). A fresh-process regression blocks the Function constructor and verifies successful and rejected real chat-schema inputs with zero compilation attempts. Server validation configuration is unchanged; eval violations remain unexpected in browser diagnostics.
 
 No CSP source, error signature, skip, timeout, required check or browser project was relaxed. Corrected local and remote results are tracked on the PR at its final SHA; the previous failed run remains part of the evidence.
+
+On the synchronized candidate, frozen installation, Typecheck, zero-warning Lint, all 1,504 unit assertions and the Next.js 15.5.28 production build passed locally. All 16 HTTP header cases passed again, and the owned server exited. The corrected parser also replayed the original WebKit artifact's 14 events/14 located console reports with no unmatched observations. Local browsers remain unperformed; the corrected remote browser/database matrix must pass before acceptance.
