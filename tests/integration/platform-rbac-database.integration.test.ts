@@ -76,6 +76,7 @@ describe.skipIf(!enabled)("platform RBAC real database protections", () => {
 
   it("denies anonymous and authenticated audit access and forged profile roles", async () => {
     for (const client of [anon, user]) {
+      expect((await client.from("platform_role_requests").select("*")).error).not.toBeNull();
       expect((await client.from("platform_role_audits").select("*")).error).not.toBeNull();
       expect((await client.from("platform_role_audits").insert({
         id: randomUUID(), actor_id: userId, target_id: secondId,
@@ -87,6 +88,18 @@ describe.skipIf(!enabled)("platform RBAC real database protections", () => {
     for (const role of ["ADMIN", "OWNER"]) {
       expect((await user.from("profiles").update({ role }).eq("id", userId)).error).not.toBeNull();
     }
+    await user.from("profiles").update({ role_version: 99 }).eq("id", userId);
+    expect((await db.profile.findUniqueOrThrow({ where: { id: userId } })).roleVersion).toBe(0);
     expect((await db.profile.findUniqueOrThrow({ where: { id: userId } })).role).toBe("USER");
+  });
+
+  it("maintains the version for direct SQL role changes, not profile edits or caller-supplied versions", async () => {
+    const original = await db.profile.findUniqueOrThrow({ where: { id: userId }, select: { role: true, roleVersion: true } });
+    await db.$executeRaw`UPDATE public.profiles SET display_name = 'version fixture', role_version = 99 WHERE id = ${userId}::uuid`;
+    expect(await db.profile.findUniqueOrThrow({ where: { id: userId }, select: { role: true, roleVersion: true } })).toEqual(original);
+    await db.$executeRaw`UPDATE public.profiles SET role = 'ADMIN', role_version = 99 WHERE id = ${userId}::uuid`;
+    expect(await db.profile.findUniqueOrThrow({ where: { id: userId }, select: { role: true, roleVersion: true } })).toEqual({ role: "ADMIN", roleVersion: original.roleVersion + 1 });
+    await db.$executeRaw`UPDATE public.profiles SET role = 'USER' WHERE id = ${userId}::uuid`;
+    expect(await db.profile.findUniqueOrThrow({ where: { id: userId }, select: { role: true, roleVersion: true } })).toEqual({ role: "USER", roleVersion: original.roleVersion + 2 });
   });
 });

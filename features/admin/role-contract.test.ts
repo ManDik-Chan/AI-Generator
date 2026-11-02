@@ -8,12 +8,16 @@ describe("platform roles", () => {
     expect(roles.map((role) => platformCapabilities(role).canManageAdminRoles)).toEqual([true, false, false]);
   });
   it("requires a valid request id and observed role, and never accepts OWNER as a requested role", () => {
-    const valid = { profileId: "d525801a-3c45-4419-93a5-3f62221e0951", requestId: "d525801a-3c45-4419-93a5-3f62221e0952", expectedRole: "USER", role: "ADMIN" };
+    const valid = { profileId: "d525801a-3c45-4419-93a5-3f62221e0951", requestId: "d525801a-3c45-4419-93a5-3f62221e0952", expectedRole: "USER", expectedVersion: "0", nextRole: "ADMIN" };
     expect(roleChangeInputSchema.safeParse(valid).success).toBe(true);
     expect(roleChangeInputSchema.safeParse({ ...valid, requestId: undefined }).success).toBe(false);
     expect(roleChangeInputSchema.safeParse({ ...valid, expectedRole: undefined }).success).toBe(false);
     expect(roleChangeInputSchema.safeParse({ ...valid, profileId: "invalid" }).success).toBe(false);
-    expect(roleChangeInputSchema.safeParse({ ...valid, role: "OWNER" }).success).toBe(false);
+    expect(roleChangeInputSchema.safeParse({ ...valid, nextRole: "OWNER" }).success).toBe(false);
+    expect(roleChangeInputSchema.safeParse({ ...valid, expectedRole: "OWNER" }).success).toBe(false);
+    for (const expectedVersion of [undefined, "", "-1", "01", "1.0", "2147483648"]) {
+      expect(roleChangeInputSchema.safeParse({ ...valid, expectedVersion }).success).toBe(false);
+    }
   });
   it("allows only OWNER to change another USER or ADMIN", () => {
     for (const actor of roles) for (const target of roles) {

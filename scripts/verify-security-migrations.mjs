@@ -100,10 +100,11 @@ async function seedOldDatabase(db) {
   const memoryId = randomUUID();
   const generatedImageId = randomUUID();
 
-  await db.profile.createMany({ data: [
-    { id: userId, email: `${userId}@example.test`, displayName: "Synthetic User", role: "USER" },
-    { id: adminId, email: `${adminId}@example.test`, displayName: "Synthetic Admin", role: "ADMIN" },
-  ] });
+  // This fixture predates later Profile columns; a current Prisma client would
+  // otherwise include role_version when inserting into the historical schema.
+  await db.$executeRaw`INSERT INTO public.profiles (id, email, display_name, role, created_at, updated_at) VALUES
+    (${userId}::uuid, ${`${userId}@example.test`}, 'Synthetic User', 'USER', now(), now()),
+    (${adminId}::uuid, ${`${adminId}@example.test`}, 'Synthetic Admin', 'ADMIN', now(), now())`;
   await db.persona.create({ data: { id: personaId, userId, name: "Synthetic Persona", personality: "fixture", systemPrompt: "fixture" } });
   await db.conversation.create({ data: { id: conversationId, userId, personaId, title: "Synthetic Conversation" } });
   await db.message.createMany({ data: [
@@ -578,6 +579,30 @@ async function verifyIncrementalUpgrade() {
   }
 }
 
+async function verifyRoleVersionUpgrade() {
+  const prior = makeMigrationTree((name) => name < "20261102095909_platform_role_version_receipts");
+  try {
+    await resetSupabase();
+    deploy(prior.schema);
+    const db = new PrismaClient({ datasourceUrl: databaseUrl });
+    try {
+      const adminId = randomUUID(), targetId = randomUUID(), requestId = randomUUID();
+      await db.$executeRaw`INSERT INTO public.profiles (id, email, role, created_at, updated_at) VALUES
+        (${adminId}::uuid, ${`${adminId}@example.test`}, 'ADMIN', now(), now()),
+        (${targetId}::uuid, ${`${targetId}@example.test`}, 'USER', now(), now())`;
+      await db.platformRoleAudit.create({ data: { actorId: adminId, targetId, oldRole: "USER", newRole: "ADMIN", requestId } });
+      deploy(join(root, "prisma/schema.prisma"));
+      assert.deepEqual(await db.profile.findUniqueOrThrow({ where: { id: adminId }, select: { role: true, roleVersion: true } }), { role: "ADMIN", roleVersion: 0 });
+      const receipt = await db.platformRoleRequest.findUniqueOrThrow({ where: { requestId } });
+      assert.equal(receipt.actorId, adminId);
+      assert.equal(receipt.expectedVersion, null);
+      assert.equal(receipt.resultVersion, null);
+      assert.equal(await db.platformRoleAudit.count({ where: { requestId } }), 1);
+      console.log("role_version_upgrade_verified historical_admin=preserved legacy_request=reserved");
+    } finally { await db.$disconnect(); }
+  } finally { removeTemporaryTree(prior.temporaryRoot); }
+}
+
 async function verifyProposalTransactionalRollback(mode) {
   const base = makeMigrationTree((name) => name < proposalMigration);
   const failing = makeMigrationTree(() => true, (temporaryPrisma) => {
@@ -903,6 +928,7 @@ if (mode === "clean") {
 }
 else if (mode === "incremental") {
   await verifyIncrementalUpgrade();
+  await verifyRoleVersionUpgrade();
   await verifyProposalTransactionalRollback("incremental");
   await verifyVerificationTransactionalRollback("incremental");
 } else if(mode==="rollback-all") {

@@ -18,24 +18,15 @@ import {
  * grants anything the backend did not. The result is parsed before it reaches client props, so
  * fields outside the view model are dropped.
  *
- * Field mapping and the backend gaps that keep role changes paused are listed in
- * docs/handoffs/2026-11-02-claude-p1-rbac-phase2-integration.md.
+ * The database now supplies the version; the page remains read-only until the
+ * role-change action is explicitly connected during the frontend integration.
  */
 
 type AdminOverview = Awaited<ReturnType<typeof getAdminOverview>>;
 export type PlatformDirectorySource = Pick<AdminOverview, "actor" | "actorCapabilities" | "users">;
 
 /** Target roles the backend role-change action accepts (its input schema), in its order. */
-const ACCEPTED_TARGET_ROLES: readonly PlatformRole[] = roleChangeInputSchema.shape.role.options;
-
-/**
- * The backend does not expose a per-member role version yet, and its action does not check one.
- * Until it does, every member carries null: the contract then forbids offering a change, and no
- * version is derived from timestamps or roles.
- */
-function backendRoleVersion(): string | null {
-  return null;
-}
+const ACCEPTED_TARGET_ROLES: readonly PlatformRole[] = roleChangeInputSchema.shape.nextRole.options;
 
 /** Display reason for a member the backend does not let this viewer change. */
 export function restrictionFor(decision: RoleChangeDecision, viewerRole: PlatformRole, targetRole: PlatformRole): RoleRestriction | null {
@@ -67,8 +58,8 @@ export function toPlatformDirectory(source: PlatformDirectorySource): ContractPa
     },
     totalMembers: users.total,
     members: users.items.map((item) => {
-      const roleVersion = backendRoleVersion();
-      const offered = item.roleChange.allowed && roleVersion !== null;
+      const roleVersion = String(item.roleVersion);
+      const offered = item.roleChange.allowed;
       return {
         id: item.id,
         email: item.email,

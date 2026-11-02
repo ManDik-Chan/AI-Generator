@@ -14,6 +14,8 @@ DO $bootstrap$
 DECLARE
   approved_uuid uuid := '<OWNER_APPROVED_AUTH_UUID>'::uuid;
   prior_role public."Role";
+  prior_role_version integer;
+  bound_role_version integer;
   operation_id uuid := gen_random_uuid();
 BEGIN
   IF EXISTS (SELECT FROM public.profiles WHERE role = 'OWNER') THEN
@@ -24,8 +26,12 @@ BEGIN
     AND (banned_until IS NULL OR banned_until < now())) THEN
     RAISE EXCEPTION 'approved identity missing, unverified or disabled';
   END IF;
-  SELECT role INTO STRICT prior_role FROM public.profiles WHERE id = approved_uuid FOR UPDATE;
+  SELECT role, role_version INTO STRICT prior_role, prior_role_version FROM public.profiles WHERE id = approved_uuid FOR UPDATE;
   UPDATE public.profiles SET role = 'OWNER', updated_at = now() WHERE id = approved_uuid;
+  SELECT role_version INTO STRICT bound_role_version FROM public.profiles WHERE id = approved_uuid;
+  IF bound_role_version <> prior_role_version + 1 THEN
+    RAISE EXCEPTION 'OWNER role version did not advance';
+  END IF;
   INSERT INTO public.platform_role_audits
     (id, actor_id, target_id, old_role, new_role, request_id)
   VALUES (gen_random_uuid(), approved_uuid, approved_uuid, prior_role, 'OWNER', operation_id);
@@ -35,7 +41,7 @@ $bootstrap$;
 COMMIT;
 ```
 
-验证仅存在一个 OWNER、目标 Auth 身份仍已验证且启用、审计记录和审批记录匹配。然后用真实隔离账号验证权限矩阵及原管理员功能，再恢复应用写入。首次绑定不能重复执行。日常界面不能转移 OWNER；身份转移需另行设计和审批高安全流程。
+验证仅存在一个 OWNER、目标 Auth 身份仍已验证且启用、角色版本已增加、审计记录和审批记录匹配。角色版本由数据库触发器维护，不能由脚本或应用自行设置。然后用真实隔离账号验证权限矩阵及原管理员功能，再恢复应用写入。首次绑定不能重复执行。日常界面不能转移 OWNER；身份转移需另行设计和审批高安全流程。
 
 ## 恢复及回滚
 

@@ -45,7 +45,7 @@ try {
     await tx.$executeRawUnsafe("LOCK TABLE public.profiles IN SHARE ROW EXCLUSIVE MODE");
     await tx.$executeRawUnsafe(block);
   });
-  assert.equal((await db.profile.findUniqueOrThrow({ where: { id: owner.id } })).role, "OWNER");
+  assert.deepEqual(await db.profile.findUniqueOrThrow({ where: { id: owner.id }, select: { role: true, roleVersion: true } }), { role: "OWNER", roleVersion: 1 });
   assert.equal(await db.platformRoleAudit.count({ where: { targetId: owner.id, newRole: "OWNER" } }), 1);
   await assert.rejects(db.$transaction(async tx => {
     await tx.$executeRawUnsafe("LOCK TABLE auth.users IN SHARE ROW EXCLUSIVE MODE");
