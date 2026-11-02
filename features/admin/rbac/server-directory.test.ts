@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import { PlatformRolesSection } from "@/features/admin/components/platform-roles-section";
 import { canChangePlatformRole, platformCapabilities, type PlatformRole, type RoleChangeDecision } from "@/features/admin/role-contract";
+import type { RoleChangeSubmitter } from "@/features/admin/rbac/contract";
 import { ROLE_AUDIT_FEED_NOT_CONNECTED, restrictionFor, toPlatformDirectory, type PlatformDirectorySource } from "@/features/admin/rbac/server-directory";
 
 const people = {
@@ -52,8 +53,11 @@ const member = (directory: ReturnType<typeof parsed>, key: Person) => directory.
 
 const router = { back() {}, forward() {}, refresh() {}, push() {}, replace() {}, prefetch() {} };
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
-const renderSection = (viewer: Person) => renderToStaticMarkup(createElement(AppRouterContext.Provider, { value: router },
-  createElement(PlatformRolesSection, { audit: ROLE_AUDIT_FEED_NOT_CONNECTED, directory: parsed(viewer) })));
+const renderSection = (viewer: Person, onChangeRole?: RoleChangeSubmitter) => renderToStaticMarkup(createElement(AppRouterContext.Provider, { value: router },
+  createElement(PlatformRolesSection, { audit: ROLE_AUDIT_FEED_NOT_CONNECTED, directory: parsed(viewer), onChangeRole })));
+const submitter: RoleChangeSubmitter = async () => ({ ok: false, code: "UNAVAILABLE" });
+/** Renders the section the way app/admin/page.tsx wires it: the action only for a role manager. */
+const renderWired = (viewer: Person) => renderSection(viewer, parsed(viewer).viewer.capabilities.manageRoles ? submitter : undefined);
 
 describe("backend to view-model mapping", () => {
   it("maps the OWNER viewer's capabilities from the backend and reports no audit read capability", () => {
@@ -105,19 +109,28 @@ describe("backend to view-model mapping", () => {
 });
 
 describe("/admin role section from backend data", () => {
-  it("shows an OWNER a read-only directory that says role changes and the audit feed are not connected", () => {
+  it("lets an OWNER change exactly the members the backend allows, and says the audit feed is not connected", () => {
+    const html = renderWired("owner");
+    expect(text(html)).not.toContain("角色调整暂不可用");
+    // One trigger per changeable member (two admins and one user); none for the OWNER's own row.
+    expect(html.split('aria-haspopup="dialog"').length - 1).toBe(3);
+    const ownRow = html.slice(html.indexOf(`data-member-id="${people.owner.id}"`));
+    expect(ownRow.slice(0, ownRow.indexOf("</li>"))).not.toContain("更改角色");
+    expect(text(html)).toContain("可以调整平台角色，每位用户可做的调整以该行显示为准");
+    expect(text(html)).toContain("角色变更记录暂未接入");
+    expect(html).toContain('data-audit-state="unavailable"');
+    expect(html).not.toContain("<ol");
+  });
+
+  it("stays read-only for an OWNER if no action is handed over", () => {
     const html = renderSection("owner");
     expect(text(html)).toContain("角色调整暂不可用");
     expect(html).not.toContain("更改角色");
     expect(text(html)).toContain("有权调整平台角色，但角色调整入口暂未接入");
-    expect(text(html)).toContain("角色变更记录暂未接入");
-    expect(html).toContain('data-audit-state="unavailable"');
-    expect(html).not.toContain("<ol");
-    expect(html).not.toContain('data-allowed="true"');
   });
 
   it("shows an ADMIN the protections and no change controls", () => {
-    const html = renderSection("adminA");
+    const html = renderWired("adminA");
     expect(text(html)).not.toContain("角色调整暂不可用");
     expect(html).not.toContain("更改角色");
     expect(text(html)).toContain("不能调整平台角色");

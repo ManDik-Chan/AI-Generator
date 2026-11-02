@@ -34,17 +34,19 @@ describe("admin surface security and completeness", () => {
   it("renders the role directory from parsed server data and states that the audit feed is not connected", () => {
     const page = read("app/admin/page.tsx");
     expect(page).toContain("const directory = toPlatformDirectory(overview);");
-    expect(page).toContain("<PlatformRolesSection audit={ROLE_AUDIT_FEED_NOT_CONNECTED} directory={directory.value} />");
+    expect(page).toContain("audit={ROLE_AUDIT_FEED_NOT_CONNECTED}");
+    expect(page).toContain("directory={directory.value}");
     expect(page).not.toMatch(/RoleControl|role-control/);
     expect(existsSync("features/admin/components/role-control.tsx")).toBe(false);
     // Platform role labels and the admin entry come from the server, not from role-name checks in the page.
     expect(page).not.toMatch(/\.role === "(?:ADMIN|OWNER|USER)"/);
   });
-  it("keeps role changes unreachable from the web app until the backend returns versioned, confirmed results", () => {
-    // Paused integration: no page or component may pass a role-change submitter or import the
-    // role-change Server Action. While nothing imports it, Next.js does not register the action
-    // as an HTTP endpoint at all. Wiring it is Phase 2b (handoff R1-R3) and must update this test.
-    expect(read("app/admin/page.tsx")).not.toContain("onChangeRole");
+  it("wires the role-change Server Action from /admin only, and hands it only to a role manager", () => {
+    // The action is a public HTTP endpoint once any page imports it; its own transaction is the
+    // security boundary. The page still hands it only to a viewer the backend lets manage roles,
+    // so ADMIN and USER sessions never receive a change control.
+    const page = read("app/admin/page.tsx");
+    expect(page).toContain("onChangeRole={directory.value.viewer.capabilities.manageRoles ? updateAdminRoleAction : undefined}");
     const target = resolve("features/admin/actions");
     const importsAction = (path: string) => [...read(path).matchAll(/(?:from|import)\s*\(?\s*["']([^"']+)["']/g)].some(([, specifier]) => {
       const resolved = specifier.startsWith("@/") ? resolve(specifier.slice(2)) : specifier.startsWith(".") ? resolve(dirname(path), specifier) : null;
@@ -53,6 +55,6 @@ describe("admin surface security and completeness", () => {
     // The detector itself must see a known importer (the action's own unit test).
     expect(importsAction("features/admin/actions.test.ts")).toBe(true);
     const importers = [...sources("app"), ...sources("components"), ...sources("features"), ...sources("lib")].filter(importsAction);
-    expect(importers).toEqual([]);
+    expect(importers).toEqual([join("app", "admin", "page.tsx")]);
   });
 });

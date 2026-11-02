@@ -22,6 +22,7 @@ import { shellViewerFromProfile } from "@/components/layout/shell-viewer-data";
 import { Button } from "@/components/ui/button";
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
 import { StatusBanner } from "@/components/ui/status-banner";
+import { updateAdminRoleAction } from "@/features/admin/actions";
 import { PlatformRolesSection } from "@/features/admin/components/platform-roles-section";
 import { getAdminOverview } from "@/features/admin/data";
 import { ROLE_AUDIT_FEED_NOT_CONNECTED, toPlatformDirectory } from "@/features/admin/rbac/server-directory";
@@ -103,9 +104,13 @@ export default async function AdminPage() {
     </div>
 
     {directory.ok ? (
-      // Role changes stay unwired until the backend returns a role version and the confirmed
-      // member state (docs/handoffs/2026-11-02-claude-p1-rbac-phase2-integration.md, R1-R3).
-      <PlatformRolesSection audit={ROLE_AUDIT_FEED_NOT_CONNECTED} directory={directory.value} />
+      // The action is handed only to a viewer the backend lets manage roles. That is a UI choice,
+      // not the security boundary: the action re-checks the actor and target in its transaction.
+      <PlatformRolesSection
+        audit={ROLE_AUDIT_FEED_NOT_CONNECTED}
+        directory={directory.value}
+        onChangeRole={directory.value.viewer.capabilities.manageRoles ? updateAdminRoleAction : undefined}
+      />
     ) : (
       <section aria-labelledby="users-title" className="mt-9">
         <SectionHeader id="users-title" kicker="权限管理" title="用户与角色" />

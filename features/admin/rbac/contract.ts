@@ -8,9 +8,9 @@ import { z } from "zod";
  * renders these fields as-is and never derives a permission from role names. It may only show
  * less than the server allows (fail closed), never more.
  *
- * Status: proposed by the frontend for P1-RBAC. Codex owns the backend contract; once it is
- * published, its payloads are mapped onto these schemas in one adapter. The field-by-field
- * requirements are in docs/handoffs/2026-11-02-claude-p1-rbac-ui.md.
+ * The backend payloads are mapped onto these schemas in one adapter (rbac/server-directory.ts).
+ * The role-change result follows the final backend contract in
+ * docs/handoffs/2026-11-02-platform-rbac-final-contract.md.
  */
 
 export const PLATFORM_ROLES = ["OWNER", "ADMIN", "USER"] as const;
@@ -134,11 +134,13 @@ export interface RoleChangeRequest {
   requestId: string;
 }
 
-/** What the page hands the role screens: Codex's server action (or nothing, which disables changes). */
+/** What the page hands the role screens: the role-change Server Action (or nothing, which disables changes). */
 export type RoleChangeSubmitter = (request: RoleChangeRequest) => Promise<unknown>;
 
 const roleChangeSuccessSchema = z.object({
   ok: z.literal(true),
+  /** False when the server found this exact request already applied (a replay). */
+  changed: z.boolean(),
   member: z.object({ id: z.uuid(), platformRole: platformRoleSchema, roleVersion: z.string().min(1) }),
 });
 const roleChangeFailureSchema = z.object({
@@ -196,6 +198,8 @@ export const parseRoleAuditFeed = (input: unknown) => toParse(roleAuditFeedSchem
  * Turns whatever the role-change action returned into an outcome. A success that does not
  * describe the member and role that were requested is not trusted: the UI cannot tell what
  * happened, so it reports CONTRACT_MISMATCH and asks for a refresh instead of guessing.
+ * The UI only requests real changes, so a confirmed member is never still at the version the
+ * request was based on; a success claiming that is not trusted either.
  */
 export function interpretRoleChangeResult(request: RoleChangeRequest, raw: unknown): RoleChangeOutcome {
   const parsed = roleChangeResultSchema.safeParse(raw);
@@ -209,7 +213,7 @@ export function interpretRoleChangeResult(request: RoleChangeRequest, raw: unkno
       ...(result.retryAfterSeconds ? { retryAfterSeconds: result.retryAfterSeconds } : {}),
     };
   }
-  if (result.member.id !== request.profileId || result.member.platformRole !== request.nextRole) {
+  if (result.member.id !== request.profileId || result.member.platformRole !== request.nextRole || result.member.roleVersion === request.expectedVersion) {
     return { ok: false, code: "CONTRACT_MISMATCH" };
   }
   return { ok: true, member: result.member };

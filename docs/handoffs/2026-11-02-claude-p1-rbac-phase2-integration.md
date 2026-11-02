@@ -1,5 +1,7 @@
 # 交接：P1-RBAC 第二阶段前后端集成（Claude，2026-11-02）
 
+> 此文记录角色写入暂停时的状态。R1–R3 已由 #55 交付，角色调整已接入，现状见 [最终集成交接](2026-11-02-claude-p1-rbac-final-integration.md)。
+
 > 分支 `claude/p1-rbac-integration-20261102`。后端基线为 PR #52 `52fe54c1d3f4aa837e7b58ccf9f365caccf38f29`，以普通合并提交接入 PR #53 `7c09b418a88d281f7c674f3fa12df66e3f82ae1e`；两者的已发布提交均未改写。本分支不合并 `main`，由 Owner 审核。
 
 ## 1. 结论

@@ -18,8 +18,8 @@ import {
  * grants anything the backend did not. The result is parsed before it reaches client props, so
  * fields outside the view model are dropped.
  *
- * The database now supplies the version; the page remains read-only until the
- * role-change action is explicitly connected during the frontend integration.
+ * roleVersion is the database-maintained profiles.role_version; the role-change request sends it
+ * back unchanged as expectedVersion, and the action re-checks it on the locked row.
  */
 
 type AdminOverview = Awaited<ReturnType<typeof getAdminOverview>>;
