@@ -43,6 +43,20 @@ describe("auth return flow", () => {
     await expect(signUp({}, data)).rejects.toThrow("redirect:/login?registered=1&next=%2Fmemories%3Fscope%3Dall");
     expect(mocks.signup.mock.calls[0][0].options.emailRedirectTo).toContain("/auth/callback?next=%2Fmemories%3Fscope%3Dall");
   });
+  it.each([
+    { data: { user: null }, error: { code: "user_already_exists" } },
+    { data: { user: { id: "obfuscated", identities: [] } }, error: null },
+  ])("gives existing addresses the same neutral result without writing a profile", async (result) => {
+    mocks.signup.mockResolvedValueOnce(result);
+    const data = credentials(); data.set("displayName", "演示用户");
+    await expect(signUp({}, data)).rejects.toThrow("redirect:/login?registered=1&next=%2Fworkspace");
+    expect(mocks.ensure).not.toHaveBeenCalled();
+  });
+  it("does not disclose provider errors during signup", async () => {
+    mocks.signup.mockResolvedValueOnce({ data: { user: null }, error: { code: "other", message: "sensitive provider detail" } });
+    const data = credentials(); data.set("displayName", "演示用户");
+    expect(await signUp({}, data)).toEqual({ error: "注册暂时无法完成，请稍后再试。" });
+  });
   it("signs out and returns to login", async () => {
     await expect(signOut()).rejects.toThrow("redirect:/login");
     expect(mocks.signout).toHaveBeenCalledOnce();
