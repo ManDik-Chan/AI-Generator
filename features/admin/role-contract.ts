@@ -28,4 +28,3 @@ export interface RoleAuditView {
   requestId: string;
   createdAt: Date;
 }
-

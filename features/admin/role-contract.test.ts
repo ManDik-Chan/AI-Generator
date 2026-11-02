@@ -22,4 +22,3 @@ describe("platform roles", () => {
     }
   });
 });
-
