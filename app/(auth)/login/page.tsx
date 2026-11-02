@@ -22,7 +22,7 @@ export default async function LoginPage({
       <h1 className="mt-2 text-page-title text-balance break-keep break-words">登录你的 AI 空间</h1>
       <p className="mt-3 text-supporting">继续你的对话、助手与记忆。</p>
       {registered === "1" && (
-        <StatusBanner className="mt-5" variant="success">注册成功。如果需要验证邮箱，请先检查收件箱。</StatusBanner>
+        <StatusBanner className="mt-5" variant="success">如果可以完成注册，请检查收件箱并按邮件提示操作；如果已注册，请直接登录。</StatusBanner>
       )}
       {configuration === "missing" && (
         <StatusBanner className="mt-5" title="登录暂不可用" variant="warning">服务尚未准备好，请稍后再试或联系管理员。</StatusBanner>
