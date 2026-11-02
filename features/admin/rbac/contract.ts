@@ -65,8 +65,12 @@ export const platformMemberSchema = z
     email: z.string().min(1),
     displayName: z.string().nullable(),
     platformRole: platformRoleSchema,
-    /** Opaque token that changes whenever this member's role changes; sent back for conflict detection. */
-    roleVersion: z.string().min(1),
+    /**
+     * Opaque token that changes whenever this member's role changes; sent back for conflict
+     * detection. Null when the server does not provide one: such a member is never offered a
+     * change, because the request could not carry the version the server must check.
+     */
+    roleVersion: z.string().min(1).nullable(),
     joinedAt: isoDateTime,
     isViewer: z.boolean(),
     roleChange: z.object({
@@ -87,6 +91,9 @@ export const platformMemberSchema = z
     }
     if (assignableRoles.length > 0 && restriction !== null) {
       context.addIssue({ code: "custom", message: "a member with assignable roles cannot also be restricted", path: ["roleChange", "restriction"] });
+    }
+    if (assignableRoles.length > 0 && member.roleVersion === null) {
+      context.addIssue({ code: "custom", message: "a member offered a role change needs a roleVersion for conflict detection", path: ["roleVersion"] });
     }
   });
 export type PlatformMember = z.infer<typeof platformMemberSchema>;
@@ -120,6 +127,11 @@ export interface RoleChangeRequest {
   /** The roleVersion the viewer saw. */
   expectedVersion: string;
   nextRole: PlatformRole;
+  /**
+   * Idempotency key the backend requires: a new UUID for every new intent, reused unchanged when
+   * the same intent is retried, so a retried request can never apply twice.
+   */
+  requestId: string;
 }
 
 /** What the page hands the role screens: Codex's server action (or nothing, which disables changes). */

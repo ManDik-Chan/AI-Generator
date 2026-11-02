@@ -68,6 +68,7 @@ describe("CI topology", () => {
     const order = (job: Job, commands: string[]) => commands.map((command) => job.text.indexOf(command));
     const stages = order(integration, ["supabase start", "pnpm exec prisma migrate deploy", "node scripts/verify-rls-baseline.mjs",
       "node scripts/verify-security-migrations.mjs clean", "node scripts/verify-registry-migrations.mjs", "pnpm test:integration",
+      "scripts/test-rbac-disposable.mts", "node scripts/test-rbac-action-chain-disposable.mjs",
       "pnpm lint", "pnpm typecheck", 'pnpm exec vitest run --exclude "tests/integration/**"', "pnpm exec prisma validate", "supabase stop --no-backup"]);
     expect(stages.every((position, index) => position >= 0 && (index === 0 || position > stages[index - 1])), String(stages)).toBe(true);
     const upgrades = order(upgrade, ["supabase start", "node scripts/verify-security-migrations.mjs incremental",

@@ -11,6 +11,10 @@ import { isRetryableFailure } from "@/features/admin/rbac/copy";
  *   outcome...) the row stays locked until the next server snapshot.
  * - If a snapshot changes the member while the dialog is open, the pending choice is dropped
  *   and the dialog re-bases on the fresh role and fresh assignable roles.
+ * - A member without a server roleVersion cannot be opened: the request could not carry the
+ *   version the server checks for conflicts.
+ * - One requestId per intent: assigned on the first submit, kept for retries of that same choice,
+ *   and dropped whenever the choice or its base changes, so the backend can deduplicate retries.
  */
 
 export interface RoleChangeFailure {
@@ -25,6 +29,8 @@ export interface RoleChangeSession {
   baseRole: PlatformRole;
   baseVersion: string;
   nextRole: PlatformRole | null;
+  /** Idempotency key of the current intent; null until it is first submitted. */
+  requestId: string | null;
   status: "editing" | "saving" | "failed";
   failure: RoleChangeFailure | null;
   /** Set when fresh server data replaced the member under an open dialog. */
@@ -36,8 +42,8 @@ export type RowNotice =
   | { kind: "rejected"; code: RoleChangeFailureCode; currentRole?: PlatformRole; retryAfterSeconds?: number; locked: boolean };
 
 export interface DirectoryState {
-  /** Latest server roleVersion per member. */
-  versions: Record<string, string>;
+  /** Latest server roleVersion per member (null when the server provides none). */
+  versions: Record<string, string | null>;
   session: RoleChangeSession | null;
   notices: Record<string, RowNotice>;
 }
@@ -46,7 +52,8 @@ export type DirectoryEvent =
   | { type: "open"; member: PlatformMember }
   | { type: "select"; role: PlatformRole }
   | { type: "close" }
-  | { type: "submit" }
+  /** `requestId` is a fresh UUID; it is used only if the current intent has none yet. */
+  | { type: "submit"; requestId: string }
   | { type: "resolved"; outcome: RoleChangeOutcome }
   | { type: "serverData"; members: PlatformMember[] };
 
@@ -78,9 +85,10 @@ export function canSubmit(session: RoleChangeSession | null) {
   return session.status === "editing" || (session.status === "failed" && Boolean(session.failure?.retryable));
 }
 
+/** The request for a session that is saving; null before the submit event assigned its requestId. */
 export function buildRoleChangeRequest(session: RoleChangeSession): RoleChangeRequest | null {
-  if (!session.nextRole) return null;
-  return { profileId: session.memberId, expectedRole: session.baseRole, expectedVersion: session.baseVersion, nextRole: session.nextRole };
+  if (!session.nextRole || !session.requestId) return null;
+  return { profileId: session.memberId, expectedRole: session.baseRole, expectedVersion: session.baseVersion, nextRole: session.nextRole, requestId: session.requestId };
 }
 
 export function directoryReducer(state: DirectoryState, event: DirectoryEvent): DirectoryState {
@@ -90,21 +98,24 @@ export function directoryReducer(state: DirectoryState, event: DirectoryEvent): 
       const { member } = event;
       if (session?.status === "saving") return state;
       if (isRowLocked(state.notices[member.id]) || member.roleChange.assignableRoles.length === 0) return state;
+      if (member.roleVersion === null) return state;
       return {
         ...state,
         notices: without(state.notices, member.id),
-        session: { memberId: member.id, baseRole: member.platformRole, baseVersion: member.roleVersion, nextRole: onlyOption(member), status: "editing", failure: null, supersededFrom: null },
+        session: { memberId: member.id, baseRole: member.platformRole, baseVersion: member.roleVersion, nextRole: onlyOption(member), requestId: null, status: "editing", failure: null, supersededFrom: null },
       };
     }
     case "select": {
       if (!session || session.status === "saving") return state;
       if (session.status === "failed" && !session.failure?.retryable) return state;
-      return { ...state, session: { ...session, nextRole: event.role, status: "editing", failure: null } };
+      // Re-selecting the same role keeps the intent (and its requestId); a different role is a new intent.
+      const requestId = event.role === session.nextRole ? session.requestId : null;
+      return { ...state, session: { ...session, nextRole: event.role, requestId, status: "editing", failure: null } };
     }
     case "close":
       return !session || session.status === "saving" ? state : { ...state, session: null };
     case "submit":
-      return canSubmit(session) ? { ...state, session: { ...session!, status: "saving", failure: null } } : state;
+      return canSubmit(session) ? { ...state, session: { ...session!, requestId: session!.requestId ?? event.requestId, status: "saving", failure: null } } : state;
     case "resolved": {
       if (!session || session.status !== "saving") return state;
       const { outcome } = event;
@@ -155,16 +166,20 @@ function rebaseSession(session: RoleChangeSession | null, byId: Map<string, Plat
   const member = byId.get(session.memberId);
   // While saving, the action's result decides; a disappeared member is reported by the result.
   if (session.status === "saving") return session;
-  if (!member) return null;
+  // Without a version there is nothing the dialog could safely submit.
+  if (!member || member.roleVersion === null) return null;
   const changed = member.roleVersion !== session.baseVersion;
   const stillAllowed = session.nextRole !== null && member.roleChange.assignableRoles.includes(session.nextRole);
   const blocked = session.status === "failed" && !session.failure?.retryable;
-  if (!changed && !blocked) return stillAllowed ? session : { ...session, nextRole: onlyOption(member) };
+  if (!changed && !blocked) return stillAllowed ? session : { ...session, nextRole: onlyOption(member), requestId: null };
+  const nextRole = changed ? onlyOption(member) : stillAllowed ? session.nextRole : onlyOption(member);
   return {
     memberId: member.id,
     baseRole: member.platformRole,
     baseVersion: member.roleVersion,
-    nextRole: changed ? onlyOption(member) : stillAllowed ? session.nextRole : onlyOption(member),
+    nextRole,
+    // A new base is a new intent; only an unchanged base with the same choice keeps its key.
+    requestId: !changed && nextRole === session.nextRole ? session.requestId : null,
     status: "editing",
     failure: null,
     supersededFrom: changed ? session.baseRole : null,

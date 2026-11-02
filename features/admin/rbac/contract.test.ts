@@ -12,7 +12,7 @@ import {
 import { describeRoleChange, isRetryableFailure, PLATFORM_ROLE_LABEL, roleChangeFailureCopy } from "@/features/admin/rbac/copy";
 import { adminDirectory, auditFeed, FIXTURE_IDS, ownerDirectory, userViewer } from "@/tests/fixtures/admin-rbac";
 
-const request: RoleChangeRequest = { profileId: FIXTURE_IDS.userC, expectedRole: "USER", expectedVersion: "v1-3c9f", nextRole: "ADMIN" };
+const request: RoleChangeRequest = { profileId: FIXTURE_IDS.userC, expectedRole: "USER", expectedVersion: "v1-3c9f", nextRole: "ADMIN", requestId: "6f1d2c3b-4a59-4e68-9f70-8a1b2c3d4e5f" };
 
 describe("platform directory contract", () => {
   it("accepts the owner and admin payloads", () => {

@@ -4,7 +4,8 @@ import { SignOutForm } from "@/features/auth/components/sign-out-form";
 import { requireUser } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
 import { AppShell } from "@/components/layout/app-shell";
-import type { ShellViewer } from "@/components/layout/shell-viewer";
+import { shellViewerFromProfile } from "@/components/layout/shell-viewer-data";
+import { PLATFORM_ROLE_LABEL } from "@/features/admin/rbac/copy";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,12 +25,7 @@ export default async function AccountPage() {
     prisma.toolRun.count({ where: { userId: user.id, retainContent: true } }),
   ]);
   const name = profile?.displayName ?? "我的 AI 空间";
-  const viewer: ShellViewer = {
-    avatarUrl: profile?.avatarUrl ?? undefined,
-    displayName: profile?.displayName ?? undefined,
-    email: profile?.email ?? user.email ?? undefined,
-    role: profile?.role,
-  };
+  const viewer = shellViewerFromProfile(profile, user.email);
 
   return (
     <AppShell mobileTitle="我的" variant="reading" viewer={viewer}>
@@ -50,8 +46,8 @@ export default async function AccountPage() {
               <h1 className="mt-2 overflow-wrap-anywhere text-[clamp(1.75rem,3vw,2.5rem)] font-medium tracking-[-.035em]">{name}</h1>
               <p className="mt-1 overflow-wrap-anywhere text-supporting">{user.email}</p>
             </div>
-            <Badge variant={(profile?.role === "ADMIN" || profile?.role === "OWNER") ? "info" : "neutral"}>
-              {profile?.role === "OWNER" ? "平台所有者" : profile?.role === "ADMIN" ? "管理员" : "个人用户"}
+            <Badge variant={viewer.canAccessAdmin ? "info" : "neutral"}>
+              {PLATFORM_ROLE_LABEL[profile?.role ?? "USER"]}
             </Badge>
           </div>
         </Surface>
@@ -87,7 +83,7 @@ export default async function AccountPage() {
           <div className="mt-5 grid gap-3 sm:grid-cols-3"><div className="premium-subpanel p-4"><p className="premium-kicker">IDENTITY</p><p className="mt-2 text-sm font-semibold">服务端身份</p><p className="mt-1 text-xs leading-5 text-muted-foreground">不会信任浏览器传入的 userId。</p></div><div className="premium-subpanel p-4"><p className="premium-kicker">STORAGE</p><p className="mt-2 text-sm font-semibold">私有素材</p><p className="mt-1 text-xs leading-5 text-muted-foreground">不公开数据库或 Storage 路径。</p></div><div className="premium-subpanel p-4"><p className="premium-kicker">HISTORY</p><p className="mt-2 text-sm font-semibold">按次选择历史</p><p className="mt-1 text-xs leading-5 text-muted-foreground">每次工具运行都可决定是否保留内容。</p></div></div>
         </Surface>
 
-        {(profile?.role === "ADMIN" || profile?.role === "OWNER") ? (
+        {viewer.canAccessAdmin ? (
           <Surface className="flex items-start gap-4 p-5 sm:p-6">
             <span className="grid size-10 shrink-0 place-items-center rounded-control bg-info-subtle text-info">
               <ShieldCheck className="size-4" />

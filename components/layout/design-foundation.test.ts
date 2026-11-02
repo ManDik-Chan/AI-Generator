@@ -92,7 +92,10 @@ describe("AIG platform application shell", () => {
     const header = read("components/layout/shell-header.tsx");
     expect(header).toContain('href="/account"');
     expect(header).toContain("账号与设置");
-    expect(header).toContain('viewer?.role === "ADMIN"');
+    // The admin entry follows the server-computed capability, never a role name in the client.
+    expect(header).toContain("viewer?.canAccessAdmin");
+    expect(header).not.toMatch(/viewer\?\.role/);
+    expect(read("components/layout/shell-viewer-data.ts")).toContain("platformCapabilities(profile.role).canAccessAdmin");
     expect(header).toContain('href="/admin"');
     expect(header).toContain("系统管理");
   });

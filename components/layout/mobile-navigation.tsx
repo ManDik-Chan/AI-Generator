@@ -46,7 +46,7 @@ function MenuSheet({ open, onOpenChange, mode, viewer }: { open: boolean; onOpen
     <Dialog description={demo ? "演示工作台：所有数据均为示例，不连接任何账户。" : "平台模块、AI Hub 与账户设置。"} onOpenChange={onOpenChange} open={open} title="AI-Generator">
       <nav aria-label="全部功能" className="space-y-5">
         {navigationGroups.map((group) => {
-          const items = visibleItems(group.items, mode, (viewer?.role === "ADMIN" || viewer?.role === "OWNER"));
+          const items = visibleItems(group.items, mode, viewer?.canAccessAdmin === true);
           if (!items.length) return null;
           return (
             <section key={group.label}>

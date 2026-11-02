@@ -18,11 +18,13 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
-import type { ShellViewer } from "@/components/layout/shell-viewer";
+import { shellViewerFromProfile } from "@/components/layout/shell-viewer-data";
 import { Button } from "@/components/ui/button";
 import { PageHeader, SectionHeader } from "@/components/ui/page-header";
-import { RoleControl } from "@/features/admin/components/role-control";
+import { StatusBanner } from "@/components/ui/status-banner";
+import { PlatformRolesSection } from "@/features/admin/components/platform-roles-section";
 import { getAdminOverview } from "@/features/admin/data";
+import { ROLE_AUDIT_FEED_NOT_CONNECTED, toPlatformDirectory } from "@/features/admin/rbac/server-directory";
 import { TOOL_LABELS } from "@/features/tools/constants";
 import { requireAdmin } from "@/lib/auth/session";
 
@@ -41,15 +43,12 @@ function formatBytes(bytes: number) {
 
 export default async function AdminPage() {
   const [{ user, profile }, overview] = await Promise.all([requireAdmin(), getAdminOverview()]);
-  const viewer: ShellViewer = {
-    avatarUrl: profile.avatarUrl ?? undefined,
-    displayName: profile.displayName ?? undefined,
-    email: profile.email ?? user.email ?? undefined,
-    role: profile.role,
-  };
+  const viewer = shellViewerFromProfile(profile, user.email);
+  const directory = toPlatformDirectory(overview);
+  if (!directory.ok) console.error("[admin] platform directory failed contract validation", directory.issues);
   const pendingRuns = (overview.toolRuns.byStatus.PENDING ?? 0) + (overview.generationRuns.PENDING ?? 0);
   const metrics = [
-    { label: "用户", value: overview.users.total, detail: `${overview.users.admins} 名管理员`, icon: Users },
+    { label: "用户", value: overview.users.total, detail: `${overview.users.admins} 名管理员（含平台所有者）`, icon: Users },
     { label: "对话", value: overview.totals.conversations, detail: `${overview.totals.messages} 条消息`, icon: MessageSquareText },
     { label: "工具运行", value: overview.totals.toolRuns, detail: `${pendingRuns} 项处理中`, icon: Wrench },
     { label: "私有图片", value: overview.totals.images, detail: formatBytes(overview.storageBytes), icon: ImageIcon },
@@ -103,10 +102,16 @@ export default async function AdminPage() {
       </section>
     </div>
 
-    <section className="mt-9" aria-labelledby="users-title">
-      <SectionHeader description={`显示最近 ${Math.min(overview.users.total, overview.users.limit)} / ${overview.users.total} 名用户；角色更新使用服务端管理员校验，且不能自降权或移除最后一名管理员。`} id="users-title" kicker="权限管理" title="用户与角色" />
-      <div className="mt-4 grid gap-3">{overview.users.items.map((item) => <article className="premium-panel grid min-w-0 gap-4 p-4 lg:grid-cols-[minmax(15rem,1fr)_minmax(16rem,.8fr)_auto] lg:items-center" key={item.id}><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="break-all text-sm font-semibold">{item.displayName || item.email}</p><span className="premium-chip">{item.role === "ADMIN" ? "管理员" : "普通用户"}</span></div><p className="mt-1 break-all text-xs text-muted-foreground">{item.email}</p><p className="mt-1 text-xs text-muted-foreground">加入于 {item.createdAt.toLocaleDateString("zh-CN")}</p></div><div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4"><span className="premium-subpanel p-2.5">对话 <strong className="block pt-1 text-sm">{item._count.conversations}</strong></span><span className="premium-subpanel p-2.5">人格 <strong className="block pt-1 text-sm">{item._count.personas}</strong></span><span className="premium-subpanel p-2.5">记忆 <strong className="block pt-1 text-sm">{item._count.memories}</strong></span><span className="premium-subpanel p-2.5">运行 <strong className="block pt-1 text-sm">{item._count.toolRuns}</strong></span></div><RoleControl disabled={item.id === user.id} profileId={item.id} role={item.role} /></article>)}</div>
-    </section>
+    {directory.ok ? (
+      // Role changes stay unwired until the backend returns a role version and the confirmed
+      // member state (docs/handoffs/2026-11-02-claude-p1-rbac-phase2-integration.md, R1-R3).
+      <PlatformRolesSection audit={ROLE_AUDIT_FEED_NOT_CONNECTED} directory={directory.value} />
+    ) : (
+      <section aria-labelledby="users-title" className="mt-9">
+        <SectionHeader id="users-title" kicker="权限管理" title="用户与角色" />
+        <StatusBanner className="mt-4" title="用户与角色暂时无法显示" variant="error">服务端返回的权限数据未通过校验，为避免显示错误的权限，此区块已停止显示。请刷新页面；如持续出现，请检查服务端日志。</StatusBanner>
+      </section>
+    )}
 
     <section className="mt-9" aria-labelledby="recent-operations-title">
       <SectionHeader description="仅显示运行元数据，不加载输入正文或输出正文。" id="recent-operations-title" kicker="最近运行" title="最近运行" />

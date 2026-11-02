@@ -76,6 +76,8 @@ export async function getAdminOverview() {
   ]);
 
   return {
+    /** The viewer whose role produced actorCapabilities and every users.items[].roleChange below. */
+    actor: { id: user.id, platformRole: profile.role },
     actorCapabilities: platformCapabilities(profile.role),
     users: { items: profiles.map((target) => ({ ...target, roleChange: canChangePlatformRole(profile.role, target.role, user.id === target.id) })), total: profileCount, admins: adminCount, limit: USER_LIST_LIMIT },
     totals: { conversations: conversationCount, messages: messageCount, memories: memoryCount, images: imageCount, toolRuns: toolRunCount },

@@ -135,11 +135,11 @@ function AccountMenu({ viewer }: { viewer?: ShellViewer }) {
     >
       <div className="px-3 pb-2 pt-1.5">
         <p className="truncate text-sm font-medium">{displayName}</p>
-        <p className="mt-0.5 truncate text-[.6875rem] text-muted-foreground">{(viewer?.role === "ADMIN" || viewer?.role === "OWNER") ? "管理员空间" : "个人空间"}</p>
+        <p className="mt-0.5 truncate text-[.6875rem] text-muted-foreground">{viewer?.canAccessAdmin ? "管理员空间" : "个人空间"}</p>
       </div>
       <Link className={menuLink} href="/account" prefetch={false}><UserRound className="size-4" />账号与设置</Link>
       <Link className={menuLink} href="/connections" prefetch={false}><KeyRound className="size-4" />连接与授权<span className="ml-auto rounded-full border border-border/16 px-1.5 text-[.625rem]">{statusMeta.planned.label}</span></Link>
-      {(viewer?.role === "ADMIN" || viewer?.role === "OWNER") ? <Link className={menuLink} href="/admin" prefetch={false}><ShieldCheck className="size-4" />系统管理</Link> : null}
+      {viewer?.canAccessAdmin ? <Link className={menuLink} href="/admin" prefetch={false}><ShieldCheck className="size-4" />系统管理</Link> : null}
       <Link className={menuLink} href="/" prefetch={false}><ArrowUpRight className="size-4" />官网</Link>
     </Dropdown>
   );
@@ -192,7 +192,7 @@ export function ShellHeader({ mode = "live", viewer, mobileTitle }: { mode?: She
           </div>
         </div>
       </header>
-      <CommandPalette isAdmin={(viewer?.role === "ADMIN" || viewer?.role === "OWNER")} mode={mode} onOpenChange={setPaletteOpen} open={paletteOpen} />
+      <CommandPalette isAdmin={viewer?.canAccessAdmin === true} mode={mode} onOpenChange={setPaletteOpen} open={paletteOpen} />
     </>
   );
 }

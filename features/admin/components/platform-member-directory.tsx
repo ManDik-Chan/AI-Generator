@@ -47,10 +47,12 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
 
   const submit = () => {
     if (!onChangeRole || inFlight.current || !session || !canSubmit(session)) return;
-    const request = buildRoleChangeRequest(session);
+    // Same rule as the reducer: a retry of the same intent reuses its key; a new intent gets one.
+    const requestId = session.requestId ?? crypto.randomUUID();
+    const request = buildRoleChangeRequest({ ...session, requestId });
     if (!request) return;
     inFlight.current = true;
-    dispatch({ type: "submit" });
+    dispatch({ type: "submit", requestId });
     startTransition(async () => {
       try {
         dispatch({ type: "resolved", outcome: await performRoleChange(onChangeRole, request) });
