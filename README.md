@@ -137,3 +137,19 @@ node --import tsx scripts/verify-security-headers.ts http://127.0.0.1:3000
 ```
 
 Keep the existing isolated Supabase security acceptance and remote Chromium desktop/mobile and WebKit iPhone gates. Local browser execution remains suspended under `AGENTS.md`; the HTTP command does not grant browser authorization. Production edge challenges, SSO pages and domain redirects require a separate Owner platform review.
+
+## Public site metadata
+
+Canonical links, Open Graph / Twitter cards, `robots.txt` and `sitemap.xml` all use the canonical origin `https://www.ai-mdc.com` (`lib/site.ts`). What the sitemap lists and what `robots.txt` asks crawlers to skip is defined once in `features/seo/index-policy.ts`; `robots.txt` is crawling advice, not access control. `security.txt` is not published until the Owner approves a contact. See [the metadata record](docs/seo/p1-public-meta-20261102.md).
+
+Share cards in `public/og/` are generated from the landing copy, fonts and artwork (rename the files when the artwork changes):
+
+```powershell
+node --import tsx scripts/generate-og-images.ts
+```
+
+With the production build running on loopback, verify the served metadata without launching a browser:
+
+```powershell
+node --import tsx scripts/verify-public-meta.ts http://127.0.0.1:3000
+```
