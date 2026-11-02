@@ -108,6 +108,12 @@ jobs:
       - name: Run all discovered real database, JWT and PostgREST suites
         run: pnpm test:integration
 
+      # Run after the database suites: this fixture intentionally leaves the protected OWNER in this disposable instance.
+      - name: Verify platform role transaction concurrency and replay
+        env:
+          RBAC_DISPOSABLE_DESTROY_AFTER_TEST: "true"
+        run: node --conditions=react-server --import tsx scripts/test-rbac-disposable.mts
+
       - name: Run static quality gates
         run: |
           pnpm lint

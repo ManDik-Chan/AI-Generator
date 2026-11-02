@@ -1,3 +1,4 @@
+BEGIN;
 -- This migration follows the enum migration so the new value is committed first.
 CREATE UNIQUE INDEX "profiles_single_platform_owner" ON "public"."profiles" (("role")) WHERE "role" = 'OWNER';
 
@@ -52,3 +53,4 @@ $$;
 REVOKE ALL ON FUNCTION "public"."protect_platform_owner_auth"() FROM PUBLIC, anon, authenticated;
 CREATE TRIGGER "users_protect_platform_owner" BEFORE UPDATE OR DELETE ON "auth"."users"
 FOR EACH ROW EXECUTE FUNCTION "public"."protect_platform_owner_auth"();
+COMMIT;

@@ -14,7 +14,9 @@ describe("admin surface security and completeness", () => {
   it("locks and rereads both roles and audits changes atomically", () => {
     const action = read("features/admin/actions.ts");
     expect(action).toContain('"use server"');
-    for (const fragment of ["await requireAdmin()", "FOR UPDATE", "canChangePlatformRole", "transaction.platformRoleAudit.create", 'isolationLevel: "Serializable"', "revalidatePath"]) expect(action).toContain(fragment);
+    for (const fragment of ["await requireAdmin()", "changePlatformRole", "revalidatePath"]) expect(action).toContain(fragment);
+    const service = read("features/admin/role-service.ts");
+    for (const fragment of ["FOR UPDATE", "canChangePlatformRole", "transaction.platformRoleAudit.create", 'isolationLevel: "Serializable"']) expect(service).toContain(fragment);
   });
   it("provides users, usage, roles, system status and real operations", () => {
     const page = read("app/admin/page.tsx");
