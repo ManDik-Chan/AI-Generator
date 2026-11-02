@@ -118,7 +118,7 @@ Implementation then: an `app/.well-known/security.txt/route.ts` handler (static,
 
 - Unit (Vitest): landing metadata, sitemap/robots policy and consistency, share image files (format, size, budget, alt text), the WOFF2 decoder (table checksums, `loca`, whole-font checksum), and that metadata stays in `<head>` for all clients.
 - HTTP (`scripts/verify-public-meta.ts`, loopback only): 61 requests against `next start`, with the contract in `tests/seo/public-meta-contract.ts`. It covers robots.txt and sitemap.xml syntax and headers, every sitemap URL (200, not noindex, canonical and `og:url` equal to the sitemap URL, card present), the landing page in both languages as eight fetchers, both images (status, type, baseline JPEG, 1200×630, size, no cookie), a static page's inherited defaults, noindex pages, signed-in redirects, the 404 and the absent security.txt.
-- CI: `tests/e2e/mobile/public-meta.spec.ts` runs the same contract in the existing remote E2E matrix. It is request-only and opens no page.
+- CI: `tests/e2e/mobile/public-meta.spec.ts` runs the same contract in the existing remote E2E matrix. It is request-only and opens no page. It runs with `detailPages: false`: all 33 sitemap entries are still checked, but the Explore/Research detail pages are not fetched, because the shared CI server has already served a login (section 10). The full fetch runs locally against a fresh server.
 
 Run locally (HTTP only, no browser):
 
@@ -128,11 +128,22 @@ node node_modules/next/dist/bin/next start -p 3217 -H 127.0.0.1
 node --import tsx scripts/verify-public-meta.ts http://127.0.0.1:3217
 ```
 
-## 10. Open decisions for the Owner
+## 10. Pre-existing: detail pages return 404 on a self-hosted server after any login or logout
+
+Found when the first CI run of this contract failed (`/explore/ai-generator: HTTP 404` in all three E2E projects, `NoFallbackError` in the server log). It does not come from this change.
+
+- Cause: `features/auth/actions.ts` calls `revalidatePath("/", "layout")` on login and logout. That marks every cached page stale. Next 15.5's file-system cache then reports a miss for those pages, and for routes with `dynamicParams = false` a miss throws `NoFallbackError` (404) instead of re-rendering. Nothing re-caches the page, so it stays 404 until the server restarts.
+- Affected routes: `/explore/[slug]`, `/explore/[slug]/release`, `/research/[slug]`, `/research/[slug]/[experiment]`, `/platform/projects/[slug]`, `/platform/developer/projects/[slug]` and `/platform/agent/[runId]`. Static pages are unaffected.
+- Reproduced locally on `next start` with a dummy loopback Supabase configuration: every detail page answered 200, then 404 after one logout action call, while `/explore` and `/docs/api` stayed 200.
+- Scope: self-hosted `next start`, including the CI E2E server, where global setup signs in through the login form before any spec. Vercel runs Next in minimal mode (`NEXT_PRIVATE_MINIMAL_MODE`), which skips this branch, so production is expected to be unaffected. This was not verified against production.
+- No existing E2E spec visits these pages, which is why it was not caught. Fixing it means either narrowing the auth revalidation or changing these routes' fallback behaviour. Both are outside this change and need their own review.
+
+## 11. Open decisions for the Owner
 
 1. security.txt: contact channel, disclosure policy and `Expires` owner (section 7).
-2. Vercel Security Checkpoint scope for crawlers and link-preview fetchers (section 6).
-3. Whether sample Explore and Research pages (labelled as samples on the page) should be indexed. They are `PUBLIC` and listed today; excluding them means `noindex`, not only removal from the sitemap.
-4. Whether the `/platform` demo workspace should be `noindex` (currently crawlable, not listed).
-5. Path-based locales (`/en`) and `<html lang>` for English (UX-07).
-6. Policy for AI training crawlers (GPTBot, ClaudeBot, Google-Extended, CCBot …). No rule was added.
+2. Fix for the self-hosted detail-page 404 (section 10), then return the CI contract to `detailPages: true`.
+3. Vercel Security Checkpoint scope for crawlers and link-preview fetchers (section 6).
+4. Whether sample Explore and Research pages (labelled as samples on the page) should be indexed. They are `PUBLIC` and listed today; excluding them means `noindex`, not only removal from the sitemap.
+5. Whether the `/platform` demo workspace should be `noindex` (currently crawlable, not listed).
+6. Path-based locales (`/en`) and `<html lang>` for English (UX-07).
+7. Policy for AI training crawlers (GPTBot, ClaudeBot, Google-Extended, CCBot …). No rule was added.

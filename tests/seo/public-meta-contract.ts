@@ -68,7 +68,22 @@ export function jpegInfo(bytes: Uint8Array) {
 
 const same = (a: string | undefined, b: string) => a !== undefined && new URL(a).href === new URL(b).href;
 
-export async function verifyPublicMeta(baseUrl: string | URL) {
+/** Prerendered detail pages of routes with `dynamicParams = false` (Explore, Research). */
+const DETAIL_PAGE = /^\/(?:explore|research)\/[^/]+(?:\/[^/]+)?$/;
+
+export interface VerifyOptions {
+  /**
+   * Fetch the prerendered Explore/Research detail pages (default true). Pass false only
+   * for a self-hosted `next start` that has already served a login or logout: their
+   * `revalidatePath("/", "layout")` makes Next 15.5 miss its file cache, and routes with
+   * `dynamicParams = false` then answer 404 (NoFallbackError) until restart. Vercel runs
+   * Next in minimal mode, which skips that path. Pre-existing; recorded in
+   * docs/seo/p1-public-meta-20261102.md. Sitemap membership is still checked.
+   */
+  detailPages?: boolean;
+}
+
+export async function verifyPublicMeta(baseUrl: string | URL, { detailPages = true }: VerifyOptions = {}) {
   const base = new URL(baseUrl);
   const results: { path: string; status: number }[] = [];
   const get = async (path: string, userAgent?: string) => {
@@ -118,11 +133,14 @@ export async function verifyPublicMeta(baseUrl: string | URL) {
   assert.equal(locs.length, (xml.match(/<url>/g) ?? []).length);
   assert.equal(new Set(locs).size, locs.length, "sitemap URLs must be unique");
   assert.ok(locs.length > 10);
+  let pagesChecked = 0;
   for (const loc of locs) {
     const path = local(loc);
     const pathname = new URL(loc).pathname;
     assert.ok(!ROBOTS_DISALLOW.some((rule) => pathname.startsWith(rule)), `${loc} is disallowed by robots.txt`);
     assert.doesNotMatch(pathname, /^\/(?:platform|login|register)(?:\/|$)/, `${loc} must not be promoted`);
+    if (!detailPages && DETAIL_PAGE.test(pathname)) continue;
+    pagesChecked += 1;
     const meta = readMetadata(await html(path, PREVIEW_USER_AGENTS.googlebot), "head");
     assert.doesNotMatch(meta.robots, /noindex/, `${loc} is in the sitemap but noindex`);
     assert.ok(same(meta.canonical, loc), `${loc}: canonical is ${meta.canonical}`);
@@ -179,7 +197,7 @@ export async function verifyPublicMeta(baseUrl: string | URL) {
 
   // Index boundary: unlisted showcase and release previews stay noindex; signed-in pages redirect.
   for (const path of ["/explore/air-quality", "/explore/route-optimizer/release"]) {
-    assert.match(readMetadata(await html(path)).robots, /noindex/, `${path} must stay noindex`);
+    if (detailPages) assert.match(readMetadata(await html(path)).robots, /noindex/, `${path} must stay noindex`);
     assert.ok(!locs.some((loc) => new URL(loc).pathname === path), `${path} must not be in the sitemap`);
   }
   assert.doesNotMatch(xml, /\/release</, "release previews must not be in the sitemap");
@@ -202,5 +220,5 @@ export async function verifyPublicMeta(baseUrl: string | URL) {
   assert.equal(securityTxt.status, 404);
   await securityTxt.body?.cancel();
 
-  return { checked: results.length, sitemapUrls: locs.length, images: [...images] };
+  return { checked: results.length, sitemapUrls: locs.length, pagesChecked, images: [...images] };
 }

@@ -24,6 +24,7 @@
 2. 首页的元数据（含 `<title>`）对浏览器、微信（`MicroMessenger`）和 Googlebot 被流式输出到 `<body>`；Next 内置名单中的 Facebook、X、Discord、Telegram、WhatsApp、Slack 抓取器才在 `<head>` 中。改为 `htmlLimitedBots: /.*/` 后，8 种 UA 均在 `<head>` 中。
 3. 404 页继承了 `https://www.ai-mdc.com/_not-found` 作为 canonical；现已清除 canonical 与分享标签，保留 `noindex`。
 4. 现有测试 `features/tools/brainstorm/contracts.test.ts` 以源码文本断言根布局的标题字面量；保留原字面量，未修改该测试。
+5. 首个 head `393263a` 的远端 E2E 三个项目均只失败新增的 `public-meta.spec.ts`（`/explore/ai-generator: HTTP 404`，服务端日志 `NoFallbackError`），其余既有 E2E 全部通过。原因是既有缺陷：登录与退出调用 `revalidatePath("/", "layout")`，自托管 `next start` 之后对所有 `dynamicParams = false` 的详情页返回 404，直到重启（见记录文档第 10 节）。CI 全局初始化通过真实登录表单登录，所以该缺陷在任何 spec 之前就已触发。本地用虚拟回环 Supabase 配置构建后复现：调用一次退出 action 后，Explore、Research、实验记录、版本预览与 `/platform/projects/*` 详情页由 200 变为 404，静态页保持 200。未修改 Auth 或路由回退行为；CI spec 改为 `detailPages: false`（仍检查全部 33 条 sitemap，仅不抓取详情页），本地脚本仍要求全新服务器上 33/33 页面通过。
 
 ## 4. 验证记录（本地，head 见 PR）
 
@@ -34,11 +35,12 @@
 ## 5. 资源与外部访问
 
 - 浏览器：未启动、未连接任何浏览器，未截图或录屏（遵守 AGENTS.md）。分享卡与字体测试图通过直接读取生成的图片文件检查。
-- 本地进程：三次以 `node node_modules/next/dist/bin/next start -p 3217 -H 127.0.0.1` 启动，每次结束后按记录的 PID（35340、11360、30804）停止，并确认进程已退出、端口不再监听、无本任务残留 Node 进程。
+- 本地进程：五次以 `node node_modules/next/dist/bin/next start -p 3217 -H 127.0.0.1` 启动，每次结束后按记录的 PID（35340、11360、30804、13028、37336）停止，并确认进程已退出、端口不再监听、无本任务残留 Node 进程。复现构建使用 `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:59999`（确认无监听的端口）与虚拟 anon key，未连接任何真实 Supabase。
+- CI 诊断：下载了 PR #50 首个 head 的 chromium-desktop E2E 诊断产物（已脱敏的报告与服务日志）到会话临时目录，仅用于定位。
 - 生产只读探测：对 `www.ai-mdc.com` 与 `ai-mdc.com` 发起少量 GET（含若干爬虫 UA），全部返回 429 `X-Vercel-Mitigated: challenge`；未尝试绕过。
 - Vercel：仅检索公开文档；未读取或修改项目防火墙、环境变量或部署设置（连接缺少团队授权）。
 - GitHub：只读查询仓库私有漏洞报告状态（`enabled: false`）。
 
 ## 6. 待 Owner 处理
 
-见记录文档第 10 节：security.txt 联系渠道与披露政策、Security Checkpoint 对爬虫与预览抓取器的范围、示例项目与 `/platform` 是否索引、`/en` 路由与英文 `<html lang>`、AI 训练爬虫策略。上线后各平台实际预览需要 Owner 用各平台调试工具复核。
+见记录文档第 11 节：security.txt 联系渠道与披露政策、自托管详情页 404 的修复（修复后 CI spec 恢复 `detailPages: true`）、Security Checkpoint 对爬虫与预览抓取器的范围、示例项目与 `/platform` 是否索引、`/en` 路由与英文 `<html lang>`、AI 训练爬虫策略。上线后各平台实际预览需要 Owner 用各平台调试工具复核。
