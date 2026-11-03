@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { PrismaClient } from "@prisma/client";
@@ -14,6 +16,7 @@ import { getRegistryProject, getRegistryQualifications, getRegistryReadReleaseHe
   listRegistryReleaseHistory, listRegistryReleaseRequests, listRegistryReviews, listRegistryVersions } from "@/features/registry/read";
 import { approveRegistryRelease, getPublicRegistryRelease, getRegistryReleaseHead, publishRegistryRelease,
   requestRegistryReleaseApproval, withdrawRegistryRelease } from "@/features/registry/release";
+import { assertDisposableTarget } from "../../scripts/disposable-supabase.mjs";
 import { createIntegrationPrisma, integrationDatabaseEnabled } from "./database";
 
 const enabled = integrationDatabaseEnabled && Boolean(process.env.SUPABASE_TEST_SERVICE_ROLE_KEY);
@@ -109,7 +112,7 @@ describe.skipIf(!enabled)("Registry internal read API with real Auth sessions an
       // Only guarded disposable fixtures are removed; no production endpoint is accepted.
       await db.$transaction(async tx => {
         await tx.$executeRawUnsafe("SET LOCAL session_replication_role='replica'");
-        for (const table of ["release_receipts", "release_withdrawals", "release_approvals", "release_requests", "command_receipts", "review_invalidations"]) {
+        for (const table of ["project_creation_receipts", "release_receipts", "release_withdrawals", "release_approvals", "release_requests", "command_receipts", "review_invalidations"]) {
           await tx.$executeRawUnsafe(`DELETE FROM registry_private.${table} WHERE project_id=ANY($1::uuid[])`, projects);
         }
         await tx.$executeRaw`DELETE FROM registry_private.operator_actions WHERE subject_id=ANY(${actors.map(a => a.id)}::uuid[])`;
@@ -120,6 +123,126 @@ describe.skipIf(!enabled)("Registry internal read API with real Auth sessions an
       for (const actor of actors) expect((await service.auth.admin.deleteUser(actor.id)).error).toBeNull();
     } finally { await db.$disconnect(); }
   }, 60000);
+
+  it("serves create and draft replacement over loopback HTTP with real JWTs, replay, CAS and revocation", async () => {
+    assertDisposableTarget();
+    vi.stubEnv("REGISTRY_INTERNAL_WRITE_HTTP_ENABLED", "true");
+    const route = await import("@/app/api/internal/registry/[[...path]]/route");
+    const server = createServer(async (incoming, outgoing) => {
+      try {
+        const path = incoming.url!.slice("/api/internal/registry/".length).split("/");
+        const method = incoming.method as "GET" | "POST" | "PUT";
+        const chunks: Buffer[] = [];
+        for await (const chunk of incoming) chunks.push(chunk);
+        const request = new Request(`http://${incoming.headers.host}${incoming.url}`, {
+          method, headers: incoming.headers as Record<string, string>,
+          ...(method === "GET" ? {} : { body: Buffer.concat(chunks) }),
+        });
+        const result = await route[method](request, { params: Promise.resolve({ path }) });
+        outgoing.writeHead(result.status, Object.fromEntries(result.headers));
+        outgoing.end(await result.text());
+      } catch { outgoing.writeHead(500).end(); }
+    });
+    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const call = (actor: Actor, path: string, method = "GET", body?: unknown, key = randomUUID() as string, etag?: string) =>
+      fetch(`${origin}/api/internal/registry/${path}`, { method, headers: {
+        authorization: `Bearer ${actor.token}`, origin,
+        ...(body === undefined ? {} : { "content-type": "application/json", "idempotency-key": key }),
+        ...(etag ? { "if-match": etag } : {}),
+      }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const slug = `write-${randomUUID()}`, key = randomUUID();
+    const create = (actor = owner, body = { slug }, idempotencyKey = key as string) =>
+      call(actor, "projects", "POST", body, idempotencyKey);
+    async function expectCode(response: Response, status: number, code: string) {
+      expect(response.status).toBe(status);
+      expect(await response.json()).toEqual({ code });
+    }
+    try {
+      await expectCode(await create({ ...owner, token: "invalid.token" }), 401, "AUTH_REQUIRED");
+      await expectCode(await create(owner, { slug, ownerId: outsider.id } as { slug: string }), 422, "INVALID_INPUT");
+      await db.$executeRawUnsafe("ALTER TABLE registry_private.project_creation_receipts ADD CONSTRAINT test_create_receipt_failure CHECK (idempotency_key <> 'force-http-rollback')");
+      try {
+        await expectCode(await create(owner, { slug }, "force-http-rollback"), 503, "UNAVAILABLE");
+        expect(await db.project.findUnique({ where: { slug } })).toBeNull();
+      } finally {
+        await db.$executeRawUnsafe("ALTER TABLE registry_private.project_creation_receipts DROP CONSTRAINT test_create_receipt_failure");
+      }
+      const concurrent = await Promise.all([create(), create()]);
+      const row = await db.project.findUniqueOrThrow({ where: { slug } });
+      projects.push(row.id);
+      expect(concurrent.map(r => r.status)).toEqual([201, 201]);
+      const creations = await Promise.all(concurrent.map(r => r.json()));
+      expect(creations.map(r => r.replayed).sort()).toEqual([false, true]);
+      for (const response of creations) expect(response.result).toEqual({ id: row.id, slug });
+      expect(row.ownerId).toBe(owner.id);
+      expect(await db.projectDraft.count({ where: { projectId: row.id } })).toBe(1);
+      await expectCode(await create(owner, { slug: `other-${randomUUID()}` }), 409, "IDEMPOTENCY_CONFLICT");
+      await expectCode(await create(outsider), 409, "CONFLICT");
+      await db.$executeRaw`UPDATE registry_private.internal_operators SET can_create=false WHERE subject_id=${owner.id}::uuid`;
+      try { await expectCode(await create(), 403, "FORBIDDEN"); }
+      finally { await db.$executeRaw`UPDATE registry_private.internal_operators SET can_create=true WHERE subject_id=${owner.id}::uuid`; }
+
+      const draftPath = `projects/${row.id}/draft`;
+      const head = await call(owner, `${draftPath}/head`);
+      expect(head.status).toBe(200);
+      expect((await head.json()).result.contentHash).toBeNull();
+      const initialTag = head.headers.get("etag")!;
+      const payload: DraftPayload = {
+        manifest: { schemaVersion: "0.5.0", projectId: row.id, slug, version: "1.0.0", name: "HTTP fixture",
+          summary: "Synthetic isolated write acceptance", category: "software", visibility: "PRIVATE",
+          integration: { mode: "SHOWCASE" }, capabilities: ["documentation.read"], researchClaims: [] },
+        presentation: { schemaVersion: "0.5.0", projectId: row.id, version: "1.0.0", title: "HTTP fixture", sections: [] },
+        documentation: [],
+      };
+      const save = (actor: Actor, etag: string, requestKey = randomUUID() as string, body = payload) =>
+        call(actor, draftPath, "PUT", body, requestKey, etag);
+      await expectCode(await save(outsider, initialTag), 404, "NOT_FOUND");
+      await db.projectMembership.create({ data: { projectId: row.id, subjectId: outsider.id, roles: ["EDITOR"] } });
+      const keys = [randomUUID(), randomUUID()];
+      const writes = await Promise.all(keys.map(k => save(outsider, initialTag, k)));
+      const winner = writes.findIndex(r => r.status === 200);
+      expect(winner).toBeGreaterThanOrEqual(0);
+      await expectCode(writes[1 - winner], 412, "PRECONDITION_FAILED");
+      const saved = await writes[winner].json();
+      expect(saved.result.payload).toEqual(payload);
+      expect(writes[winner].headers.get("etag")).toBe(saved.etag);
+      const replay = await save(outsider, initialTag, keys[winner]);
+      expect(replay.status).toBe(200);
+      expect(await replay.json()).toEqual({ ...saved, replayed: true });
+      await expectCode(await save(outsider, initialTag, keys[winner], {
+        ...payload, presentation: { ...payload.presentation, title: "Changed" },
+      }), 409, "IDEMPOTENCY_CONFLICT");
+      await db.$executeRaw`UPDATE registry_private.operator_actions SET active=false WHERE subject_id=${outsider.id}::uuid AND action='EDIT_DRAFT'`;
+      try { await expectCode(await save(outsider, initialTag, keys[winner]), 403, "FORBIDDEN"); }
+      finally { await db.$executeRaw`UPDATE registry_private.operator_actions SET active=true WHERE subject_id=${outsider.id}::uuid AND action='EDIT_DRAFT'`; }
+
+      await db.projectMembership.update({
+        where: { projectId_subjectId: { projectId: row.id, subjectId: outsider.id } }, data: { active: false },
+      });
+      await expectCode(await save(outsider, initialTag, keys[winner]), 404, "NOT_FOUND");
+
+      // Force the last database write to fail after the draft update, then prove rollback through GET.
+      await db.$executeRawUnsafe("ALTER TABLE registry_private.command_receipts ADD CONSTRAINT test_write_receipt_failure CHECK (idempotency_key <> 'force-http-rollback')");
+      try {
+        await expectCode(await save(owner, saved.etag, "force-http-rollback", {
+          ...payload, presentation: { ...payload.presentation, title: "Must roll back" },
+        }), 409, "CONFLICT");
+      } finally {
+        await db.$executeRawUnsafe("ALTER TABLE registry_private.command_receipts DROP CONSTRAINT test_write_receipt_failure");
+      }
+      const readBack = await call(owner, draftPath);
+      expect(readBack.status).toBe(200);
+      expect(readBack.headers.get("etag")).toBe(saved.etag);
+      expect(await readBack.json()).toEqual({
+        result: { ...saved.result, contentHash: hashSnapshot(payload) }, etag: saved.etag, replayed: false,
+      });
+    } finally {
+      vi.stubEnv("REGISTRY_INTERNAL_WRITE_HTTP_ENABLED", "");
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  }, 60000);
+
 
   it("computes draft hashes on the server while preserving the strict legacy DraftDTO", async () => {
     const f = await fixture(), draft = await getRegistryDraft(access(owner, f)), head = await getRegistryDraftHead(access(owner, f));

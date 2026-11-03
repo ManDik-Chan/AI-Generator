@@ -4,7 +4,7 @@ Baseline: `main@fc43538` (PRs #37–#41 merged). This change implements the read
 
 ## Gates and identity
 
-The new query library requires `REGISTRY_INTERNAL_ACCESS_ENABLED=true` and `REGISTRY_INTERNAL_READ_ENABLED=true`. HTTP additionally requires `REGISTRY_INTERNAL_READ_HTTP_ENABLED=true`. All default to false. Draft/review and Release command flags may remain false while reads are enabled. Existing library Draft reads remain backward compatible with their original draft/review flag. No new flag enables HTTP writes or public reads.
+The new query library requires `REGISTRY_INTERNAL_ACCESS_ENABLED=true` and `REGISTRY_INTERNAL_READ_ENABLED=true`. HTTP additionally requires `REGISTRY_INTERNAL_READ_HTTP_ENABLED=true`. All default to false. Draft/review and Release command flags may remain false while reads are enabled. Existing library Draft reads remain backward compatible with their original draft/review flag. Write routes use their own [C2 contract and flags](registry-c2-write-contracts.md).
 
 Every call verifies the Bearer access token with Supabase Auth, then verifies the corresponding `auth.sessions` row, subject, JWT expiry and `not_after` inside a database transaction. This follows the [Supabase session revocation model](https://supabase.com/docs/guides/auth/sessions#how-to-ensure-an-access-token-jwt-cannot-be-used-after-a-user-signs-out). Token metadata and profile ADMIN do not participate in authorization. OWNER does not substitute for internal or action qualifications.
 
@@ -34,7 +34,7 @@ The legacy `getRegistryDraft()` library keeps `result` compatible with the stric
 
 ## HTTP
 
-Base: `/api/internal/registry`. Bearer token only; cookies are not an authentication fallback. No login redirects. GET only; HEAD/OPTIONS/POST/PUT/PATCH/DELETE return 405 while enabled. GET bodies and transfer encoding are rejected. Present Origin must match the request origin; cross-site fetch metadata is denied. Missing Origin is allowed for explicit Bearer server clients. There are no CORS grants.
+Base: `/api/internal/registry`. Bearer token only; cookies are not an authentication fallback. No login redirects. The read handler accepts GET. The shared route dispatches the two [C2 write operations](registry-c2-write-contracts.md) separately. Other methods return 405 while reads are enabled. GET bodies and transfer encoding are rejected. Present Origin must match the request origin; cross-site fetch metadata is denied. Missing Origin is allowed for explicit Bearer server clients. There are no CORS grants.
 
 | GET suffix | Read qualification |
 | --- | --- |
