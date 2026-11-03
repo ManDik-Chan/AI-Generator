@@ -230,9 +230,31 @@ async function collectStallDiagnostics(page: Page) {
         then: typeof then === "function" ? Function.prototype.toString.call(then).replace(/\s+/g, " ").slice(0, 160) : String(then),
       };
     });
+    // React's stylesheet resources (kept on the document) beside the real <link> elements. A render that
+    // meets a stylesheet resource React has not seen inserted and loaded suspends without registering a
+    // ping, which matches the stalled lanes above.
+    type StyleResource = { type?: string; instance?: (HTMLLinkElement & { _p?: unknown }) | null; state?: { loading?: number; preload?: HTMLLinkElement | null } };
+    const stylesheets = () => {
+      const key = Object.keys(document).find((name) => name.startsWith("__reactResources$"));
+      const resources = key ? (document as unknown as Record<string, { hoistableStyles?: Map<string, StyleResource> }>)[key]?.hoistableStyles : undefined;
+      return {
+        resources: [...(resources ?? new Map<string, StyleResource>())].map(([styleKey, resource]) => ({
+          key: styleKey.replace(/^href="|"$/g, "").replace(/^.*\/css\//, "css/"),
+          type: resource.type ?? null,
+          loading: resource.state?.loading ?? null,
+          instance: resource.instance ? { connected: resource.instance.isConnected, sheet: Boolean(resource.instance.sheet), hasLoadPromise: Boolean(resource.instance._p) } : null,
+          preload: resource.state?.preload ? { connected: resource.state.preload.isConnected } : null,
+        })),
+        links: [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"], link[rel="preload"][as="style"]')].map((link) => ({
+          rel: link.rel, href: link.getAttribute("href")?.replace(/^.*\/css\//, "css/") ?? null,
+          precedence: link.dataset.precedence ?? null, sheet: Boolean(link.sheet), media: link.media || null,
+        })),
+      };
+    };
     const snapshot = () => ({
       commits: probe?.commits ?? null,
       wakeablesSeen: probe?.wakeables.length ?? null,
+      stylesheets: stylesheets(),
       admins: document.querySelector('[aria-label="系统概览"]')?.textContent?.match(/\d+ 名管理员/)?.[0] ?? null,
       roots: [...(probe?.roots ?? [])].map((root) => ({
         pending: bits(root.pendingLanes), suspended: bits(root.suspendedLanes), pinged: bits(root.pingedLanes),
