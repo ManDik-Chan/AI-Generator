@@ -142,11 +142,36 @@ async function collectStallDiagnostics(page: Page) {
     const describeValue = (value: unknown) => isThenable(value)
       ? `thenable:${String((value as { status?: unknown }).status ?? "untracked")}`
       : isRouterState(value) ? "router-state" : typeof value;
+    // The router cache along the state's tree: which segment's RSC is missing or still pending.
+    type CacheNode = { rsc?: unknown; prefetchRsc?: unknown; lazyData?: unknown; loading?: unknown; parallelRoutes?: Map<string, Map<string, CacheNode>> };
+    type RouterTree = [unknown, Record<string, RouterTree>?, ...unknown[]];
+    const describeRsc = (value: unknown) => value === null ? "null" : value === undefined ? "undefined"
+      : isThenable(value) ? `thenable:${String((value as { status?: unknown }).status ?? "untracked")}` : typeof value === "object" ? "value" : typeof value;
+    const cacheTree = (state: unknown) => {
+      if (!isRouterState(state)) return null;
+      const router = state as { tree: RouterTree; cache: CacheNode; canonicalUrl: string; pushRef?: { mpaNavigation?: boolean } };
+      const nodes: Array<Record<string, string | null>> = [];
+      const visit = (tree: RouterTree | undefined, node: CacheNode | undefined, path: string, depth: number) => {
+        if (!tree || depth > 12) return;
+        nodes.push({ path: path || "/", node: node ? "present" : "missing", rsc: describeRsc(node?.rsc), prefetchRsc: describeRsc(node?.prefetchRsc), lazyData: node?.lazyData ? describeRsc(node.lazyData) : null, loading: describeRsc(node?.loading) });
+        for (const [key, childTree] of Object.entries(tree[1] ?? {})) {
+          const segment = childTree[0];
+          const name = typeof segment === "string" ? segment : JSON.stringify(segment);
+          const children = node?.parallelRoutes?.get(key);
+          let child = children?.get(typeof segment === "string" ? segment : "");
+          if (!child && children) for (const [cacheKey, candidate] of children) if (String(cacheKey).startsWith(name.split("?")[0])) { child = candidate; break; }
+          visit(childTree, child, `${path}/${key}:${name}`, depth + 1);
+        }
+      };
+      visit(router.tree, router.cache, "", 0);
+      return { canonicalUrl: router.canonicalUrl, mpaNavigation: Boolean(router.pushRef?.mpaNavigation), nodes };
+    };
     // Circular update list: `last.next` is the first update.
     const updates = (last: Update | null | undefined) => {
-      const list: Array<{ lane: string; action: string }> = [];
+      const list: Array<{ lane: string; action: string; cache?: ReturnType<typeof cacheTree> }> = [];
       for (let update = last?.next, index = 0; update && index < 32; update = update.next, index += 1) {
-        list.push({ lane: bits(update.lane), action: describeValue(update.action) });
+        const fulfilled = isThenable(update.action) && (update.action as { status?: unknown }).status === "fulfilled";
+        list.push({ lane: bits(update.lane), action: describeValue(update.action), ...(fulfilled ? { cache: cacheTree((update.action as { value?: unknown }).value) } : {}) });
         if (update === last) break;
       }
       return list;
@@ -171,6 +196,7 @@ async function collectStallDiagnostics(page: Page) {
             fiberLanes: bits(fiber.lanes ?? 0),
             stateHook: hook ? {
               committed: describeValue(hook.memoizedState),
+              committedCache: cacheTree(isThenable(hook.memoizedState) ? (hook.memoizedState as { value?: unknown }).value : hook.memoizedState),
               lastRendered: describeValue(hook.queue?.lastRenderedState),
               queueLanes: bits(hook.queue?.lanes ?? 0),
               baseQueue: updates(hook.baseQueue),
