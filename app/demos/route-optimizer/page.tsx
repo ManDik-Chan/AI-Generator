@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { demos, sourceUrl } from "@/features/demos/catalog";
-import { DemoPageHeader, HowItWorks } from "@/features/demos/components/demo-page";
+import { DemoNextSteps, DemoPageHeader, HowItWorks } from "@/features/demos/components/demo-page";
 import { RouteOptimizerDemo } from "@/features/demos/route-optimizer/components/route-optimizer-demo";
 
 const demo = demos[0];
@@ -29,6 +29,7 @@ export default function RouteOptimizerPage() {
           ["同一套运行状态", "PENDING → ACCEPTED → RUNNING → SUCCEEDED / TIMED_OUT / CANCELLED / FAILED，与平台规划的远程运行状态机一致，终态不可逆。"],
         ]}
       />
+      <DemoNextSteps demo={demo} docsHref="/docs/api#route-optimizer-solve" />
     </div>
   );
 }

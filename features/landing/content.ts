@@ -230,7 +230,7 @@ const zh: LandingCopy = {
   footer: {
     cols: [
       { title: "平台", links: [{ href: "/explore", label: "探索项目" }, { href: "/demos", label: "运行 Demo" }, { href: "/docs", label: "开发者文档" }, { href: "/platform", label: "演示工作台" }, { href: "/platform/projects", label: "项目 · 开发中" }, { href: "/platform/connections", label: "连接与授权 · 规划中" }] },
-      { title: "AI Hub", links: [{ href: "/chat", label: "AI 对话" }, { href: "/personas", label: "专属人格" }, { href: "/memories", label: "长期记忆" }, { href: "/tools", label: "AI 工具" }] },
+      { title: "AI Hub · 登录后使用", links: [{ href: "/chat", label: "AI 对话" }, { href: "/personas", label: "专属人格" }, { href: "/memories", label: "长期记忆" }, { href: "/tools", label: "AI 工具" }] },
       { title: "账户", links: [{ href: "/workspace", label: "进入工作台" }, { href: "/account", label: "账户与隐私" }, { href: "/login", label: "登录" }, { href: "/register", label: "注册" }] },
     ],
     site: "站点",
@@ -404,7 +404,7 @@ const en: LandingCopy = {
   footer: {
     cols: [
       { title: "Platform", links: [{ href: "/explore", label: "Explore projects" }, { href: "/demos", label: "Run the demos" }, { href: "/docs", label: "Developer docs" }, { href: "/platform", label: "Demo workspace" }, { href: "/platform/projects", label: "Projects · in development" }, { href: "/platform/connections", label: "Connections · planned" }] },
-      { title: "AI Hub", links: [{ href: "/chat", label: "AI chat" }, { href: "/personas", label: "Personas" }, { href: "/memories", label: "Long-term memory" }, { href: "/tools", label: "AI tools" }] },
+      { title: "AI Hub · sign-in required", links: [{ href: "/chat", label: "AI chat" }, { href: "/personas", label: "Personas" }, { href: "/memories", label: "Long-term memory" }, { href: "/tools", label: "AI tools" }] },
       { title: "Account", links: [{ href: "/workspace", label: "Open the workspace" }, { href: "/account", label: "Account & privacy" }, { href: "/login", label: "Log in" }, { href: "/register", label: "Sign up" }] },
     ],
     site: "Site",

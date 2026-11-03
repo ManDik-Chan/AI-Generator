@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { demos, sourceUrl } from "@/features/demos/catalog";
-import { DemoPageHeader, HowItWorks } from "@/features/demos/components/demo-page";
+import { DemoNextSteps, DemoPageHeader, HowItWorks } from "@/features/demos/components/demo-page";
 import { NeuralNetworkDemo } from "@/features/demos/neural-network/components/neural-network-demo";
 
 const demo = demos[1];
@@ -20,7 +20,7 @@ export default function NeuralNetworkPage() {
         boundary="数据集在你的浏览器里按种子生成，训练在 Web Worker 中进行，不向服务器发送任何训练数据或结果；无法启动 Worker 时会改在主线程运行并注明。单次运行最长 60 秒。网络规模刻意很小（最多 4 层 × 8 个神经元），用于展示原理，不是生产模型。"
         links={[
           { href: "/docs/guide#浏览器运行时", label: "aig.worker/1 协议" },
-          { href: "/docs/api#capabilities", label: "能力描述符" },
+          { href: "/docs/api#capabilitydescriptor", label: "能力描述符" },
           { href: sourceUrl(demo.sourcePath), label: "查看源码", external: true },
         ]}
         steps={[
@@ -29,6 +29,7 @@ export default function NeuralNetworkPage() {
           ["同一套运行状态", "运行同样经过 ACCEPTED → RUNNING → 终态：训练完成为 SUCCEEDED，你点停止为 CANCELLED，损失变为非有限值为 FAILED / DIVERGED。"],
         ]}
       />
+      <DemoNextSteps demo={demo} docsHref="/docs/guide#浏览器运行时" />
     </div>
   );
 }
