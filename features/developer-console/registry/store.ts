@@ -74,6 +74,8 @@ export interface ReadStore<S, K extends string> {
   /** Refreshes only when never read or the last read is older than `maxAgeMs`. */
   ensureFresh(maxAgeMs: number): Promise<void>;
   loadMore(key: K): Promise<void>;
+  /** Marks the data as outdated after a write, so the next ensureFresh reads again. Sends nothing. */
+  invalidate(): void;
 }
 
 export type ProjectListKey = "reviews" | "versions" | "releases" | "requests";
@@ -143,6 +145,7 @@ function createBase<S extends { refreshing: boolean; lastRefresh: number | null;
   return {
     get snapshot() { return snapshot; },
     get generation() { return generation; },
+    invalidate() { if (!snapshot.refreshing) update((current) => ({ ...current, lastRefresh: null })); },
     begin() { return ++generation; },
     update,
     settle,
@@ -211,6 +214,7 @@ export function createProjectStore(client: RegistryReadClient, projectId: string
     subscribe: base.subscribe,
     getSnapshot: () => base.snapshot,
     refresh,
+    invalidate: base.invalidate,
     async ensureFresh(maxAgeMs) {
       const { lastRefresh, refreshing } = base.snapshot;
       if (!refreshing && (lastRefresh === null || now() - lastRefresh > maxAgeMs)) await refresh();
@@ -249,6 +253,7 @@ export function createOverviewStore(client: RegistryReadClient, { now = Date.now
     subscribe: base.subscribe,
     getSnapshot: () => base.snapshot,
     refresh,
+    invalidate: base.invalidate,
     async ensureFresh(maxAgeMs) {
       const { lastRefresh, refreshing } = base.snapshot;
       if (!refreshing && (lastRefresh === null || now() - lastRefresh > maxAgeMs)) await refresh();

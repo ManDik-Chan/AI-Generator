@@ -11,7 +11,7 @@ export type ConsoleMode = "mock" | "registry";
 export function ConsoleModeSwitch({ active, mockHref, registryHref }: { active: ConsoleMode; mockHref: string; registryHref: string }) {
   const items: { mode: ConsoleMode; label: string; href: string; title: string }[] = [
     { mode: "mock", label: "Mock 演示", href: mockHref, title: "浏览器内的示例数据，可以切换身份并完整演示写入流程，不保存" },
-    { mode: "registry", label: "Registry 只读", href: registryHref, title: "以当前登录身份读取 Registry 的真实数据，不发送任何写请求" },
+    { mode: "registry", label: "Registry", href: registryHref, title: "以当前登录身份读写 Registry 的真实数据；只提供创建项目与保存草稿" },
   ];
   return (
     <nav aria-label="数据来源" className="inline-flex h-8 items-center gap-0.5 rounded-full bg-surface p-0.5 text-[.75rem]">

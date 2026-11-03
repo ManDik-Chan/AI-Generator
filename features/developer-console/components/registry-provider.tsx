@@ -3,10 +3,14 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from "react";
 
 import { createRegistryReadAdapter, type RegistryReadAdapter } from "@/features/developer-console/registry/adapter";
+import type { CreateSnapshot, CreateStore } from "@/features/developer-console/registry/create-store";
+import type { DraftEditorStore, EditorSnapshot } from "@/features/developer-console/registry/draft-editor";
 import type { OverviewSnapshot, ProjectSnapshot, ProjectStore, OverviewStore } from "@/features/developer-console/registry/store";
+import { createRegistryWriteAdapter, type RegistryWriteAdapter } from "@/features/developer-console/registry/write-adapter";
 import { createSupabaseBrowserClient } from "@/lib/auth/supabase/browser";
 
 const RegistryContext = createContext<RegistryReadAdapter | null>(null);
+const RegistryWriteContext = createContext<RegistryWriteAdapter | null>(null);
 
 /** Reads that are newer than this are reused when a screen mounts again. */
 const REUSE_MS = 30_000;
@@ -21,15 +25,39 @@ async function currentAccessToken(): Promise<string | null> {
 }
 
 /**
- * One read-only Registry adapter per console visit. This provider is never nested inside the mock
+ * One Registry read adapter and one write adapter per console visit; the write adapter holds unsaved
+ * drafts in memory for as long as this layout stays mounted. This provider is never nested inside the mock
  * ConsoleProvider: the Registry routes cannot reach the mock engine, and no mock state exists there.
  */
-export function RegistryConsoleProvider({ children, adapter: injected }: { children: ReactNode; adapter?: RegistryReadAdapter }) {
-  const [adapter] = useState(() => injected ?? createRegistryReadAdapter({
-    fetch: (input, init) => globalThis.fetch(input, init),
-    getAccessToken: currentAccessToken,
-  }));
-  return <RegistryContext.Provider value={adapter}>{children}</RegistryContext.Provider>;
+export function RegistryConsoleProvider({ children, adapter: injected, writer: injectedWriter }: { children: ReactNode; adapter?: RegistryReadAdapter; writer?: RegistryWriteAdapter }) {
+  const [adapters] = useState(() => {
+    const options = { fetch: (input: RequestInfo | URL, init?: RequestInit) => globalThis.fetch(input, init), getAccessToken: currentAccessToken };
+    const read = injected ?? createRegistryReadAdapter(options);
+    return { read, write: injectedWriter ?? createRegistryWriteAdapter(read, options) };
+  });
+  return (
+    <RegistryContext.Provider value={adapters.read}>
+      <RegistryWriteContext.Provider value={adapters.write}>{children}</RegistryWriteContext.Provider>
+    </RegistryContext.Provider>
+  );
+}
+
+export function useRegistryWriter() {
+  const writer = useContext(RegistryWriteContext);
+  if (!writer) throw new Error("useRegistryWriter must be used inside <RegistryConsoleProvider>");
+  return writer;
+}
+
+export function useRegistryCreate(): { snapshot: CreateSnapshot; store: CreateStore } {
+  const store = useRegistryWriter().creator();
+  return { snapshot: useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot), store };
+}
+
+export function useDraftEditor(projectId: string): { snapshot: EditorSnapshot; store: DraftEditorStore } {
+  const store = useRegistryWriter().editor(projectId);
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
+  useEffect(() => { void store.ensureLoaded(); }, [store]);
+  return { snapshot, store };
 }
 
 export function useRegistryAdapter() {

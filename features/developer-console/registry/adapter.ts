@@ -2,9 +2,10 @@
  * Registry read-only console adapter.
  *
  * It shares `execute` / `replay` with the ConsoleAdapter seam (../adapter.ts) only to refuse them:
- * there is no internal Registry HTTP write route yet, and this mode must never fall back to the
- * in-browser mock engine or pretend a command succeeded. Both methods reject without touching the
- * network. Reads go through the GET-only client and the stores in ./store.
+ * review, seal, release and asset commands have no internal HTTP write route, and this mode must
+ * never fall back to the in-browser mock engine or pretend a command succeeded. Both methods reject
+ * without touching the network. Reads go through the GET-only client and the stores in ./store; the
+ * two P1-C2 writes (create project, save draft) have their own client in ./write-client.ts.
  */
 import type { ConsoleAdapter } from "@/features/developer-console/adapter";
 import { createRegistryReadClient, type RegistryReadClient, type RegistryReadClientOptions } from "@/features/developer-console/registry/client";

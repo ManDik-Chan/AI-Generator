@@ -45,7 +45,7 @@ export function actionLabel(action: RegistryAction) {
   return action === "INGEST_ASSET" || action === "VERIFY_ASSET" ? assetLabels[action] : actionMeta[action].label;
 }
 
-/** Commands that change Registry state. None of them is available in this mode. */
+/** Commands that change Registry state. Of these, only EDIT_DRAFT is sent by this mode (registry/write-client.ts). */
 export const WRITE_ACTIONS = [
   "EDIT_DRAFT", "SUBMIT_REVIEW", "WITHDRAW_REVIEW", "DECIDE_REVIEW", "SEAL_VERSION",
   "REQUEST_RELEASE", "APPROVE_RELEASE", "PUBLISH_RELEASE", "WITHDRAW_RELEASE", "ROLLBACK_RELEASE",
