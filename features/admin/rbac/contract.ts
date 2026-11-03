@@ -104,6 +104,11 @@ export const platformDirectorySchema = z
     members: z.array(platformMemberSchema),
     /** All members on the platform; `members` may be a recent subset. */
     totalMembers: count,
+    /**
+     * When the server built this snapshot. The directory can receive snapshots from a page render
+     * and from the directory loader action; it keeps the newest and ignores one that arrives late.
+     */
+    generatedAt: isoDateTime,
   })
   .superRefine((directory, context) => {
     const ids = new Set<string>();
@@ -136,6 +141,20 @@ export interface RoleChangeRequest {
 
 /** What the page hands the role screens: the role-change Server Action (or nothing, which disables changes). */
 export type RoleChangeSubmitter = (request: RoleChangeRequest) => Promise<unknown>;
+
+/** The directory loader Server Action: a fresh, parsed snapshot for the signed-in viewer. */
+export type DirectoryLoader = () => Promise<unknown>;
+
+const directoryLoadResultSchema = z.union([
+  z.object({ ok: z.literal(true), directory: platformDirectorySchema }),
+  z.object({ ok: z.literal(false) }),
+]);
+
+/** A loader result the directory can apply, or null when it is unusable (the caller keeps what it shows). */
+export function interpretDirectoryLoad(raw: unknown): PlatformDirectory | null {
+  const parsed = directoryLoadResultSchema.safeParse(raw);
+  return parsed.success && parsed.data.ok ? parsed.data.directory : null;
+}
 
 const roleChangeSuccessSchema = z.object({
   ok: z.literal(true),
@@ -220,7 +239,7 @@ export function interpretRoleChangeResult(request: RoleChangeRequest, raw: unkno
 }
 
 /** Next.js signals redirects and not-found through thrown errors; those must keep propagating. */
-function isFrameworkNavigation(error: unknown) {
+export function isFrameworkNavigation(error: unknown) {
   if (typeof error !== "object" || error === null || !("digest" in error)) return false;
   const digest = (error as { digest: unknown }).digest;
   return typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK") || digest === "NEXT_NOT_FOUND");

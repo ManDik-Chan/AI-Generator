@@ -3,7 +3,7 @@ import { StatusBanner } from "@/components/ui/status-banner";
 import { PlatformMemberDirectory } from "@/features/admin/components/platform-member-directory";
 import { RoleAuditLog } from "@/features/admin/components/role-audit-log";
 import { ViewerAccessCard } from "@/features/admin/components/viewer-access-card";
-import type { PlatformDirectory, RoleAuditFeed, RoleChangeSubmitter } from "@/features/admin/rbac/contract";
+import type { DirectoryLoader, PlatformDirectory, RoleAuditFeed, RoleChangeSubmitter } from "@/features/admin/rbac/contract";
 
 const UNAVAILABLE: RoleAuditFeed = { status: "unavailable" };
 
@@ -16,7 +16,7 @@ const UNAVAILABLE: RoleAuditFeed = { status: "unavailable" };
  * an "unavailable" feed (no audit read endpoint exists yet), the section states that plainly
  * instead of disappearing; it never shows sample rows.
  */
-export function PlatformRolesSection({ directory, audit, onChangeRole }: { directory: PlatformDirectory; audit?: RoleAuditFeed; onChangeRole?: RoleChangeSubmitter }) {
+export function PlatformRolesSection({ directory, audit, onChangeRole, onLoadDirectory }: { directory: PlatformDirectory; audit?: RoleAuditFeed; onChangeRole?: RoleChangeSubmitter; onLoadDirectory?: DirectoryLoader }) {
   const { viewer } = directory;
   if (viewer.platformRole === "USER") {
     return (
@@ -37,7 +37,7 @@ export function PlatformRolesSection({ directory, audit, onChangeRole }: { direc
         <SectionHeader description="角色、可执行的调整和不可调整的原因都由服务端按当前登录身份给出；每次调整提交时服务端会再次校验。" id="users-title" kicker="权限管理" title="用户与角色" />
         <div className="mt-4 grid gap-4">
           <ViewerAccessCard connected={{ roleChanges: Boolean(onChangeRole), roleAudit: !feedUnavailable }} viewer={viewer} />
-          <PlatformMemberDirectory members={directory.members} onChangeRole={onChangeRole} totalMembers={directory.totalMembers} viewer={viewer} />
+          <PlatformMemberDirectory generatedAt={directory.generatedAt} members={directory.members} onChangeRole={onChangeRole} onLoadDirectory={onLoadDirectory} totalMembers={directory.totalMembers} viewer={viewer} />
         </div>
       </section>
 

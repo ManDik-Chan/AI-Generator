@@ -31,7 +31,8 @@ vi.mock("next/cache", () => ({ revalidatePath: request.revalidatePath }));
 
 import { updateAdminRoleAction } from "@/features/admin/actions";
 import { getAdminOverview } from "@/features/admin/data";
-import { performRoleChange } from "@/features/admin/rbac/contract";
+import { interpretDirectoryLoad, performRoleChange } from "@/features/admin/rbac/contract";
+import { loadPlatformDirectoryAction } from "@/features/admin/rbac/directory-action";
 import { toPlatformDirectory } from "@/features/admin/rbac/server-directory";
 import { prisma } from "@/lib/database/prisma";
 
@@ -277,6 +278,25 @@ describe.skipIf(!enabled)("platform role request chain with real sessions", () =
 
     await expect(redirectOf(loadDirectory("userD"))).resolves.toBe("/workspace");
     await expect(redirectOf(loadDirectory("signedOut"))).resolves.toBe("/login");
+  });
+
+  it("serves the same directory through the loader action, behind the same guard", async () => {
+    actAs("owner");
+    const owner = interpretDirectoryLoad(await loadPlatformDirectoryAction());
+    expect(owner?.viewer).toEqual({ id: ids.owner, platformRole: "OWNER", capabilities: { manageRoles: true, viewRoleAudit: false } });
+    expect(owner?.members.find((member) => member.id === ids.userC)).toMatchObject({ roleVersion: "2", roleChange: { assignableRoles: ["ADMIN"] } });
+    expect(Number.isNaN(Date.parse(owner?.generatedAt ?? ""))).toBe(false);
+
+    actAs("adminA");
+    const admin = interpretDirectoryLoad(await loadPlatformDirectoryAction());
+    expect(admin?.viewer).toEqual({ id: ids.adminA, platformRole: "ADMIN", capabilities: { manageRoles: false, viewRoleAudit: false } });
+    expect(admin?.members.every((member) => member.roleChange.assignableRoles.length === 0)).toBe(true);
+    expect(JSON.stringify(admin)).not.toMatch(/_count|updatedAt|avatarUrl|memoryEnabled/);
+
+    actAs("userD");
+    await expect(redirectOf(loadPlatformDirectoryAction())).resolves.toBe("/workspace");
+    actAs("signedOut");
+    await expect(redirectOf(loadPlatformDirectoryAction())).resolves.toBe("/login");
   });
 
   it("revokes an ADMIN's access on the very next request", async () => {

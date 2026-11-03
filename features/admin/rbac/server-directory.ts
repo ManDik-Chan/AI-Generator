@@ -44,9 +44,10 @@ export function restrictionFor(decision: RoleChangeDecision, viewerRole: Platfor
   }
 }
 
-export function toPlatformDirectory(source: PlatformDirectorySource): ContractParse<PlatformDirectory> {
+export function toPlatformDirectory(source: PlatformDirectorySource, generatedAt: Date = new Date()): ContractParse<PlatformDirectory> {
   const { actor, actorCapabilities, users } = source;
   return parsePlatformDirectory({
+    generatedAt: generatedAt.toISOString(),
     viewer: {
       id: actor.id,
       platformRole: actor.platformRole,

@@ -130,7 +130,7 @@ describe("ADMIN view", () => {
 
 describe("USER and unwired states", () => {
   it("renders no directory, controls or audit for a USER viewer", () => {
-    const html = render(createElement(PlatformRolesSection, { directory: { viewer: userViewer, members: ownerDirectory().members.map((member) => ({ ...member, isViewer: member.id === userViewer.id })), totalMembers: 5 }, audit: auditFeed(), onChangeRole: submitter }));
+    const html = render(createElement(PlatformRolesSection, { directory: { viewer: userViewer, members: ownerDirectory().members.map((member) => ({ ...member, isViewer: member.id === userViewer.id })), totalMembers: 5, generatedAt: "2026-11-02T08:00:00.000Z" }, audit: auditFeed(), onChangeRole: submitter }));
     expect(text(html)).toContain("没有平台管理权限");
     expect(html).not.toContain("更改角色");
     expect(html).not.toContain("data-member-id");

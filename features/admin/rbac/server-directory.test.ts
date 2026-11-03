@@ -101,6 +101,13 @@ describe("backend to view-model mapping", () => {
     expect(result.ok && result.value.members[0]).toMatchObject({ joinedAt: "2026-10-01T08:30:00.000Z", activity: { conversations: 2, personas: 1, memories: 4, toolRuns: 3 } });
   });
 
+  it("stamps each snapshot with the server time it was built", () => {
+    const result = toPlatformDirectory(backendOverview("owner"), new Date(Date.UTC(2026, 10, 3, 9, 15, 30, 250)));
+    expect(result.ok && result.value.generatedAt).toBe("2026-11-03T09:15:30.250Z");
+    const now = toPlatformDirectory(backendOverview("owner"));
+    expect(now.ok && Math.abs(Date.parse(now.value.generatedAt) - Date.now())).toBeLessThan(5_000);
+  });
+
   it("fails closed when the backend sends a role outside the contract", () => {
     const source = backendOverview("owner");
     source.users.items[1] = { ...source.users.items[1], role: "SUPERADMIN" as PlatformRole };

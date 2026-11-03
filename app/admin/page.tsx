@@ -25,6 +25,7 @@ import { StatusBanner } from "@/components/ui/status-banner";
 import { updateAdminRoleAction } from "@/features/admin/actions";
 import { PlatformRolesSection } from "@/features/admin/components/platform-roles-section";
 import { getAdminOverview } from "@/features/admin/data";
+import { loadPlatformDirectoryAction } from "@/features/admin/rbac/directory-action";
 import { ROLE_AUDIT_FEED_NOT_CONNECTED, toPlatformDirectory } from "@/features/admin/rbac/server-directory";
 import { TOOL_LABELS } from "@/features/tools/constants";
 import { requireAdmin } from "@/lib/auth/session";
@@ -110,6 +111,7 @@ export default async function AdminPage() {
         audit={ROLE_AUDIT_FEED_NOT_CONNECTED}
         directory={directory.value}
         onChangeRole={directory.value.viewer.capabilities.manageRoles ? updateAdminRoleAction : undefined}
+        onLoadDirectory={directory.value.viewer.capabilities.manageRoles ? loadPlatformDirectoryAction : undefined}
       />
     ) : (
       <section aria-labelledby="users-title" className="mt-9">

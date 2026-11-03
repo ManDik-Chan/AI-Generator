@@ -5,23 +5,36 @@ import { useCallback, useEffect, useReducer, useRef, useState, useTransition } f
 
 import { MemberDirectoryView, type RoleFilter } from "@/features/admin/components/member-directory-view";
 import { RoleChangeDialogView } from "@/features/admin/components/role-change-dialog-view";
-import { performRoleChange, type PlatformMember, type PlatformViewer, type RoleChangeSubmitter } from "@/features/admin/rbac/contract";
+import { interpretDirectoryLoad, isFrameworkNavigation, performRoleChange, type DirectoryLoader, type PlatformMember, type PlatformViewer, type RoleChangeSubmitter } from "@/features/admin/rbac/contract";
 import { buildRoleChangeRequest, canSubmit, directoryReducer, initialDirectoryState } from "@/features/admin/rbac/role-change-state";
 
 export interface PlatformMemberDirectoryProps {
   viewer: PlatformViewer;
   members: PlatformMember[];
   totalMembers: number;
+  /** When the server built `members` (the directory snapshot's generatedAt). */
+  generatedAt: string;
   /** The role-change server action. Without it the directory is read-only. */
   onChangeRole?: RoleChangeSubmitter;
+  /** Loads a fresh snapshot as an action result; used after a confirmed change and on refresh. */
+  onLoadDirectory?: DirectoryLoader;
   loginHref?: string;
 }
 
-export function PlatformMemberDirectory({ viewer, members, totalMembers, onChangeRole, loginHref = "/login?next=%2Fadmin" }: PlatformMemberDirectoryProps) {
+interface Snapshot {
+  generatedAt: string;
+  members: PlatformMember[];
+  totalMembers: number;
+}
+
+export function PlatformMemberDirectory({ viewer, members, totalMembers, generatedAt, onChangeRole, onLoadDirectory, loginHref = "/login?next=%2Fadmin" }: PlatformMemberDirectoryProps) {
   const router = useRouter();
   const [state, dispatch] = useReducer(directoryReducer, members, initialDirectoryState);
+  const [snapshot, setSnapshot] = useState<Snapshot>({ generatedAt, members, totalMembers });
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
+  // A redirect or not-found from the loader, rethrown during render so Next.js's boundaries navigate.
+  const [navigation, setNavigation] = useState<{ error: unknown } | null>(null);
   const [, startTransition] = useTransition();
 
   const inFlight = useRef(false);
@@ -31,19 +44,51 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
   const recoveryRef = useRef<HTMLButtonElement | HTMLAnchorElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
 
-  // A new `members` array means a new server render (router refresh or revalidation).
+  // Server snapshots arrive from page renders (props) and from the loader action. Keep the newest:
+  // a page render that commits late must not replace data the loader already brought.
+  const newest = useRef(generatedAt);
+  const accept = useCallback((next: Snapshot) => {
+    if (Date.parse(next.generatedAt) <= Date.parse(newest.current)) return;
+    newest.current = next.generatedAt;
+    setSnapshot(next);
+    dispatch({ type: "serverData", members: next.members });
+  }, []);
+
   const seenMembers = useRef(members);
   useEffect(() => {
     if (seenMembers.current === members) return;
     seenMembers.current = members;
-    dispatch({ type: "serverData", members });
-  }, [members]);
+    accept({ generatedAt, members, totalMembers });
+  }, [accept, generatedAt, members, totalMembers]);
+
+  /*
+   * Fresh data for the directory comes back as an action result rather than only through the page
+   * re-rendering: CI showed the revalidated or refreshed /admin tree being received but, at times,
+   * never committed by React, which left a row waiting on 「正在同步最新权限…」. router.refresh() still
+   * runs so the rest of the page updates as well.
+   */
+  const loadDirectory = useCallback(() => {
+    if (!onLoadDirectory) return;
+    void onLoadDirectory().then(
+      (raw) => {
+        const directory = interpretDirectoryLoad(raw);
+        if (directory) accept({ generatedAt: directory.generatedAt, members: directory.members, totalMembers: directory.totalMembers });
+      },
+      (error: unknown) => {
+        // A failed load keeps what is shown; the page refresh may still deliver.
+        if (isFrameworkNavigation(error)) setNavigation({ error });
+      },
+    );
+  }, [accept, onLoadDirectory]);
 
   const changesEnabled = Boolean(onChangeRole) && viewer.platformRole !== "USER" && viewer.capabilities.manageRoles;
   const session = state.session;
-  const activeMember = session ? members.find((member) => member.id === session.memberId) ?? null : null;
+  const activeMember = session ? snapshot.members.find((member) => member.id === session.memberId) ?? null : null;
 
-  const refresh = useCallback(() => router.refresh(), [router]);
+  const refresh = useCallback(() => {
+    router.refresh();
+    loadDirectory();
+  }, [loadDirectory, router]);
 
   const submit = () => {
     if (!onChangeRole || inFlight.current || !session || !canSubmit(session)) return;
@@ -55,7 +100,11 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
     dispatch({ type: "submit", requestId });
     startTransition(async () => {
       try {
-        dispatch({ type: "resolved", outcome: await performRoleChange(onChangeRole, request) });
+        const outcome = await performRoleChange(onChangeRole, request);
+        dispatch({ type: "resolved", outcome });
+        // A confirmed change unlocks its row once a snapshot shows the new version. After a failure
+        // the row stays locked until the viewer asks for the latest state.
+        if (outcome.ok) loadDirectory();
       } finally {
         inFlight.current = false;
       }
@@ -85,12 +134,14 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
     return () => cancelAnimationFrame(frame);
   }, [failure]);
 
+  if (navigation) throw navigation.error;
+
   return (
     <>
       <MemberDirectoryView
         changesEnabled={changesEnabled}
         loginHref={loginHref}
-        members={members}
+        members={snapshot.members}
         onOpen={(member) => { lastMemberId.current = member.id; dispatch({ type: "open", member }); }}
         onQueryChange={setQuery}
         onRefresh={refresh}
@@ -99,7 +150,7 @@ export function PlatformMemberDirectory({ viewer, members, totalMembers, onChang
         registerTrigger={(memberId, element) => { if (element) triggers.current.set(memberId, element); else triggers.current.delete(memberId); }}
         roleFilter={roleFilter}
         state={state}
-        totalMembers={totalMembers}
+        totalMembers={snapshot.totalMembers}
         viewer={viewer}
       />
       <RoleChangeDialogView

@@ -57,4 +57,17 @@ describe("admin surface security and completeness", () => {
     const importers = [...sources("app"), ...sources("components"), ...sources("features"), ...sources("lib")].filter(importsAction);
     expect(importers).toEqual([join("app", "admin", "page.tsx")]);
   });
+  it("serves the directory loader only through the page boundary, to role managers", () => {
+    // The loader is a public HTTP endpoint too. It runs the same guard and parsing as the page, and
+    // the page hands it only to the viewer that also receives the role-change action.
+    const loader = read("features/admin/rbac/directory-action.ts");
+    expect(loader).toContain('"use server"');
+    expect(loader).toContain("toPlatformDirectory(await getAdminOverview())");
+    expect(read("features/admin/data.ts")).toContain("await requireAdmin()");
+    const page = read("app/admin/page.tsx");
+    expect(page).toContain("onLoadDirectory={directory.value.viewer.capabilities.manageRoles ? loadPlatformDirectoryAction : undefined}");
+    const importers = [...sources("app"), ...sources("components"), ...sources("features"), ...sources("lib")]
+      .filter((path) => /from ["']@\/features\/admin\/rbac\/directory-action["']/.test(read(path)));
+    expect(importers).toEqual([join("app", "admin", "page.tsx")]);
+  });
 });

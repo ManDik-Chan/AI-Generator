@@ -41,6 +41,7 @@ export function ownerDirectory(): PlatformDirectory {
   return {
     viewer: ownerViewer,
     totalMembers: 120,
+    generatedAt: "2026-11-02T08:00:00.000Z",
     members: [
       member(FIXTURE_IDS.owner, "OWNER", viewerId, { restriction: "OWNER_PROTECTED" }, { displayName: "平台负责人" }),
       member(FIXTURE_IDS.adminA, "ADMIN", viewerId, { assignable: ["USER"] }, { displayName: "运营管理员" }),
@@ -57,6 +58,7 @@ export function adminDirectory(): PlatformDirectory {
   return {
     viewer: adminViewer,
     totalMembers: 5,
+    generatedAt: "2026-11-02T08:00:00.000Z",
     members: [
       member(FIXTURE_IDS.owner, "OWNER", viewerId, { restriction: "OWNER_PROTECTED" }, { displayName: "平台负责人" }),
       member(FIXTURE_IDS.adminA, "ADMIN", viewerId, { restriction: "SELF" }, { displayName: "运营管理员" }),

@@ -60,3 +60,23 @@
 - 相对现有 `main`，部署后 ADMIN 不再能在界面调整任何平台角色；在 OWNER 初始化完成前，界面中没有人能调整角色，紧急撤销只能走受控数据库操作。
 - OWNER 初始化按 `docs/platform-rbac-operations.md` 执行，并核对角色版本已前进；所有生产迁移与真实 OWNER 绑定须单独获得 Owner 批准。
 - 初始化后用真实隔离账号核对 OWNER / ADMIN / USER 的 `/admin` 表现，再恢复应用写入。
+
+## 6. 目录同步改为由 Action 结果送达（2026-11-03）
+
+**现象。** 远程 E2E 在三端间歇失败：角色变更或「刷新最新状态」之后，服务端已返回正确且完整的 `/admin` 数据，界面却一直停在「正在同步最新权限…」或未重新对齐的对话框。
+
+**CI 诊断结论（仅失败时记录，见 E2E 中的 `collectStallDiagnostics`）：**
+- Next.js 路由 Action 队列为空，没有丢弃或积压的动作；路由状态的每个待提交更新都已拿到完成的数据。
+- 路由缓存树完整：根、`admin`、`__PAGE__` 段的 RSC 都已存在，没有懒加载请求或整页跳转。
+- 样式资源均已加载（React 记录为已插入且已加载）。
+- React 根节点上有一个 transition lane 处于挂起状态，未被 ping，也没有已排程的回调；`pingCache` 中没有任何仍在等待的 Promise。再触发一次刷新有时能提交，有时不能。
+
+即页面级重新渲染被 React（19.1.10）挂起且没有唤醒；Action 结果和本地状态更新始终正常。根因位于框架内部，尚未定位到具体缺陷，本轮不升级 React 或 Next.js。
+
+**处理。** 目录不再只依赖整页重新渲染获得最新快照：
+- 新增 `features/admin/rbac/directory-action.ts` 的 `loadPlatformDirectoryAction`，与页面使用同一入口：`getAdminOverview()` 内的 `requireAdmin()` 和 `toPlatformDirectory()` 解析，仅交给能调整角色的查看者。
+- 每个快照带服务端生成时间 `generatedAt`；目录只接受更新的快照，较晚提交的旧页面渲染不会覆盖。
+- 确认成功后与点击「刷新最新状态」时调用该 Action；失败后仍保持锁定，直到用户主动刷新。`router.refresh()` 仍会执行，页面其他区块在 React 提交后更新。
+- 真实会话链路测试新增该 Action 的 OWNER / ADMIN / USER / 未登录用例。
+
+页面概览等其他区块仍依赖整页渲染，同样可能延迟更新。E2E 中的诊断代码在确认稳定后再移除。

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CLIENT_OUTCOME_CODES,
+  interpretDirectoryLoad,
   interpretRoleChangeResult,
   parsePlatformDirectory,
   parseRoleAuditFeed,
@@ -34,7 +35,7 @@ describe("platform directory contract", () => {
   });
 
   it("keeps a project OWNER a platform USER with no capabilities", () => {
-    const raw = { viewer: { ...userViewer, projectRoles: ["OWNER"], projectOwner: true }, members: [], totalMembers: 0 };
+    const raw = { viewer: { ...userViewer, projectRoles: ["OWNER"], projectOwner: true }, members: [], totalMembers: 0, generatedAt: "2026-11-02T08:00:00.000Z" };
     const parsed = parsePlatformDirectory(raw);
     expect(parsed.ok && parsed.value.viewer).toEqual({ id: userViewer.id, platformRole: "USER", capabilities: { manageRoles: false, viewRoleAudit: false } });
   });
@@ -59,6 +60,25 @@ describe("platform directory contract", () => {
       const parsed = parsePlatformDirectory(payload);
       expect(parsed.ok).toBe(false);
       expect(parsed.ok ? [] : parsed.issues).not.toHaveLength(0);
+    }
+  });
+});
+
+describe("directory loader results", () => {
+  it("applies a parsed snapshot and drops fields outside the view model", () => {
+    const raw = { ok: true, directory: { ...ownerDirectory(), debug: "server internals" } } as unknown as Record<string, unknown>;
+    const directory = interpretDirectoryLoad(raw);
+    expect(directory?.generatedAt).toBe("2026-11-02T08:00:00.000Z");
+    expect(directory?.members).toHaveLength(5);
+    expect(JSON.stringify(directory)).not.toContain("server internals");
+  });
+
+  it("keeps the current view for a failed, malformed or contradictory result", () => {
+    const contradictory = ownerDirectory();
+    contradictory.members[1].roleChange.assignableRoles = ["ADMIN", "USER"];
+    const withoutStamp = { ...ownerDirectory(), generatedAt: undefined };
+    for (const raw of [{ ok: false }, undefined, null, "ok", { ok: true }, { ok: true, directory: contradictory }, { ok: true, directory: withoutStamp }]) {
+      expect(interpretDirectoryLoad(raw)).toBeNull();
     }
   });
 });
