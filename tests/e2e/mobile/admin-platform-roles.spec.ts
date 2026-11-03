@@ -128,29 +128,55 @@ function installReactCommitProbe() {
 
 async function collectStallDiagnostics(page: Page) {
   return page.evaluate(async () => {
-    type Hook = { memoizedState?: unknown; queue?: { lanes?: number; pending?: unknown; lastRenderedState?: unknown } | null; baseQueue?: unknown; next?: Hook | null };
-    type Fiber = { memoizedState?: unknown; lanes?: number; child?: Fiber | null; sibling?: Fiber | null };
+    type Update = { lane: number; revertLane?: number; action: unknown; next: Update };
+    type Hook = { memoizedState?: unknown; queue?: { lanes?: number; pending?: Update | null; lastRenderedState?: unknown } | null; baseQueue?: Update | null; next?: Hook | null };
+    type QueuedAction = { payload?: { type?: string }; discarded?: boolean; next?: QueuedAction | null } | null;
+    type ActionQueue = { pending?: QueuedAction; last?: QueuedAction; needsRefresh?: boolean };
+    type Fiber = { memoizedState?: unknown; memoizedProps?: unknown; lanes?: number; child?: Fiber | null; sibling?: Fiber | null };
     type Root = { current: Fiber; pendingLanes: number; suspendedLanes: number; pingedLanes: number; entangledLanes: number; expiredLanes: number; callbackNode: unknown; callbackPriority: number };
     const probe = (window as unknown as { __aigCommitProbe?: { commits: number; roots: Set<Root> } }).__aigCommitProbe;
     const router = (window as unknown as { next?: { router?: { refresh?: () => void } } }).next?.router;
     const bits = (lanes: number) => (lanes >>> 0).toString(2);
+    const isThenable = (value: unknown) => typeof value === "object" && value !== null && typeof (value as { then?: unknown }).then === "function";
     const isRouterState = (value: unknown) => typeof value === "object" && value !== null && "canonicalUrl" in value && "tree" in value;
+    const describeValue = (value: unknown) => isThenable(value)
+      ? `thenable:${String((value as { status?: unknown }).status ?? "untracked")}`
+      : isRouterState(value) ? "router-state" : typeof value;
+    // Circular update list: `last.next` is the first update.
+    const updates = (last: Update | null | undefined) => {
+      const list: Array<{ lane: string; action: string }> = [];
+      for (let update = last?.next, index = 0; update && index < 32; update = update.next, index += 1) {
+        list.push({ lane: bits(update.lane), action: describeValue(update.action) });
+        if (update === last) break;
+      }
+      return list;
+    };
+    // Next.js's AppRouter receives the router action queue as a prop; its first state hook holds the router state.
     const routerHook = (root: Root) => {
       const stack: Fiber[] = [root.current];
       for (let visited = 0; stack.length && visited < 50_000; visited += 1) {
         const fiber = stack.pop()!;
+        const props = fiber.memoizedProps as { actionQueue?: ActionQueue } | null | undefined;
         let hook = fiber.memoizedState as Hook | null | undefined;
-        for (let index = 0; hook && typeof hook === "object" && "queue" in hook && index < 64; index += 1, hook = hook.next) {
-          const state = hook.memoizedState;
-          if (isRouterState(state) || isRouterState(hook.queue?.lastRenderedState)) {
-            return {
-              fiberLanes: bits(fiber.lanes ?? 0),
-              queueLanes: bits(hook.queue?.lanes ?? 0),
-              hasPendingUpdates: Boolean(hook.queue?.pending),
-              hasBaseQueue: Boolean(hook.baseQueue),
-              stateIsThenable: typeof state === "object" && state !== null && typeof (state as { then?: unknown }).then === "function",
-            };
+        for (let index = 0; hook && typeof hook === "object" && index < 64 && !(isRouterState(hook.queue?.lastRenderedState) || isThenable(hook.queue?.lastRenderedState)); index += 1) hook = hook.next;
+        // The outer AppRouter only forwards the queue; the component that calls useActionQueue owns the state hook.
+        if (props && typeof props === "object" && props.actionQueue && typeof props.actionQueue === "object" && hook && typeof hook === "object" && hook.queue) {
+          const queue = props.actionQueue;
+          const queued: string[] = [];
+          for (let action = queue.pending, index = 0; action && index < 16; action = action.next ?? null, index += 1) {
+            queued.push(`${action.payload?.type ?? "?"}${action.discarded ? "(discarded)" : ""}`);
           }
+          return {
+            actionQueue: { queued, needsRefresh: Boolean(queue.needsRefresh), last: queue.last?.payload?.type ?? null },
+            fiberLanes: bits(fiber.lanes ?? 0),
+            stateHook: hook ? {
+              committed: describeValue(hook.memoizedState),
+              lastRendered: describeValue(hook.queue?.lastRenderedState),
+              queueLanes: bits(hook.queue?.lanes ?? 0),
+              baseQueue: updates(hook.baseQueue),
+              pending: updates(hook.queue?.pending),
+            } : null,
+          };
         }
         if (fiber.sibling) stack.push(fiber.sibling);
         if (fiber.child) stack.push(fiber.child);
