@@ -39,7 +39,7 @@ function enabledRead() {
   if (process.env.REGISTRY_INTERNAL_ACCESS_ENABLED !== "true"
     || (process.env.REGISTRY_DRAFT_REVIEW_ENABLED !== "true" && process.env.REGISTRY_INTERNAL_READ_ENABLED !== "true")) fail("DISABLED", 403);
 }
-async function authenticate(token: string): Promise<Principal> {
+export async function authenticate(token: string): Promise<Principal> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) return fail("UNAVAILABLE", 503);
   const auth = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -61,7 +61,7 @@ const roles: Record<Action, string[]> = {
   EDIT_DRAFT: ["OWNER", "EDITOR"], SUBMIT_REVIEW: ["OWNER", "EDITOR"],
   WITHDRAW_REVIEW: ["OWNER", "EDITOR"], DECIDE_REVIEW: ["REVIEWER"], SEAL_VERSION: ["OWNER", "EDITOR"],
 };
-async function session(tx: Tx, actor: Principal) {
+export async function session(tx: Tx, actor: Principal) {
   const found = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM auth.sessions
     WHERE id=${actor.session}::uuid AND user_id=${actor.id}::uuid
       AND (not_after IS NULL OR not_after>clock_timestamp()) AND to_timestamp(${actor.exp})>clock_timestamp() FOR SHARE`;

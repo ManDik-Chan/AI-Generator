@@ -221,14 +221,16 @@ describe("internal read HTTP boundary", () => {
     expect(reads.listRegistryProjects).toHaveBeenCalledTimes(600);
   });
 
-  it("wires the Next catch-all route to the same read boundary and explicitly rejects every write method", async () => {
+  it("wires the Next catch-all route to the same read boundary and keeps write operations disabled by default", async () => {
     const route = await import("@/app/api/internal/registry/[[...path]]/route");
     expect(route.runtime).toBe("nodejs");
     expect(route.dynamic).toBe("force-dynamic");
     const response = await route.GET(request("qualifications"), { params: Promise.resolve({ path: ["qualifications"] }) });
     expect(response.status).toBe(200);
     expect(reads.getRegistryQualifications).toHaveBeenCalledOnce();
-    for (const method of ["POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as const) {
+    vi.stubEnv("REGISTRY_INTERNAL_WRITE_HTTP_ENABLED", "");
+    expect((await route.POST(request("projects", { method: "POST" }), { params: Promise.resolve({ path: ["projects"] }) })).status).toBe(403);
+    for (const method of ["PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"] as const) {
       const rejected = await route[method](request("projects", { method }), { params: Promise.resolve({ path: ["projects"] }) });
       expect(rejected.status).toBe(405);
       expect(rejected.headers.get("allow")).toBe("GET");
