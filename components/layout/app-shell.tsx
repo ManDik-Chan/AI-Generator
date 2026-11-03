@@ -51,6 +51,8 @@ function ShellFooter({ mode }: { mode: ShellMode }) {
         <nav aria-label="页脚" className="flex flex-wrap gap-x-4 gap-y-1">
           <Link className="link-grow hover:text-foreground" href="/" prefetch={false}>官网</Link>
           <Link className="link-grow hover:text-foreground" href="/explore" prefetch={false}>探索项目</Link>
+          <Link className="link-grow hover:text-foreground" href="/demos" prefetch={false}>运行 Demo</Link>
+          <Link className="link-grow hover:text-foreground" href="/docs" prefetch={false}>开发者文档</Link>
           <a className="link-grow hover:text-foreground" href="https://github.com/ManDik-Chan/AI-Generator" rel="noopener noreferrer" target="_blank">GitHub</a>
         </nav>
       </div>

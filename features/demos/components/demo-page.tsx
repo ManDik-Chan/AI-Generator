@@ -2,9 +2,47 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ArrowUpRight, BookOpen, Code2 } from "lucide-react";
 
-import { ArrowLink, DemoNotice, Kicker, SectionHead, ToneBadge, delay } from "@/components/platform/primitives";
+import { ArrowLink, DemoNotice, Kicker, LoopArrow, SectionHead, ToneBadge, delay } from "@/components/platform/primitives";
 import { Button } from "@/components/ui/button";
 import { sourceUrl, type DemoEntry } from "@/features/demos/catalog";
+import { publicProjectSlugs } from "@/features/platform/source";
+import { researchHrefForShowcase } from "@/features/research/source";
+
+export interface DemoNextStep {
+  href: string;
+  title: string;
+  detail: string;
+}
+
+/** Where a visitor goes after running a demo: its project page, research record, docs, and back to the platform. */
+export function demoNextSteps(demo: DemoEntry, docsHref: string): DemoNextStep[] {
+  const steps: DemoNextStep[] = [];
+  if (publicProjectSlugs().includes(demo.slug)) steps.push({ href: `/explore/${demo.slug}`, title: "项目页", detail: "成果、证据等级与版本预览" });
+  const research = researchHrefForShowcase(demo.slug);
+  if (research) steps.push({ href: research, title: "研究记录", detail: "实验协议、结论，以及可在浏览器中重算的参考结果" });
+  steps.push({ href: docsHref, title: "接口文档", detail: "本 Demo 使用的接口、错误码与接入写法" });
+  steps.push({ href: "/platform", title: "演示工作台", detail: "示例数据 · 项目、开发者控制台与 AI Hub" });
+  return steps;
+}
+
+/** Closing strip of a demo page, in the same tile language as the /demos index. */
+export function DemoNextSteps({ demo, docsHref }: { demo: DemoEntry; docsHref: string }) {
+  return (
+    <section aria-labelledby="demo-next" className="mt-20">
+      <SectionHead action={<ArrowLink href="/demos">全部 Demo</ArrowLink>} id="demo-next">运行之后</SectionHead>
+      <ul className="grid gap-0.5 min-[640px]:grid-cols-2 min-[1181px]:grid-cols-4">
+        {demoNextSteps(demo, docsHref).map((step) => (
+          <li key={step.href}>
+            <Link className="group flex h-full min-h-[7rem] flex-col justify-between rounded-card bg-surface p-5 transition-colors duration-500 hover:bg-surface-muted" href={step.href} prefetch={false}>
+              <span className="flex items-center justify-between gap-3 text-[1.0625rem] font-medium tracking-[-.015em]"><span className="link-grow">{step.title}</span><LoopArrow className="text-muted-foreground" /></span>
+              <span className="mt-4 text-[.8125rem] leading-5 text-muted-foreground">{step.detail}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 /** Editorial header of a demo page: index, title, honest execution facts and the ways in. */
 export function DemoPageHeader({ demo, docsHref, children }: { demo: DemoEntry; docsHref: string; children?: ReactNode }) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { CornerDownLeft, FileCheck2, FolderPlus, MessageSquarePlus, Search } from "lucide-react";
+import { BookOpen, CornerDownLeft, FileCheck2, FolderPlus, Home, MessageSquarePlus, Play, Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { navigationGroups, resolveHref, visibleItems, type ShellMode } from "@/components/layout/navigation";
@@ -36,7 +36,12 @@ function entries(mode: ShellMode, isAdmin: boolean): Entry[] {
     badge: item.status ? statusMeta[item.status].label : undefined,
     group: group.label,
   })));
-  return [...actions, ...pages];
+  const site: Entry[] = [
+    { key: "site-demos", label: "运行 Demo", description: "两个真实执行的公开 Demo，无需登录", href: "/demos", icon: Play, group: "公开页面" },
+    { key: "site-docs", label: "开发者文档", description: "手册、API Reference 与接口清单", href: "/docs", icon: BookOpen, group: "公开页面" },
+    { key: "site-home", label: "官网", description: "返回 www.ai-mdc.com 首页", href: "/", icon: Home, group: "公开页面" },
+  ];
+  return [...actions, ...pages, ...site];
 }
 
 export function CommandPalette({ open, onOpenChange, mode, isAdmin }: { open: boolean; onOpenChange(open: boolean): void; mode: ShellMode; isAdmin: boolean }) {

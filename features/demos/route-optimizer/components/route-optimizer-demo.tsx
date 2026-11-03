@@ -322,7 +322,7 @@ export function RouteOptimizerDemo() {
 }
 
 function ErrorNotice({ error }: { error: ClientError }) {
-  if (error.kind === "network") return <p className="border-b border-border/10 bg-destructive-subtle px-4 py-3 text-[.8125rem] text-destructive-foreground">{error.message}</p>;
+  if (error.kind === "network") return <p className="border-b border-border/10 bg-destructive-subtle px-4 py-3 text-[.8125rem] text-destructive-foreground" role="alert">{error.message}</p>;
   const { body, status, retryAfter } = error;
   return (
     <div className="border-b border-border/10 bg-destructive-subtle px-4 py-3 text-[.8125rem] text-destructive-foreground" role="alert">
