@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CLIENT_OUTCOME_CODES,
+  interpretDirectoryLoad,
   interpretRoleChangeResult,
   parsePlatformDirectory,
   parseRoleAuditFeed,
@@ -12,7 +13,7 @@ import {
 import { describeRoleChange, isRetryableFailure, PLATFORM_ROLE_LABEL, roleChangeFailureCopy } from "@/features/admin/rbac/copy";
 import { adminDirectory, auditFeed, FIXTURE_IDS, ownerDirectory, userViewer } from "@/tests/fixtures/admin-rbac";
 
-const request: RoleChangeRequest = { profileId: FIXTURE_IDS.userC, expectedRole: "USER", expectedVersion: "v1-3c9f", nextRole: "ADMIN" };
+const request: RoleChangeRequest = { profileId: FIXTURE_IDS.userC, expectedRole: "USER", expectedVersion: "v1-3c9f", nextRole: "ADMIN", requestId: "6f1d2c3b-4a59-4e68-9f70-8a1b2c3d4e5f" };
 
 describe("platform directory contract", () => {
   it("accepts the owner and admin payloads", () => {
@@ -34,7 +35,7 @@ describe("platform directory contract", () => {
   });
 
   it("keeps a project OWNER a platform USER with no capabilities", () => {
-    const raw = { viewer: { ...userViewer, projectRoles: ["OWNER"], projectOwner: true }, members: [], totalMembers: 0 };
+    const raw = { viewer: { ...userViewer, projectRoles: ["OWNER"], projectOwner: true }, members: [], totalMembers: 0, generatedAt: "2026-11-02T08:00:00.000Z" };
     const parsed = parsePlatformDirectory(raw);
     expect(parsed.ok && parsed.value.viewer).toEqual({ id: userViewer.id, platformRole: "USER", capabilities: { manageRoles: false, viewRoleAudit: false } });
   });
@@ -63,15 +64,56 @@ describe("platform directory contract", () => {
   });
 });
 
+describe("directory loader results", () => {
+  it("applies a parsed snapshot and drops fields outside the view model", () => {
+    const raw = { ok: true, directory: { ...ownerDirectory(), debug: "server internals" } } as unknown as Record<string, unknown>;
+    const directory = interpretDirectoryLoad(raw);
+    expect(directory?.generatedAt).toBe("2026-11-02T08:00:00.000Z");
+    expect(directory?.members).toHaveLength(5);
+    expect(JSON.stringify(directory)).not.toContain("server internals");
+  });
+
+  it("keeps the current view for a failed, malformed or contradictory result", () => {
+    const contradictory = ownerDirectory();
+    contradictory.members[1].roleChange.assignableRoles = ["ADMIN", "USER"];
+    const withoutStamp = { ...ownerDirectory(), generatedAt: undefined };
+    for (const raw of [{ ok: false }, undefined, null, "ok", { ok: true }, { ok: true, directory: contradictory }, { ok: true, directory: withoutStamp }]) {
+      expect(interpretDirectoryLoad(raw)).toBeNull();
+    }
+  });
+});
+
 describe("role change results", () => {
   it("accepts a success that names the requested member and role", () => {
-    expect(interpretRoleChangeResult(request, { ok: true, member: { id: FIXTURE_IDS.userC, platformRole: "ADMIN", roleVersion: "v2" } }))
+    expect(interpretRoleChangeResult(request, { ok: true, changed: true, member: { id: FIXTURE_IDS.userC, platformRole: "ADMIN", roleVersion: "v2" } }))
       .toEqual({ ok: true, member: { id: FIXTURE_IDS.userC, platformRole: "ADMIN", roleVersion: "v2" } });
   });
 
   it("does not trust a success for a different member or role", () => {
-    expect(interpretRoleChangeResult(request, { ok: true, member: { id: FIXTURE_IDS.userD, platformRole: "ADMIN", roleVersion: "v2" } })).toEqual({ ok: false, code: "CONTRACT_MISMATCH" });
-    expect(interpretRoleChangeResult(request, { ok: true, member: { id: FIXTURE_IDS.userC, platformRole: "OWNER", roleVersion: "v2" } })).toEqual({ ok: false, code: "CONTRACT_MISMATCH" });
+    expect(interpretRoleChangeResult(request, { ok: true, changed: true, member: { id: FIXTURE_IDS.userD, platformRole: "ADMIN", roleVersion: "v2" } })).toEqual({ ok: false, code: "CONTRACT_MISMATCH" });
+    expect(interpretRoleChangeResult(request, { ok: true, changed: true, member: { id: FIXTURE_IDS.userC, platformRole: "OWNER", roleVersion: "v2" } })).toEqual({ ok: false, code: "CONTRACT_MISMATCH" });
+  });
+
+  it("reads the final backend payloads (docs/handoffs/2026-11-02-platform-rbac-final-contract.md)", () => {
+    const versioned: RoleChangeRequest = { ...request, expectedVersion: "3" };
+    const member = { id: FIXTURE_IDS.userC, platformRole: "ADMIN", roleVersion: "4" } as const;
+    // A first apply and an exact replay both confirm the member at the result version.
+    expect(interpretRoleChangeResult(versioned, { ok: true, changed: true, member })).toEqual({ ok: true, member });
+    expect(interpretRoleChangeResult(versioned, { ok: true, changed: false, member })).toEqual({ ok: true, member });
+    // Failure details beyond the view model (version, protection reason) are dropped, not trusted.
+    expect(interpretRoleChangeResult(versioned, { ok: false, code: "ROLE_CONFLICT", currentRole: "ADMIN", currentVersion: "5" })).toEqual({ ok: false, code: "ROLE_CONFLICT", currentRole: "ADMIN" });
+    expect(interpretRoleChangeResult(versioned, { ok: false, code: "TARGET_PROTECTED", reason: "OWNER_PROTECTED" })).toEqual({ ok: false, code: "TARGET_PROTECTED" });
+    for (const code of ["FORBIDDEN", "TARGET_NOT_FOUND", "INVALID_REQUEST", "UNAVAILABLE"] as const) {
+      expect(interpretRoleChangeResult(versioned, { ok: false, code })).toEqual({ ok: false, code });
+    }
+  });
+
+  it("does not trust a success without the changed flag or still at the request's base version", () => {
+    const versioned: RoleChangeRequest = { ...request, expectedVersion: "3" };
+    expect(interpretRoleChangeResult(versioned, { ok: true, member: { id: FIXTURE_IDS.userC, platformRole: "ADMIN", roleVersion: "4" } })).toEqual({ ok: false, code: "CONTRACT_MISMATCH" });
+    for (const changed of [true, false]) {
+      expect(interpretRoleChangeResult(versioned, { ok: true, changed, member: { id: FIXTURE_IDS.userC, platformRole: "ADMIN", roleVersion: "3" } })).toEqual({ ok: false, code: "CONTRACT_MISMATCH" });
+    }
   });
 
   it("passes server error codes through with the server's current role", () => {
@@ -81,7 +123,7 @@ describe("role change results", () => {
   });
 
   it("treats unknown or legacy shapes as an unconfirmed outcome instead of success", () => {
-    for (const raw of [undefined, null, "ok", { ok: false, code: "TEAPOT" }, { status: "success", message: "已授予管理员角色。" }, { ok: true }]) {
+    for (const raw of [undefined, null, "ok", { ok: false, code: "TEAPOT" }, { status: "success", message: "已授予管理员角色。" }, { ok: true }, { ok: true, changed: true }]) {
       expect(interpretRoleChangeResult(request, raw)).toEqual({ ok: false, code: "CONTRACT_MISMATCH" });
     }
   });

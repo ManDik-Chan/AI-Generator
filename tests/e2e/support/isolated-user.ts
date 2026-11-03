@@ -97,6 +97,29 @@ export function isAcceptedLoginTransportEnd(failure: string | null) {
   return failure === null || failure === "net::ERR_ABORTED";
 }
 
+/**
+ * Creates an isolated, confirmed account without signing it in, for tests that only
+ * need a target the signed-in user acts on. Clean it up with cleanupIsolatedE2eUser.
+ */
+export async function createIsolatedE2eAccount(
+  testInfo: TestInfo,
+  label: string,
+): Promise<IsolatedE2eUser> {
+  const { serviceRoleKey, supabaseUrl } = requiredTestEnvironment();
+  const namespace = createE2eNamespace(testInfo, label);
+  const email = `${namespace}@example.test`;
+  const password = `P!${randomUUID()}a9`;
+  await Promise.all([recordE2eSensitiveValue(email), recordE2eSensitiveValue(password)]);
+  const service = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+  });
+  const created = await service.auth.admin.createUser({ email, password, email_confirm: true });
+  if (created.error || !created.data.user) {
+    throw new Error(`Unable to create isolated E2E account for ${namespace}.`);
+  }
+  return { email, namespace, password, userId: created.data.user.id };
+}
+
 export async function createIsolatedE2eUser(
   page: Page,
   testInfo: TestInfo,
@@ -185,7 +208,8 @@ export async function createIsolatedE2eUser(
 export async function cleanupIsolatedE2eUser(
   identity: IsolatedE2eUser,
   db: PrismaClient,
-  page: Page,
+  /** The signed-in page to close first; omitted for accounts that never signed in. */
+  page?: Page,
 ) {
   const { serviceRoleKey, supabaseUrl } = requiredTestEnvironment();
   const service = createClient(supabaseUrl, serviceRoleKey, {
@@ -197,7 +221,7 @@ export async function cleanupIsolatedE2eUser(
   });
   const cleanupErrors: unknown[] = [];
   try {
-    if (!page.isClosed()) await page.close({ runBeforeUnload: false });
+    if (page && !page.isClosed()) await page.close({ runBeforeUnload: false });
   } catch (error) {
     cleanupErrors.push(error);
   }

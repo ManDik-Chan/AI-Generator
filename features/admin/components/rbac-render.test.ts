@@ -24,6 +24,7 @@ const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "
 const count = (html: string, needle: string) => html.split(needle).length - 1;
 const submitter = async () => ({ ok: false, code: "UNAVAILABLE" });
 const run = (state: DirectoryState, ...events: DirectoryEvent[]) => events.reduce(directoryReducer, state);
+const submit: DirectoryEvent = { type: "submit", requestId: "6f1d2c3b-4a59-4e68-9f70-8a1b2c3d4e5f" };
 const find = (directory: PlatformDirectory, id: string) => directory.members.find((member) => member.id === id)!;
 
 function directoryView(directory: PlatformDirectory, overrides: Partial<MemberDirectoryViewProps> = {}) {
@@ -129,7 +130,7 @@ describe("ADMIN view", () => {
 
 describe("USER and unwired states", () => {
   it("renders no directory, controls or audit for a USER viewer", () => {
-    const html = render(createElement(PlatformRolesSection, { directory: { viewer: userViewer, members: ownerDirectory().members.map((member) => ({ ...member, isViewer: member.id === userViewer.id })), totalMembers: 5 }, audit: auditFeed(), onChangeRole: submitter }));
+    const html = render(createElement(PlatformRolesSection, { directory: { viewer: userViewer, members: ownerDirectory().members.map((member) => ({ ...member, isViewer: member.id === userViewer.id })), totalMembers: 5, generatedAt: "2026-11-02T08:00:00.000Z" }, audit: auditFeed(), onChangeRole: submitter }));
     expect(text(html)).toContain("没有平台管理权限");
     expect(html).not.toContain("更改角色");
     expect(html).not.toContain("data-member-id");
@@ -146,7 +147,7 @@ describe("USER and unwired states", () => {
 describe("row feedback", () => {
   const directory = ownerDirectory();
   const userC = find(directory, FIXTURE_IDS.userC);
-  const opened = run(initialDirectoryState(directory.members), { type: "open", member: userC }, { type: "submit" });
+  const opened = run(initialDirectoryState(directory.members), { type: "open", member: userC }, submit);
 
   it("keeps an empty live region on every row", () => {
     const html = directoryView(directory);
@@ -213,7 +214,7 @@ describe("role change dialog", () => {
   });
 
   it("disables the choices and announces saving", () => {
-    const html = dialog(userC, { type: "submit" });
+    const html = dialog(userC, submit);
     expect(html).toContain('aria-busy="true"');
     expect(html).toMatch(/<fieldset[^>]*disabled/);
     expect(text(html)).toContain("正在保存");
@@ -221,14 +222,14 @@ describe("role change dialog", () => {
   });
 
   it("lets a retryable failure be confirmed again", () => {
-    const html = dialog(userC, { type: "submit" }, { type: "resolved", outcome: { ok: false, code: "UNAVAILABLE" } });
+    const html = dialog(userC, submit, { type: "resolved", outcome: { ok: false, code: "UNAVAILABLE" } });
     expect(html).toContain('role="alert"');
     expect(text(html)).toContain("暂时无法保存");
     expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*type="submit"/);
   });
 
   it("blocks confirming after a conflict and offers the latest state", () => {
-    const html = dialog(userC, { type: "submit" }, { type: "resolved", outcome: { ok: false, code: "ROLE_CONFLICT", currentRole: "ADMIN" } });
+    const html = dialog(userC, submit, { type: "resolved", outcome: { ok: false, code: "ROLE_CONFLICT", currentRole: "ADMIN" } });
     expect(html).toContain('role="alert"');
     expect(text(html)).toContain("刷新最新状态");
     expect(text(html)).toContain(" 关闭 ");
@@ -236,8 +237,8 @@ describe("role change dialog", () => {
   });
 
   it("explains a forbidden result and an expired session", () => {
-    expect(text(dialog(userC, { type: "submit" }, { type: "resolved", outcome: { ok: false, code: "FORBIDDEN" } }))).toContain("你的权限已变化");
-    expect(dialog(userC, { type: "submit" }, { type: "resolved", outcome: { ok: false, code: "UNAUTHENTICATED" } })).toContain('href="/login?next=%2Fadmin"');
+    expect(text(dialog(userC, submit, { type: "resolved", outcome: { ok: false, code: "FORBIDDEN" } }))).toContain("你的权限已变化");
+    expect(dialog(userC, submit, { type: "resolved", outcome: { ok: false, code: "UNAUTHENTICATED" } })).toContain('href="/login?next=%2Fadmin"');
   });
 
   it("says the member changed under the dialog", () => {

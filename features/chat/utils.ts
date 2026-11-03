@@ -62,8 +62,8 @@ export function startOfUtcDay(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
-export function hasReachedDailyMessageLimit(role: "ADMIN" | "USER", count: number, limit: number) {
-  return role !== "ADMIN" && count >= limit;
+export function hasReachedDailyMessageLimit(role: "OWNER" | "ADMIN" | "USER", count: number, limit: number) {
+  return role === "USER" && count >= limit;
 }
 
 export function encodeChatSse(event: string, data: unknown) {

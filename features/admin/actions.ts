@@ -1,48 +1,48 @@
 "use server";
 
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
-
+import { roleChangeInputSchema, type PlatformRole, type RoleChangeErrorCode } from "@/features/admin/role-contract";
+import { changePlatformRole, SafeRoleUpdateError } from "@/features/admin/role-service";
 import { requireAdmin } from "@/lib/auth/session";
 import { prisma } from "@/lib/database/prisma";
 
-const updateRoleSchema = z.object({
-  profileId: z.string().uuid(),
-  role: z.enum(["ADMIN", "USER"]),
-});
+export type AdminRoleActionResult =
+  | { ok: true; changed: boolean; member: { id: string; platformRole: PlatformRole; roleVersion: string } }
+  | { ok: false; code: RoleChangeErrorCode; currentRole?: PlatformRole; currentVersion?: string; reason?: "SELF" | "OWNER_PROTECTED" };
 
-export interface AdminRoleActionState {
-  status: "idle" | "success" | "error";
-  message: string;
-}
-
-class SafeRoleUpdateError extends Error {}
-
-export async function updateAdminRoleAction(
-  _previous: AdminRoleActionState,
-  formData: FormData,
-): Promise<AdminRoleActionState> {
-  const { user } = await requireAdmin();
-  const parsed = updateRoleSchema.safeParse({ profileId: formData.get("profileId"), role: formData.get("role") });
-  if (!parsed.success) return { status: "error", message: "角色请求无效，请刷新后重试。" };
-  if (parsed.data.profileId === user.id) return { status: "error", message: "当前管理员不能修改自己的角色。" };
-
+export async function updateAdminRoleAction(input: unknown): Promise<AdminRoleActionResult> {
+  let user: Awaited<ReturnType<typeof requireAdmin>>["user"];
   try {
-    await prisma.$transaction(async (transaction) => {
-      const target = await transaction.profile.findUnique({ where: { id: parsed.data.profileId }, select: { role: true } });
-      if (!target) throw new SafeRoleUpdateError("目标用户不存在或已被删除。");
-      if (target.role === parsed.data.role) return;
-      if (target.role === "ADMIN" && parsed.data.role === "USER") {
-        const admins = await transaction.profile.count({ where: { role: "ADMIN" } });
-        if (admins <= 1) throw new SafeRoleUpdateError("至少需要保留一名管理员。" );
-      }
-      await transaction.profile.update({ where: { id: parsed.data.profileId }, data: { role: parsed.data.role } });
-    }, { isolationLevel: "Serializable" });
+    ({ user } = await requireAdmin());
   } catch (error) {
-    if (error instanceof SafeRoleUpdateError) return { status: "error", message: error.message };
-    return { status: "error", message: "角色更新失败；没有更改任何权限。" };
+    // Preserve framework navigation, while never returning database details.
+    if (typeof error === "object" && error !== null && "digest" in error &&
+        typeof error.digest === "string" && (error.digest.startsWith("NEXT_REDIRECT") || error.digest.startsWith("NEXT_HTTP_ERROR_FALLBACK"))) throw error;
+    throw new Error("Role update outcome could not be confirmed.");
   }
+  const parsed = roleChangeInputSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, code: "INVALID_REQUEST" };
 
-  revalidatePath("/admin");
-  return { status: "success", message: parsed.data.role === "ADMIN" ? "已授予管理员角色。" : "已调整为普通用户。" };
+  let result: Awaited<ReturnType<typeof changePlatformRole>>;
+  try {
+    result = await changePlatformRole(prisma, user.id, parsed.data);
+  } catch (error) {
+    if (error instanceof SafeRoleUpdateError) return { ok: false, code: error.code, ...error.details };
+    // These transaction failures are known to have aborted. A concurrent duplicate
+    // request ID may first hit P2002; retrying reads the winning receipt.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2034" || error.code === "P2002")) {
+      return { ok: false, code: "UNAVAILABLE" };
+    }
+    // In particular, a lost commit acknowledgement is not a proven rollback.
+    // Do not expose the original exception; the caller maps a throw to UNKNOWN_OUTCOME.
+    throw new Error("Role update outcome could not be confirmed.");
+  }
+  try {
+    revalidatePath("/admin");
+  } catch {
+    // The transaction already committed, but the caller has not received its result.
+    throw new Error("Role update outcome could not be confirmed.");
+  }
+  return { ok: true, ...result };
 }

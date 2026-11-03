@@ -20,17 +20,24 @@ export const PLATFORM_ROLE_SUMMARY: Record<PlatformRole, string> = {
 
 export const PLATFORM_VS_PROJECT_NOTE = "平台角色只决定能否进入系统管理。项目中的「项目所有者」等角色只在该项目内有效，不会带来平台管理权限。";
 
-export function viewerCapabilityLines(viewer: PlatformViewer) {
+/** Which server endpoints this page actually has wired. A capability without one cannot be used yet. */
+export interface ViewerConnections {
+  roleChanges: boolean;
+  roleAudit: boolean;
+}
+
+export function viewerCapabilityLines(viewer: PlatformViewer, connected: ViewerConnections = { roleChanges: true, roleAudit: true }) {
+  const { manageRoles, viewRoleAudit } = viewer.capabilities;
   return [
     {
       key: "manageRoles",
-      allowed: viewer.capabilities.manageRoles,
-      label: viewer.capabilities.manageRoles ? "可以调整平台角色，每位用户可做的调整以该行显示为准" : "不能调整平台角色",
+      allowed: manageRoles && connected.roleChanges,
+      label: !manageRoles ? "不能调整平台角色" : connected.roleChanges ? "可以调整平台角色，每位用户可做的调整以该行显示为准" : "有权调整平台角色，但角色调整入口暂未接入",
     },
     {
       key: "viewRoleAudit",
-      allowed: viewer.capabilities.viewRoleAudit,
-      label: viewer.capabilities.viewRoleAudit ? "可以查看角色变更记录" : "不能查看角色变更记录",
+      allowed: viewRoleAudit && connected.roleAudit,
+      label: !connected.roleAudit ? "角色变更记录暂未接入" : viewRoleAudit ? "可以查看角色变更记录" : "不能查看角色变更记录",
     },
   ] as const;
 }

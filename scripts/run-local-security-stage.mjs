@@ -9,7 +9,7 @@ import { PrismaClient } from "@prisma/client";
 const require = createRequire(import.meta.url);
 const root = process.cwd();
 const mode = process.argv[2];
-if (!["migrate", "registry", "registry-migrations", "integration", "all-real", "metadata", "cleanup", "migrations-clean", "migrations-incremental", "migrations-rollback-all"].includes(mode) || !process.argv[3]) {
+if (!["migrate", "registry", "registry-migrations", "integration", "all-real", "metadata", "cleanup", "migrations-clean", "migrations-incremental", "migrations-rollback-all", "owner-privacy", "rbac-database", "rbac-transactions", "rbac-chain"].includes(mode) || !process.argv[3]) {
   throw new Error("Usage: node scripts/run-local-security-stage.mjs <migrate|integration|all-real|metadata|cleanup> <isolated-workdir>");
 }
 const isolated = realpathSync(resolve(process.argv[3]));
@@ -41,6 +41,7 @@ const env = { ...process.env,
   ALLOW_TEST_DATABASE_MUTATIONS: "true", TEST_DATABASE_CONFIRMED_NON_PRODUCTION: "true", REQUIRE_SECURITY_TEST_DATABASE: "true",
   SUPABASE_TEST_URL: status.API_URL, SUPABASE_TEST_ANON_KEY: status.ANON_KEY, SUPABASE_TEST_SERVICE_ROLE_KEY: status.SERVICE_ROLE_KEY,
   NEXT_PUBLIC_SUPABASE_URL: status.API_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY: status.ANON_KEY, SUPABASE_SERVICE_ROLE_KEY: status.SERVICE_ROLE_KEY,
+  RBAC_DISPOSABLE_DESTROY_AFTER_TEST: "true",
 };
 mkdirSync(resolve("test-results"), { recursive: true });
 if (mode === "metadata") {
@@ -64,6 +65,10 @@ if (mode === "metadata") {
     : mode === "registry" ? [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "tests/integration/registry.integration.test.ts", "--reporter=default"]
     : mode.startsWith("migrations-") ? ["scripts/verify-security-migrations.mjs",mode.slice("migrations-".length)]
     : mode === "integration" ? ["scripts/run-security-integration.mjs"]
+    : mode === "owner-privacy" ? ["scripts/verify-platform-owner-privacy.mjs"]
+    : mode === "rbac-database" ? [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "tests/integration/platform-rbac-database.integration.test.ts", "--reporter=default"]
+    : mode === "rbac-transactions" ? ["--conditions=react-server", "--import", "tsx", "scripts/test-rbac-disposable.mts"]
+    : mode === "rbac-chain" ? ["scripts/test-rbac-action-chain-disposable.mjs"]
     : mode === "cleanup" ? ["--conditions=react-server", "--import", "tsx", "scripts/cleanup-tool-assets.ts"]
       : [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "--no-file-parallelism", "--reporter=json", "--outputFile=test-results/local-stage-all-real.json"];
   const result = spawnSync(process.execPath, args, { cwd: root, env, encoding: "utf8", windowsHide: true, maxBuffer: 32 * 1024 * 1024 });

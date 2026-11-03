@@ -108,6 +108,20 @@ jobs:
       - name: Run all discovered real database, JWT and PostgREST suites
         run: pnpm test:integration
 
+      # Run after the database suites: this fixture intentionally leaves the protected OWNER in this disposable instance.
+      - name: Verify platform role transaction concurrency and replay
+        env:
+          RBAC_DISPOSABLE_DESTROY_AFTER_TEST: "true"
+        run: node --conditions=react-server --import tsx scripts/test-rbac-disposable.mts
+
+      # Final database stage: resets the disposable database, verifies the OWNER bootstrap runbook
+      # and OWNER JWT isolation, resets again, then runs the real role-change Server Action and
+      # /admin loader chain with OWNER, ADMIN and USER sessions. Leaves protected OWNER fixtures.
+      - name: Verify platform role request chain and OWNER isolation
+        env:
+          RBAC_DISPOSABLE_DESTROY_AFTER_TEST: "true"
+        run: node scripts/test-rbac-action-chain-disposable.mjs
+
       - name: Run static quality gates
         run: |
           pnpm lint

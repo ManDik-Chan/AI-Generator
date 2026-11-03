@@ -8,9 +8,9 @@ import { z } from "zod";
  * renders these fields as-is and never derives a permission from role names. It may only show
  * less than the server allows (fail closed), never more.
  *
- * Status: proposed by the frontend for P1-RBAC. Codex owns the backend contract; once it is
- * published, its payloads are mapped onto these schemas in one adapter. The field-by-field
- * requirements are in docs/handoffs/2026-11-02-claude-p1-rbac-ui.md.
+ * The backend payloads are mapped onto these schemas in one adapter (rbac/server-directory.ts).
+ * The role-change result follows the final backend contract in
+ * docs/handoffs/2026-11-02-platform-rbac-final-contract.md.
  */
 
 export const PLATFORM_ROLES = ["OWNER", "ADMIN", "USER"] as const;
@@ -65,8 +65,12 @@ export const platformMemberSchema = z
     email: z.string().min(1),
     displayName: z.string().nullable(),
     platformRole: platformRoleSchema,
-    /** Opaque token that changes whenever this member's role changes; sent back for conflict detection. */
-    roleVersion: z.string().min(1),
+    /**
+     * Opaque token that changes whenever this member's role changes; sent back for conflict
+     * detection. Null when the server does not provide one: such a member is never offered a
+     * change, because the request could not carry the version the server must check.
+     */
+    roleVersion: z.string().min(1).nullable(),
     joinedAt: isoDateTime,
     isViewer: z.boolean(),
     roleChange: z.object({
@@ -88,6 +92,9 @@ export const platformMemberSchema = z
     if (assignableRoles.length > 0 && restriction !== null) {
       context.addIssue({ code: "custom", message: "a member with assignable roles cannot also be restricted", path: ["roleChange", "restriction"] });
     }
+    if (assignableRoles.length > 0 && member.roleVersion === null) {
+      context.addIssue({ code: "custom", message: "a member offered a role change needs a roleVersion for conflict detection", path: ["roleVersion"] });
+    }
   });
 export type PlatformMember = z.infer<typeof platformMemberSchema>;
 
@@ -97,6 +104,11 @@ export const platformDirectorySchema = z
     members: z.array(platformMemberSchema),
     /** All members on the platform; `members` may be a recent subset. */
     totalMembers: count,
+    /**
+     * When the server built this snapshot. The directory can receive snapshots from a page render
+     * and from the directory loader action; it keeps the newest and ignores one that arrives late.
+     */
+    generatedAt: isoDateTime,
   })
   .superRefine((directory, context) => {
     const ids = new Set<string>();
@@ -120,13 +132,34 @@ export interface RoleChangeRequest {
   /** The roleVersion the viewer saw. */
   expectedVersion: string;
   nextRole: PlatformRole;
+  /**
+   * Idempotency key the backend requires: a new UUID for every new intent, reused unchanged when
+   * the same intent is retried, so a retried request can never apply twice.
+   */
+  requestId: string;
 }
 
-/** What the page hands the role screens: Codex's server action (or nothing, which disables changes). */
+/** What the page hands the role screens: the role-change Server Action (or nothing, which disables changes). */
 export type RoleChangeSubmitter = (request: RoleChangeRequest) => Promise<unknown>;
+
+/** The directory loader Server Action: a fresh, parsed snapshot for the signed-in viewer. */
+export type DirectoryLoader = () => Promise<unknown>;
+
+const directoryLoadResultSchema = z.union([
+  z.object({ ok: z.literal(true), directory: platformDirectorySchema }),
+  z.object({ ok: z.literal(false) }),
+]);
+
+/** A loader result the directory can apply, or null when it is unusable (the caller keeps what it shows). */
+export function interpretDirectoryLoad(raw: unknown): PlatformDirectory | null {
+  const parsed = directoryLoadResultSchema.safeParse(raw);
+  return parsed.success && parsed.data.ok ? parsed.data.directory : null;
+}
 
 const roleChangeSuccessSchema = z.object({
   ok: z.literal(true),
+  /** False when the server found this exact request already applied (a replay). */
+  changed: z.boolean(),
   member: z.object({ id: z.uuid(), platformRole: platformRoleSchema, roleVersion: z.string().min(1) }),
 });
 const roleChangeFailureSchema = z.object({
@@ -184,6 +217,8 @@ export const parseRoleAuditFeed = (input: unknown) => toParse(roleAuditFeedSchem
  * Turns whatever the role-change action returned into an outcome. A success that does not
  * describe the member and role that were requested is not trusted: the UI cannot tell what
  * happened, so it reports CONTRACT_MISMATCH and asks for a refresh instead of guessing.
+ * The UI only requests real changes, so a confirmed member is never still at the version the
+ * request was based on; a success claiming that is not trusted either.
  */
 export function interpretRoleChangeResult(request: RoleChangeRequest, raw: unknown): RoleChangeOutcome {
   const parsed = roleChangeResultSchema.safeParse(raw);
@@ -197,14 +232,14 @@ export function interpretRoleChangeResult(request: RoleChangeRequest, raw: unkno
       ...(result.retryAfterSeconds ? { retryAfterSeconds: result.retryAfterSeconds } : {}),
     };
   }
-  if (result.member.id !== request.profileId || result.member.platformRole !== request.nextRole) {
+  if (result.member.id !== request.profileId || result.member.platformRole !== request.nextRole || result.member.roleVersion === request.expectedVersion) {
     return { ok: false, code: "CONTRACT_MISMATCH" };
   }
   return { ok: true, member: result.member };
 }
 
 /** Next.js signals redirects and not-found through thrown errors; those must keep propagating. */
-function isFrameworkNavigation(error: unknown) {
+export function isFrameworkNavigation(error: unknown) {
   if (typeof error !== "object" || error === null || !("digest" in error)) return false;
   const digest = (error as { digest: unknown }).digest;
   return typeof digest === "string" && (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK") || digest === "NEXT_NOT_FOUND");

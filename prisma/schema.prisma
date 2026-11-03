@@ -9,8 +9,34 @@ datasource db {
 }
 
 enum Role {
+  OWNER
   ADMIN
   USER
+}
+
+model PlatformRoleAudit {
+  id        String   @id @default(uuid()) @db.Uuid
+  actorId   String   @map("actor_id") @db.Uuid
+  targetId  String   @map("target_id") @db.Uuid
+  oldRole   Role     @map("old_role")
+  newRole   Role     @map("new_role")
+  requestId String   @unique @map("request_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("platform_role_audits")
+}
+
+model PlatformRoleRequest {
+  requestId       String  @id @map("request_id") @db.Uuid
+  actorId         String  @map("actor_id") @db.Uuid
+  targetId        String  @map("target_id") @db.Uuid
+  expectedRole    Role    @map("expected_role")
+  expectedVersion Int?    @map("expected_version")
+  nextRole        Role    @map("next_role")
+  resultVersion   Int?    @map("result_version")
+  changed         Boolean
+
+  @@map("platform_role_requests")
 }
 
 enum MessageRole {
@@ -184,6 +210,7 @@ model Profile {
   displayName   String?  @map("display_name")
   avatarUrl     String?  @map("avatar_url")
   role          Role     @default(USER)
+  roleVersion   Int      @default(0) @map("role_version")
   memoryEnabled Boolean  @default(true) @map("memory_enabled")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)

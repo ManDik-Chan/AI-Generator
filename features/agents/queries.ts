@@ -216,7 +216,7 @@ export async function getAgentUsage(userId: string, dailyLimit: number) {
     prisma.usageLedger.aggregate({ where: { userId, capability: { in: [...AGENT_USAGE_CAPABILITIES] }, createdAt: { gte: startOfUtcDay() } }, _sum: { units: true } }),
   ]);
   const used = usageUnits(aggregate);
-  const unlimited = profile?.role === "ADMIN";
+  const unlimited = (profile?.role === "ADMIN" || profile?.role === "OWNER");
   return { limit: dailyLimit, used, remaining: unlimited ? dailyLimit : Math.max(0, dailyLimit - used), unlimited };
 }
 
