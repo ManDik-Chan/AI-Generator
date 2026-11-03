@@ -51,7 +51,7 @@ describe("Registry read-only mode is isolated from the mock", () => {
   const entries = [
     join(root, "app/developer/registry/layout.tsx"),
     ...walk(join(root, "features/developer-console/registry")).filter((file) => !file.endsWith(".test.ts")),
-    ...["registry-provider", "registry-header", "registry-kit", "registry-workbench", "registry-project", "console-mode-switch"].map((name) => join(root, `features/developer-console/components/${name}.tsx`)),
+    ...["registry-provider", "registry-header", "registry-kit", "registry-workbench", "registry-project", "registry-create", "registry-draft-editor", "console-mode-switch"].map((name) => join(root, `features/developer-console/components/${name}.tsx`)),
   ];
   const graph = reachable(entries);
 
@@ -68,11 +68,11 @@ describe("Registry read-only mode is isolated from the mock", () => {
 
   it("route pages add only the session check and the ID shape check on the server", () => {
     const pages = walk(join(root, "app/developer/registry")).filter((file) => file.endsWith("page.tsx"));
-    expect(pages.map(rel).sort()).toEqual(["app/developer/registry/page.tsx", "app/developer/registry/projects/[projectId]/page.tsx"]);
+    expect(pages.map(rel).sort()).toEqual(["app/developer/registry/page.tsx", "app/developer/registry/projects/[projectId]/draft/page.tsx", "app/developer/registry/projects/[projectId]/page.tsx"]);
     for (const page of pages) {
       const imports = [...readFileSync(page, "utf8").matchAll(/^import\s+(?!type\b)[^"']*["']([^"']+)["']/gm)].map((match) => match[1]);
       expect(imports.every((name) => ["next/navigation", "@/lib/auth/session", "@/features/developer-console/registry/contract"].includes(name)
-        || /^@\/features\/developer-console\/components\/registry-(workbench|project)$/.test(name)), rel(page)).toBe(true);
+        || /^@\/features\/developer-console\/components\/registry-(workbench|project|draft-editor)$/.test(name)), rel(page)).toBe(true);
     }
   });
 

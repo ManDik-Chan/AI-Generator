@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { PageIntro, SectionHead, ToneBadge } from "@/components/platform/primitives";
 import { Mono } from "@/features/developer-console/components/desk-kit";
-import { GateBlock, ListBody, MoreRows, ReadOnlyNotice, RefreshButton, SlotBody } from "@/features/developer-console/components/registry-kit";
+import { CreateProjectPanel } from "@/features/developer-console/components/registry-create";
+import { GateBlock, ListBody, MoreRows, RegistryNotice, RefreshButton, SlotBody } from "@/features/developer-console/components/registry-kit";
 import { useNow, useRegistryOverview } from "@/features/developer-console/components/registry-provider";
 import { formatClock, visibilityLabels } from "@/features/developer-console/labels";
 import { roleLabels } from "@/features/developer-console/permissions";
@@ -16,7 +18,7 @@ import { actionLabel, formatExpiry, orderProjects, orderQualifications } from "@
 export function RegistryWorkbench({ base, mockHref }: { base: string; mockHref: string }) {
   const { snapshot, store } = useRegistryOverview();
   const now = useNow(15_000);
-  return <RegistryWorkbenchView base={base} mockHref={mockHref} now={now} onLoadMore={() => void store.loadMore("projects")} onRefresh={() => void store.refresh()} snapshot={snapshot} />;
+  return <RegistryWorkbenchView base={base} create={<CreateProjectPanel base={base} />} mockHref={mockHref} now={now} onLoadMore={() => void store.loadMore("projects")} onRefresh={() => void store.refresh()} snapshot={snapshot} />;
 }
 
 export function QualificationList({ items, now, empty }: { items: QualificationDTO[]; now: number; empty: string }) {
@@ -38,20 +40,23 @@ export function QualificationList({ items, now, empty }: { items: QualificationD
   );
 }
 
-export function RegistryWorkbenchView({ snapshot, base, mockHref, now, onRefresh, onLoadMore }: {
+export function RegistryWorkbenchView({ snapshot, base, mockHref, now, onRefresh, onLoadMore, create }: {
   snapshot: OverviewSnapshot; base: string; mockHref: string; now: number; onRefresh: () => void; onLoadMore: () => void;
+  /** Create-project panel; shown only once the server has confirmed this account as a live internal operator. */
+  create?: ReactNode;
 }) {
+  const operator = snapshot.qualifications.data !== null && snapshot.qualifications.error === null;
   return (
     <div className="pb-6">
       <PageIntro
         actions={<RefreshButton blockedUntil={snapshot.blockedUntil} lastRefresh={snapshot.lastRefresh} onRefresh={onRefresh} refreshing={snapshot.refreshing} />}
-        description="以你当前登录的身份读取 Registry：你所在的项目、草稿与审核、不可变版本、发布历史与发布申请，以及你自己的平台操作资格。这个模式只读，不提供任何写入命令。"
-        kicker="开发者控制台 · Registry 只读"
+        description="以你当前登录的身份读取 Registry：你所在的项目、草稿与审核、不可变版本、发布历史与发布申请，以及你自己的平台操作资格。有相应资格的内部操作员可以在这里创建项目、编辑并保存草稿。"
+        kicker="开发者控制台 · Registry"
         meta={<ToneBadge dot tone="success">真实数据</ToneBadge>}
         title={["你的 Registry 项目，", "按真实权限读取。"]}
       />
 
-      <ReadOnlyNotice className="mb-14" />
+      <RegistryNotice className="mb-14" />
 
       {snapshot.gate ? <GateBlock gate={snapshot.gate} mockHref={mockHref} returnPath={base} /> : (
         <div className="space-y-20">
@@ -68,6 +73,10 @@ export function RegistryWorkbenchView({ snapshot, base, mockHref, now, onRefresh
               </p>
             </div>
           </section>
+
+          {operator ? create : snapshot.qualifications.status === "error" ? (
+            <p className="text-[.75rem] leading-5 text-muted-foreground" role="note">没有读取到你的平台操作资格，控制台不提供创建项目入口。</p>
+          ) : null}
 
           <section aria-labelledby="rg-projects">
             <SectionHead id="rg-projects" meta={<ToneBadge tone="success">Registry</ToneBadge>}>我的项目</SectionHead>
@@ -91,7 +100,7 @@ export function RegistryWorkbenchView({ snapshot, base, mockHref, now, onRefresh
                         我的角色：{project.roles.map((role) => <ToneBadge key={role} tone={role === "OWNER" ? "ink" : "neutral"}>{roleLabels[role]}</ToneBadge>)}
                       </p>
                       <Link className="group inline-flex h-10 items-center gap-1.5 justify-self-start rounded-full border border-foreground/25 px-4 text-[.8125rem] font-medium transition-colors duration-300 hover:bg-foreground hover:text-background min-[900px]:justify-self-end" href={`${base}/projects/${project.id}`} prefetch={false}>
-                        只读查看<ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-500 ease-out-expo group-hover:translate-x-0.5" />
+                        查看<ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-500 ease-out-expo group-hover:translate-x-0.5" />
                         <span className="sr-only">：/{project.slug}</span>
                       </Link>
                     </li>

@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth/session";
 type Props = { params: Promise<{ projectId: string }> };
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Registry 只读 · 项目" };
+export const metadata: Metadata = { title: "Registry · 项目" };
 
 // The page only checks the ID's shape. Whether the project exists or the user may read it is
 // decided by the read API in the browser, with the user's own Bearer token.

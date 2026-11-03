@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, Lock } from "lucide-react";
+import { useSyncExternalStore } from "react";
+import { ArrowLeft, ArrowRight, Lock, PenLine } from "lucide-react";
 
 import { Kicker, ToneBadge } from "@/components/platform/primitives";
+import { Button } from "@/components/ui/button";
 import { Facts, Mono, Panel } from "@/features/developer-console/components/desk-kit";
-import { ErrorNote, GateBlock, ListBody, MoreRows, ReadOnlyNotice, ReadRow, RefreshButton, SlotBody } from "@/features/developer-console/components/registry-kit";
-import { useNow, useRegistryProject } from "@/features/developer-console/components/registry-provider";
+import { ErrorNote, GateBlock, ListBody, MoreRows, RegistryNotice, ReadRow, RefreshButton, SlotBody } from "@/features/developer-console/components/registry-kit";
+import { useNow, useRegistryProject, useRegistryWriter } from "@/features/developer-console/components/registry-provider";
 import { QualificationList } from "@/features/developer-console/components/registry-workbench";
+import { editAccess, editAccessText } from "@/features/developer-console/registry/write-view";
 import { draftStateMeta, formatClock, formatRemaining, requestStateMeta, reviewStateMeta, visibilityLabels } from "@/features/developer-console/labels";
 import { roleLabels } from "@/features/developer-console/permissions";
 import type { DraftRead, ReleaseRecordDTO } from "@/features/developer-console/registry/contract";
@@ -19,8 +22,12 @@ import {
 export function RegistryProjectDesk({ projectId, base, mockHref }: { projectId: string; base: string; mockHref: string }) {
   const { snapshot, store } = useRegistryProject(projectId);
   const now = useNow();
+  // Only observes the in-memory editor; creating it sends no request.
+  const editor = useRegistryWriter().editor(projectId);
+  const unsaved = useSyncExternalStore(editor.subscribe, () => editor.getSnapshot().dirty || editor.getSnapshot().pending !== null, () => false);
   return (
     <RegistryProjectView
+      unsaved={unsaved}
       base={base}
       mockHref={mockHref}
       now={now}
@@ -58,7 +65,33 @@ function PayloadSummary({ draft }: { draft: DraftRead }) {
   );
 }
 
-function DraftPanel({ snapshot }: { snapshot: ProjectSnapshot }) {
+function EditEntry({ snapshot, base, now, unsaved }: { snapshot: ProjectSnapshot; base: string; now: number; unsaved: boolean }) {
+  const head = snapshot.draftHead.data;
+  if (!head) return null;
+  const access = editAccess(snapshot.project.data, snapshot.project.error, head.state, now);
+  const href = `${base}/projects/${snapshot.projectId}/draft`;
+  if (access.kind === "editable") {
+    return (
+      <div className="mt-6 flex flex-col gap-3 border-t border-border/12 pt-5 min-[640px]:flex-row min-[640px]:items-center min-[640px]:justify-between">
+        <p className="text-[.75rem] leading-5 text-muted-foreground">
+          {unsaved ? <b className="font-medium text-foreground">你有未保存的修改。</b> : null}
+          服务端确认你在本项目有 EDIT_DRAFT，至 {formatClock(access.expiresAt)}。保存时会再次核对。
+        </p>
+        <Button asChild size="sm"><Link href={href} prefetch={false}><PenLine className="size-4" />{unsaved ? "继续编辑" : head.contentHash === null ? "写入第一版内容" : "编辑草稿"}<ArrowRight className="size-3.5" /></Link></Button>
+      </div>
+    );
+  }
+  const text = editAccessText(access);
+  return (
+    <div className="mt-6 border-t border-border/12 pt-5 text-[.75rem] leading-5" role="note">
+      <p className="font-medium">不能编辑 · {text.title}</p>
+      <p className="mt-0.5 text-muted-foreground">{text.detail}</p>
+      {unsaved ? <p className="mt-2"><Link className="link-grow" href={href} prefetch={false}>你有未保存的修改，打开以查看或导出</Link></p> : null}
+    </div>
+  );
+}
+
+function DraftPanel({ snapshot, base, now, unsaved }: { snapshot: ProjectSnapshot; base: string; now: number; unsaved: boolean }) {
   const { draftHead, draft } = snapshot;
   const agreement = draftAgreement(draftHead, draft);
   return (
@@ -94,6 +127,7 @@ function DraftPanel({ snapshot }: { snapshot: ProjectSnapshot }) {
           </div>
         )
       ) : null}
+      <EditEntry base={base} now={now} snapshot={snapshot} unsaved={unsaved} />
     </Panel>
   );
 }
@@ -259,19 +293,21 @@ function ReleasePanel({ snapshot, now, onMore }: { snapshot: ProjectSnapshot; no
   );
 }
 
-function ReadOnlyCommands({ snapshot, now }: { snapshot: ProjectSnapshot; now: number }) {
+function WriteCommands({ snapshot, now }: { snapshot: ProjectSnapshot; now: number }) {
   const granted = new Map((snapshot.project.data?.effectiveActions ?? []).map((item) => [item.action, item.expiresAt]));
   return (
     <section aria-labelledby="rg-commands" className="rounded-card bg-surface p-5">
-      <h2 className="flex items-center gap-2 text-sm font-medium" id="rg-commands"><Lock aria-hidden="true" className="size-4" />写入命令 · 不可用</h2>
-      <p className="mt-1 text-[.6875rem] leading-4 text-muted-foreground">Registry 还没有内部 HTTP 写接口，这个模式也不会模拟写入成功。下面只对照你在本项目的读取时资格。</p>
+      <h2 className="flex items-center gap-2 text-sm font-medium" id="rg-commands"><Lock aria-hidden="true" className="size-4" />写入命令</h2>
+      <p className="mt-1 text-[.6875rem] leading-4 text-muted-foreground">这个控制台只提供保存草稿一项项目内写入（另有创建项目）。其余命令还没有内部 HTTP 写接口，这里也不会模拟成功。下面对照你在本项目的读取时资格。</p>
       <ul className="mt-3 text-[.75rem]">
         {WRITE_ACTIONS.map((action) => {
           const expiresAt = granted.get(action);
           return (
             <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 border-b border-border/12 py-1.5 last:border-b-0" key={action}>
               <span className="min-w-0">{actionLabel(action)}</span>
-              <span className="text-right text-muted-foreground">{expiresAt && Date.parse(expiresAt) > now ? "有资格 · 不可执行" : "无资格 · 不可执行"}</span>
+              <span className="text-right text-muted-foreground">{action === "EDIT_DRAFT"
+                ? (expiresAt && Date.parse(expiresAt) > now ? "有资格 · 可在草稿中保存" : "无资格")
+                : expiresAt && Date.parse(expiresAt) > now ? "有资格 · 本控制台不提供" : "无资格 · 本控制台不提供"}</span>
             </li>
           );
         })}
@@ -280,8 +316,10 @@ function ReadOnlyCommands({ snapshot, now }: { snapshot: ProjectSnapshot; now: n
   );
 }
 
-export function RegistryProjectView({ snapshot, base, mockHref, now, onRefresh, onLoadMore }: {
+export function RegistryProjectView({ snapshot, base, mockHref, now, onRefresh, onLoadMore, unsaved = false }: {
   snapshot: ProjectSnapshot; base: string; mockHref: string; now: number; onRefresh: () => void; onLoadMore: (key: ProjectListKey) => void;
+  /** The in-memory draft editor for this project holds unsaved edits or an unresolved save. */
+  unsaved?: boolean;
 }) {
   const project = snapshot.project;
   const slug = project.data?.slug;
@@ -296,18 +334,18 @@ export function RegistryProjectView({ snapshot, base, mockHref, now, onRefresh, 
 
       <header className="flex flex-col gap-5 pb-8 min-[1024px]:flex-row min-[1024px]:items-end min-[1024px]:justify-between">
         <div className="min-w-0">
-          <Kicker>Registry 只读 · Project</Kicker>
+          <Kicker>Registry · Project</Kicker>
           <h1 className="mt-3 break-all text-[clamp(2rem,4.2vw,3.5rem)] font-medium leading-[1.05] tracking-[-.04em]">{slug ? `/${slug}` : "项目"}</h1>
           <p className="mt-3 flex flex-wrap items-center gap-2 text-[.75rem]">
             <Mono className="text-muted-foreground">{snapshot.projectId}</Mono>
             {project.data ? <ToneBadge tone={visibilityLabels[project.data.visibility].tone}>{visibilityLabels[project.data.visibility].label}</ToneBadge> : null}
-            <ToneBadge dot tone="success">Registry · 只读</ToneBadge>
+            <ToneBadge dot tone="success">Registry · 真实数据</ToneBadge>
           </p>
         </div>
         <RefreshButton blockedUntil={snapshot.blockedUntil} lastRefresh={snapshot.lastRefresh} onRefresh={onRefresh} refreshing={snapshot.refreshing} />
       </header>
 
-      <ReadOnlyNotice className="mb-6" />
+      <RegistryNotice className="mb-6" />
 
       {snapshot.gate ? <GateBlock gate={snapshot.gate} mockHref={mockHref} returnPath={returnPath} /> : missing ? (
         <ErrorNote error={project.error!} scope="draft" />
@@ -332,14 +370,14 @@ export function RegistryProjectView({ snapshot, base, mockHref, now, onRefresh, 
                 )}
               </SlotBody>
             </Panel>
-            <DraftPanel snapshot={snapshot} />
+            <DraftPanel base={base} now={now} snapshot={snapshot} unsaved={unsaved} />
             <ReviewsPanel now={now} onMore={() => onLoadMore("reviews")} snapshot={snapshot} />
             <VersionsPanel onMore={() => onLoadMore("versions")} snapshot={snapshot} />
             <ReleasePanel now={now} onMore={onLoadMore} snapshot={snapshot} />
           </div>
 
-          <aside aria-label="只读模式与读取记录" className="space-y-0.5 min-[1180px]:sticky min-[1180px]:top-[calc(var(--shell-header-height,4rem)+1rem)] min-[1180px]:max-h-[calc(100dvh-var(--shell-header-height,4rem)-2rem)] min-[1180px]:self-start min-[1180px]:overflow-y-auto">
-            <ReadOnlyCommands now={now} snapshot={snapshot} />
+          <aside aria-label="写入命令与读取记录" className="space-y-0.5 min-[1180px]:sticky min-[1180px]:top-[calc(var(--shell-header-height,4rem)+1rem)] min-[1180px]:max-h-[calc(100dvh-var(--shell-header-height,4rem)-2rem)] min-[1180px]:self-start min-[1180px]:overflow-y-auto">
+            <WriteCommands now={now} snapshot={snapshot} />
             <section aria-labelledby="rg-reads" className="rounded-card bg-surface p-5">
               <h2 className="text-sm font-medium" id="rg-reads">读取记录</h2>
               <p className="mt-1 text-[.6875rem] leading-4 text-muted-foreground">每个 GET 单独鉴权、单独成功或失败；多次读取之间不是同一个快照。只有草稿、审核与发布头携带 ETag。</p>

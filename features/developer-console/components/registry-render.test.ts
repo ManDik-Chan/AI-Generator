@@ -1,5 +1,5 @@
 /*
- * Server-renders the Registry read-only screens from real store snapshots (fake fetch). Local
+ * Server-renders the Registry screens from real store snapshots (fake fetch). Local
  * browser automation is paused (AGENTS.md); this checks content, states and controls, not layout.
  */
 import { createElement } from "react";
@@ -38,12 +38,12 @@ async function project(changes: Record<string, FakeResponse> = {}) {
 }
 function expectRealAndClean(html: string) {
   expect(text(html)).not.toMatch(/\bundefined\b|\bNaN\b|\[object Object\]/);
-  expect(html).toContain("Registry 只读");
+  expect(html).toContain("Registry 真实数据");
   expect(html).not.toContain("Mock 数据源");
   for (const name of mockNames) expect(html).not.toContain(name);
 }
 
-describe("Registry read-only screens", () => {
+describe("Registry screens", () => {
   it("overview lists own qualifications by action and projects linked by ID", async () => {
     const html = await overview();
     expectRealAndClean(html);
@@ -71,7 +71,7 @@ describe("Registry read-only screens", () => {
     expect(html).toContain(`href="/login?next=${encodeURIComponent(base)}"`);
   });
 
-  it("project view orders lists by time, binds hashes and offers no write control", async () => {
+  it("project view orders lists by time, binds hashes and has no inline write control", async () => {
     const html = await project();
     expectRealAndClean(html);
     const plain = text(html);
@@ -88,9 +88,12 @@ describe("Registry read-only screens", () => {
     expect(plain).toContain("当前发布的版本");
     expect(html).toContain(draftRead.contentHash);
     expect(html).toContain(`&quot;draft:${DRAFT}:3&quot;`);
-    expect((plain.match(/不可执行/g) ?? []).length).toBe(12);
-    expect(plain).toContain("编辑草稿 有资格 · 不可执行");
-    expect(plain).toContain("发布 无资格 · 不可执行");
+    expect((plain.match(/本控制台不提供/g) ?? []).length).toBe(11);
+    expect(plain).toContain("编辑草稿 有资格 · 可在草稿中保存");
+    expect(plain).toContain("发布 无资格 · 本控制台不提供");
+    // The fixture draft is IN_REVIEW: EDIT_DRAFT is granted, but the state forbids editing, so no edit link.
+    expect(plain).toContain("不能编辑 · 草稿当前不可编辑");
+    expect(html).not.toContain(`${base}/projects/${PROJECT}/draft"`);
     // The only control is the refresh button: no form, no command button.
     expect(html.match(/<button/g) ?? []).toHaveLength(1);
     expect(html).toContain("重新读取");
@@ -153,7 +156,7 @@ describe("console headers state the data source", () => {
     expect(signedIn).toContain(`href="${base}"`);
     expect(signedIn).toContain("模拟身份");
     const publicDemo = renderToStaticMarkup(createElement(ConsoleProvider, null, createElement(ConsoleHeader, { base: "/platform/developer" })));
-    expect(publicDemo).not.toContain("Registry 只读");
+    expect(publicDemo).not.toContain("/developer/registry");
   });
 
   it("mock screens cannot render outside their provider, so the Registry routes cannot show mock data", () => {

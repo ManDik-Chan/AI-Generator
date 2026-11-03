@@ -12,13 +12,13 @@ import type { ListSlot, Slot } from "@/features/developer-console/registry/store
 import { readErrorText, statusText, type ReadScope } from "@/features/developer-console/registry/view";
 import { cn } from "@/lib/utils";
 
-/** Fixed notice on every Registry screen: real data, read-only, no fallback. */
-export function ReadOnlyNotice({ className }: { className?: string }) {
+/** Fixed notice on every Registry screen: real data, two writes only, no fallback. */
+export function RegistryNotice({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-start gap-2 rounded-card bg-surface px-4 py-3 text-xs leading-5 text-muted-foreground", className)} role="note">
       <Lock aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-foreground" />
       <p>
-        <b className="font-medium text-foreground">Registry 只读</b> · 以你当前登录的身份通过内部 GET 接口读取真实数据。编辑、审核、封存、发布、撤回、回滚与资产操作在这个模式下都不可用，控制台不会发送任何写请求；读取失败时显示真实错误，不会改用示例数据。
+        <b className="font-medium text-foreground">Registry 真实数据</b> · 以你当前登录的身份通过内部接口读写。只提供两项写入：创建项目、保存完整草稿，每次都由服务端按你的实时资格判定。审核、封存、发布、撤回、回滚与资产操作在这里都不可用；读取或写入失败时显示真实结果，不会改用示例数据，也不会显示为成功。
       </p>
     </div>
   );

@@ -4,7 +4,7 @@ import { RegistryWorkbench } from "@/features/developer-console/components/regis
 import { requireUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "开发者控制台 · Registry 只读" };
+export const metadata: Metadata = { title: "开发者控制台 · Registry" };
 
 export default async function DeveloperRegistryPage() {
   await requireUser();
