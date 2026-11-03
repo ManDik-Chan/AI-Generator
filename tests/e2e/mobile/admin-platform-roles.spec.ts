@@ -107,8 +107,18 @@ function redirectTargetOf(response: APIResponse) {
  * state hook's pending lanes, and whether one more refresh commits. It changes no app behavior.
  */
 function installReactCommitProbe() {
-  const probe = { commits: 0, roots: new Set<unknown>() };
+  const probe = { commits: 0, roots: new Set<unknown>(), wakeables: [] as unknown[] };
   Object.defineProperty(window, "__aigCommitProbe", { value: probe });
+  // React keys root.pingCache (a WeakMap) by each promise a suspended render waits on, with a Set of
+  // lanes as the value. Remember those promises so a stalled root can say what it is waiting for.
+  const setEntry = WeakMap.prototype.set;
+  WeakMap.prototype.set = function recordWakeable(this: WeakMap<object, unknown>, key: object, value: unknown) {
+    if (value instanceof Set && typeof (key as { then?: unknown }).then === "function" && !probe.wakeables.includes(key)) {
+      probe.wakeables.push(key);
+      if (probe.wakeables.length > 128) probe.wakeables.shift();
+    }
+    return setEntry.call(this, key, value);
+  };
   if ("__REACT_DEVTOOLS_GLOBAL_HOOK__" in window) return;
   let renderers = 0;
   Object.defineProperty(window, "__REACT_DEVTOOLS_GLOBAL_HOOK__", {
@@ -133,8 +143,8 @@ async function collectStallDiagnostics(page: Page) {
     type QueuedAction = { payload?: { type?: string }; discarded?: boolean; next?: QueuedAction | null } | null;
     type ActionQueue = { pending?: QueuedAction; last?: QueuedAction; needsRefresh?: boolean };
     type Fiber = { memoizedState?: unknown; memoizedProps?: unknown; lanes?: number; child?: Fiber | null; sibling?: Fiber | null };
-    type Root = { current: Fiber; pendingLanes: number; suspendedLanes: number; pingedLanes: number; entangledLanes: number; expiredLanes: number; callbackNode: unknown; callbackPriority: number };
-    const probe = (window as unknown as { __aigCommitProbe?: { commits: number; roots: Set<Root> } }).__aigCommitProbe;
+    type Root = { current: Fiber; pendingLanes: number; suspendedLanes: number; pingedLanes: number; entangledLanes: number; expiredLanes: number; callbackNode: unknown; callbackPriority: number; pingCache?: WeakMap<object, Set<number>> | null };
+    const probe = (window as unknown as { __aigCommitProbe?: { commits: number; roots: Set<Root>; wakeables: object[] } }).__aigCommitProbe;
     const router = (window as unknown as { next?: { router?: { refresh?: () => void } } }).next?.router;
     const bits = (lanes: number) => (lanes >>> 0).toString(2);
     const isThenable = (value: unknown) => typeof value === "object" && value !== null && typeof (value as { then?: unknown }).then === "function";
@@ -209,13 +219,25 @@ async function collectStallDiagnostics(page: Page) {
       }
       return null;
     };
+    // The promises this root's suspended lanes still wait on, and what kind of promise each one is.
+    const waitingOn = (root: Root) => (probe?.wakeables ?? []).filter((wakeable) => root.pingCache?.has(wakeable)).map((wakeable) => {
+      const then = (wakeable as { then: unknown }).then;
+      return {
+        lanes: [...(root.pingCache!.get(wakeable) ?? [])].map(bits),
+        nativePromise: Object.prototype.toString.call(wakeable) === "[object Promise]",
+        status: String((wakeable as { status?: unknown }).status ?? "untracked"),
+        ownKeys: Object.keys(wakeable).slice(0, 8),
+        then: typeof then === "function" ? Function.prototype.toString.call(then).replace(/\s+/g, " ").slice(0, 160) : String(then),
+      };
+    });
     const snapshot = () => ({
       commits: probe?.commits ?? null,
+      wakeablesSeen: probe?.wakeables.length ?? null,
       admins: document.querySelector('[aria-label="系统概览"]')?.textContent?.match(/\d+ 名管理员/)?.[0] ?? null,
       roots: [...(probe?.roots ?? [])].map((root) => ({
         pending: bits(root.pendingLanes), suspended: bits(root.suspendedLanes), pinged: bits(root.pingedLanes),
         entangled: bits(root.entangledLanes), expired: bits(root.expiredLanes),
-        scheduled: root.callbackNode !== null, callbackPriority: root.callbackPriority, routerHook: routerHook(root),
+        scheduled: root.callbackNode !== null, callbackPriority: root.callbackPriority, waitingOn: waitingOn(root), routerHook: routerHook(root),
       })),
     });
     const before = snapshot();
