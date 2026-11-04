@@ -47,4 +47,12 @@ COMMIT;
 
 生产前先验证备份可恢复及迁移工具状态。若绑定误操作或 OWNER 身份丢失，停止应用和 Auth 管理写入，保存数据库和审计快照，由 Owner 单独批准的多人复核恢复流程处理；不要让日常应用账户禁用触发器或绕过唯一索引。恢复需要数据库超级权限，需记录具体执行者、UUID、审批、每项变更并事后核对审计。触发器保护 Auth 删除、封禁和软删除，也会阻止直接删除 OWNER profile；绕过或重建这些保护必须在隔离环境先演练，并在重新开放服务前验证。当前版本不提供 OWNER 转移脚本。
 
+从 Supabase 逻辑备份（`supabase db dump` 的 roles / schema / data 三段）恢复到新实例时，dump 不包含 `auth` 和 `storage` schema 中由迁移创建的对象。恢复后 `auth.users` 上缺少 `users_protect_platform_owner`（OWNER 身份的删除、封禁和软删除保护）以及 `on_auth_user_created`，storage 上缺少 Registry 的 RESTRICTIVE 策略和触发器。新实例的默认授权还会给应用表加上 `anon` / `authenticated` 的 REFERENCES/TRIGGER/TRUNCATE/MAINTAIN 权限，Registry 表还会加上 `service_role` 的这些权限。因此必须按以下顺序执行，且在重新开放服务前完成：
+
+1. 按 Supabase 文档顺序在一个事务中恢复：`psql --single-transaction --variable ON_ERROR_STOP=1 --file roles.sql --file schema.sql --command 'SET session_replication_role = replica' --file data.sql`。
+2. 用与备份迁移状态一致的 `prisma/rls.sql` 执行 `psql --single-transaction --variable ON_ERROR_STOP=1 --file prisma/rls.sql`。若备份已执行全部迁移，使用当前 `main` 的版本。若是 15 个迁移的生产 schema，使用 `f4d3023` 的版本，再执行 `prisma migrate deploy`。版本不匹配时，脚本会因缺表报错并整体回滚，不会部分生效。
+3. 核对：`prisma migrate status` 无待执行迁移；`auth.users` 上存在 `users_protect_platform_owner` 与 `on_auth_user_created`；对 OWNER 执行封禁或降级会以 42501 被拒绝。最后按上文验证仅存在一个 OWNER。
+
+`scripts/verify-rls-restore.mjs` 已在本机一次性栈上用合成数据演练“全部迁移 → 备份 → 清空 → 恢复 → `rls.sql`”。与直接迁移的数据库相比，安全目录、结构及数据指纹一致，仅有 4 处已知的等价文本差异，OWNER 保护触发器在恢复后仍然生效。尚未在托管实例上或用真实生产备份验证，详见 `docs/ci-pipeline.md`。
+
 回滚应用前先确认旧版本无法把 OWNER 当作普通用户误操作；迁移后的 OWNER 枚举不能简单删除，历史审计也依赖该类型。优先恢复经验证的迁移前备份，并核对迁移历史和 Auth 一致性；若需保留迁移后数据，应另行设计经过演练的前向修复和审计保留方案，不能仅删除表或手动改 Prisma 迁移历史。不得把此说明当作生产执行授权。

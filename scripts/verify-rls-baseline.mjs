@@ -20,37 +20,52 @@ import { assertDisposableTarget } from "./disposable-supabase.mjs";
 
 const grantee = (column) => `case when ${column}=0 then 'PUBLIC' else pg_get_userbyid(${column}) end`;
 
-/** One sorted line per security-relevant catalog fact in public (and the auth.users trigger). */
+/** Application schemas whose tables, functions and privileges the migrations own. */
+const APP = "('public','registry_private')";
+/** Supabase-owned relations the migrations attach RLS policies or triggers to. */
+const PLATFORM = "(n.nspname='storage' and c.relname in ('objects','buckets')) or (n.nspname='auth' and c.relname='users')";
+
+/**
+ * One sorted line per security-relevant catalog fact: schema, table, column and function privileges,
+ * RLS flags, policies, function definitions and triggers in the application schemas, plus RLS,
+ * policies, privileges and triggers on storage.objects, storage.buckets and auth.users.
+ */
 export const SNAPSHOT_SQL = `
 select line from (
-  select 'rls '||n.nspname||'.'||c.relname||' enabled='||c.relrowsecurity||' forced='||c.relforcerowsecurity as line
-    from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind in ('r','p')
+  select 'schema-acl '||n.nspname||' '||${grantee("a.grantee")}||' '||a.privilege_type||' grantable='||a.is_grantable as line
+    from pg_namespace n cross join lateral aclexplode(coalesce(n.nspacl, acldefault('n', n.nspowner))) a
+    where n.nspname in ${APP}
   union all
-  select 'policy '||schemaname||'.'||tablename||' '||policyname||' '||permissive||' '||array_to_string(roles,',')||' '||cmd
-      ||' using='||coalesce(qual,'-')||' check='||coalesce(with_check,'-')
-    from pg_policies where schemaname='public'
+  select 'rls '||n.nspname||'.'||c.relname||' enabled='||c.relrowsecurity||' forced='||c.relforcerowsecurity
+    from pg_class c join pg_namespace n on n.oid=c.relnamespace
+    where c.relkind in ('r','p') and (n.nspname in ${APP} or ${PLATFORM})
+  union all
+  select 'policy '||p.schemaname||'.'||p.tablename||' '||p.policyname||' '||p.permissive||' '||array_to_string(p.roles,',')||' '||p.cmd
+      ||' using='||coalesce(p.qual,'-')||' check='||coalesce(p.with_check,'-')
+    from pg_policies p join pg_namespace n on n.nspname=p.schemaname join pg_class c on c.relnamespace=n.oid and c.relname=p.tablename
+    where n.nspname in ${APP} or ${PLATFORM}
   union all
   select 'table-acl '||n.nspname||'.'||c.relname||' '||${grantee("a.grantee")}||' '||a.privilege_type||' grantable='||a.is_grantable
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
-    cross join lateral aclexplode(coalesce(c.relacl, acldefault('r', c.relowner))) a
-    where n.nspname='public' and c.relkind in ('r','p','v','m')
+    cross join lateral aclexplode(coalesce(c.relacl, acldefault((case when c.relkind='S' then 's' else 'r' end)::"char", c.relowner))) a
+    where c.relkind in ('r','p','v','m','S') and (n.nspname in ${APP} or ${PLATFORM})
   union all
   select 'column-acl '||n.nspname||'.'||c.relname||'.'||t.attname||' '||${grantee("a.grantee")}||' '||a.privilege_type||' grantable='||a.is_grantable
     from pg_attribute t join pg_class c on c.oid=t.attrelid join pg_namespace n on n.oid=c.relnamespace
     cross join lateral aclexplode(t.attacl) a
-    where n.nspname='public' and t.attnum>0 and not t.attisdropped and t.attacl is not null
+    where t.attnum>0 and not t.attisdropped and t.attacl is not null and (n.nspname in ${APP} or ${PLATFORM})
   union all
   select 'function '||p.oid::regprocedure::text||' definition-b64='||translate(encode(convert_to(pg_get_functiondef(p.oid),'UTF8'),'base64'),E'\\n','')
-    from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' and p.prokind='f'
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ${APP} and p.prokind='f'
   union all
   select 'function-acl '||p.oid::regprocedure::text||' '||${grantee("a.grantee")}||' '||a.privilege_type
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
-    where n.nspname='public' and p.prokind='f'
+    where n.nspname in ${APP} and p.prokind='f'
   union all
   select 'trigger '||n.nspname||'.'||c.relname||' '||t.tgname||' enabled='||t.tgenabled::text||' definition-md5='||md5(pg_get_triggerdef(t.oid))
     from pg_trigger t join pg_class c on c.oid=t.tgrelid join pg_namespace n on n.oid=c.relnamespace
-    where not t.tgisinternal and (n.nspname='public' or (n.nspname='auth' and c.relname='users'))
+    where not t.tgisinternal and (n.nspname in ${APP} or ${PLATFORM})
 ) facts order by line;`;
 
 export function buildScript(baseline) {
@@ -132,8 +147,13 @@ export function compareSnapshots(output) {
     for (const line of afterLines) if (!base.has(line)) differences.push(`${stage} + ${line}`);
   }
   const lexicalOnly = [...raw.before].filter(([name, hash]) => raw["after-1"].get(name) !== hash).map(([name]) => name.replace(/^function /, ""));
-  const count = (prefix) => before.filter((line) => line.startsWith(prefix)).length;
-  return { differences, lexicalOnly, facts: before.length, policies: count("policy "), tables: count("rls "), functions: count("function "), triggers: count("trigger ") };
+  return { differences, lexicalOnly, ...countFacts(before) };
+}
+
+/** Summary counts for a canonical snapshot (one line per catalog fact). */
+export function countFacts(lines) {
+  const count = (prefix) => lines.filter((line) => line.startsWith(prefix)).length;
+  return { facts: lines.length, policies: count("policy "), tables: count("rls "), functions: count("function "), triggers: count("trigger ") };
 }
 
 export function main() {

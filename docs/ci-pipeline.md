@@ -63,7 +63,7 @@ Per commit the two workflows started 7 disposable Supabase instances, ran 8 prod
 ### Changes
 
 1. **One browser matrix.** The Merge Gates copy is removed. Browser coverage is unchanged: the same three projects and the same specs run once per commit in Security Acceptance, behind real Supabase acceptance, and still gate the required `authenticated Playwright` check.
-2. **The baseline is verified directly.** `scripts/verify-rls-baseline.mjs` (in the clean-install job, right after migrations) snapshots the catalog, applies `prisma/rls.sql` twice inside one transaction, compares and rolls back. Any difference in RLS flags, policies, privileges, triggers or function source (after PostgreSQL's own case/quoting/whitespace equivalences, with string literals and comments kept significant) fails `Supabase Security Acceptance`. This is stricter than before: previously a drift that did not break a browser flow went unnoticed, and the check that ran was not required. Locally it detected a loosened policy, a changed exception literal and a removed column grant.
+2. **The baseline is verified directly.** `scripts/verify-rls-baseline.mjs` (in the clean-install job, right after migrations) snapshots the catalog, applies `prisma/rls.sql` twice inside one transaction, compares and rolls back. Any difference in RLS flags, policies, privileges, triggers or function source (after PostgreSQL's own case/quoting/whitespace equivalences, with string literals and comments kept significant) fails `Supabase Security Acceptance`. This is stricter than before: previously a drift that did not break a browser flow went unnoticed, and the check that ran was not required. Locally it detected a loosened policy, a changed exception literal and a removed column grant. The snapshot also covers `registry_private`, schema privileges, and RLS, policies, privileges and triggers on `storage.objects`, `storage.buckets` and `auth.users` (see “Disaster-recovery baseline and logical backups” below).
 3. **Parallel Supabase acceptance.** Upgrade and rollback proofs moved to their own job and runner with their own disposable Supabase. `Supabase Security Acceptance` keeps its name as a fail-closed aggregator (`if: always()`, fails unless both jobs report `success`), so the ruleset needs no change. The browser matrix still `needs: supabase-security-acceptance`.
 
 Structural effect per commit:
@@ -90,3 +90,36 @@ Measured wall-clock and runner-minute results for the first runs of the new topo
 
 - Starting Supabase and installing the Playwright browser concurrently inside each browser job (0.3–2 min per job).
 - Caching Playwright browser downloads or Supabase images; benefit uncertain against restore time.
+
+## Disaster-recovery baseline and logical backups
+
+`prisma/rls.sql` matches the schema after **all** migrations in `prisma/migrations`. It is applied after restoring a Supabase logical backup onto a fresh instance, because a restore drops three kinds of controls:
+
+1. **Default privileges.** `pg_dump` writes table and function grants relative to the owner-only default. On restore, each `CREATE TABLE` in `public` picks up the fresh instance's `ALTER DEFAULT PRIVILEGES` for `anon`, `authenticated` and `service_role`. The dump never revokes them.
+2. **Triggers on `auth.users`** (`on_auth_user_created`, `users_protect_platform_owner`). The dump excludes the `auth` schema. The trigger functions in `public` are restored.
+3. **Policies and triggers on `storage.objects` / `storage.buckets`** (`registry_private_objects_boundary`, `registry_private_buckets_boundary`, `registry_guard_storage_object`, `registry_guard_storage_bucket`). The dump also excludes the `storage` schema. The bucket rows and the `registry_private` trigger functions are restored.
+
+`rls.sql` restores these controls exactly as the migrations define them. It sets the exact `PUBLIC`/`anon`/`authenticated` privileges on every application table and on each function the migrations restrict. It changes `service_role` privileges only where a migration does: it grants ALL on `asset_deletions` and revokes ALL on the 8 Registry tables. It revokes every privilege on `registry_private` tables and functions except `USAGE` on the schema and `EXECUTE` on `can_read(uuid)` for `authenticated`. It drops and recreates each policy and trigger. On a schema that is missing a table it names (an older backup), it fails, and `--single-transaction` rolls it back.
+
+Two checks cover it:
+
+- `scripts/verify-rls-baseline.mjs` (CI, clean-install job): `rls.sql` is a no-op on a migrated database and is idempotent.
+- `scripts/verify-rls-restore.mjs` (local, disposable stack only, not in CI): `node scripts/run-local-security-stage.mjs rls-restore <isolated-workdir>`. It resets the stack, runs `prisma migrate deploy` and inserts synthetic accounts (one platform OWNER). It then runs `supabase db dump` (roles, schema, `--use-copy --data-only -x storage.buckets_vectors -x storage.vector_indexes`) into a temporary directory outside the repository, resets again and restores with `psql --single-transaction` in Supabase's documented order. Finally it applies `rls.sql` twice and compares against the migrated database: the security catalog, plus schema/relation/function owners, columns, constraints, indexes, enum and domain types, default privileges, extensions, and a row count and content hash for every application, `storage.buckets`/`objects` and `auth.users`/`identities` table. The comparison must match apart from four named, pinned text variants. It also checks that the OWNER triggers still reject a ban and a demotion, and that `prisma migrate status` shows no pending migration. The script leaves the disposable database in the restored state.
+
+Local result on 2026-11-04 (supabase/postgres 17.6.1.143, 30 migrations, 1,882 facts, of which 804 are the security catalog):
+
+| Stage | Differences from the migrated database |
+| --- | --- |
+| Restore only | 272: REFERENCES/TRIGGER/TRUNCATE/MAINTAIN for `anon` and `authenticated` on 29 `public` tables and for `service_role` on the 8 Registry tables; 2 missing `auth.users` triggers; 2 missing storage policies and 2 missing storage triggers; the 2 constraint variants below |
+| Restore + `rls.sql` from `main` before this change (negative control) | 125: the 4 privileges above for `anon` and `authenticated` on the 11 tables added since July, and for `service_role` on the 8 Registry tables; `users_protect_platform_owner`; the 2 storage policies and 2 storage triggers. A ban of the OWNER's `auth.users` row is no longer rejected |
+| Restore + this `rls.sql` | 0, apart from the known variants |
+| Second application | 0 |
+
+Known equivalent variants, accepted only for these objects:
+
+- `handle_new_auth_user()` and `protect_profile_system_fields()`: `rls.sql` writes `begin … new.id`, while the migrations write `BEGIN … NEW."id"`. These are the same SQL (keyword case and quoted lowercase identifiers).
+- `agent_runs_counters_check` and `project_documentation_shape`: PostgreSQL deparses the re-parsed `pg_dump` text with one redundant `AND` grouping flattened, and with the `::text` cast applied to each `IN` element instead of the array. The verifier accepts only the exact migrated → restored text pair, so any other change fails.
+
+Limits: the result is from a local image. Hosted instances run a different minor version and may have broader default privileges. `rls.sql` sets the `anon`/`authenticated` privileges explicitly, so the result does not depend on those defaults. `service_role` follows the target's defaults on the tables where migrations leave it unchanged, as a fresh `prisma migrate deploy` on that target would. The proof was not run on a hosted instance or with a real production backup. Storage object files are not part of the database dump. `_prisma_migrations` keeps the default `anon`/`authenticated` privileges because no migration changes them.
+
+For a backup taken before all migrations were applied, use `rls.sql` from the commit whose `prisma/migrations` matches the backup's `_prisma_migrations` (for the 15-migration production schema, `f4d3023`, as rehearsed). Then run `prisma migrate deploy`. After that, the current `rls.sql` is a no-op.
