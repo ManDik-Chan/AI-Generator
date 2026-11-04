@@ -9,7 +9,7 @@ import { PrismaClient } from "@prisma/client";
 const require = createRequire(import.meta.url);
 const root = process.cwd();
 const mode = process.argv[2];
-if (!["migrate", "registry", "registry-migrations", "integration", "all-real", "metadata", "cleanup", "migrations-clean", "migrations-incremental", "migrations-rollback-all", "owner-privacy", "rbac-database", "rbac-transactions", "rbac-chain"].includes(mode) || !process.argv[3]) {
+if (!["migrate", "registry", "registry-migrations", "integration", "all-real", "metadata", "cleanup", "migrations-clean", "migrations-incremental", "migrations-rollback-all", "owner-privacy", "rbac-database", "rbac-transactions", "rbac-chain", "rls-baseline", "rls-restore"].includes(mode) || !process.argv[3]) {
   throw new Error("Usage: node scripts/run-local-security-stage.mjs <migrate|integration|all-real|metadata|cleanup> <isolated-workdir>");
 }
 const isolated = realpathSync(resolve(process.argv[3]));
@@ -69,6 +69,8 @@ if (mode === "metadata") {
     : mode === "rbac-database" ? [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "tests/integration/platform-rbac-database.integration.test.ts", "--reporter=default"]
     : mode === "rbac-transactions" ? ["--conditions=react-server", "--import", "tsx", "scripts/test-rbac-disposable.mts"]
     : mode === "rbac-chain" ? ["scripts/test-rbac-action-chain-disposable.mjs"]
+    : mode === "rls-baseline" ? ["scripts/verify-rls-baseline.mjs"]
+    : mode === "rls-restore" ? ["scripts/verify-rls-restore.mjs"]
     : mode === "cleanup" ? ["--conditions=react-server", "--import", "tsx", "scripts/cleanup-tool-assets.ts"]
       : [join(dirname(require.resolve("vitest/package.json")), "vitest.mjs"), "run", "--no-file-parallelism", "--reporter=json", "--outputFile=test-results/local-stage-all-real.json"];
   const result = spawnSync(process.execPath, args, { cwd: root, env, encoding: "utf8", windowsHide: true, maxBuffer: 32 * 1024 * 1024 });

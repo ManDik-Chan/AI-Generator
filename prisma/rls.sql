@@ -1,5 +1,19 @@
 -- Disaster-recovery baseline. Production releases apply the same controls through
 -- versioned Prisma migrations; this file is safe to repeat after a restore.
+--
+-- It matches the schema after all migrations in prisma/migrations and fails on an
+-- older schema (for example, a table it names does not exist yet). A logical dump
+-- (`supabase db dump`) loses three kinds of controls when it is restored onto a
+-- fresh Supabase instance:
+--   1. pg_dump writes table/function grants relative to the owner-only default, so
+--      the fresh instance's ALTER DEFAULT PRIVILEGES for anon/authenticated/
+--      service_role are added on CREATE and never revoked;
+--   2. triggers on auth.users are not dumped (the auth schema is excluded);
+--   3. policies and triggers on storage.objects/storage.buckets are not dumped.
+-- This file restores each of them exactly as the migrations define them.
+-- scripts/verify-rls-baseline.mjs proves it is a no-op on a migrated database;
+-- scripts/verify-rls-restore.mjs proves dump -> reset -> restore -> this file
+-- reproduces the migrated catalog.
 
 alter table public.profiles enable row level security;
 alter table public.personas enable row level security;
@@ -223,3 +237,72 @@ revoke execute on function public.validate_memory_proposal() from public, anon, 
 revoke execute on function public.protect_memory_proposal_source_message() from public, anon, authenticated;
 revoke execute on function public.prepare_memory_proposal_memory_delete() from public, anon, authenticated;
 revoke execute on function public.bump_memory_revision() from public, anon, authenticated;
+
+-- 20261028074859_asset_deletion_consistency and its follow-ups.
+revoke all privileges on table public.asset_deletions from public, anon, authenticated;
+grant all privileges on table public.asset_deletions to service_role;
+revoke execute on function public.guard_asset_deletion_identity() from public, anon, authenticated;
+revoke execute on function public.guard_private_asset_identity() from public, anon, authenticated;
+revoke execute on function public.enqueue_deleted_asset() from public, anon, authenticated;
+revoke execute on function public.track_attached_asset() from public, anon, authenticated;
+revoke execute on function public.guard_avatar_attachment() from public, anon, authenticated;
+
+-- 20261028135224_project_registry_foundation: Registry records are readable only
+-- through registry_internal_read; every write goes through server commands.
+revoke all privileges on table
+  public.projects,
+  public.project_drafts,
+  public.project_versions,
+  public.project_releases,
+  public.project_assets,
+  public.project_documentation,
+  public.project_memberships,
+  public.publication_reviews
+from public, anon, authenticated, service_role;
+grant select on table
+  public.projects,
+  public.project_drafts,
+  public.project_versions,
+  public.project_releases,
+  public.project_assets,
+  public.project_documentation,
+  public.project_memberships,
+  public.publication_reviews
+to authenticated;
+
+-- registry_private is not exposed: no table privileges for any API role, and the
+-- only callable function is the read predicate used by registry_internal_read.
+revoke all privileges on schema registry_private from public, anon, authenticated, service_role;
+grant usage on schema registry_private to authenticated;
+revoke all privileges on all tables in schema registry_private from public, anon, authenticated, service_role;
+revoke all privileges on all functions in schema registry_private from public, anon, authenticated, service_role;
+grant execute on function registry_private.can_read(uuid) to authenticated;
+
+-- 20261031095630_registry_private_quarantine: storage boundary for Registry buckets.
+drop policy if exists registry_private_objects_boundary on storage.objects;
+create policy registry_private_objects_boundary on storage.objects as restrictive for all to anon, authenticated
+  using (bucket_id not in ('registry-quarantine-v1', 'registry-candidates-v1'))
+  with check (bucket_id not in ('registry-quarantine-v1', 'registry-candidates-v1'));
+drop policy if exists registry_private_buckets_boundary on storage.buckets;
+create policy registry_private_buckets_boundary on storage.buckets as restrictive for all to anon, authenticated
+  using (id not in ('registry-quarantine-v1', 'registry-candidates-v1'))
+  with check (id not in ('registry-quarantine-v1', 'registry-candidates-v1'));
+drop trigger if exists registry_guard_storage_bucket on storage.buckets;
+create trigger registry_guard_storage_bucket
+  before insert or update or delete on storage.buckets
+  for each row execute function registry_private.guard_registry_bucket();
+drop trigger if exists registry_guard_storage_object on storage.objects;
+create trigger registry_guard_storage_object
+  before insert or update on storage.objects
+  for each row execute function registry_private.guard_registry_object();
+
+-- 20261102090100_platform_role_audit and 20261102095909_platform_role_version_receipts.
+revoke all privileges on table public.platform_role_audits, public.platform_role_requests
+from public, anon, authenticated;
+revoke execute on function public.protect_platform_owner() from public, anon, authenticated;
+revoke execute on function public.protect_platform_owner_auth() from public, anon, authenticated;
+revoke execute on function public.maintain_profile_role_version() from public, anon, authenticated;
+drop trigger if exists users_protect_platform_owner on auth.users;
+create trigger users_protect_platform_owner
+  before update or delete on auth.users
+  for each row execute function public.protect_platform_owner_auth();
