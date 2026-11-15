@@ -129,6 +129,29 @@ describe("Agent cancellation and stale reconciliation behavior", () => {
     }));
   });
 
+  it("does not terminalize workers when the assistant message is no longer pending", async () => {
+    const client = transactionClient({ status: "PENDING" });
+    client.message.updateMany.mockResolvedValue({ count: 0 });
+    mocks.client = client;
+
+    expect(await finishAgentRun({ userId: "user-1", runId: "run-1", status: "ERROR", content: "Too late", errorCode: "AGENT_ERROR" })).toBe(false);
+    expect(client.agentWorker.updateMany).not.toHaveBeenCalled();
+    expect(client.agentWorker.findMany).not.toHaveBeenCalled();
+    expect(client.agentRun.updateMany).not.toHaveBeenCalled();
+    expect(client.agentEvent.createMany).not.toHaveBeenCalled();
+  });
+
+  it("does not time out workers when the stale run claim is lost", async () => {
+    const client = transactionClient({ status: "PENDING", startedAt: new Date("2026-01-01T00:00:00Z") });
+    client.agentRun.updateMany.mockResolvedValueOnce({ count: 0 });
+    mocks.client = client;
+
+    expect(await reconcileStaleAgentRun("user-1", "run-1", new Date("2026-01-01T00:05:00Z"))).toBe("PENDING");
+    expect(client.agentWorker.updateMany).not.toHaveBeenCalled();
+    expect(client.message.updateMany).not.toHaveBeenCalled();
+    expect(client.agentEvent.createMany).not.toHaveBeenCalled();
+  });
+
   it("cancels only the requested Worker and records one event", async () => {
     const client = transactionClient({ status: "PENDING" });
     client.agentWorker.findFirst.mockResolvedValue({ status: "RUNNING" });
