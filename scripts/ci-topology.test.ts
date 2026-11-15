@@ -66,14 +66,18 @@ describe("CI topology", () => {
   it("keeps every database acceptance stage, each job on its own disposable Supabase", () => {
     const integration = byId("supabase-integration-acceptance"), upgrade = byId("supabase-upgrade-acceptance");
     const order = (job: Job, commands: string[]) => commands.map((command) => job.text.indexOf(command));
-    const stages = order(integration, ["supabase start", "pnpm exec prisma migrate deploy", "node scripts/verify-rls-baseline.mjs",
+    const stages = order(integration, ["scripts/start-disposable-supabase.mjs", "pnpm exec prisma migrate deploy", "node scripts/verify-rls-baseline.mjs",
       "node scripts/verify-security-migrations.mjs clean", "node scripts/verify-registry-migrations.mjs", "pnpm test:integration",
       "scripts/test-rbac-disposable.mts", "node scripts/test-rbac-action-chain-disposable.mjs",
       "pnpm lint", "pnpm typecheck", 'pnpm exec vitest run --exclude "tests/integration/**"', "pnpm exec prisma validate", "supabase stop --no-backup"]);
     expect(stages.every((position, index) => position >= 0 && (index === 0 || position > stages[index - 1])), String(stages)).toBe(true);
-    const upgrades = order(upgrade, ["supabase start", "node scripts/verify-security-migrations.mjs incremental",
+    const upgrades = order(upgrade, ["scripts/start-disposable-supabase.mjs", "node scripts/verify-security-migrations.mjs incremental",
       "node scripts/verify-security-migrations.mjs rollback-all", "supabase stop --no-backup"]);
     expect(upgrades.every((position, index) => position >= 0 && (index === 0 || position > upgrades[index - 1])), String(upgrades)).toBe(true);
+    expect(readFileSync(".github/workflows/security-acceptance.yml", "utf8").split("scripts/start-disposable-supabase.mjs").length - 1).toBe(3);
+    for (const job of [integration, upgrade, byId("authenticated-browser-acceptance")]) {
+      expect(job.text).toContain("scripts/start-disposable-supabase.mjs");
+    }
     for (const job of [integration, upgrade]) {
       expect(job.needs).toEqual([]);
       expect(job.text).toContain('REQUIRE_SECURITY_TEST_DATABASE: "true"');
