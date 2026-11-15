@@ -32,7 +32,10 @@ export const FIXED_NOW = Date.UTC(2026, 10, 1, 4, 0, 0);
 
 export const summary = { id: PROJECT, slug: "console-read-fixture", visibility: "PRIVATE", roles: ["OWNER", "EDITOR"] };
 export const projectRead = { ...summary, effectiveActions: [{ action: "READ_DRAFT", expiresAt: future(60) }, { action: "EDIT_DRAFT", expiresAt: future(60) }, { action: "READ_RELEASE", expiresAt: future(30) }] };
-export const qualifications = { actions: [{ action: "READ_RELEASE", expiresAt: future(30) }, { action: "READ_DRAFT", expiresAt: future(60 * 26) }, { action: "PUBLISH_RELEASE", expiresAt: future(5) }] };
+export const qualifications = {
+  actions: [{ action: "READ_RELEASE", expiresAt: future(30) }, { action: "READ_DRAFT", expiresAt: future(60 * 26) }, { action: "PUBLISH_RELEASE", expiresAt: future(5) }],
+  create: { expiresAt: future(45) },
+};
 export const draftHead = { id: DRAFT, projectId: PROJECT, revision: 3, state: "IN_REVIEW", contentHash };
 export const draftRead = { id: DRAFT, projectId: PROJECT, revision: 3, state: "IN_REVIEW", payload, contentHash };
 
