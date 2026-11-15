@@ -34,7 +34,9 @@ Reviewed chat persistence and cancellation, tool-quota reservation, and the Agen
 
 ### Fixed
 
-Pull request for this branch, stacked on #61.
+Pull request: https://github.com/ManDik-Chan/AI-Generator/pull/63
+
+Stacked on #61. Head `0ec502b` plus the documentation update that records this URL.
 
 `finishAgentRun` updated active workers to terminal states and then returned without finishing the run when the assistant message was no longer `PENDING`. A chat cancel does that: `POST /api/chat/messages/{id}/cancel` previously marked only the message `CANCELLED`, so the next finish committed worker timeouts or failures while the Agent run stayed `PENDING`.
 
