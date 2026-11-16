@@ -63,7 +63,7 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof DailyToolLimitError) return jsonError(`今日工具次数已用完（${error.limit} 次），请在 UTC 次日重试。`, 429, "DAILY_LIMIT", { limit: error.limit, used: error.used, remaining: 0 });
     if (isUsageIdempotencyConflict(error)) return jsonError("该请求已经提交，请勿重复发送。", 409, "DUPLICATE_REQUEST");
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return jsonError("并发请求较多，请稍后重试。", 429, "RATE_LIMITED", { limit: config.dailyLimit, used: config.dailyLimit, remaining: 0 });
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return jsonError("并发请求较多，请稍后重试。", 429, "RATE_LIMITED");
     console.error("tool_run_create_failed", { requestId, userId, toolType: parsed.data.tool, stage: "persist", errorCode: "UNKNOWN", status: 500, durationMs: Date.now() - startedAt });
     return jsonError("工具运行记录创建失败，请稍后重试。", 500, "UNKNOWN");
   }
