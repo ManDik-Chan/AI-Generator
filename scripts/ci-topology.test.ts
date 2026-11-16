@@ -77,6 +77,8 @@ describe("CI topology", () => {
     expect(readFileSync(".github/workflows/security-acceptance.yml", "utf8").split("scripts/start-disposable-supabase.mjs").length - 1).toBe(3);
     for (const job of [integration, upgrade, byId("authenticated-browser-acceptance")]) {
       expect(job.text).toContain("scripts/start-disposable-supabase.mjs");
+      // The published ports are reserved before the first network step of the job.
+      expect(job.text).toMatch(/ {4}steps:\n {6}- name: Reserve the local Supabase ports\n {8}run: sudo sysctl -w net\.ipv4\.ip_local_reserved_ports=54320-54329\n/);
     }
     for (const job of [integration, upgrade]) {
       expect(job.needs).toEqual([]);
