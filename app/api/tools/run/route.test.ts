@@ -8,7 +8,10 @@ vi.mock("@/lib/ai/config", async (importOriginal) => ({ ...(await importOriginal
 vi.mock("@/lib/ai/registry", () => ({ getToolAiProvider: mocks.getProvider }));
 vi.mock("@/features/tools/usage", async (importOriginal) => ({ ...(await importOriginal<typeof import("@/features/tools/usage")>()), createPendingToolRun: mocks.createRun, finishRecoverableToolRun: mocks.finishRun, persistToolRunPartial: mocks.persistPartial, isToolRunPending: mocks.isPending }));
 
+import { Prisma } from "@prisma/client";
+
 import { POST } from "@/app/api/tools/run/route";
+import { DailyToolLimitError } from "@/features/tools/usage";
 
 const valid = { tool: "SUMMARIZE", input: "请总结这段文本", options: { length: "standard", format: "paragraph", language: "auto" }, saveHistory: true };
 const request = (body: unknown) => new Request("http://localhost/api/tools/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -28,6 +31,20 @@ describe("tool run API", () => {
   it("rejects unauthenticated requests", async () => { mocks.getUser.mockResolvedValue({ data: { user: null } }); const response = await POST(request(valid)); expect(response.status).toBe(401); expect(await response.json()).toMatchObject({ code: "AUTHENTICATION" }); });
   it("rejects invalid input before counting a run", async () => { const response = await POST(request({ ...valid, systemPrompt: "unsafe" })); expect(response.status).toBe(400); expect(mocks.createRun).not.toHaveBeenCalled(); });
   it("returns a friendly configuration response", async () => { mocks.configured.mockReturnValue({ configured: false }); const response = await POST(request(valid)); expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ code: "CONFIGURATION" }); });
+  it("reports the real usage when the daily limit is reached", async () => {
+    mocks.createRun.mockRejectedValue(new DailyToolLimitError(30, 30));
+    const response = await POST(request(valid));
+    expect(response.status).toBe(429);
+    expect(await response.json()).toMatchObject({ code: "DAILY_LIMIT", limit: 30, used: 30, remaining: 0 });
+    expect(mocks.streamText).not.toHaveBeenCalled();
+  });
+  it("reports a serialization conflict as retryable without quota figures", async () => {
+    mocks.createRun.mockRejectedValue(new Prisma.PrismaClientKnownRequestError("write conflict", { code: "P2034", clientVersion: "test" }));
+    const response = await POST(request(valid));
+    expect(response.status).toBe(429);
+    expect(await response.json()).toEqual({ code: "RATE_LIMITED", message: "并发请求较多，请稍后重试。" });
+    expect(mocks.streamText).not.toHaveBeenCalled();
+  });
   it("streams start, deltas and done through one model call", async () => {
     const response = await POST(request(valid)); const text = await response.text();
     expect(response.headers.get("content-type")).toContain("text/event-stream");
