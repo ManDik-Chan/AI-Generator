@@ -38,6 +38,7 @@ describe("image analysis run API", () => {
     mocks.finishRecoverable.mockResolvedValue({ count: 1 });
     mocks.persistPartial.mockResolvedValue({ count: 1 });
     mocks.isPending.mockResolvedValue(true);
+    mocks.cleanupAssets.mockResolvedValue(undefined);
     mocks.streamImageAnalysis.mockImplementation(async function* () { yield "图片里是"; yield "一只猫"; });
   });
 
@@ -63,6 +64,53 @@ describe("image analysis run API", () => {
     expect(partial).toBe("a".repeat(770));
     expect(mocks.finishRecoverable).toHaveBeenCalledWith(USER, RUN, "ERROR", { errorCode: "UNSAFE_OUTPUT" });
     expect(JSON.stringify([mocks.persistPartial.mock.calls, mocks.finishRecoverable.mock.calls])).not.toContain("Authorization");
+  });
+
+  it("removes the source image of a no-history run at completion and on failure", async () => {
+    await (await POST(request(false))).text();
+    expect(mocks.cleanupAssets).toHaveBeenCalledTimes(1);
+    expect(mocks.cleanupAssets).toHaveBeenCalledWith(USER, RUN);
+    mocks.cleanupAssets.mockClear();
+    mocks.streamImageAnalysis.mockImplementation(async function* () { yield "部分结果"; throw new AiProviderError("TIMEOUT", "Vision request timed out."); });
+    await (await POST(request(false))).text();
+    expect(mocks.cleanupAssets).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes the source image of a no-history run cancelled before the stream starts", async () => {
+    mocks.isPending.mockResolvedValue(false);
+    const text = await (await POST(request(false))).text();
+    expect(text).toContain("event: cancelled");
+    expect(mocks.streamImageAnalysis).not.toHaveBeenCalled();
+    expect(mocks.cleanupAssets).toHaveBeenCalledTimes(1);
+    expect(mocks.cleanupAssets).toHaveBeenCalledWith(USER, RUN);
+  });
+
+  it("removes the source image of a no-history run when a partial save finds it cancelled", async () => {
+    mocks.persistPartial.mockResolvedValue({ count: 0 });
+    mocks.streamImageAnalysis.mockImplementation(async function* () { yield "a".repeat(1100); yield "更多内容"; });
+    const text = await (await POST(request(false))).text();
+    expect(text).toContain("event: cancelled");
+    expect(text).not.toContain("更多内容");
+    expect(mocks.cleanupAssets).toHaveBeenCalledTimes(1);
+    expect(mocks.finishRecoverable).not.toHaveBeenCalled();
+  });
+
+  it("keeps the source image of a cancelled run when history is on", async () => {
+    mocks.isPending.mockResolvedValue(false);
+    const text = await (await POST(request(true))).text();
+    expect(text).toContain("event: cancelled");
+    expect(mocks.cleanupAssets).not.toHaveBeenCalled();
+  });
+
+  it("still reports completion when the source image removal fails", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.cleanupAssets.mockRejectedValue(new Error("ASSET_CLEANUP_PENDING"));
+    const text = await (await POST(request(false))).text();
+    expect(text).toContain("event: done");
+    expect(mocks.finishRecoverable).toHaveBeenCalledTimes(1);
+    expect(mocks.finishRecoverable).toHaveBeenCalledWith(USER, RUN, "COMPLETE", { outputText: "图片里是一只猫" });
+    expect(log).toHaveBeenCalledWith("tool_asset_cleanup_pending", { userId: USER, runId: RUN });
+    log.mockRestore();
   });
 
   it("keeps the partial output of a provider failure", async () => {
