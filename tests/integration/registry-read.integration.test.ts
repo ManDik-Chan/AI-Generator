@@ -283,6 +283,16 @@ describe.skipIf(!enabled)("Registry internal read API with real Auth sessions an
     const before = Date.now(), eligibility = await getRegistryQualifications({ accessToken: actor.token });
     expect(eligibility.result.actions.map(item => item.action).sort()).toEqual(["READ_DRAFT", "READ_RELEASE"]);
     for (const item of eligibility.result.actions) expect(Date.parse(item.expiresAt)).toBeLessThan(before + 16 * 60 * 1000);
+    expect(eligibility.result.create).not.toBeNull();
+    expect(Date.parse(eligibility.result.create!.expiresAt)).toBeLessThan(before + 16 * 60 * 1000);
+    await db.$executeRaw`UPDATE registry_private.internal_operators SET can_create=false WHERE subject_id=${actor.id}::uuid`;
+    try {
+      const withoutCreate = await getRegistryQualifications({ accessToken: actor.token });
+      expect(withoutCreate.result.create).toBeNull();
+      expect(withoutCreate.result.actions.map(item => item.action).sort()).toEqual(["READ_DRAFT", "READ_RELEASE"]);
+    } finally {
+      await db.$executeRaw`UPDATE registry_private.internal_operators SET can_create=true WHERE subject_id=${actor.id}::uuid`;
+    }
     const project = await getRegistryProject(access(actor, f));
     expect(project.result.roles).toEqual(["VIEWER"]);
     expect(project.result.effectiveActions.map(item => item.action).sort()).toEqual(["READ_DRAFT", "READ_RELEASE"]);

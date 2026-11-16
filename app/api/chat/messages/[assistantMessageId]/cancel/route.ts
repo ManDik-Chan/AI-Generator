@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { cancelAgentRunForAssistantMessage } from "@/features/agents/run-state";
 import { createSupabaseServerClient } from "@/lib/auth/supabase/server";
 import { prisma } from "@/lib/database/prisma";
 
@@ -11,6 +12,9 @@ export async function POST(_request: Request, context: { params: Promise<{ assis
   if (!userId) return NextResponse.json({ message: "请先登录。" }, { status: 401 });
   const { assistantMessageId } = await context.params;
   if (!idSchema.safeParse(assistantMessageId).success) return NextResponse.json({ message: "消息不存在或无权访问。" }, { status: 404 });
+
+  const agentStatus = await cancelAgentRunForAssistantMessage(userId, assistantMessageId);
+  if (agentStatus === "CANCELLED") return NextResponse.json({ status: "CANCELLED" });
 
   const cancelled = await prisma.message.updateMany({
     where: { id: assistantMessageId, role: "ASSISTANT", status: "PENDING", supersededAt: null, conversation: { userId } },

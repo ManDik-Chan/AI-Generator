@@ -5,7 +5,7 @@ import { versionDTOSchema } from "./contracts";
 import { getRegistryReviewInContext, readRegistryDraftTransaction } from "./protocol";
 import { releaseETag } from "./release";
 import { REGISTRY_ACTION_ROLES, reviewDTOSchema } from "./read-contracts";
-import { pageSchema, projectReadDTOSchema, projectSummaryDTOSchema, qualificationsDTOSchema,
+import { pageSchema, projectReadDTOSchema, projectSummaryDTOSchema, qualificationDTOSchema, qualificationsDTOSchema,
   releaseHeadReadDTOSchema, releaseRecordDTOSchema, releaseRequestDTOSchema, type QualificationDTO } from "./query-contracts";
 import { authorizeProject, enabledRead, pageInput, parse, projectInput, readTransaction, tokenInput, type ReadContext } from "./read-context";
 import { fail, RELEASE_POLICY_REVISION } from "./release-context";
@@ -26,13 +26,23 @@ async function qualifications(ctx: ReadContext): Promise<QualificationDTO[]> {
     WHERE a.subject_id=${ctx.actor.id}::uuid AND a.active AND o.active
       AND a.expires_at>clock_timestamp() AND o.expires_at>clock_timestamp() ORDER BY a.action FOR SHARE OF a,o`;
   ctx.deadlines.push(...rows.map(row => row.expiresAt));
-  return qualificationsDTOSchema.parse({ actions: rows.map(row => ({ action: row.action, expiresAt: row.expiresAt.toISOString() })) }).actions;
+  return z.array(qualificationDTOSchema).max(14).parse(rows.map(row => ({ action: row.action, expiresAt: row.expiresAt.toISOString() })));
+}
+async function createQualification(ctx: ReadContext): Promise<{ expiresAt: string } | null> {
+  const rows = await ctx.tx.$queryRaw<{ expiresAt: Date }[]>`SELECT expires_at AS "expiresAt"
+    FROM registry_private.internal_operators
+    WHERE subject_id=${ctx.actor.id}::uuid AND active AND can_create AND expires_at>clock_timestamp() FOR SHARE`;
+  if (rows.length !== 1) return null;
+  ctx.deadlines.push(rows[0].expiresAt);
+  return { expiresAt: rows[0].expiresAt.toISOString() };
 }
 
 /** The global action list describes only this caller; project role intersection is separate. */
 export async function getRegistryQualifications(input: z.input<typeof tokenInput>) {
   const args = parse(tokenInput, input);
-  return readTransaction(args.accessToken, "READ_DRAFT", async ctx => ({ result: { actions: await qualifications(ctx) } }));
+  return readTransaction(args.accessToken, "READ_DRAFT", async ctx => ({
+    result: qualificationsDTOSchema.parse({ actions: await qualifications(ctx), create: await createQualification(ctx) }),
+  }));
 }
 export async function listRegistryProjects(input: z.input<typeof tokenInput> & PageInput) {
   const args = parse(globalPageInput, input);

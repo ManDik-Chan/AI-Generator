@@ -21,7 +21,7 @@ Queries require an active unexpired internal operator, the specific active unexp
 | Review | Existing decision/effectiveState/hash/expiry plus `submittedByViewer`; no submitter/reviewer identity |
 | Project summary | id, slug, visibility, caller roles; release head pointer requires the independent READ_RELEASE query |
 | Project detail | Summary plus `effectiveActions: {action, expiresAt}[]`, intersecting the caller's active independent grants and own project roles |
-| Qualifications | `{actions: {action, expiresAt}[]}` for the current caller only; expiry is the earlier of internal/operator-action expiry |
+| Qualifications | `{ actions: {action, expiresAt}[], create: { expiresAt } \| null }` for the current caller only. Action expiry is the earlier of the internal operator and that action. `create` is present only when `can_create` is set on the active internal operator; its `expiresAt` is that operator row's `expires_at`. `null` means the caller can read but has no create qualification. |
 | Version | Existing strict `VersionDTO` with validated canonical snapshot/hash; only same-project members with READ_DRAFT |
 | Release history | id/project/version/hash/visibility, publishedAt, state, withdrawnAt and intent; intent can be null for pre-approval legacy history |
 | Release requests | id/project/version/hash/intent/target/visibility/expiry, approvalId, state, expired, stale, requestedByViewer, approvedByViewer |

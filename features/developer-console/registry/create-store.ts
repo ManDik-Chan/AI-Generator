@@ -1,9 +1,9 @@
 /*
  * State of "create a Registry project" for one console visit. Framework-free.
  *
- * - Creation eligibility (`can_create`) is not exposed by any read endpoint, so the console cannot
- *   know it in advance. The server decides on submit. After FORBIDDEN or DISABLED the store keeps a
- *   sticky `denied` outcome for the rest of the visit and the UI stops offering the form.
+ * - The overview shows this form only after GET /qualifications returns `create`. Submit still
+ *   rechecks that grant. After FORBIDDEN or DISABLED the store keeps a sticky `denied` outcome for
+ *   the rest of the visit and the UI stops offering the form.
  * - Each submit is one logical operation with a new key. An uncertain outcome keeps the attempt; the
  *   only way forward is to resend the identical attempt (a replay returns the original project) or to
  *   abandon it explicitly. The slug cannot be changed while an attempt is uncertain.

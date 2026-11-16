@@ -208,7 +208,8 @@ describe("Registry overview store", () => {
     const client = createRegistryReadClient({ fetch: fake.fetch, getAccessToken: async () => TOKEN, now: () => FIXED_NOW });
     const store = createOverviewStore(client, { now: () => FIXED_NOW, pageSize: 1 });
     await store.refresh();
-    expect(store.getSnapshot().qualifications.data?.map((item) => item.action)).toEqual(["READ_RELEASE", "READ_DRAFT", "PUBLISH_RELEASE"]);
+    expect(store.getSnapshot().qualifications.data?.actions.map((item) => item.action)).toEqual(["READ_RELEASE", "READ_DRAFT", "PUBLISH_RELEASE"]);
+    expect(store.getSnapshot().qualifications.data?.create?.expiresAt).toEqual(expect.any(String));
     await store.loadMore("projects");
     expect(store.getSnapshot().projects.items.map((item) => item.slug)).toEqual(["console-read-fixture", "aaa-second"]);
     expect(fake.calls.map((call) => call.url)).toContain(`/api/internal/registry/projects?limit=1&after=${summary.id}`);

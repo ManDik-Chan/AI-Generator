@@ -42,10 +42,10 @@ export function QualificationList({ items, now, empty }: { items: QualificationD
 
 export function RegistryWorkbenchView({ snapshot, base, mockHref, now, onRefresh, onLoadMore, create }: {
   snapshot: OverviewSnapshot; base: string; mockHref: string; now: number; onRefresh: () => void; onLoadMore: () => void;
-  /** Create-project panel; shown only once the server has confirmed this account as a live internal operator. */
+  /** Create-project panel; shown only when this read confirmed a create qualification. */
   create?: ReactNode;
 }) {
-  const operator = snapshot.qualifications.data !== null && snapshot.qualifications.error === null;
+  const canCreate = snapshot.qualifications.data?.create != null && snapshot.qualifications.error === null;
   return (
     <div className="pb-6">
       <PageIntro
@@ -65,7 +65,7 @@ export function RegistryWorkbenchView({ snapshot, base, mockHref, now, onRefresh
             <div className="grid gap-x-10 gap-y-6 min-[900px]:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
               <div>
                 <SlotBody scope="overview" slot={snapshot.qualifications}>
-                  {(items) => <QualificationList empty="你目前没有任何有效的平台操作资格。" items={items} now={now} />}
+                  {(data) => <QualificationList empty="你目前没有任何有效的平台操作资格。" items={data.actions} now={now} />}
                 </SlotBody>
               </div>
               <p className="text-[.75rem] leading-5 text-muted-foreground">
@@ -74,8 +74,10 @@ export function RegistryWorkbenchView({ snapshot, base, mockHref, now, onRefresh
             </div>
           </section>
 
-          {operator ? create : snapshot.qualifications.status === "error" ? (
+          {canCreate ? create : snapshot.qualifications.error ? (
             <p className="text-[.75rem] leading-5 text-muted-foreground" role="note">没有读取到你的平台操作资格，控制台不提供创建项目入口。</p>
+          ) : snapshot.qualifications.data?.create === null ? (
+            <p className="text-[.75rem] leading-5 text-muted-foreground" role="note">服务端没有确认创建资格，控制台不提供创建项目入口。</p>
           ) : null}
 
           <section aria-labelledby="rg-projects">
