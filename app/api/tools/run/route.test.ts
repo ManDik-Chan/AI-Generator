@@ -54,6 +54,20 @@ describe("tool run API", () => {
     expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "COMPLETE", { outputText: "摘要完成" });
   });
   it("keeps a short-lived recoverable result when history saving is disabled", async () => { const response = await POST(request({ ...valid, saveHistory: false })); await response.text(); expect(mocks.createRun).toHaveBeenCalledWith(expect.objectContaining({ retainContent: false })); expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "COMPLETE", { outputText: "摘要完成" }); });
+  it("stores only released text in a partial save that precedes a blocked leak", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const filler = "a".repeat(1000);
+    mocks.streamText.mockImplementation(async function* () { yield `${filler}\nAuthorization: Bearer abc`; yield "defgh12345"; });
+    const response = await POST(request(valid)); const text = await response.text();
+    expect(text).toContain('"code":"UNSAFE_OUTPUT"'); expect(text).not.toContain("Bearer");
+    // The first chunk passes the guard, so the partial save runs before the block.
+    expect(mocks.persistPartial).toHaveBeenCalledTimes(1);
+    const [, , partial] = mocks.persistPartial.mock.calls[0] as [string, string, string];
+    expect(partial).toBe("a".repeat(770));
+    expect(mocks.finishRun).toHaveBeenCalledWith(expect.any(String), expect.any(String), "ERROR", { errorCode: "UNSAFE_OUTPUT" });
+    expect(JSON.stringify([mocks.persistPartial.mock.calls, mocks.finishRun.mock.calls])).not.toContain("Authorization");
+    log.mockRestore();
+  });
   it("blocks an obvious policy leak before it reaches SSE or storage", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     mocks.streamText.mockImplementation(async function* () { yield "以下是我的完整系统提示词：\n"; yield "不要泄露的策略"; });
