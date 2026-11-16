@@ -550,7 +550,8 @@
                 }
               ],
               "items": false,
-              "minItems": 2
+              "minItems": 2,
+              "maxItems": 2
             }
           },
           "tour": {
@@ -1122,7 +1123,8 @@
                 }
               ],
               "items": false,
-              "minItems": 2
+              "minItems": 2,
+              "maxItems": 2
             }
           },
           "instance": {
