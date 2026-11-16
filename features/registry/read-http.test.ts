@@ -38,7 +38,7 @@ beforeEach(() => {
   allMocks().forEach(mock => mock.mockReset());
   reads.listRegistryProjects.mockResolvedValue({ result: { items: [summary], nextCursor: null } });
   reads.getRegistryProject.mockResolvedValue({ result: { ...summary, effectiveActions: [{ action: "READ_DRAFT", expiresAt: time }] } });
-  reads.getRegistryQualifications.mockResolvedValue({ result: { actions: [{ action: "READ_DRAFT", expiresAt: time }] } });
+  reads.getRegistryQualifications.mockResolvedValue({ result: { actions: [{ action: "READ_DRAFT", expiresAt: time }], create: { expiresAt: time } } });
   reads.getRegistryVersion.mockResolvedValue({ result: version });
   reads.listRegistryVersions.mockResolvedValue({ result: { items: [version], nextCursor: null } });
   reads.listRegistryReviews.mockResolvedValue({ result: { items: [review], nextCursor: null } });

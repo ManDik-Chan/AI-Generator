@@ -131,8 +131,8 @@ export function CreateProjectView({ snapshot, base, now, onSubmit, onRetry, onAb
         </div>
         <div className="space-y-2 text-[.75rem] leading-5 text-muted-foreground">
           <p>
-            <b className="font-medium text-foreground">只面向有资格的内部操作员。</b>
-            创建需要有效、未到期、带创建权限的内部操作员身份。这项资格目前不在上方的资格列表里返回，所以控制台事先无法确认：提交后由服务端判定，没有资格会得到 403，不会创建任何内容。
+            <b className="font-medium text-foreground">服务端已确认创建资格。</b>
+            创建需要有效、未到期、带创建权限的内部操作员身份。这次读取已经确认该项资格；提交时服务端会再核对一次，没有资格不会创建任何内容。
           </p>
           <p>新项目是私有的，你成为它的 OWNER，并得到一份空草稿。OWNER 角色不包含 EDIT_DRAFT 等平台资格，编辑草稿需要另外授予。</p>
         </div>

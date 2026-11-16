@@ -12,7 +12,7 @@
  */
 import {
   REVOKING_CODES,
-  type DraftHeadRead, type DraftRead, type Page, type ProjectReadDTO, type ProjectSummaryDTO, type QualificationDTO, type ReadError,
+  type DraftHeadRead, type DraftRead, type Page, type ProjectReadDTO, type ProjectSummaryDTO, type Qualifications, type ReadError,
   type ReleaseHeadRead, type ReleaseRecordDTO, type ReleaseRequestDTO, type ReviewDTO, type VersionRead,
 } from "@/features/developer-console/registry/contract";
 import { DEFAULT_PAGE_SIZE, type ReadResult, type RegistryReadClient } from "@/features/developer-console/registry/client";
@@ -63,7 +63,7 @@ export interface OverviewSnapshot {
   lastRefresh: number | null;
   gate: ReadError | null;
   blockedUntil: number | null;
-  qualifications: Slot<QualificationDTO[]>;
+  qualifications: Slot<Qualifications>;
   projects: ListSlot<ProjectSummaryDTO>;
 }
 
@@ -241,8 +241,7 @@ export function createOverviewStore(client: RegistryReadClient, { now = Date.now
     base.update((s) => ({ ...s, refreshing: true, gate: null, qualifications: loadingSlot(s.qualifications), projects: loadingList(s.projects) }));
     await Promise.all([
       client.qualifications().then((result) => {
-        const actions: ReadResult<QualificationDTO[]> = result.ok ? { ok: true, data: result.data.actions, etag: null } : result;
-        base.settle(gen, actions, (s, at) => ({ ...s, qualifications: settleSlot(s.qualifications, actions, at) }));
+        base.settle(gen, result, (s, at) => ({ ...s, qualifications: settleSlot(s.qualifications, result, at) }));
       }),
       client.projects({ limit: pageSize }).then((result) => base.settle(gen, result, (s, at) => ({ ...s, projects: settleList(s.projects, result, at) }))),
     ]);
