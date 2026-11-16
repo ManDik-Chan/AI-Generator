@@ -9,7 +9,7 @@ import { processUploadedImage, UnsafeUploadError } from "@/features/tools/image/
 import { imageRunFieldsSchema } from "@/features/tools/image/schemas";
 import { buildToolAssetPath, downloadToolAsset, removeToolAssets, uploadToolAsset } from "@/features/tools/image/storage";
 import { TOOL_OUTPUT_MAX_CHARS } from "@/features/tools/constants";
-import { ToolOutputGuard } from "@/features/tools/output-guard";
+import { ToolOutputGuard, UnsafeToolOutputError } from "@/features/tools/output-guard";
 import { createPendingVisionToolRun, DailyToolLimitError, finishRecoverableToolRun, finishToolRun, isToolRunPending, persistToolRunPartial } from "@/features/tools/usage";
 import { encodeToolSse, publicToolError } from "@/features/tools/utils";
 import { AiProviderError } from "@/lib/ai/errors";
@@ -88,14 +88,16 @@ export async function POST(request: Request) {
   observer.send("start", { runId: usage.runId, tool: "IMAGE_ANALYZE", limit: usage.limit, used: usage.used, remaining: usage.remaining, unlimited: usage.unlimited });
   const generation = (async () => {
     let output = ""; let persistedLength = 0; let lastPersistedAt = Date.now(); const guard = new ToolOutputGuard();
+    // Text the guard has released. It is the only text sent or stored before the run completes.
+    let released = "";
     const cancellation = await createDurableCancellationController({ isPending: () => isToolRunPending(userId, usage.runId), taskType: "IMAGE_ANALYZE", taskId: usage.runId });
     try {
       if (cancellation.signal.aborted) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
       for await (const delta of provider.streamImageAnalysis({ system: prompt.system, question: prompt.user, image: image.bytes, mimeType: image.mimeType, signal: cancellation.signal })) {
         if (output.length + delta.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Vision output too large");
-        output += delta; const safe = guard.push(delta); if (safe) observer.send("delta", { text: safe });
+        output += delta; const safe = guard.push(delta); if (safe) { released += safe; observer.send("delta", { text: safe }); }
         if (Date.now() - lastPersistedAt >= 750 || output.length - persistedLength >= 1024) {
-          const persisted = await persistToolRunPartial(userId, usage.runId, output);
+          const persisted = await persistToolRunPartial(userId, usage.runId, released);
           if (!persisted.count) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
           lastPersistedAt = Date.now(); persistedLength = output.length;
         }
@@ -107,7 +109,9 @@ export async function POST(request: Request) {
       else observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" });
     } catch (error) {
       const normalized = publicToolError(error);
-      const failed = await finishRecoverableToolRun(userId, usage.runId, "ERROR", { outputText: output, errorCode: normalized.code }).catch(() => ({ count: 0 }));
+      // Blocked output is never stored; the last stored partial holds released text only.
+      const unsafe = error instanceof UnsafeToolOutputError;
+      const failed = await finishRecoverableToolRun(userId, usage.runId, "ERROR", { ...(unsafe ? {} : { outputText: output }), errorCode: normalized.code }).catch(() => ({ count: 0 }));
       if (!parsed.data.saveHistory) await cleanupToolRunAssets(userId, usage.runId);
       observer.send(failed.count ? "error" : "cancelled", failed.count ? { code: normalized.code, message: normalized.message } : { runId: usage.runId, status: "CANCELLED" });
     } finally {

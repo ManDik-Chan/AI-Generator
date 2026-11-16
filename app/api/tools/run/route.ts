@@ -74,6 +74,8 @@ export async function POST(request: Request) {
 
   const generation = (async () => {
     let output = "";
+    // Text the guard has released. It is the only text sent or stored before the run completes.
+    let released = "";
     let persistedLength = 0;
     let lastPersistedAt = Date.now();
     const outputGuard = new ToolOutputGuard();
@@ -95,9 +97,9 @@ export async function POST(request: Request) {
         if (output.length + text.length > TOOL_OUTPUT_MAX_CHARS) throw new AiProviderError("INVALID_RESPONSE", "Tool output exceeded the safe storage limit.");
         output += text;
         const safeText = outputGuard.push(text);
-        if (safeText) observer.send("delta", { text: safeText });
+        if (safeText) { released += safeText; observer.send("delta", { text: safeText }); }
         if (Date.now() - lastPersistedAt >= 750 || output.length - persistedLength >= 1024) {
-          const persisted = await persistToolRunPartial(userId, usage.runId, output);
+          const persisted = await persistToolRunPartial(userId, usage.runId, released);
           if (!persisted.count) { observer.send("cancelled", { runId: usage.runId, status: "CANCELLED" }); return; }
           persistedLength = output.length;
           lastPersistedAt = Date.now();
