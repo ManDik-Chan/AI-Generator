@@ -15,7 +15,7 @@ import { createProjectCreateStore } from "@/features/developer-console/registry/
 import { createDraftEditorStore } from "@/features/developer-console/registry/draft-editor";
 import { createOverviewStore } from "@/features/developer-console/registry/store";
 import { createRegistryWriteClient } from "@/features/developer-console/registry/write-client";
-import { FIXED_NOW, defaultRoutes, err, fakeFetch } from "@/tests/fixtures/registry-console-read";
+import { FIXED_NOW, defaultRoutes, err, fakeFetch, ok, qualifications } from "@/tests/fixtures/registry-console-read";
 import { PROJECT, TOKEN, fakeRegistry, validPayload } from "@/tests/fixtures/registry-console-write";
 
 const base = "/developer/registry";
@@ -47,14 +47,18 @@ describe("create panel", () => {
     expect(failed).not.toContain("CREATE-PANEL");
     expect(failed).toContain("不提供创建项目入口");
     expect(await render({ ...defaultRoutes(), qualifications: err("DISABLED", 403), projects: err("DISABLED", 403) })).not.toContain("CREATE-PANEL");
+    const unconfirmed = await render({ ...defaultRoutes(), qualifications: ok({ ...qualifications, create: null }) });
+    expect(unconfirmed).not.toContain("CREATE-PANEL");
+    expect(text(unconfirmed)).toContain("服务端没有确认创建资格");
   });
 
-  it("says eligibility is decided on submit, and after a refusal shows no form at all", async () => {
+  it("states the confirmed create qualification, and after a refusal shows no form at all", async () => {
     const server = fakeRegistry();
     const { creator } = stores(server);
     const open = renderCreate(creator);
     expect(open).toContain("<form");
-    expect(text(open)).toContain("提交后由服务端判定");
+    expect(text(open)).toContain("服务端已确认创建资格");
+    expect(text(open)).not.toContain("提交后由服务端判定");
     expect(text(open)).toContain("OWNER 角色不包含 EDIT_DRAFT");
     server.state.canCreate = false;
     await creator.submit("denied-project");

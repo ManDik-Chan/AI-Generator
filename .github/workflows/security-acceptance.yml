@@ -16,6 +16,10 @@ concurrency:
 # and rollback proofs do not depend on the integration job's state. The required
 # "Supabase Security Acceptance" check is the aggregator below and passes only if both succeed;
 # the browser matrix still starts only after it.
+#
+# supabase/config.toml publishes 54320-54322, inside the Linux ephemeral port range
+# (32768-60999). Every job that starts Supabase first reserves 54320-54329, before any network
+# step, so the kernel never assigns one of them as the source port of a runner connection.
 jobs:
   supabase-integration-acceptance:
     name: Supabase Security Acceptance (clean install and integration)
@@ -30,6 +34,9 @@ jobs:
       SUPABASE_GENERATED_IMAGE_BUCKET: p1-generated-images
       SUPABASE_PERSONA_AVATAR_BUCKET: p1-persona-avatars
     steps:
+      - name: Reserve the local Supabase ports
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
+
       - name: Check out the exact PR commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -144,6 +151,9 @@ jobs:
       SUPABASE_GENERATED_IMAGE_BUCKET: p1-generated-images
       SUPABASE_PERSONA_AVATAR_BUCKET: p1-persona-avatars
     steps:
+      - name: Reserve the local Supabase ports
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
+
       - name: Check out the exact PR commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -261,6 +271,9 @@ jobs:
           - project: webkit-iphone
             browser: webkit
     steps:
+      - name: Reserve the local Supabase ports
+        run: sudo sysctl -w net.ipv4.ip_local_reserved_ports=54320-54329
+
       - name: Check out the exact PR commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 

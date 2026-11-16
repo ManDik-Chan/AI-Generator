@@ -15,7 +15,7 @@ Both require `Content-Type: application/json` (UTF-8) and `Idempotency-Key` matc
 
 ## Claude integration sequence
 
-1. Read `GET /qualifications` to present creation eligibility. Treat eligibility as advisory and handle the live authorization result.
+1. Read `GET /qualifications`. `result.create` is `{ expiresAt }` when the caller has active, unexpired `can_create`, and `null` otherwise. Treat that field as advisory and handle the live authorization result.
 2. POST the slug. Store the returned project ID and slug. Creation atomically initializes a private project, OWNER membership and an empty draft. Project ownership alone does not confer internal action grants.
 3. Load `GET /projects/{id}/draft/head`. A null content hash denotes an uninitialized draft. Full draft GET can return `DRAFT_UNINITIALIZED` in that state. Use the head ETag for the first save. On subsequent edits read the full draft and use its ETag.
 4. Build the complete payload with the returned project ID and slug, then PUT it. On success take the returned ETag. After a replay or an uncertain outcome, GET the current state before assuming the returned revision is the latest. The write DTO excludes the content hash. GET includes the hash from the same snapshot as its ETag.

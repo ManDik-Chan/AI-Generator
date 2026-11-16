@@ -133,7 +133,8 @@ describe.skipIf(!enabled)("Developer console Registry read mode with real Auth s
     await list.refresh();
     const o = list.getSnapshot();
     expect(o.gate).toBeNull();
-    expect(o.qualifications.data?.map((item) => item.action).sort()).toEqual([...actions].sort());
+    expect(o.qualifications.data?.actions.map((item) => item.action).sort()).toEqual([...actions].sort());
+    expect(o.qualifications.data?.create?.expiresAt).toEqual(expect.any(String));
     expect(o.projects.items.map((item) => item.id)).toContain(projectId);
 
     const store = project();
