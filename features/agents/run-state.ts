@@ -50,11 +50,19 @@ export async function finishAgentRun(input: {
     });
     if (!run) return false;
 
+    const completedAt = new Date();
+    const message = await transaction.message.updateMany({
+      where: { id: run.assistantMessageId, status: "PENDING", supersededAt: null },
+      data: { content: input.content, status: input.status === "COMPLETE" ? "COMPLETE" : "ERROR" },
+    });
+    // A cancelled or superseded assistant message must not commit worker terminal states
+    // while the run remains PENDING. Returning here leaves the transaction with no worker writes.
+    if (!message.count) return false;
+
     const unfinished = await transaction.agentWorker.findMany({
       where: { agentRunId: input.runId, userId: input.userId, status: { in: ["QUEUED", "RUNNING"] } },
       select: { key: true, status: true },
     });
-    const completedAt = new Date();
     if (input.timeout) {
       await transaction.agentWorker.updateMany({
         where: { agentRunId: input.runId, userId: input.userId, status: { in: ["QUEUED", "RUNNING"] } },
@@ -73,11 +81,6 @@ export async function finishAgentRun(input: {
       ]);
     }
 
-    const message = await transaction.message.updateMany({
-      where: { id: run.assistantMessageId, status: "PENDING", supersededAt: null },
-      data: { content: input.content, status: input.status === "COMPLETE" ? "COMPLETE" : "ERROR" },
-    });
-    if (!message.count) return false;
     const workers = await transaction.agentWorker.groupBy({
       by: ["status"],
       where: { agentRunId: input.runId, userId: input.userId },
@@ -178,6 +181,12 @@ export async function reconcileStaleAgentRun(userId: string, runId: string, stal
       where: { agentRunId: runId, userId, status: { in: ["QUEUED", "RUNNING"] } },
       select: { key: true },
     });
+    const claimed = await transaction.agentRun.updateMany({
+      where: { id: runId, userId, status: "PENDING", startedAt: { lte: staleBefore } },
+      data: { status: "ERROR", phase: "FINISHED", errorCode: "STALE_RUN", completedAt },
+    });
+    if (!claimed.count) return "PENDING" as const;
+
     await transaction.agentWorker.updateMany({
       where: { agentRunId: runId, userId, status: { in: ["QUEUED", "RUNNING"] } },
       data: { status: "TIMEOUT", errorCode: "STALE_RUN", completedAt },
@@ -196,8 +205,8 @@ export async function reconcileStaleAgentRun(userId: string, runId: string, stal
     });
     const completedWorkerCount = workerCounts.reduce((total, row) => total + (terminalStatuses.has(row.status) ? row._count._all : 0), 0);
     const successfulWorkerCount = workerCounts.find((row) => row.status === "COMPLETE")?._count._all ?? 0;
-    const finished = await transaction.agentRun.updateMany({
-      where: { id: runId, userId, status: "PENDING", startedAt: { lte: staleBefore } },
+    const counted = await transaction.agentRun.updateMany({
+      where: { id: runId, userId, status: "ERROR", errorCode: "STALE_RUN" },
       data: {
         status: "ERROR",
         phase: "FINISHED",
@@ -207,7 +216,7 @@ export async function reconcileStaleAgentRun(userId: string, runId: string, stal
         successfulWorkerCount,
       },
     });
-    if (!finished.count) return "PENDING" as const;
+    if (!counted.count) throw new Error("Stale Agent run terminal state changed concurrently.");
     await appendAgentEvents(transaction, {
       userId,
       runId,
@@ -218,4 +227,14 @@ export async function reconcileStaleAgentRun(userId: string, runId: string, stal
     }, { runLocked: true });
     return "ERROR" as const;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+/** Cancel the pending Agent run that owns this assistant message, if one exists. */
+export async function cancelAgentRunForAssistantMessage(userId: string, assistantMessageId: string) {
+  const run = await prisma.agentRun.findFirst({
+    where: { userId, assistantMessageId, status: "PENDING" },
+    select: { id: true },
+  });
+  if (!run) return null;
+  return cancelAgentRun(userId, run.id);
 }
